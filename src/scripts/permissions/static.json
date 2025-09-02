@@ -1,0 +1,22 @@
+[
+  {
+    "name": "all:*",
+    "action": "all",
+    "resource": "*",
+    "path": "/*",
+    "method": "ALL",
+    "description": "Full access to all resources",
+    "isWildcard": true,
+    "isAdminLevel": true
+  },
+  {
+    "name": "system:health",
+    "action": "view",
+    "resource": "system",
+    "path": "/health",
+    "method": "GET",
+    "description": "System health check endpoint",
+    "isWildcard": false,
+    "isAdminLevel": false
+  }
+]

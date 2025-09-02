@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Halo Forms - Telegram Web App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        color: #333;
+      }
+
+      .container {
+        max-width: 400px;
+        margin: 0 auto;
+        background: white;
+        min-height: 100vh;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        text-align: center;
+        position: relative;
+      }
+
+      .header h1 {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 5px;
+      }
+
+      .header p {
+        opacity: 0.9;
+        font-size: 14px;
+      }
+
+      .back-btn {
+        position: absolute;
+        left: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: none;
+      }
+
+      .content {
+        padding: 20px;
+      }
+
+      .step-indicator {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 30px;
+      }
+
+      .step {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #e0e0e0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        margin: 0 5px;
+        position: relative;
+      }
+
+      .step.active {
+        background: #667eea;
+        color: white;
+      }
+
+      .step.completed {
+        background: #4caf50;
+        color: white;
+      }
+
+      .step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        right: -10px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 10px;
+        height: 2px;
+        background: #e0e0e0;
+      }
+
+      .step.completed:not(:last-child)::after {
+        background: #4caf50;
+      }
+
+      .screen {
+        display: none;
+        animation: fadeIn 0.3s ease-in;
+      }
+
+      .screen.active {
+        display: block;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .welcome-screen {
+        text-align: center;
+        padding: 40px 20px;
+      }
+
+      .welcome-icon {
+        font-size: 80px;
+        color: #667eea;
+        margin-bottom: 20px;
+      }
+
+      .welcome-title {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: #333;
+      }
+
+      .welcome-subtitle {
+        font-size: 16px;
+        color: #666;
+        margin-bottom: 30px;
+        line-height: 1.5;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 25px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+        margin-bottom: 15px;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn:active {
+        transform: translateY(0);
+      }
+
+      .btn.secondary {
+        background: #f8f9fa;
+        color: #667eea;
+        border: 2px solid #667eea;
+      }
+
+      .btn.secondary:hover {
+        background: #667eea;
+        color: white;
+      }
+
+      .phone-input {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        padding: 15px;
+        font-size: 16px;
+        width: 100%;
+        margin-bottom: 20px;
+        transition: border-color 0.3s ease;
+      }
+
+      .phone-input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .project-card {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .project-card:hover {
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .project-card.selected {
+        border-color: #667eea;
+        background: linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%);
+      }
+
+      .project-icon {
+        font-size: 24px;
+        margin-bottom: 10px;
+        color: #667eea;
+      }
+
+      .project-name {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #333;
+      }
+
+      .project-description {
+        font-size: 14px;
+        color: #666;
+        line-height: 1.4;
+      }
+
+      .form-field {
+        margin-bottom: 20px;
+      }
+
+      .form-label {
+        display: block;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #333;
+      }
+
+      .form-input {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 15px;
+        font-size: 16px;
+        width: 100%;
+        transition: border-color 0.3s ease;
+      }
+
+      .form-input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .form-textarea {
+        min-height: 100px;
+        resize: vertical;
+      }
+
+      .form-select {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 15px;
+        font-size: 16px;
+        width: 100%;
+        cursor: pointer;
+      }
+
+      .review-item {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 10px;
+      }
+
+      .review-label {
+        font-size: 14px;
+        font-weight: 600;
+        color: #666;
+        margin-bottom: 5px;
+      }
+
+      .review-value {
+        font-size: 16px;
+        color: #333;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px 20px;
+      }
+
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .success-screen {
+        text-align: center;
+        padding: 40px 20px;
+      }
+
+      .success-icon {
+        font-size: 80px;
+        color: #4caf50;
+        margin-bottom: 20px;
+      }
+
+      .error-message {
+        background: #ffebee;
+        color: #c62828;
+        padding: 15px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        border-left: 4px solid #c62828;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #e0e0e0;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 20px;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        transition: width 0.3s ease;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <button class="back-btn" onclick="goBack()">
+          <i class="fas fa-arrow-left"></i>
+        </button>
+        <h1 id="header-title">Halo Forms</h1>
+        <p id="header-subtitle">Complete your forms easily</p>
+      </div>
+
+      <div class="content">
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+          <div class="step" id="step-1">1</div>
+          <div class="step" id="step-2">2</div>
+          <div class="step" id="step-3">3</div>
+          <div class="step" id="step-4">4</div>
+        </div>
+
+        <!-- Welcome Screen -->
+        <div class="screen active" id="welcome-screen">
+          <div class="welcome-screen">
+            <div class="welcome-icon">
+              <i class="fas fa-clipboard-list"></i>
+            </div>
+            <h2 class="welcome-title">Welcome to Halo Forms!</h2>
+            <p class="welcome-subtitle">
+              Complete your forms quickly and easily with our modern interface. Let's get started by authenticating your
+              account.
+            </p>
+            <button class="btn" onclick="startAuthentication()"><i class="fas fa-sign-in-alt"></i> Get Started</button>
+          </div>
+        </div>
+
+        <!-- Authentication Screen -->
+        <div class="screen" id="auth-screen">
+          <h2 style="margin-bottom: 20px; text-align: center">Phone Authentication</h2>
+          <p style="text-align: center; color: #666; margin-bottom: 30px">Please share your phone number to continue</p>
+          <div id="auth-error" class="error-message hidden"></div>
+          <button class="btn" onclick="requestPhoneNumber()"><i class="fas fa-phone"></i> Share Phone Number</button>
+          <button class="btn secondary" onclick="showWelcome()"><i class="fas fa-arrow-left"></i> Back</button>
+        </div>
+
+        <!-- Project Selection Screen -->
+        <div class="screen" id="project-screen">
+          <h2 style="margin-bottom: 20px; text-align: center">Select a Project</h2>
+          <p style="text-align: center; color: #666; margin-bottom: 30px">Choose the project you want to work on</p>
+          <div id="projects-container"></div>
+          <div id="project-error" class="error-message hidden"></div>
+          <button class="btn secondary" onclick="showAuth()"><i class="fas fa-arrow-left"></i> Back</button>
+        </div>
+
+        <!-- Form Filling Screen -->
+        <div class="screen" id="form-screen">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <h2 style="margin-bottom: 20px; text-align: center">Form Questions</h2>
+          <div id="form-container"></div>
+          <div id="form-error" class="error-message hidden"></div>
+          <div style="display: flex; gap: 10px">
+            <button class="btn secondary" onclick="showProjects()" style="flex: 1">
+              <i class="fas fa-arrow-left"></i> Back
+            </button>
+            <button class="btn" onclick="nextQuestion()" id="next-btn" style="flex: 1">
+              Next <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Review Screen -->
+        <div class="screen" id="review-screen">
+          <h2 style="margin-bottom: 20px; text-align: center">Review Your Answers</h2>
+          <div id="review-container"></div>
+          <div style="display: flex; gap: 10px">
+            <button class="btn secondary" onclick="showForm()" style="flex: 1"><i class="fas fa-edit"></i> Edit</button>
+            <button class="btn" onclick="submitForm()" style="flex: 1"><i class="fas fa-paper-plane"></i> Submit</button>
+          </div>
+        </div>
+
+        <!-- Loading Screen -->
+        <div class="screen" id="loading-screen">
+          <div class="loading">
+            <div class="spinner"></div>
+            <h3 id="loading-text">Processing...</h3>
+          </div>
+        </div>
+
+        <!-- Success Screen -->
+        <div class="screen" id="success-screen">
+          <div class="success-screen">
+            <div class="success-icon">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <h2 class="welcome-title">Form Submitted Successfully!</h2>
+            <p class="welcome-subtitle">
+              Your form has been submitted and is being processed. You'll receive a confirmation email shortly.
+            </p>
+            <button class="btn" onclick="startNewForm()"><i class="fas fa-plus"></i> Submit Another Form</button>
+            <button class="btn secondary" onclick="closeApp()"><i class="fas fa-times"></i> Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

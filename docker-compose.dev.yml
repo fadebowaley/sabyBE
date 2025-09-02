@@ -1,0 +1,132 @@
+services:
+  # Development Backend Service with Hot Reload
+  halobe:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: halo-dev-backend
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=development
+      - DEBUG=*
+      - PORT=4000
+      - MONGODB_URL=mongodb://mongodb:27017/halo-dev
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=halo-dev
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=dev-jwt-secret-key
+      - HALOFE_URL=http://localhost:3000
+      # Development storage configuration
+      - STORAGE_PROVIDER=local
+      # Email configuration (development)
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_USERNAME=dev
+      - SMTP_PASSWORD=dev
+      - EMAIL_FROM=dev@halo.local
+    volumes:
+      # Hot reload for development
+      - .:/app
+      - /app/node_modules
+    command: ["npm", "run", "dev"]
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - halo-dev-network
+
+  # Development MongoDB
+  mongodb:
+    image: mongo:6.0
+    container_name: halo-dev-mongodb
+    ports:
+      - "27019:27017"
+    environment:
+      MONGO_INITDB_DATABASE: halo-dev
+    volumes:
+      - mongodb_dev_data:/data/db
+    networks:
+      - halo-dev-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Development PostgreSQL
+  postgres:
+    image: postgres:15
+    container_name: halo-dev-postgres
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: halo-dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - halo-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Development Redis
+  redis:
+    image: redis:7-alpine
+    container_name: halo-dev-redis
+    ports:
+      - "6381:6379"
+    networks:
+      - halo-dev-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MailHog for email testing in development
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: halo-dev-mailhog
+    ports:
+      - "1026:1025" # SMTP
+      - "8026:8025" # Web UI
+    networks:
+      - halo-dev-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8025/api/v2/messages"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mongodb_dev_data:
+  postgres_dev_data:
+
+networks:
+  halo-dev-network:
+    driver: bridge

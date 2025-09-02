@@ -1,0 +1,8 @@
+version: '2'
+tunnels:
+  main-app:
+    addr: 4000
+    proto: http
+  whatsapp-bot:
+    addr: 4001
+    proto: http

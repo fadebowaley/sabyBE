@@ -1,0 +1,55 @@
+{
+  "access": {
+    "type": "private",
+    "requiresLogin": true,
+    "allowedRoles": ["admin", "contributor"],
+    "submissionLimit": 100,
+    "allowMultipleSubmissions": false,
+    "allowAnonymous": false
+  },
+  "behavior": {
+    "autosave": true,
+    "saveDraft": true,
+    "allowResubmission": false,
+    "showProgressBar": false,
+    "timeoutInMinutes": 20
+  },
+  "logic": {
+    "enableConditionalLogic": true,
+    "enableCalculatedFields": true
+  },
+  "distribution": {
+    "enablePublicUrl": false,
+    "enablePrivateUrl": true,
+    "enableHtmlEmbed": true,
+    "enableApiSubmission": true,
+    "enableJsEmbed": true
+  },
+  "notifications": {
+    "onSubmit": {
+      "sendToUser": false,
+      "sendToOwner": true,
+      "emailTemplateId": "default_submit_notice"
+    },
+    "webhook": {
+      "enabled": false,
+      "url": "",
+      "headers": {}
+    }
+  },
+  "submission": {
+    "redirectUrl": "",
+    "confirmationMessage": "Thank you for your response!",
+    "storeInDatabase": true,
+    "exportEnabled": true
+  },
+  "ui": {
+    "theme": "light",
+    "layout": "single-page",
+    "branding": {
+      "logoUrl": "",
+      "primaryColor": "#2E86AB"
+    },
+    "language": "en"
+  }
+}

@@ -1,0 +1,228 @@
+
+
+  "elements": [
+    {
+      "id": "element-1750861914651-2",
+      "type": "header",
+      "label": "EMPLOYEE FORM",
+      "properties": {
+        "placeholder": "",
+        "defaultValue": "Section Header",
+        "helpText": "",
+        "conditional": false,
+        "validation": {
+          "required": false
+        },
+        "colSpan": 4,
+        "headerLevel": "h2",
+        "headerAlignment": "left"
+      }
+    },
+    {
+      "id": "element-1750861934298-3",
+      "type": "text",
+      "label": "SURNAME",
+      "properties": {
+        "placeholder": "",
+        "defaultValue": "",
+        "helpText": "",
+        "conditional": false,
+        "validation": {
+          "required": false
+        },
+        "colSpan": 2
+      }
+    },
+    {
+      "id": "element-1750861937766-4",
+      "type": "text",
+      "label": "FIRSTNAME",
+      "properties": {
+        "placeholder": "",
+        "defaultValue": "",
+        "helpText": "",
+        "conditional": false,
+        "validation": {
+          "required": false
+        },
+        "colSpan": 2
+      }
+    },
+    {
+      "id": "element-1750862363607-5",
+      "type": "text",
+      "label": "METER NUMBER",
+      "properties": {
+        "placeholder": "",
+        "defaultValue": "",
+        "helpText": "",
+        "conditional": false,
+        "validation": {
+          "required": false
+        },
+        "colSpan": 2
+      }
+    },
+    {
+      "id": "element-1750862370294-6",
+      "type": "text",
+      "label": "MOBILE NUMBER",
+      "properties": {
+        "placeholder": "",
+        "defaultValue": "",
+        "helpText": "",
+        "conditional": false,
+        "validation": {
+          "required": false
+        },
+        "colSpan": 2
+      }
+    },
+    {
+      "id": "element-1750862527358-7",
+      "type": "button",
+      "label": "SUBMIT NOW",
+      "properties": {
+        "placeholder": "",
+        "defaultValue": "",
+        "helpText": "",
+        "conditional": false,
+        "validation": {
+          "required": false
+        },
+        "colSpan": 2,
+        "buttonText": "SUBMIT NOW",
+        "buttonType": "submit"
+      }
+    }
+  ],
+  "style": "default",
+  "wizardMode": false,
+  "columnSpans": {
+    "element-1750861914651-2": 4,
+    "element-1750861934298-3": 2,
+    "element-1750861937766-4": 2,
+    "element-1750862363607-5": 2,
+    "element-1750862370294-6": 2,
+    "element-1750862527358-7": 2
+  },
+  "userSettings": {
+    "access": {
+      "type": "role-based",
+      "requiresLogin": true,
+      "allowedRoles": [
+        "owner",
+        "admin"
+      ],
+      "submissionLimit": 50,
+      "allowMultipleSubmissions": true,
+      "allowAnonymous": false
+    },
+    "behavior": {
+      "autosave": true,
+      "saveDraft": false,
+      "allowResubmission": true,
+      "showProgressBar": true,
+      "timeoutInMinutes": 10
+    },
+    "distribution": {
+      "enablePublicUrl": true,
+      "enablePrivateUrl": true,
+      "enableHtmlEmbed": false,
+      "enableApiSubmission": true,
+      "enableJsEmbed": false
+    },
+    "notifications": {
+      "onSubmit": {
+        "sendToUser": true,
+        "sendToOwner": true,
+        "emailTemplateId": "thank_you_advanced"
+      }
+    },
+    "ui": {
+      "theme": "dark",
+      "layout": "multi-step",
+      "branding": {
+        "logoUrl": "https://cdn.user.com/logo.png",
+        "primaryColor": "#222222"
+      },
+      "language": "en",
+      "showFormTitle": true,
+      "showFormDescription": true
+    },
+    "builder": {
+      "selectedStyle": "default",
+      "wizardMode": false,
+      "columnSpans": {
+        "element-1750861914651-2": 4,
+        "element-1750861934298-3": 2,
+        "element-1750861937766-4": 2
+      },
+      "elements": [
+        {
+          "id": "element-1750861914651-2",
+          "type": "header",
+          "label": "EMPLOYEE FORM",
+          "properties": {
+            "placeholder": "",
+            "defaultValue": "Section Header",
+            "helpText": "",
+            "conditional": false,
+            "validation": {
+              "required": false
+            },
+            "colSpan": 4,
+            "headerLevel": "h2",
+            "headerAlignment": "left"
+          }
+        },
+        {
+          "id": "element-1750861934298-3",
+          "type": "text",
+          "label": "SURNAME",
+          "properties": {
+            "placeholder": "",
+            "defaultValue": "",
+            "helpText": "",
+            "conditional": false,
+            "validation": {
+              "required": false
+            },
+            "colSpan": 2
+          }
+        },
+        {
+          "id": "element-1750861937766-4",
+          "type": "text",
+          "label": "FIRSTNAME",
+          "properties": {
+            "placeholder": "",
+            "defaultValue": "",
+            "helpText": "",
+            "conditional": false,
+            "validation": {
+              "required": false
+            },
+            "colSpan": 2
+          }
+        }
+      ],
+      "formLayout": {
+        "spacing": "normal",
+        "labelPosition": "top",
+        "buttonAlignment": "left"
+      },
+      "validation": {
+        "showRequiredAsterisk": true,
+        "validateOnSubmit": true,
+        "validateOnBlur": false
+      }
+    }
+  },
+  "metadata": {
+    "createdAt": "2025-06-25T14:46:35.625Z",
+    "version": "1.0.0",
+    "elementsCount": 6,
+    "hasValidation": false
+  }
+]

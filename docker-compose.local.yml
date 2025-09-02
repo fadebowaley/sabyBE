@@ -1,0 +1,78 @@
+
+services:
+  # MongoDB for local testing
+  mongodb:
+    image: mongo:6.0
+    container_name: halo-local-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: halo-local
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - halo-local
+
+  # PostgreSQL for local testing
+  postgres:
+    image: postgres:15
+    container_name: halo-local-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: halo-local
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - halo-local
+
+  # Redis for local testing
+  redis:
+    image: redis:7-alpine
+    container_name: halo-local-redis
+    ports:
+      - "6380:6379"
+    networks:
+      - halo-local
+
+  # Halo Backend
+  halobe:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: halo-local-backend
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - MONGODB_URL=mongodb://mongodb:27017/halo-local
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=halo-local
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=local-dev-secret-key-change-in-production
+      - HALOFE_URL=http://localhost:3000
+    depends_on:
+      - mongodb
+      - postgres
+      - redis
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - halo-local
+    command: ["sh", "-c", "npm run dev && tail -f /dev/null"]
+
+volumes:
+  mongodb_data:
+  postgres_data:
+
+networks:
+  halo-local:
+    driver: bridge
