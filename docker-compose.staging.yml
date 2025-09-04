@@ -1,0 +1,121 @@
+services:
+  # Staging Backend Service
+  halobe:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: halo-staging-backend
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=staging
+      - PORT=4000
+      - MONGODB_URL=mongodb://mongodb:27017/halo-staging
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-staging-password}
+      - POSTGRES_DB=halo-staging
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-staging-redis-password}
+      - JWT_SECRET=${JWT_SECRET:-staging-jwt-secret-change-this}
+      - HALOFE_URL=${HALOFE_URL:-http://localhost:3000}
+      # Staging storage configuration
+      - STORAGE_PROVIDER=${STORAGE_PROVIDER:-aws-s3}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
+      # Email configuration
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAIL_FROM=${EMAIL_FROM}
+      # Telegram configuration
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_WEBHOOK_URL=${TELEGRAM_WEBHOOK_URL}
+      # WhatsApp configuration
+      - PHONE_NUMBER_ID=${PHONE_NUMBER_ID}
+      - VERIFY_TOKEN=${VERIFY_TOKEN}
+      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - halo-staging-network
+
+  # Staging MongoDB
+  mongodb:
+    image: mongo:6.0
+    container_name: halo-staging-mongodb
+    environment:
+      MONGO_INITDB_DATABASE: halo-staging
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-staging-password}
+    volumes:
+      - mongodb_staging_data:/data/db
+    networks:
+      - halo-staging-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Staging PostgreSQL
+  postgres:
+    image: postgres:15
+    container_name: halo-staging-postgres
+    environment:
+      POSTGRES_DB: halo-staging
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-staging-password}
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+    networks:
+      - halo-staging-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Staging Redis
+  redis:
+    image: redis:7-alpine
+    container_name: halo-staging-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-staging-redis-password}
+    networks:
+      - halo-staging-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-staging-redis-password}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mongodb_staging_data:
+  postgres_staging_data:
+
+networks:
+  halo-staging-network:
+    driver: bridge
