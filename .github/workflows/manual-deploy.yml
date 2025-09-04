@@ -1,0 +1,88 @@
+name: 🚨 Manual Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      image_tag:
+        description: 'Docker image tag to deploy (leave empty for latest)'
+        required: false
+        type: string
+      skip_tests:
+        description: 'Skip tests (emergency deployment)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/halobe
+  SERVICE_NAME: halobe
+  SERVICE_PORT: 4000
+
+jobs:
+  manual-deploy:
+    name: 🚨 Manual Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: �� Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 🏷️ Set image tag
+      id: tag
+      run: |
+        if [ -n "${{ inputs.image_tag }}" ]; then
+          echo "TAG=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+        else
+          echo "TAG=latest" >> $GITHUB_OUTPUT
+        fi
+
+    - name: 🧪 Run quick tests (if not skipped)
+      if: ${{ !inputs.skip_tests }}
+      run: |
+        echo "Running quick smoke tests..."
+        # Add your quick test commands here
+        npm ci
+        npm run lint
+
+    - name: 🚀 Deploy to ${{ inputs.environment }}
+      run: |
+        echo "🚀 Deploying to ${{ inputs.environment }}..."
+        
+        # Pull the specified image
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.TAG }}
+        
+        # Deploy using your existing script
+        chmod +x docker-build.sh
+        ./docker-build.sh stop ${{ inputs.environment }} || true
+        ./docker-build.sh build ${{ inputs.environment }}
+        ./docker-build.sh start ${{ inputs.environment }}
+        
+        # Health check
+        ./docker-build.sh health ${{ inputs.environment }}
+
+    - name: 📢 Deployment notification
+      if: always()
+      run: |
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "✅ Manual deployment to ${{ inputs.environment }} successful"
+          echo "🐳 Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.TAG }}"
+        else
+          echo "❌ Manual deployment to ${{ inputs.environment }} failed"
+        fi
