@@ -1,0 +1,11 @@
+name,level,structure,parent,address,city,state,country,postalCode,dateOfEstablishment,isMain,users
+Main Office,Global,Headquarters,,123 Corporate Blvd,New York,NY,USA,10001,2020-01-01,true,john.doe@example.com
+NA Operations,Regional,North America,Main Office,456 Regional Ave,Chicago,IL,USA,60601,2020-02-01,false,jane.smith@example.com
+US Operations,Country,United States,NA Operations,789 Country St,Washington,DC,USA,20001,2020-03-01,false,mike.johnson@example.com
+NYC Branch,City,New York,US Operations,321 City Rd,New York,NY,USA,10002,2020-04-01,false,sarah.wilson@example.com
+Sales Team,Department,Sales,NYC Branch,654 Sales St,New York,NY,USA,10003,2020-05-01,false,david.brown@example.com
+Marketing Team,Department,Marketing,NYC Branch,987 Marketing Ave,New York,NY,USA,10004,2020-06-01,false,lisa.davis@example.com
+Engineering Team,Department,Engineering,NYC Branch,147 Engineering Blvd,New York,NY,USA,10005,2020-07-01,false,tom.miller@example.com
+Finance Team,Department,Finance,NYC Branch,258 Finance Way,New York,NY,USA,10006,2020-08-01,false,emma.garcia@example.com
+Sales Rep 1,Individual,Sales Team,Sales Team,111 Rep St,New York,NY,USA,10007,2020-09-01,false,alex.rodriguez@example.com
+Sales Rep 2,Individual,Sales Team,Sales Team,222 Rep Ave,New York,NY,USA,10008,2020-10-01,false,sophia.martinez@example.com

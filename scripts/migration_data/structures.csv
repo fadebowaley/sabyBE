@@ -1,0 +1,21 @@
+name,code,type,level,parent,description
+Headquarters,HQ,headquarters,Global,,Main corporate headquarters
+North America,NA,region,Regional,Headquarters,North American operations
+Europe,EU,region,Regional,Headquarters,European operations
+Asia Pacific,AP,region,Regional,Headquarters,Asia Pacific operations
+United States,US,territory,Country,North America,United States operations
+Canada,CA,territory,Country,North America,Canadian operations
+United Kingdom,UK,territory,Country,Europe,UK operations
+Germany,DE,territory,Country,Europe,German operations
+Japan,JP,territory,Country,Asia Pacific,Japanese operations
+Australia,AU,territory,Country,Asia Pacific,Australian operations
+New York,NYC,branch,City,United States,New York City office
+Los Angeles,LA,branch,City,United States,Los Angeles office
+London,LON,branch,City,United Kingdom,London office
+Berlin,BER,branch,City,Germany,Berlin office
+Tokyo,TOK,branch,City,Japan,Tokyo office
+Sydney,SYD,branch,City,Australia,Sydney office
+Sales,SALES,department,Department,New York,Sales department
+Marketing,MKTG,department,Department,New York,Marketing department
+Engineering,ENG,department,Department,New York,Engineering department
+Finance,FIN,department,Department,New York,Finance department

@@ -1,0 +1,11 @@
+name,description,rank
+Global,Global/Corporate level,1
+Regional,Regional/Zone level,2
+Country,Country level,3
+State,State/Province level,4
+City,City level,5
+District,District level,6
+Branch,Branch/Office level,7
+Department,Department level,8
+Team,Team level,9
+Individual,Individual level,10

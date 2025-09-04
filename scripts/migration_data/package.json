@@ -1,0 +1,23 @@
+{
+  "name": "halo-data-migration",
+  "version": "1.0.0",
+  "description": "Data migration system for Halo CRM",
+  "main": "../comprehensive_data_migration.js",
+  "scripts": {
+    "migrate": "node ../comprehensive_data_migration.js",
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "csv-parser": "^3.0.0",
+    "csv-writer": "^1.6.0"
+  },
+  "keywords": [
+    "migration",
+    "data",
+    "csv",
+    "halo",
+    "crm"
+  ],
+  "author": "Halo Team",
+  "license": "MIT"
+}
