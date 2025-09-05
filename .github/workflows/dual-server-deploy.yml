@@ -2,7 +2,7 @@ name: 🚀 Dual Server Deployment (Staging + Production)
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ production, develop ]
     tags: [ 'v*' ]
   workflow_dispatch:
     inputs:
@@ -25,7 +25,7 @@ env:
   IMAGE_NAME: fadebowaley/sabybe/halobe
 
   # Server Configuration
-  PRODUCTION_HOST: 172.191.51.123
+  PRODUCTION_HOST: ${{ secrets.PRODUCTION_SERVER_IP }}
   PRODUCTION_USER: haloadmin
   STAGING_HOST: ${{ secrets.STAGING_SERVER_IP }}
   STAGING_USER: haloadmin
