@@ -64,7 +64,7 @@ start_whatsapp() {
         pm2 restart $APP_NAME
     else
         print_status "Starting main application with WhatsApp..."
-        pm2 start ecosystem.config.json --env development
+        pm2 start ecosystem.config.js --env development
     fi
 
     print_status "Waiting for app to start..."
