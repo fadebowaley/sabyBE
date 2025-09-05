@@ -239,7 +239,7 @@ jobs:
           IMAGE_TAG="${GITHUB_REF#refs/tags/}"
         else
           ENVIRONMENT="production"
-          IMAGE_TAG="main"
+          IMAGE_TAG="production"
         fi
         
         echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
@@ -267,7 +267,7 @@ jobs:
         # Pull latest code
         echo "📥 Pulling latest code..."
         git fetch origin
-        git reset --hard origin/main
+        git reset --hard origin/production
         
         # Pull the Docker image
         echo "🐳 Pulling Docker image: ${{ steps.deploy.outputs.FULL_IMAGE }}"
