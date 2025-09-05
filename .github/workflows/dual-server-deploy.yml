@@ -22,7 +22,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: fadebowaley/sabybe/halobe
+  IMAGE_NAME: ${{ github.repository }}/halobe
 
   # Server Configuration
   PRODUCTION_HOST: ${{ secrets.PRODUCTION_SERVER_IP }}
@@ -160,6 +160,9 @@ jobs:
         git reset --hard origin/develop
         
         # Pull the Docker image
+        # Login to GitHub Container Registry
+        echo "🔐 Logging in to GitHub Container Registry..."
+        echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
         echo "🐳 Pulling Docker image: ${{ steps.deploy.outputs.FULL_IMAGE }}"
         docker pull ${{ steps.deploy.outputs.FULL_IMAGE }}
         
@@ -270,6 +273,9 @@ jobs:
         git reset --hard origin/main
         
         # Pull the Docker image
+        # Login to GitHub Container Registry
+        echo "🔐 Logging in to GitHub Container Registry..."
+        echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
         echo "🐳 Pulling Docker image: ${{ steps.deploy.outputs.FULL_IMAGE }}"
         docker pull ${{ steps.deploy.outputs.FULL_IMAGE }}
         
