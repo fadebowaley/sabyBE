@@ -308,15 +308,17 @@ jobs:
 
     - name: 📢 Create GitHub Release
       if: startsWith(github.ref, 'refs/tags/')
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v2
+
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ steps.version.outputs.VERSION }}
-        release_name: Release ${{ steps.version.outputs.VERSION }}
+        name: Release ${{ github.ref_name }}
+
         body: |
           🚀 **Halo Backend ${{ steps.version.outputs.VERSION }}**
-           - Docker image: `${{ steps.deploy.outputs.FULL_IMAGE }}
+             - Docker image: `ghcr.io/fadebowaley/sabybe/halobe:${{ github.ref_name }}`
           
           ## What's New
           - Production deployment completed
