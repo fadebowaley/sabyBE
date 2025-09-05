@@ -159,10 +159,11 @@ jobs:
         git fetch origin
         git reset --hard origin/develop
         
-        # Pull the Docker image
+        # Login to GitHub Container Registry
+        echo "🔐 Logging in to GitHub Container Registry..."
+        echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
         echo "🐳 Pulling Docker image: ${{ steps.deploy.outputs.FULL_IMAGE }}"
         docker pull ${{ steps.deploy.outputs.FULL_IMAGE }}
-        
         # Tag the image for local use
         docker tag ${{ steps.deploy.outputs.FULL_IMAGE }} halo-halobe:staging
         
@@ -269,10 +270,11 @@ jobs:
         git fetch origin
         git reset --hard origin/main
         
-        # Pull the Docker image
+        # Login to GitHub Container Registry
+        echo "🔐 Logging in to GitHub Container Registry..."
+        echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
         echo "🐳 Pulling Docker image: ${{ steps.deploy.outputs.FULL_IMAGE }}"
         docker pull ${{ steps.deploy.outputs.FULL_IMAGE }}
-        
         # Tag the image for local use
         docker tag ${{ steps.deploy.outputs.FULL_IMAGE }} halo-halobe:production
         
