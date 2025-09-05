@@ -22,7 +22,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: fadebowaley/sabyBE/halobe
+  IMAGE_NAME: fadebowaley/sabybe/halobe
   
   # Server Configuration
   PRODUCTION_HOST: 172.191.51.123
