@@ -11,8 +11,7 @@
     "node": ">=18.20.2"
   },
   "scripts": {
-    "start": "pm2 start src/index.js --no-daemon ||",
-    "start:prod": "NODE_ENV=production node src/index.js",
+    "start": "cross-env NODE_ENV=production node src/index.js",
     "dev": "cross-env NODE_ENV=development nodemon src/index.js",
     "test": "jest -i --colors --verbose --detectOpenHandles --passWithNoTests",
     "test:watch": "jest -i --watchAll",
