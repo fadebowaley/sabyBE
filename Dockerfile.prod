@@ -39,7 +39,7 @@ COPY --from=builder /app/node_modules ./node_modules
 # Copy only required application files
 COPY --from=builder --chown=nodejs:nodejs /app/src ./src
 COPY --from=builder --chown=nodejs:nodejs /app/public ./public
-COPY --from=builder --chown=nodejs:nodejs /app/ecosystem.config.json ./
+COPY --from=builder --chown=nodejs:nodejs /app/ecosystem.config.js ./
 
 # Create runtime directories
 RUN mkdir -p uploads logs && chown -R nodejs:nodejs uploads logs
