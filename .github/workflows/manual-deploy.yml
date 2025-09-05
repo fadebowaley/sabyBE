@@ -23,7 +23,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/halobe
+  IMAGE_NAME: fadebowaley/halobe
   SERVICE_NAME: halobe
   SERVICE_PORT: 4000
 
