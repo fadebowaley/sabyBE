@@ -54,6 +54,7 @@ const corsOptions = {
   credentials: true,
 };
 
+
 /*
 Access-Control-Allow-Origin: http://localhost:3000
 Access-Control-Allow-Methods: GET, POST, PUT, DELETE
@@ -78,7 +79,7 @@ if (config.env === 'production') {
 app.get('/', (req, res) => {
   res.status(200).json({
     status: 'OK',
-    message: 'Saby is on Fire🔥🔥🔥🔥 running with HOT RELOAD! 🚀',
+    message: 'Saby is on Fire 🔥 🔥 🔥 🔥 !',
     timestamp: new Date().toISOString(),
     environment: config.env,
     version: '1.0.0',
