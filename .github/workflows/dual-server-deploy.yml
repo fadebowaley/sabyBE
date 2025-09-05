@@ -22,7 +22,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/halobe
+  IMAGE_NAME: fadebowaley/sabybe/halobe
 
   # Server Configuration
   PRODUCTION_HOST: ${{ secrets.PRODUCTION_SERVER_IP }}
