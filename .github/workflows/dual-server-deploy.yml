@@ -23,15 +23,20 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: fadebowaley/sabybe/halobe
-  
+
   # Server Configuration
   PRODUCTION_HOST: 172.191.51.123
   PRODUCTION_USER: haloadmin
   STAGING_HOST: ${{ secrets.STAGING_SERVER_IP }}
   STAGING_USER: haloadmin
-  
+
   # SSH Configuration
   SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
+permissions:
+  contents: write   # allow creating releases
+  packages: write   # allow pushing docker images
+
 
 jobs:
   # =============================================================================
