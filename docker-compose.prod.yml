@@ -2,10 +2,11 @@
 services:
   # Production Backend Service
   halobe:
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
+    # build:
+      # context: .
+      # dockerfile: Dockerfile.prod
     container_name: halo-prod-backend
+    image: halo-halobe:production
     ports:
       - "4000:4000"
     environment:
