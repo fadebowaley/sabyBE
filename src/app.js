@@ -81,6 +81,7 @@ app.get('/', (req, res) => {
     status: 'OK',
     message:
       '🚀 “The Lord sustains me; he guides me along right paths.” – Psalm 23:3 | Saby Live v1.4.1 🌟',
+
     timestamp: new Date().toISOString(),
     environment: config.env,
     version: '1.0.0',
@@ -91,7 +92,8 @@ app.get('/', (req, res) => {
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
-    message: 'Halo Backend API is healthy - PRODUCTION BRANCH TEST v1.3.0 - 2025-09-05',
+    message:
+    '🚀 “The Lord sustains me; he guides me along right paths.” – Psalm 23:3 | Saby Live v1.4.1 🌟',
     timestamp: new Date().toISOString(),
     environment: config.env,
     version: '1.0.0',
