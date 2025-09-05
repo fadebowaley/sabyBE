@@ -89,7 +89,8 @@ app.get('/', (req, res) => {
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
-    message: 'DEVELOP BRANCH TEST v1.4.1 - STAGING DEPLOYMENT TRIGGERED',
+    message:
+      '🛠️ “I will restore you to health and heal your wounds.” – Jeremiah 30:17 | Saby Staging v1.0.0 🔧',
     timestamp: new Date().toISOString(),
     environment: config.env,
     version: '1.0.0',
