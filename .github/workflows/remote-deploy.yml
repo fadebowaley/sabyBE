@@ -2,7 +2,7 @@ name: 🚀 Remote Server Deployment
 
 on:
   push:
-    branches: [ production ]
+    branches: [ staging ]
     tags: [ 'v*' ]
   workflow_dispatch:
     inputs:
