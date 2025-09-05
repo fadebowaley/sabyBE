@@ -2,7 +2,7 @@ name: 🚀 Dual Server Deployment (Staging + Production)
 
 on:
   push:
-    branches: [ production, develop ]
+    branches: [ main, develop ]
     tags: [ 'v*' ]
   workflow_dispatch:
     inputs:
@@ -239,7 +239,7 @@ jobs:
           IMAGE_TAG="${GITHUB_REF#refs/tags/}"
         else
           ENVIRONMENT="production"
-          IMAGE_TAG="production"
+          IMAGE_TAG="main"
         fi
         
         echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
@@ -267,7 +267,7 @@ jobs:
         # Pull latest code
         echo "📥 Pulling latest code..."
         git fetch origin
-        git reset --hard origin/production
+        git reset --hard origin/main
         
         # Pull the Docker image
         echo "🐳 Pulling Docker image: ${{ steps.deploy.outputs.FULL_IMAGE }}"
