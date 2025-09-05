@@ -1,52 +1,56 @@
-# Multi-stage production build for Halo Backend
+# ---------------------------------------------------
+# Stage 1: Builder
+# ---------------------------------------------------
 FROM node:18-alpine AS builder
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files (ensures cached layer if only code changes)
 COPY package*.json ./
 
-# Install all dependencies (including dev dependencies for build)
+# Install all dependencies (dev + prod)
 RUN npm ci
 
-# Copy source code
+# Copy the rest of the source code
 COPY . .
 
-# Build the application (if you have build scripts)
+# (Optional) Build step, e.g., TypeScript transpile or bundling
 # RUN npm run build
 
-# Production stage
+
+# ---------------------------------------------------
+# Stage 2: Production
+# ---------------------------------------------------
 FROM node:18-alpine AS production
 
-# Create app user for security
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs \
+ && adduser -S nodejs -u 1001
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy only package files first (to keep cache layers efficient)
 COPY package*.json ./
 
-# Install only production dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Copy production node_modules from builder (skip re-install)
+COPY --from=builder /app/node_modules ./node_modules
 
-# Copy built application from builder stage
+# Copy only required application files
 COPY --from=builder --chown=nodejs:nodejs /app/src ./src
 COPY --from=builder --chown=nodejs:nodejs /app/public ./public
 COPY --from=builder --chown=nodejs:nodejs /app/ecosystem.config.js ./
 
-# Create uploads directory
+# Create runtime directories
 RUN mkdir -p uploads logs && chown -R nodejs:nodejs uploads logs
 
 # Switch to non-root user
 USER nodejs
 
-# Expose port
+# Expose backend port
 EXPOSE 4000
 
-# Health check
+# Health check for container orchestration
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:4000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
 

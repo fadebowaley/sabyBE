@@ -19,3 +19,4 @@ notes/
 docker-compose.override.yml
 create-azure-staging-vm.sh
 azure-vm-setup-guide.md
+Dockerfile.prod.bk
