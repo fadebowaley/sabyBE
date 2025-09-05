@@ -239,7 +239,7 @@ jobs:
           fi
         elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
           ENVIRONMENT="production"
-          IMAGE_TAG="${GITHUB_REF#refs/tags/}"
+          IMAGE_TAG="${GITHUB_REF#refs/tags/v}"
         else
           ENVIRONMENT="production"
           IMAGE_TAG="main"
