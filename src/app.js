@@ -77,11 +77,11 @@ if (config.env === 'production') {
 // Health check endpoint
 app.get('/', (req, res) => {
   res.status(200).json({
-    status: "OK",
-    message: "🔥 Saby Backend API is running with HOT RELOAD! 🚀",
+    status: 'OK',
+    message: 'Saby is on Fire🔥🔥🔥🔥 running with HOT RELOAD! 🚀',
     timestamp: new Date().toISOString(),
     environment: config.env,
-    version: "1.0.0",
+    version: '1.0.0',
   });
 });
 
