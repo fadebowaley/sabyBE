@@ -19,7 +19,7 @@ services:
       - POSTGRES_DB=halo-prod
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_PASSWORD=@redispassword2025
       - JWT_SECRET=${JWT_SECRET:-production-jwt-secret-change-this}
       - HALOFE_URL=${HALOFE_URL:-http://localhost:3000}
       # Production storage configuration
@@ -102,12 +102,12 @@ services:
   redis:
     image: redis:7-alpine
     container_name: halo-prod-redis
-    command: redis-server --requirepass ${REDIS_PASSWORD:-}
+    command: redis-server --requirepass @redispassword2025
     networks:
       - halo-prod-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "@redispassword2025", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
