@@ -90,7 +90,7 @@ app.get('/', (req, res) => {
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
-    message: 'Halo Backend API is healthy - AUTOMATED DEPLOYMENT TEST v1.2.0 - 2025-09-05',
+    message: 'Halo Backend API is healthy - PRODUCTION BRANCH TEST v1.3.0 - 2025-09-05',
     timestamp: new Date().toISOString(),
     environment: config.env,
     version: '1.0.0',
