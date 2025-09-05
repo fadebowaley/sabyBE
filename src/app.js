@@ -77,11 +77,12 @@ if (config.env === 'production') {
 // Health check endpoint
 app.get('/', (req, res) => {
   res.status(200).json({
-    status: "OK",
-    message: "🔥 Halo Backend API is running with HOT RELOAD! 🚀",
+    status: 'OK',
+    message:
+      '🛠️ “I will restore you to health and heal your wounds.” – Jeremiah 30:17 | Saby Staging v1.0.0 🔧',
     timestamp: new Date().toISOString(),
-    environment: config.env,
-    version: "1.0.0",
+    environment: 'staging',
+    version: '1.0.0',
   });
 });
 
@@ -92,7 +93,7 @@ app.get('/api/health', (req, res) => {
     message:
       '🛠️ “I will restore you to health and heal your wounds.” – Jeremiah 30:17 | Saby Staging v1.0.0 🔧',
     timestamp: new Date().toISOString(),
-    environment: config.env,
+    environment: 'staging',
     version: '1.0.0',
   });
 });
