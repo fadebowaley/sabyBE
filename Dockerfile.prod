@@ -28,7 +28,6 @@ FROM node:18-alpine AS production
 RUN addgroup -g 1001 -S nodejs \
  && adduser -S nodejs -u 1001
 
-# Install PM2 globally
 
 WORKDIR /app
 

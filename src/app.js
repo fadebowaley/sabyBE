@@ -86,7 +86,7 @@ app.get('/', (req, res) => {
 });
 
 // Health check endpoint (alternative)
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     message: 'Halo Backend API is healthy',
