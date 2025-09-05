@@ -78,7 +78,7 @@ if (config.env === 'production') {
 app.get('/', (req, res) => {
   res.status(200).json({
     status: "OK",
-    message: "🔥 Halo Backend API is running with HOT RELOAD! 🚀",
+    message: "🔥 Saby Backend API is running with HOT RELOAD! 🚀",
     timestamp: new Date().toISOString(),
     environment: config.env,
     version: "1.0.0",
