@@ -81,7 +81,8 @@ print_usage() {
     echo "Environments:"
     echo "  local     Local development (default)"
     echo "  prod      Production"
-    echo "  dev       Development with hot reload"
+    echo "  dev       Development with hot reload
+  staging   Staging environment"
     echo ""
     echo "Examples:"
     echo "  $0 build local"
@@ -166,8 +167,16 @@ get_compose_file() {
                 exit 1
             fi
             ;;
+        staging)
+            if [ -f "docker-compose.staging.yml" ]; then
+                echo "docker-compose.staging.yml"
+            else
+                print_error "Staging compose file not found: docker-compose.staging.yml"
+                exit 1
+            fi
+            ;;
         *)
-            print_error "Invalid environment: $env. Use 'local', 'prod', or 'dev'"
+            print_error "Invalid environment: $env. Use 'local', 'prod', 'dev', or 'staging'"
             exit 1
             ;;
     esac
