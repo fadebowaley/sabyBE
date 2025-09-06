@@ -93,7 +93,7 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     message:
-    '🚀 “The Lord sustains me; he guides me along right paths.” – Psalm 23:3 | Saby Live v1.4.1 🌟',
+    '🚀 “The Lord sustains me; he guides me along right paths.” – Psalm 23:3 | Saby Live v1.4.1 🌟- Mo Version',
     timestamp: new Date().toISOString(),
     environment: config.env,
     version: '1.0.0',
