@@ -1,9 +1,7 @@
 services:
   # Staging Backend Service
   halobe:
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
+    image: ghcr.io/fadebowaley/sabybe/halobe:develop
     container_name: halo-staging-backend
     ports:
       - "4000:4000"
