@@ -146,8 +146,23 @@ jobs:
         ssh -i ~/.ssh/staging_key -o StrictHostKeyChecking=no ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
           set -e
           
+          # Create application directory if it doesn't exist
+          sudo mkdir -p /opt/halo-backend
+          sudo chown $USER:$USER /opt/halo-backend
+          
           # Navigate to application directory
-          cd /opt/halo-backend || { echo "❌ Application directory not found"; exit 1; }
+          cd /opt/halo-backend
+          
+          # Clone or update repository if needed
+          if [ ! -f "docker-compose.dev.yml" ]; then
+            echo "📥 Setting up application for first time..."
+            git clone https://github.com/fadebowaley/sabyBE.git .
+          else
+            echo "🔄 Updating existing application..."
+            git fetch origin
+            git checkout production
+            git pull origin production
+          fi
           
           # Create environment file with remote PostgreSQL configuration
           cat > .env.staging << ENVEOF
@@ -250,8 +265,24 @@ jobs:
         ssh -i ~/.ssh/production_key -o StrictHostKeyChecking=no ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_HOST }} << 'EOF'
           set -e
           
+          # Create application directory if it doesn't exist
+          sudo mkdir -p /opt/halo-backend
+          sudo chown $USER:$USER /opt/halo-backend
+          
           # Navigate to application directory
-          cd /opt/halo-backend || { echo "❌ Application directory not found"; exit 1; }
+          cd /opt/halo-backend
+          
+          # Clone or update repository if needed
+          if [ ! -f "docker-compose.prod.yml" ]; then
+            echo "📥 Setting up application for first time..."
+            git clone https://github.com/fadebowaley/sabyBE.git .
+            git checkout production
+          else
+            echo "🔄 Updating existing application..."
+            git fetch origin
+            git checkout production
+            git pull origin production
+          fi
           
           # Create environment file with remote PostgreSQL configuration
           cat > .env.production << ENVEOF
