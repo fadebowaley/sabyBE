@@ -1,0 +1,358 @@
+{
+  "id": "c3a9a4c8-1234-4d56-9b78-98765abc4321",
+  "tenant_id": "rccg_global",
+  "project_id": "growth_tracker",
+  "form_id": "church_growth_2025_09",
+  "node_id": "Lagos_Central",
+  "user_id": "user_admin_01",
+  "source": "mobile_app",
+  "status": "submitted",
+  "project_name": "Monthly Growth Report",
+  "project_category": "church_growth",
+  "event_date": "2025-09-30",
+
+  "data": {
+    "attendance": {
+      "settings": {
+        "title": "Attendance",
+        "description": "Attendance per service",
+        "required": true,
+        "dates": {
+          "start": "2025-09-01",
+          "end": "2025-09-30"
+        },
+        "date_enforcement": [
+          {
+            "service": "sunday_service",
+            "valid_dates": [
+              "2025-09-07",
+              "2025-09-14",
+              "2025-09-21",
+              "2025-09-28"
+            ]
+          },
+          {
+            "service": "bible_study",
+            "valid_dates": [
+              "2025-09-01",
+              "2025-09-08",
+              "2025-09-15",
+              "2025-09-22",
+              "2025-09-29"
+            ]
+          },
+          {
+            "service": "prayer_meeting",
+            "valid_dates": [
+              "2025-09-03",
+              "2025-09-10",
+              "2025-09-17",
+              "2025-09-24"
+            ]
+          }
+        ],
+        "compliance": {
+          "per_service_required": true,
+          "weekly_submission_window": true,
+          "notifications": {
+            "reminders": ["next_day", "end_of_week"],
+            "escalation": "end_of_month"
+          }
+        }
+      },
+      "records": [
+        {
+          "service": "sunday_service",
+          "week": 1,
+          "date": "2025-09-07",
+          "men": 120,
+          "women": 150,
+          "youth": 80,
+          "children": 60,
+          "total": 410
+        },
+        {
+          "service": "bible_study",
+          "week": 1,
+          "date": "2025-09-01",
+          "men": 40,
+          "women": 65,
+          "youth": 30,
+          "children": 15,
+          "total": 150
+        },
+        {
+          "service": "prayer_meeting",
+          "week": 1,
+          "date": "2025-09-03",
+          "men": 55,
+          "women": 75,
+          "youth": 35,
+          "children": 20,
+          "total": 185
+        },
+
+        {
+          "service": "sunday_service",
+          "week": 2,
+          "date": "2025-09-14",
+          "men": 125,
+          "women": 155,
+          "youth": 90,
+          "children": 70,
+          "total": 440
+        },
+        {
+          "service": "bible_study",
+          "week": 2,
+          "date": "2025-09-08",
+          "men": 45,
+          "women": 70,
+          "youth": 35,
+          "children": 20,
+          "total": 170
+        },
+        {
+          "service": "prayer_meeting",
+          "week": 2,
+          "date": "2025-09-10",
+          "men": 60,
+          "women": 80,
+          "youth": 40,
+          "children": 25,
+          "total": 205
+        },
+
+        {
+          "service": "sunday_service",
+          "week": 3,
+          "date": "2025-09-21",
+          "men": 130,
+          "women": 160,
+          "youth": 100,
+          "children": 80,
+          "total": 470
+        },
+        {
+          "service": "bible_study",
+          "week": 3,
+          "date": "2025-09-15",
+          "men": 50,
+          "women": 75,
+          "youth": 40,
+          "children": 20,
+          "total": 185
+        },
+        {
+          "service": "prayer_meeting",
+          "week": 3,
+          "date": "2025-09-17",
+          "men": 65,
+          "women": 85,
+          "youth": 45,
+          "children": 25,
+          "total": 220
+        },
+
+        {
+          "service": "sunday_service",
+          "week": 4,
+          "date": "2025-09-28",
+          "men": 135,
+          "women": 165,
+          "youth": 105,
+          "children": 85,
+          "total": 490
+        },
+        {
+          "service": "bible_study",
+          "week": 4,
+          "date": "2025-09-22",
+          "men": 55,
+          "women": 80,
+          "youth": 45,
+          "children": 25,
+          "total": 205
+        },
+        {
+          "service": "prayer_meeting",
+          "week": 4,
+          "date": "2025-09-24",
+          "men": 70,
+          "women": 90,
+          "youth": 50,
+          "children": 30,
+          "total": 240
+        }
+      ]
+    },
+
+    "financial": {
+      "settings": {
+        "title": "Financial Contributions",
+        "description": "Offerings, Tithes, and Special Contributions",
+        "required": true,
+        "rules": {
+          "offering": { "percentage": 50 },
+          "tithe": { "percentage": 25 },
+          "special": { "min_amount": 1000 }
+        },
+        "compliance": {
+          "validate_percentages": true,
+          "notify_on_violation": true
+        }
+      },
+      "records": [
+        {
+          "week": 1,
+          "date": "2025-09-07",
+          "offering": 5000,
+          "tithe": 2500,
+          "special": 1500,
+          "total": 9000
+        },
+        {
+          "week": 1,
+          "date": "2025-09-01",
+          "offering": 2000,
+          "tithe": 1000,
+          "special": 800,
+          "total": 3800
+        },
+        {
+          "week": 1,
+          "date": "2025-09-03",
+          "offering": 2500,
+          "tithe": 1200,
+          "special": 1000,
+          "total": 4700
+        },
+
+        {
+          "week": 2,
+          "date": "2025-09-14",
+          "offering": 5200,
+          "tithe": 2600,
+          "special": 1800,
+          "total": 9600
+        },
+        {
+          "week": 2,
+          "date": "2025-09-08",
+          "offering": 2100,
+          "tithe": 1100,
+          "special": 900,
+          "total": 4100
+        },
+        {
+          "week": 2,
+          "date": "2025-09-10",
+          "offering": 2600,
+          "tithe": 1300,
+          "special": 1100,
+          "total": 5000
+        },
+
+        {
+          "week": 3,
+          "date": "2025-09-21",
+          "offering": 5400,
+          "tithe": 2700,
+          "special": 2000,
+          "total": 10100
+        },
+        {
+          "week": 3,
+          "date": "2025-09-15",
+          "offering": 2200,
+          "tithe": 1150,
+          "special": 950,
+          "total": 4300
+        },
+        {
+          "week": 3,
+          "date": "2025-09-17",
+          "offering": 2700,
+          "tithe": 1350,
+          "special": 1200,
+          "total": 5250
+        },
+
+        {
+          "week": 4,
+          "date": "2025-09-28",
+          "offering": 5600,
+          "tithe": 2800,
+          "special": 2200,
+          "total": 10600
+        },
+        {
+          "week": 4,
+          "date": "2025-09-22",
+          "offering": 2300,
+          "tithe": 1200,
+          "special": 1000,
+          "total": 4500
+        },
+        {
+          "week": 4,
+          "date": "2025-09-24",
+          "offering": 2800,
+          "tithe": 1400,
+          "special": 1300,
+          "total": 5500
+        }
+      ]
+    },
+
+    "first_timers": {
+      "settings": {
+        "title": "First Timers",
+        "description": "List of first-time attendees",
+        "required": false
+      },
+      "records": [
+        {
+          "date": "2025-09-07",
+          "name": "John Doe",
+          "contact": { "phone": "+2348012345678", "email": "john@example.com" },
+          "follow_up_status": "pending"
+        },
+        {
+          "date": "2025-09-01",
+          "name": "Mary James",
+          "contact": { "phone": "+2348098765432", "email": "mary@example.com" },
+          "follow_up_status": "in_progress"
+        },
+        {
+          "date": "2025-09-14",
+          "name": "Peter Obi",
+          "contact": {
+            "phone": "+2348055555555",
+            "email": "peter@example.com"
+          },
+          "follow_up_status": "completed"
+        },
+        {
+          "date": "2025-09-21",
+          "name": "Grace Ade",
+          "contact": {
+            "phone": "+2348077777777",
+            "email": "grace@example.com"
+          },
+          "follow_up_status": "pending"
+        }
+      ]
+    }
+  },
+
+  "meta": {
+    "submitted_by": "Pastor John",
+    "submission_device": "mobile",
+    "submission_version": "v1.2.0",
+    "week_range": [1, 4],
+    "month": "September",
+    "year": 2025,
+    "compliance_status": "complete"
+  }
+}
