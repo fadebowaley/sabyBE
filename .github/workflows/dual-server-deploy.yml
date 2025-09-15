@@ -34,11 +34,11 @@ env:
   SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 
   # Remote PostgreSQL Configuration
-  POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
-  POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
-  POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-  POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+  POSTGRES_HOST: 20.169.129.160
+  POSTGRES_PORT: 5432
+  POSTGRES_USER: sabyagentic_user
+  POSTGRES_PASSWORD: WcKoT/m9hFGMaiztjci/reLyMVln9qE0ReAaHc0Cb8E=
+  POSTGRES_DB: halograph
 
 permissions:
   contents: write   # allow creating releases
