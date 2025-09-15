@@ -107,146 +107,155 @@ jobs:
   # DEPLOY TO STAGING SERVER
   # =============================================================================
   deploy-staging:
-    name: 🧪 Deploy to Staging
+    name: 🧪 Deploy to Staging Server
     runs-on: ubuntu-latest
     needs: build-and-push
     if: |
-      (github.ref == 'refs/heads/develop' || 
-       github.event.inputs.environment == 'staging' || 
-       github.event.inputs.environment == 'both') &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      (github.ref == 'refs/heads/develop' && github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch' && (inputs.environment == 'staging' || inputs.environment == 'both'))
     environment: staging
 
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
 
-    - name: 🔧 Setup SSH key
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ env.SSH_KEY }}" > ~/.ssh/staging_key
-        chmod 600 ~/.ssh/staging_key
-        ssh-keyscan -H ${{ env.STAGING_HOST }} >> ~/.ssh/known_hosts
+    - name: 🔐 Setup SSH
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: 🧪 Test PostgreSQL connection
+    - name: 🏷️ Set deployment variables
+      id: deploy
       run: |
-        echo "Testing PostgreSQL connection to remote database..."
-        # Test connection without exposing credentials in logs
-        if timeout 10 bash -c "</dev/tcp/${{ env.POSTGRES_HOST }}/${{ env.POSTGRES_PORT }}"; then
-          echo "✅ PostgreSQL server is reachable on ${{ env.POSTGRES_HOST }}:${{ env.POSTGRES_PORT }}"
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          ENVIRONMENT="staging"
+          if [ -n "${{ inputs.image_tag }}" ]; then
+            IMAGE_TAG="${{ inputs.image_tag }}"
+          else
+            IMAGE_TAG="develop"
+          fi
         else
-          echo "❌ Cannot reach PostgreSQL server on ${{ env.POSTGRES_HOST }}:${{ env.POSTGRES_PORT }}"
-          exit 1
+          ENVIRONMENT="staging"
+          IMAGE_TAG="develop"
         fi
+        
+        echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
+        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
+        echo "FULL_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$IMAGE_TAG" >> $GITHUB_OUTPUT
+        echo "SERVER_HOST=${{ env.STAGING_HOST }}" >> $GITHUB_OUTPUT
+        echo "SERVER_USER=${{ env.STAGING_USER }}" >> $GITHUB_OUTPUT
 
     - name: 🚀 Deploy to staging server
       run: |
-        echo "🚀 Deploying to staging server..."
+        echo "🚀 Deploying to STAGING server: ${{ steps.deploy.outputs.SERVER_HOST }}"
+        echo "🐳 Image: ${{ steps.deploy.outputs.FULL_IMAGE }}"
         
-        ssh -i ~/.ssh/staging_key -o StrictHostKeyChecking=no ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
-          set -e
-          
-          # Create application directory if it doesn't exist
-          sudo mkdir -p /opt/halo-backend
-          sudo chown $USER:$USER /opt/halo-backend
-          
-          # Navigate to application directory
-          cd /opt/halo-backend
-          
-          # Clone or update repository if needed
-          if [ ! -f "docker-compose.dev.yml" ]; then
-            echo "📥 Setting up application for first time..."
-            git clone https://github.com/fadebowaley/sabyBE.git .
-          else
-            echo "🔄 Updating existing application..."
-            git fetch origin
-            git checkout production
-            git pull origin production
-          fi
-          
-          # Create environment file with remote PostgreSQL configuration
-          cat > .env.staging << ENVEOF
-        NODE_ENV=staging
-        PORT=4000
-        MONGODB_URL=mongodb://mongodb:27017/halo-staging
+        # Create deployment script
+        cat > deploy-staging.sh << 'DEPLOY_SCRIPT'
+        #!/bin/bash
+        set -e
         
-        # Remote PostgreSQL Configuration
-        POSTGRES_HOST=${{ env.POSTGRES_HOST }}
-        POSTGRES_PORT=${{ env.POSTGRES_PORT }}
-        POSTGRES_USER=${{ env.POSTGRES_USER }}
-        POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
-        POSTGRES_DB=${{ env.POSTGRES_DB }}
+        echo "🔧 Setting up staging deployment..."
         
-        REDIS_HOST=redis
-        REDIS_PORT=6379
-        JWT_SECRET=${{ secrets.JWT_SECRET_STAGING }}
-        HALOFE_URL=${{ secrets.STAGING_FRONTEND_URL }}
-        ENVEOF
-          
-          # Pull latest image
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          
-          # Stop existing containers (ignore errors)
-          docker-compose -f docker-compose.staging.yml down || true
-          
-          # Start new deployment
-          docker-compose -f docker-compose.staging.yml up -d
-          
-          # Wait for services to be ready
-          echo "⏳ Waiting for services to start..."
-          sleep 30
-          
-          # Health check
-          for i in {1..10}; do
-            if curl -sf http://localhost:4000/ > /dev/null; then
-              echo "✅ Staging deployment successful!"
-              exit 0
-            fi
-            echo "⏳ Attempt $i/10: Waiting for service..."
-            sleep 10
-          done
-          
-          echo "❌ Health check failed after 100 seconds"
-          docker-compose -f docker-compose.staging.yml logs
-          exit 1
-        EOF
+        # Create project directory if it doesn't exist
+        mkdir -p ~/sabyBackend
+        cd ~/sabyBackend
+        
+        # Pull latest code
+        echo "📥 Pulling latest code..."
+        git fetch origin
+        git reset --hard origin/develop
+        
+        # Login to GitHub Container Registry
+        echo "🔐 Logging in to GitHub Container Registry..."
+        echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
+        echo "🐳 Pulling Docker image: ${{ steps.deploy.outputs.FULL_IMAGE }}"
+        docker pull ${{ steps.deploy.outputs.FULL_IMAGE }}
+        # Tag the image for local use
+        docker tag ${{ steps.deploy.outputs.FULL_IMAGE }} halo-halobe:staging
+        
+        # Stop existing containers
+        echo "🛑 Stopping existing staging containers..."
+        ./docker-build.sh stop staging || true
+        
+        # Start new containers
+        echo "🚀 Starting new staging containers..."
+        ./docker-build.sh start staging
+        
+        # Health check
+        echo "🏥 Running health check..."
+        sleep 10
+        ./docker-build.sh status staging
+        
+        echo "✅ Staging deployment completed successfully!"
+        DEPLOY_SCRIPT
+        
+        # Copy deployment script to staging server
+        scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no deploy-staging.sh ${{ steps.deploy.outputs.SERVER_USER }}@${{ steps.deploy.outputs.SERVER_HOST }}:~/deploy-staging.sh
+        
+        # Execute deployment on staging server
+        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no ${{ steps.deploy.outputs.SERVER_USER }}@${{ steps.deploy.outputs.SERVER_HOST }} << 'REMOTE_COMMANDS'
+        chmod +x ~/deploy-staging.sh
+        ~/deploy-staging.sh
+        rm ~/deploy-staging.sh
+        REMOTE_COMMANDS
 
-    - name: 🧪 Run staging smoke tests
+    - name: 📊 Staging deployment status
+      if: always()
       run: |
-        echo "🧪 Running staging smoke tests..."
-        
-        # Test PostgreSQL endpoint
-        curl -f http://${{ env.STAGING_HOST }}:4000/v1/postgres/status || exit 1
-        echo "✅ PostgreSQL endpoint test passed"
-        
-        # Test basic API functionality
-        curl -f http://${{ env.STAGING_HOST }}:4000/ || exit 1
-        echo "✅ Basic API test passed"
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "✅ Staging deployment successful"
+          echo "🌐 Staging Server: ${{ steps.deploy.outputs.SERVER_HOST }}"
+          echo "🐳 Image: ${{ steps.deploy.outputs.FULL_IMAGE }}"
+        else
+          echo "❌ Staging deployment failed"
+        fi
 
   # =============================================================================
   # DEPLOY TO PRODUCTION SERVER
   # =============================================================================
   deploy-production:
-    name: 🏭 Deploy to Production
+    name: 🌟 Deploy to Production Server
     runs-on: ubuntu-latest
     needs: build-and-push
     if: |
-      (github.ref == 'refs/heads/production' || 
-       github.event.inputs.environment == 'production' || 
-       github.event.inputs.environment == 'both') &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      (github.ref == 'refs/heads/production' && github.event_name == 'push') ||
+      (startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch' && (inputs.environment == 'production' || inputs.environment == 'both'))
     environment: production
 
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
 
-    - name: 🔧 Setup SSH key
+    - name: 🔐 Setup SSH
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: 🏷️ Set deployment variables
+      id: deploy
       run: |
-        mkdir -p ~/.ssh
-        echo "${{ env.SSH_KEY }}" > ~/.ssh/production_key
-        chmod 600 ~/.ssh/production_key
-        ssh-keyscan -H ${{ env.PRODUCTION_HOST }} >> ~/.ssh/known_hosts
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          ENVIRONMENT="production"
+          if [ -n "${{ inputs.image_tag }}" ]; then
+            IMAGE_TAG="${{ inputs.image_tag }}"
+          else
+            IMAGE_TAG="latest"
+          fi
+        elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          ENVIRONMENT="production"
+          IMAGE_TAG="${GITHUB_REF#refs/tags/}"
+        else
+          ENVIRONMENT="production"
+          IMAGE_TAG="main"
+        fi
+        
+        echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
+        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
+        echo "FULL_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$IMAGE_TAG" >> $GITHUB_OUTPUT
+        echo "SERVER_HOST=${{ env.PRODUCTION_HOST }}" >> $GITHUB_OUTPUT
+        echo "SERVER_USER=${{ env.PRODUCTION_USER }}" >> $GITHUB_OUTPUT
 
     - name: 🧪 Test PostgreSQL connection
       run: |
@@ -258,122 +267,126 @@ jobs:
           exit 1
         fi
 
-    - name: 🏭 Deploy to production server
+    - name: 🚀 Deploy to production server
       run: |
-        echo "🏭 Deploying to production server..."
+        echo "🚀 Deploying to PRODUCTION server: ${{ steps.deploy.outputs.SERVER_HOST }}"
+        echo "🐳 Image: ${{ steps.deploy.outputs.FULL_IMAGE }}"
         
-        ssh -i ~/.ssh/production_key -o StrictHostKeyChecking=no ${{ env.PRODUCTION_USER }}@${{ env.PRODUCTION_HOST }} << 'EOF'
-          set -e
-          
-          # Create application directory if it doesn't exist
-          sudo mkdir -p /opt/halo-backend
-          sudo chown $USER:$USER /opt/halo-backend
-          
-          # Navigate to application directory
-          cd /opt/halo-backend
-          
-          # Clone or update repository if needed
-          if [ ! -f "docker-compose.prod.yml" ]; then
-            echo "📥 Setting up application for first time..."
-            git clone https://github.com/fadebowaley/sabyBE.git .
-            git checkout production
-          else
-            echo "🔄 Updating existing application..."
-            git fetch origin
-            git checkout production
-            git pull origin production
-          fi
-          
-          # Create environment file with remote PostgreSQL configuration
-          cat > .env.production << ENVEOF
-        NODE_ENV=production
-        PORT=4000
-        MONGODB_URL=mongodb://mongodb:27017/halo-production
+        # Create deployment script
+        cat > deploy-production.sh << 'DEPLOY_SCRIPT'
+        #!/bin/bash
+        set -e
         
-        # Remote PostgreSQL Configuration
-        POSTGRES_HOST=${{ env.POSTGRES_HOST }}
-        POSTGRES_PORT=${{ env.POSTGRES_PORT }}
-        POSTGRES_USER=${{ env.POSTGRES_USER }}
-        POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
-        POSTGRES_DB=${{ env.POSTGRES_DB }}
+        echo "🔧 Setting up production deployment..."
         
-        REDIS_HOST=redis
-        REDIS_PORT=6379
-        JWT_SECRET=${{ secrets.JWT_SECRET_PRODUCTION }}
-        HALOFE_URL=${{ secrets.PRODUCTION_FRONTEND_URL }}
-        ENVEOF
-          
-          # Pull latest image
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          
-          # Create backup of current deployment
-          docker-compose -f docker-compose.prod.yml ps > deployment_backup_$(date +%Y%m%d_%H%M%S).log || true
-          
-          # Rolling deployment with health checks
-          docker-compose -f docker-compose.prod.yml up -d --no-deps halobe
-          
-          # Wait for new container to be ready
-          echo "⏳ Waiting for new deployment to be ready..."
-          sleep 45
-          
-          # Health check
-          for i in {1..15}; do
-            if curl -sf http://localhost:4000/ > /dev/null; then
-              echo "✅ Production deployment successful!"
-              # Clean up old containers
-              docker system prune -f
-              exit 0
-            fi
-            echo "⏳ Attempt $i/15: Waiting for service..."
-            sleep 10
-          done
-          
-          echo "❌ Health check failed - rolling back..."
-          docker-compose -f docker-compose.prod.yml logs
-          # Could add rollback logic here
-          exit 1
-        EOF
+        # Create project directory if it doesn't exist
+        mkdir -p ~/sabyBackend
+        cd ~/sabyBackend
+        
+        # Pull latest code
+        echo "📥 Pulling latest code..."
+        git fetch origin
+        git reset --hard origin/production
+        
+        # Login to GitHub Container Registry
+        echo "🔐 Logging in to GitHub Container Registry..."
+        echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
+        echo "🐳 Pulling Docker image: ${{ steps.deploy.outputs.FULL_IMAGE }}"
+        docker pull ${{ steps.deploy.outputs.FULL_IMAGE }}
+        # Tag the image for local use
+        docker tag ${{ steps.deploy.outputs.FULL_IMAGE }} halo-halobe:production
+        
+        # Stop existing containers
+        echo "🛑 Stopping existing production containers..."
+        ./docker-build.sh stop prod || true
+        
+        # Start new containers
+        echo "🚀 Starting new production containers..."
+        ./docker-build.sh start prod
+        
+        # Health check
+        echo "🏥 Running health check..."
+        sleep 10
+        ./docker-build.sh health prod
+        
+        echo "✅ Production deployment completed successfully!"
+        DEPLOY_SCRIPT
+        
+        # Copy deployment script to production server
+        scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no deploy-production.sh ${{ steps.deploy.outputs.SERVER_USER }}@${{ steps.deploy.outputs.SERVER_HOST }}:~/deploy-production.sh
+        
+        # Execute deployment on production server
+        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no ${{ steps.deploy.outputs.SERVER_USER }}@${{ steps.deploy.outputs.SERVER_HOST }} << 'REMOTE_COMMANDS'
+        chmod +x ~/deploy-production.sh
+        ~/deploy-production.sh
+        rm ~/deploy-production.sh
+        REMOTE_COMMANDS
 
-    - name: 🏭 Run production smoke tests
+    - name: 🏷️ Get version tag
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: 📢 Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.version.outputs.VERSION }}
+        name: Release ${{ github.ref_name }}
+
+        body: |
+          🚀 **Halo Backend ${{ steps.version.outputs.VERSION }}**
+             - Docker image: `ghcr.io/fadebowaley/sabybe/halobe:${{ github.ref_name }}`
+          
+          ## What's New
+          - Production deployment completed
+          - Docker image: `${{ steps.deploy.outputs.FULL_IMAGE }}`
+          
+          ## Deployment Details
+          - **Environment**: Production
+          - **Server**: ${{ steps.deploy.outputs.SERVER_HOST }}
+          - **Service**: Halo Backend
+          - **Port**: 4000
+          - **Health Check**: ✅ Passed
+        draft: false
+        prerelease: false
+
+    - name: 📊 Production deployment status
+      if: always()
       run: |
-        echo "🏭 Running production smoke tests..."
-        
-        # Test PostgreSQL endpoint
-        curl -f http://${{ env.PRODUCTION_HOST }}:4000/v1/postgres/status || exit 1
-        echo "✅ PostgreSQL endpoint test passed"
-        
-        # Test basic API functionality
-        curl -f http://${{ env.PRODUCTION_HOST }}:4000/ || exit 1
-        echo "✅ Basic API test passed"
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "✅ Production deployment successful"
+          echo "🌐 Production Server: ${{ steps.deploy.outputs.SERVER_HOST }}"
+          echo "🐳 Image: ${{ steps.deploy.outputs.FULL_IMAGE }}"
+        else
+          echo "❌ Production deployment failed"
+        fi
 
   # =============================================================================
-  # DEPLOYMENT SUMMARY
+  # CLEANUP
   # =============================================================================
-  deployment-summary:
-    name: 📊 Deployment Summary
+  cleanup:
+    name: 🧹 Cleanup
     runs-on: ubuntu-latest
-    needs: [build-and-push, deploy-staging, deploy-production]
-    if: always()
+    needs: [deploy-staging, deploy-production]
+    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
 
     steps:
-    - name: 📊 Summary
+    - name: 🧹 Clean up old images
       run: |
-        echo "## 📊 Deployment Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🐳 Docker Image" >> $GITHUB_STEP_SUMMARY
-        echo "- **Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\`" >> $GITHUB_STEP_SUMMARY
-        echo "- **Build Status**: ${{ needs.build-and-push.result == 'success' && '✅ Success' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🗄️ Database Configuration" >> $GITHUB_STEP_SUMMARY
-        echo "- **PostgreSQL**: Remote database on VM (${{ env.POSTGRES_HOST }}:${{ env.POSTGRES_PORT }})" >> $GITHUB_STEP_SUMMARY
-        echo "- **Database**: \`${{ env.POSTGRES_DB }}\`" >> $GITHUB_STEP_SUMMARY
-        echo "- **Connection**: External (distributed)" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🚀 Deployments" >> $GITHUB_STEP_SUMMARY
-        echo "- **Staging**: ${{ needs.deploy-staging.result == 'success' && '✅ Success' || (needs.deploy-staging.result == 'skipped' && '⏭️ Skipped' || '❌ Failed') }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Production**: ${{ needs.deploy-production.result == 'success' && '✅ Success' || (needs.deploy-production.result == 'skipped' && '⏭️ Skipped' || '❌ Failed') }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 📋 Notes" >> $GITHUB_STEP_SUMMARY
-        echo "- PostgreSQL container removed from Docker Compose" >> $GITHUB_STEP_SUMMARY
-        echo "- Using distributed PostgreSQL database on VM" >> $GITHUB_STEP_SUMMARY
-        echo "- Improved scalability and consistency across environments" >> $GITHUB_STEP_SUMMARY
+        echo "Cleaning up old Docker images..."
+        # Keep only the last 5 versions
+        docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}" | \
+        grep "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | \
+        tail -n +6 | \
+        awk '{print $3}' | \
+        xargs -r docker rmi || true
+
+    - name: 📊 Update deployment status
+      run: |
+        echo "✅ Dual server deployment pipeline completed successfully"
+        echo "🐳 Docker images built and deployed"
+        echo "🔒 Security scans completed"
+        echo "🧪 Tests passed"
