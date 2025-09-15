@@ -13,7 +13,7 @@ services:
     networks:
       - halo-local
 
-  # PostgreSQL for local testing
+  # PostgreSQL for local testing (OPTIONAL - can use remote instead)
   postgres:
     image: postgres:15
     container_name: halo-local-postgres
@@ -27,6 +27,9 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - halo-local
+    # Uncomment if you want to use local PostgreSQL instead of remote
+    profiles:
+      - local-postgres
 
   # Redis for local testing
   redis:
@@ -49,19 +52,26 @@ services:
       - NODE_ENV=development
       - PORT=4000
       - MONGODB_URL=mongodb://mongodb:27017/halo-local
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=halo-local
+      # Remote PostgreSQL configuration (default)
+      - POSTGRES_HOST=${POSTGRES_HOST:-20.169.129.160}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-sabyagentic_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-WcKoT/m9hFGMaiztjci/reLyMVln9qE0ReAaHc0Cb8E=}
+      - POSTGRES_DB=${POSTGRES_DB:-halograph}
+      # To use local PostgreSQL instead, set these in your .env:
+      # POSTGRES_HOST=postgres
+      # POSTGRES_USER=postgres
+      # POSTGRES_PASSWORD=password
+      # POSTGRES_DB=halo-local
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - JWT_SECRET=local-dev-secret-key-change-in-production
       - HALOFE_URL=http://localhost:3000
     depends_on:
       - mongodb
-      - postgres
       - redis
+      # Uncomment if using local PostgreSQL
+      # - postgres
     volumes:
       - .:/app
       - /app/node_modules
@@ -71,7 +81,7 @@ services:
 
 volumes:
   mongodb_data:
-  postgres_data:
+  postgres_data:  # Keep for backward compatibility with local PostgreSQL
 
 networks:
   halo-local:
