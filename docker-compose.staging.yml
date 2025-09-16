@@ -9,11 +9,11 @@ services:
       - NODE_ENV=staging
       - PORT=4000
       - MONGODB_URL=mongodb://mongodb:27017/halo-staging
-      - POSTGRES_HOST=postgres
+      - POSTGRES_HOST=20.169.129.160
       - POSTGRES_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-staging-password}
-      - POSTGRES_DB=halo-staging
+      - POSTGRES_USER=sabyagentic_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-WcKoT/m9hFGMaiztjci/reLyMVln9qE0ReAaHc0Cb8E=}
+      - POSTGRES_DB=halograph
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-staging-redis-password}
@@ -40,8 +40,6 @@ services:
       - WHATSAPP_TOKEN=${WHATSAPP_TOKEN}
     depends_on:
       mongodb:
-        condition: service_healthy
-      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -76,24 +74,6 @@ services:
       start_period: 40s
 
   # Staging PostgreSQL
-  postgres:
-    image: postgres:15
-    container_name: halo-staging-postgres
-    environment:
-      POSTGRES_DB: halo-staging
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-staging-password}
-    volumes:
-      - postgres_staging_data:/var/lib/postgresql/data
-    networks:
-      - halo-staging-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   # Staging Redis
   redis:
@@ -112,7 +92,6 @@ services:
 
 volumes:
   mongodb_staging_data:
-  postgres_staging_data:
 
 networks:
   halo-staging-network:
