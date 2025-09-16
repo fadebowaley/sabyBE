@@ -29,7 +29,8 @@
     "permissions:dry": "node src/scripts/permissions/generate.js --dry-run",
     "permissions:clean": "node src/scripts/permissions/generate.js --seed --remove-obsolete",
     "create-super-user": "node src/scripts/create-super-user.js",
-    "list-users": "node src/scripts/list-users.js"
+    "list-users": "node src/scripts/list-users.js",
+    "create-table": "node scripts/create-tables.js"
   },
   "keywords": [
     "halo",

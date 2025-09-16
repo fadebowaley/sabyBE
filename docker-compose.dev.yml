@@ -12,11 +12,12 @@ services:
       - DEBUG=*
       - PORT=4000
       - MONGODB_URL=mongodb://mongodb:27017/halo-dev
-      - POSTGRES_HOST=postgres
+      # Remote PostgreSQL configuration
+      - POSTGRES_HOST=20.169.129.160
       - POSTGRES_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=halo-dev
+      - POSTGRES_USER=sabyagentic_user
+      - POSTGRES_PASSWORD=WcKoT/m9hFGMaiztjci/reLyMVln9qE0ReAaHc0Cb8E=
+      - POSTGRES_DB=halograph
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - JWT_SECRET=dev-jwt-secret-key
@@ -37,14 +38,12 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
       mailhog:
         condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:4000/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -71,33 +70,14 @@ services:
       retries: 3
       start_period: 40s
 
-  # Development PostgreSQL
-  postgres:
-    image: postgres:15
-    container_name: halo-dev-postgres
-    ports:
-      - "5434:5432"
-    environment:
-      POSTGRES_DB: halo-dev
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    volumes:
-      - postgres_dev_data:/var/lib/postgresql/data
-    networks:
-      - halo-dev-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+  # NOTE: PostgreSQL service removed - now using remote PostgreSQL on VM
 
   # Development Redis
   redis:
     image: redis:7-alpine
     container_name: halo-dev-redis
     ports:
-      - "6381:6379"
+      - "6380:6379"
     networks:
       - halo-dev-network
     healthcheck:
@@ -107,25 +87,19 @@ services:
       retries: 3
       start_period: 40s
 
-  # MailHog for email testing in development
+  # MailHog for email testing
   mailhog:
     image: mailhog/mailhog:latest
     container_name: halo-dev-mailhog
     ports:
-      - "1026:1025" # SMTP
-      - "8026:8025" # Web UI
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
     networks:
       - halo-dev-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8025/api/v2/messages"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
 volumes:
   mongodb_dev_data:
-  postgres_dev_data:
+  # Removed postgres_dev_data volume - using remote PostgreSQL
 
 networks:
   halo-dev-network:

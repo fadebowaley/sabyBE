@@ -1,13 +1,11 @@
 const mongoose = require('mongoose');
-const config = require('./src/config/config');
-const User = require('./src/models/user.model');
+const config = require('../src/config/config');
+const User = require('../src/models/user.model');
 
 async function printTenantUsers() {
   try {
     await mongoose.connect(config.mongoose.url, config.mongoose.options);
-    const tenantId = '7vR-Ldacit';
-    const users = await User.find({ tenantId });
-    console.log(`\nUsers for tenantId: ${tenantId}`);
+    const users = await User.find({});
     users.forEach((user, idx) => {
       console.log(`\n${idx + 1}. ${user.firstname} ${user.lastname}`);
       console.log(`   Email: ${user.email}`);

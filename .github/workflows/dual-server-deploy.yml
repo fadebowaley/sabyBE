@@ -33,6 +33,13 @@ env:
   # SSH Configuration
   SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 
+  # Remote PostgreSQL Configuration
+  POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+  POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
+  POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+  POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+
 permissions:
   contents: write   # allow creating releases
   packages: write   # allow pushing docker images
@@ -249,6 +256,16 @@ jobs:
         echo "SERVER_HOST=${{ env.PRODUCTION_HOST }}" >> $GITHUB_OUTPUT
         echo "SERVER_USER=${{ env.PRODUCTION_USER }}" >> $GITHUB_OUTPUT
 
+    - name: 🧪 Test PostgreSQL connection
+      run: |
+        echo "Testing PostgreSQL connection to remote database..."
+        if timeout 10 bash -c "</dev/tcp/${{ env.POSTGRES_HOST }}/${{ env.POSTGRES_PORT }}"; then
+          echo "✅ PostgreSQL server is reachable on ${{ env.POSTGRES_HOST }}:${{ env.POSTGRES_PORT }}"
+        else
+          echo "❌ Cannot reach PostgreSQL server on ${{ env.POSTGRES_HOST }}:${{ env.POSTGRES_PORT }}"
+          exit 1
+        fi
+
     - name: 🚀 Deploy to production server
       run: |
         echo "🚀 Deploying to PRODUCTION server: ${{ steps.deploy.outputs.SERVER_HOST }}"
@@ -268,7 +285,7 @@ jobs:
         # Pull latest code
         echo "📥 Pulling latest code..."
         git fetch origin
-        git reset --hard origin/main
+        git reset --hard origin/production
         
         # Login to GitHub Container Registry
         echo "🔐 Logging in to GitHub Container Registry..."

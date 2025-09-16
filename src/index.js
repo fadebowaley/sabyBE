@@ -24,7 +24,7 @@ const connectToDatabases = async () => {
 
     if (postgresConnected && redisConnected) {
       // Start the server only if both databases are connected
-      server = app.listen(config.port, '0.0.0.0', () => {
+      server = app.listen(config.port, '::', () => {
         logger.info(`🚀 Server is running on port ${config.port}`);
         logger.info(`🌍 Environment: ${config.env}`);
         logger.info('📊 Database Status:');

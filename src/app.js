@@ -54,6 +54,7 @@ const corsOptions = {
   credentials: true,
 };
 
+
 /*
 Access-Control-Allow-Origin: http://localhost:3000
 Access-Control-Allow-Methods: GET, POST, PUT, DELETE

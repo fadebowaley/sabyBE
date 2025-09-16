@@ -2,21 +2,23 @@
 services:
   # Production Backend Service
   halobe:
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
+    # build:
+      # context: .
+      # dockerfile: Dockerfile.prod
     container_name: halo-prod-backend
+    image: halo-halobe:production
     ports:
       - "4000:4000"
     environment:
       - NODE_ENV=production
       - PORT=4000
       - MONGODB_URL=mongodb://mongodb:27017/halo-prod
-      - POSTGRES_HOST=postgres
+      # Remote PostgreSQL configuration
+      - POSTGRES_HOST=20.169.129.160
       - POSTGRES_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
-      - POSTGRES_DB=halo-prod
+      - POSTGRES_USER=sabyagentic_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-WcKoT/m9hFGMaiztjci/reLyMVln9qE0ReAaHc0Cb8E=}
+      - POSTGRES_DB=halograph
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=redispassword2025
@@ -44,13 +46,11 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:4000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:4000/', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -58,13 +58,17 @@ services:
     networks:
       - halo-prod-network
 
+  # NOTE: PostgreSQL service removed - now using remote PostgreSQL on VM
+
   # Production MongoDB
   mongodb:
     image: mongo:6.0
     container_name: halo-prod-mongodb
+    ports:
+      - "27017:27017"
     environment:
       MONGO_INITDB_DATABASE: halo-prod
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password}
     volumes:
       - mongodb_prod_data:/data/db
@@ -78,36 +82,20 @@ services:
       retries: 3
       start_period: 40s
 
-  # Production PostgreSQL
-  postgres:
-    image: postgres:15
-    container_name: halo-prod-postgres
-    environment:
-      POSTGRES_DB: halo-prod
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-    volumes:
-      - postgres_prod_data:/var/lib/postgresql/data
-    networks:
-      - halo-prod-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
   # Production Redis
   redis:
     image: redis:7-alpine
     container_name: halo-prod-redis
-    command: redis-server --requirepass redispassword2025
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redispassword2025}
+    volumes:
+      - redis_prod_data:/data
     networks:
       - halo-prod-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redispassword2025", "ping"]
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-redispassword2025}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -115,7 +103,8 @@ services:
 
 volumes:
   mongodb_prod_data:
-  postgres_prod_data:
+  redis_prod_data:
+  # Removed postgres_prod_data volume - using remote PostgreSQL
 
 networks:
   halo-prod-network:
