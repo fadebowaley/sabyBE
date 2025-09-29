@@ -18,7 +18,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-staging-redis-password}
       - JWT_SECRET=${JWT_SECRET:-staging-jwt-secret-change-this}
-      - HALOFE_URL=${HALOFE_URL:-http://localhost:3000}
+      - HALOFE_URL=${HALOFE_URL:-http://40.71.204.212:3000}
       # Staging storage configuration
       - STORAGE_PROVIDER=${STORAGE_PROVIDER:-aws-s3}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
