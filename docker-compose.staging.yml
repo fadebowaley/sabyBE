@@ -8,7 +8,7 @@ services:
     environment:
       - NODE_ENV=staging
       - PORT=4000
-      - MONGODB_URL=mongodb://mongodb:27017/halo-staging
+      - MONGODB_URL=mongodb://admin:staging-password@mongodb:27017/halo-staging?authSource=admin
       - POSTGRES_HOST=20.169.129.160
       - POSTGRES_PORT=5432
       - POSTGRES_USER=sabyagentic_user
