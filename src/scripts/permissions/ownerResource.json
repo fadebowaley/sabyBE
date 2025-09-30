@@ -1,4 +1,4 @@
 
 {
-  "ownerResourceBundle": ["user", "app", "structure", "node", "payment", "level", "storage", "project", "apikeys", "project-form"]
+  "ownerResourceBundle": ["user", "app", "structure", "node", "payment", "level", "storage", "project", "apikeys", "project-form", "roles"]
 }
