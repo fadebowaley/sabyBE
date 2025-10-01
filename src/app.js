@@ -46,10 +46,9 @@ const corsOptions = {
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://0.0.0.0:3000',
-    'http://10.17.1.18:3000',
-    'http://10.17.1.132:8080',
     'http://40.71.204.212:3000', // Staging frontend
     'https://40.71.204.212:3000', // Staging frontend HTTPS
+    'https://api-staging.saby.ai', // Staging backend HTTPS
   ],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
