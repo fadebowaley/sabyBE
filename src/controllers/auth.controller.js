@@ -55,7 +55,30 @@ const login = catchAsync(async (req, res) => {
   const { email, password } = req.body;
   const user = await authService.loginUserWithEmailAndPassword(email, password);
   const tokens = await tokenService.generateAuthTokens(user);
-  res.send({ user, tokens });
+  
+  // Send comprehensive user data for frontend
+  const userResponse = {
+    id: user.id,
+    userId: user.userId,
+    haloId: user.haloId,
+    tenantId: user.tenantId,
+    firstname: user.firstname,
+    lastname: user.lastname,
+    name: `${user.firstname} ${user.lastname}`.trim(),
+    email: user.email,
+    phoneNumber: user.phoneNumber,
+    avatar: user.avatar,
+    isOwner: user.isOwner,
+    isSuper: user.isSuper,
+    isAgreed: user.isAgreed,
+    isEmailVerified: user.isEmailVerified,
+    isPhoneVerified: user.isPhoneVerified,
+    status: user.status,
+    createdAt: user.createdAt,
+    roles: user.roles,
+  };
+  
+  res.send({ user: userResponse, tokens });
 });
 
 /**
