@@ -231,6 +231,36 @@ const updateUserById = async (userId, updateBody) => {
 };
 
 /**
+ * Get user roles with populated role details
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} User with populated roles
+ */
+const getUserRoles = async (userId) => {
+  const user = await User.findById(userId).populate('roles', 'name description permissions');
+  
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  return user;
+};
+
+/**
+ * Get user nodes where user is a member
+ * @param {string} userId - User ID
+ * @returns {Promise<Array>} Array of nodes where user is a member
+ */
+const getUserNodes = async (userId) => {
+  const Nodes = require('../models/node.model');
+  const nodes = await Nodes.find({ users: userId })
+    .populate('level', 'name description rank')
+    .populate('structure', 'name description')
+    .select('nodeId name address city state country isMain isActive level structure users');
+  
+  return nodes;
+};
+
+/**
  * Delete user by id
  * @param {ObjectId} userId
  * @returns {Promise<User>}
@@ -320,4 +350,6 @@ module.exports = {
   softDeleteUserById,
   assignRoles,
   getUserByPhone,
+  getUserRoles,
+  getUserNodes,
 };

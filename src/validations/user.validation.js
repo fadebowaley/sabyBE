@@ -80,6 +80,7 @@ const updateUser = {
       password: Joi.string().custom(password),
       firstname: Joi.string(),
       lastname: Joi.string(),
+      phoneNumber: Joi.string().pattern(/^[\+]?[1-9][\d]{0,15}$/),
       isSuper: Joi.boolean().valid(false).default(false),
       isOwner: Joi.boolean().valid(false).default(false),
     })

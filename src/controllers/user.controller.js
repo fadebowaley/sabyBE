@@ -153,6 +153,26 @@ const deleteUser = catchAsync(async (req, res) => {
   res.status(httpStatus.NO_CONTENT).send();
 });
 
+/**
+ * Get user roles
+ * @param {Object} req
+ * @param {Object} res
+ */
+const getUserRoles = catchAsync(async (req, res) => {
+  const user = await userService.getUserRoles(req.params.userId);
+  res.send(user.roles);
+});
+
+/**
+ * Get user nodes
+ * @param {Object} req
+ * @param {Object} res
+ */
+const getUserNodes = catchAsync(async (req, res) => {
+  const nodes = await userService.getUserNodes(req.params.userId);
+  res.send(nodes);
+});
+
 
 const softDeleteUser = catchAsync(async (req, res) => {
   const { userId } = req.params; // Get the userId from URL parameters
@@ -185,6 +205,8 @@ module.exports = {
   restoreUser,
   restoreUsers,
   softDeleteUser,
-  assignRoles
+  assignRoles,
+  getUserRoles,
+  getUserNodes
   // bulk create
 };

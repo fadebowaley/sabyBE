@@ -298,6 +298,12 @@ router.post('/bulk-create', requireAccess('create:user:bulk-create'), validate(u
 // Update user
 router.patch('/:userId', requireAccess('update:user::userId'), validate(userValidation.updateUser), userController.updateUser);
 
+// Get user roles
+router.get('/:userId/roles', requireAccess('read:user::userId'), userController.getUserRoles);
+
+// Get user nodes
+router.get('/:userId/nodes', requireAccess('read:user::userId'), userController.getUserNodes);
+
 
 /**
  * @swagger
