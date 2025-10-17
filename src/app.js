@@ -116,7 +116,7 @@ const swaggerSpec = swaggerJsdoc(swaggerConfig);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   explorer: true,
   customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'HaloCRM API Documentation'
+  customSiteTitle: 'Saby API Documentation'
 }));
 
 // WhatsApp webhook forwarding to separate bot

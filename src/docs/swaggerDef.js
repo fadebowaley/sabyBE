@@ -9,95 +9,61 @@ const config = require('../config/config');
 const swaggerDef = {
   openapi: '3.0.0',
   info: {
-    title: 'HaloCRM API Documentation',
+    title: 'Saby API Documentation',
     version,
-    description: `# IntroductionHaloCRM is a comprehensive Customer Relationship Management system that provides a robust API for managing various aspects of your business operations.
-## Key Features
-- User and Role Management
-- Program and Collection Management
-- Statement and Payment Tracking
-- Report Generation
-- Settings Configuration
-- Data Management
+    description: `Saby API provides a robust platform for managing hierarchical networks, user roles, and organizational structures.
 
-## Authentication
-All API endpoints require authentication using JWT tokens. Include the token in the Authorization header:
-\`Authorization: Bearer <your_token>\`
+**Authentication:** All endpoints require JWT tokens. Include in header: \`Authorization: Bearer <token>\`
 
-## Rate Limiting
-API requests are rate-limited to ensure fair usage. Current limits:
-- 100 requests per minute per IP
-- 1000 requests per hour per user
+**Rate Limiting:** 100 requests/min per IP, 1000 requests/hour per user
 
-## Error Handling
-The API uses standard HTTP response codes:
-- 2xx: Success
-- 4xx: Client errors
-- 5xx: Server errors
-
-For detailed error information, check the response body.
+**HTTP Status Codes:** 2xx (Success), 4xx (Client errors), 5xx (Server errors)
     `,
     license: {
       name: 'MIT',
-      url: 'https://github.com/fadebowaley/sotsm-portal/blob/main/LICENSE',
+      url: 'https://github.com/fadebowaley/saby',
     },
     contact: {
-      name: 'HaloCRM Support',
-      email: 'support@halocrm.com',
-      url: 'https://halocrm.com',
+      name: 'Saby API Team',
+      email: 'apis@saby.ai',
+      url: 'https://saby.ai',
     },
-    termsOfService: 'https://halocrm.com/terms',
+    termsOfService: 'https://saby.ai/terms',
   },
   servers: [
     {
-      url: `http://localhost:${config.port}/v1`,
-      description: 'Local Development Server',
-    },
-    {
-      url: 'https://api.halocrm.com/v1',
+      url: 'https://api.saby.ai/v1',
       description: 'Production Server',
     },
     {
-      url: 'https://staging-api.halocrm.com/v1',
+      url: 'https://api-staging.saby.ai/v1',
       description: 'Staging Server',
+    },
+    {
+      url: `http://localhost:${config.port}/v1`,
+      description: 'Local Development',
     },
   ],
   tags: [
     {
       name: 'Auth',
-      description: 'Authentication and authorization endpoints',
+      description: 'Authentication and authorization',
     },
     {
       name: 'Users',
-      description: 'User management operations',
+      description: 'User management',
     },
     {
       name: 'Roles',
       description: 'Role and permission management',
     },
     {
-      name: 'Programs',
-      description: 'Program management operations',
+      name: 'Structures',
+      description: 'Network and structure management',
     },
     {
-      name: 'Collections',
-      description: 'Collection management operations',
-    },
-    {
-      name: 'Statements',
-      description: 'Statement and payment operations',
-    },
-    {
-      name: 'Reports',
-      description: 'Report generation and management',
-    },
-    {
-      name: 'Settings',
-      description: 'System settings and configuration',
-    },
-    {
-      name: 'Data',
-      description: 'Data management operations',
+      name: 'Nodes',
+      description: 'Node operations',
     },
   ],
   components: {
