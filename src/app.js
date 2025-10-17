@@ -8,6 +8,8 @@ const passport = require('passport');
 const http = require('http');
 const httpStatus = require('http-status');
 const path = require('path');
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 const config = require('./config/config');
 const morgan = require('./config/morgan');
 const { jwtStrategy } = require('./config/passport');
@@ -16,6 +18,7 @@ const routes = require('./routes/v1');
 const { errorConverter, errorHandler } = require('./middlewares/error');
 const ApiError = require('./utils/ApiError');
 const logger = require('./config/logger');
+const swaggerConfig = require('./docs/swaggerConfig');
 
 const app = express();
 
@@ -51,6 +54,9 @@ const corsOptions = {
     'http://40.71.204.212:3000', // Staging frontend
     'https://40.71.204.212:3000', // Staging frontend HTTPS
     'https://api-staging.saby.ai', // Staging backend HTTPS
+    'https://saby.ai', // Production frontend
+    'https://www.saby.ai', // Production frontend with www
+    'https://api.saby.ai', // Production backend
   ],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -104,6 +110,14 @@ app.get('/api/health', (req, res) => {
 
 // v1 api routes
 app.use('/v1', routes);
+
+// Swagger API documentation
+const swaggerSpec = swaggerJsdoc(swaggerConfig);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'HaloCRM API Documentation'
+}));
 
 // WhatsApp webhook forwarding to separate bot
 app.get('/whatsapp/webhook', (req, res) => {
