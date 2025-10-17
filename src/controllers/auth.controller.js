@@ -1,6 +1,13 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
-const { authService, userService, tokenService, emailService } = require('../services');
+const {
+  authService,
+  userService,
+  tokenService,
+  emailService,
+  apiKeyService,
+} = require('../services');
+const logger = require('../config/logger');
 
 /**
  * Register a new user
@@ -70,6 +77,7 @@ const login = catchAsync(async (req, res) => {
     avatar: user.avatar,
     isOwner: user.isOwner,
     isSuper: user.isSuper,
+    isSaby: user.isSaby,
     isAgreed: user.isAgreed,
     isEmailVerified: user.isEmailVerified,
     isPhoneVerified: user.isPhoneVerified,
@@ -177,6 +185,23 @@ const verifyOtp = catchAsync(async (req, res) => {
   const { email, otp } = req.body;
   const { success, user } = await authService.verifyOtp(email, otp);
   if (success) {
+    // Auto-generate web API keys for new user
+    try {
+      if (user.tenantId && user._id) {
+        const keys = await apiKeyService.autoGenerateWebApiKeys(
+          user.tenantId,
+          user._id
+        );
+        logger.info(`Auto-generated web API keys for user: ${user.email}`, {
+          staging: keys.staging.keyDoc._id,
+          production: keys.production.keyDoc._id,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to auto-generate web API keys:', error);
+      // Don't fail registration if API key generation fails
+    }
+
     return res.status(httpStatus.OK).send({
       message: 'OTP verified successfully',
     });

@@ -14,11 +14,12 @@ const resolveAccessIdentity = async (req, requiredPermissions = []) => {
   const isJwt = header?.startsWith('Bearer ') && !header?.includes('sk_');
   const apiKey = req.header('x-api-key') || header;
 
-  console.log('[requireAccess] Incoming headers:', {
-    Authorization: req.header('Authorization'),
-    'x-api-key': req.header('x-api-key'),
-    requiredPermissions,
-  });
+      console.log('[requireAccess] Incoming headers:', {
+        Authorization: req.header('Authorization'),
+        'x-api-key': req.header('x-api-key'),
+        requiredPermissions,
+      });
+      console.log('[requireAccess] Full request headers:', req.headers);
 
   // === 1. Try JWT ===
   if (isJwt) {

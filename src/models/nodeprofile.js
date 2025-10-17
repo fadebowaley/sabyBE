@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
-const validator = require('validator'); // Validator is used for validating input data, such as checking if a string is a valid email format.
-const { toJSON, paginate, tenantPlugin } = require('./plugins'); // toJSON plugin is used to convert Mongoose documents to JSON format, while paginate helps in paginating results.
+const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
 const ChurchProfileSchema = new mongoose.Schema(
   {
@@ -8,11 +7,11 @@ const ChurchProfileSchema = new mongoose.Schema(
       type: String,
       index: true,
     },
-    // Reference to the church
+    // Reference to the church node
     church: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Nodes', // Assuming ChurchStructure is the model for churches
-      required: true, // Assuming this reference is mandatory
+      ref: 'Nodes',
+      required: true,
     },
     // Additional Information
     dateOfEstablishment: { type: Date },
@@ -32,4 +31,10 @@ const ChurchProfileSchema = new mongoose.Schema(
   { timestamps: true } // Automatically adds createdAt & updatedAt fields
 );
 
-module.exports = conn.model('Church', ChurchProfileSchema);
+// Add plugins
+ChurchProfileSchema.plugin(toJSON);
+ChurchProfileSchema.plugin(paginate);
+ChurchProfileSchema.plugin(tenantPlugin);
+
+const ChurchProfile = mongoose.model('ChurchProfile', ChurchProfileSchema);
+module.exports = ChurchProfile;

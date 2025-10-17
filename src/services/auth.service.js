@@ -9,16 +9,32 @@ const { sendOtpEmail } = require('./email.service');
 const { User } = require('../models');
 const logger = require('../config/logger');
 
-const loginUserWithEmailAndPassword = async (email, password) => {
+const loginUserWithEmailAndPassword = async (
+  email,
+  password,
+  channel = 'web'
+) => {
   const user = await User.findOne({ email });
   if (!user || !(await user.isPasswordMatch(password))) {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Incorrect email or password');
   }
   if (!user.otpVerified) {
-    const error = new ApiError(httpStatus.UNAUTHORIZED, 'Please verify your account using the OTP sent to your email');
+    const error = new ApiError(
+      httpStatus.UNAUTHORIZED,
+      'Please verify your account using the OTP sent to your email'
+    );
     error.name = 'OtpNotVerified';
     throw error;
   }
+
+  // Channel-aware access control
+  if (channel === 'web' && user.isOrdinaryUser && user.isOrdinaryUser()) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Access denied. This account cannot access the web portal. Please use the designated access channel.'
+    );
+  }
+
   return user;
 };
 
@@ -117,7 +133,7 @@ const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString()
 
 const sendUserOtp = async (user) => {
   const otp = generateOtp();
-  console.log('leaked otp', otp);
+  console.log('🔐 OTP for user', user.email, ':', otp);
   const update = {
     otp,
     otpExpires: moment().add(10, 'minutes').toDate(),
@@ -125,7 +141,16 @@ const sendUserOtp = async (user) => {
   };
 
   await User.updateOne({ _id: user._id }, update); // No validation issues
-  await sendOtpEmail(user.email, otp);
+
+  // Skip email sending in development mode
+  if (process.env.NODE_ENV === 'development') {
+    console.log(
+      '📧 Development mode: Skipping email sending. OTP logged above.'
+    );
+  } else {
+    await sendOtpEmail(user.email, otp);
+  }
+
   return { email: user.email, otp };
 };
 

@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
-const Level = require('./level.model');
 const { HaloNCounter } = require('./haloCounter.model');
 const hierarchyPlugin = require('./plugins/hierarchy.plugin');
 
@@ -75,63 +74,6 @@ nodeSchema.statics.generateNodeId = async function () {
   );
   const base36 = counter.seq.toString(36).toUpperCase().padStart(5, '0');
   return `HLN-${base36}`;
-};
-
-// CREATE: Create a new node
-nodeSchema.statics.createNode = async function (data) {
-  if (!data.nodeId) {
-    data.nodeId = await this.generateNodeId();
-  }
-  const node = await this.create(data);
-  return node;
-};
-
-// READ: Get a node by ID (with tenant isolation and user population)
-nodeSchema.statics.getNodeById = async function (nodeId, tenantId) {
-  const node = await this.findOne({ _id: nodeId, tenantId, deletedAt: null }).populate('users');
-  if (!node) throw new Error('Node not found');
-  return node;
-};
-
-// UPDATE: Update node fields
-nodeSchema.statics.updateNodeById = async function (nodeId, tenantId, updateData) {
-  const allowedFields = [
-    'level',
-    'parent',
-    'name',
-    'address',
-    'city',
-    'state',
-    'country',
-    'postalCode',
-    'dateOfEstablishment',
-    'isMain',
-    'users',
-    'identity',
-    'hierarchy',
-    'path',
-  ];
-
-  const node = await this.findOne({ _id: nodeId, tenantId, deletedAt: null });
-  if (!node) throw new Error('Node not found or already deleted');
-
-  allowedFields.forEach((field) => {
-    if (updateData[field] !== undefined) {
-      node[field] = updateData[field];
-    }
-  });
-  await node.save();
-  return node;
-};
-
-// DELETE: Soft delete a node
-nodeSchema.statics.deleteNodeById = async function (nodeId, tenantId) {
-  const node = await this.findOne({ _id: nodeId, tenantId, deletedAt: null });
-  if (!node) throw new Error('Node not found or already deleted');
-
-  node.deletedAt = new Date();
-  await node.save();
-  return node;
 };
 
 // Utility function to build hierarchy dynamically based on level names

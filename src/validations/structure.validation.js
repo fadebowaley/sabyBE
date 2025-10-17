@@ -1,6 +1,5 @@
 const Joi = require('joi');
 
-
 const createStructure = Joi.object({
   tempId: Joi.string().required(),
   name: Joi.string().trim().min(1).required(),
@@ -10,8 +9,13 @@ const createStructure = Joi.object({
   parentTempId: Joi.string().allow(null), // can be null for root nodes
   active: Joi.boolean().required(),
   special: Joi.boolean().required(),
+  position: Joi.object()
+    .keys({
+      x: Joi.number().required(),
+      y: Joi.number().required(),
+    })
+    .optional(),
 });
-
 
 const updateStructure = {
   params: Joi.object().keys({
@@ -23,9 +27,16 @@ const updateStructure = {
       type: Joi.string(),
       description: Joi.string().allow('', null),
       parentId: Joi.string().allow(null),
+      level: Joi.string(), // Allow level updates for hierarchy changes
       metadata: Joi.object().allow(null),
       isActive: Joi.boolean(),
-      position: Joi.number().integer().min(0),
+      isSpecial: Joi.boolean(),
+      position: Joi.object()
+        .keys({
+          x: Joi.number().required(),
+          y: Joi.number().required(),
+        })
+        .optional(),
     })
     .min(1),
 };
@@ -76,7 +87,12 @@ const moveStructure = {
   }),
   body: Joi.object().keys({
     newParentId: Joi.string().allow(null).required(),
-    position: Joi.number().integer().min(0),
+    position: Joi.object()
+      .keys({
+        x: Joi.number().required(),
+        y: Joi.number().required(),
+      })
+      .optional(),
   }),
 };
 

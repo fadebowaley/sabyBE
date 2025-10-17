@@ -10,16 +10,17 @@ const createRole = catchAsync(async (req, res) => {
   res.status(httpStatus.CREATED).send(role);
 });
 
-
 //Controller to create bulk roles
 const bulkCreateRoles = catchAsync(async (req, res) => {
-  const roles = await roleService.bulkCreateRoles(req.body.rolesArray, req.user);
+  const roles = await roleService.bulkCreateRoles(
+    req.body.rolesArray,
+    req.user
+  );
   res.status(httpStatus.CREATED).json({
     message: `${roles.length} roles successfully created.`,
     data: roles,
   });
 });
-
 
 // Controller: deleteAllRoles
 const deleteAllRoles = catchAsync(async (req, res) => {
@@ -27,10 +28,9 @@ const deleteAllRoles = catchAsync(async (req, res) => {
   const result = await roleService.deleteAllRoles(tenantId);
   res.status(httpStatus.OK).json({
     message: result.message,
-    deletedCount: result.deletedCount
+    deletedCount: result.deletedCount,
   });
 });
-
 
 //controller to get Roles
 const getRoles = catchAsync(async (req, res) => {
@@ -41,10 +41,9 @@ const getRoles = catchAsync(async (req, res) => {
   res.send(result);
 });
 
-
 //Controller to get a particular roles
 const getRole = catchAsync(async (req, res) => {
-  const role = await roleService.getRoleById(req.params.roleId);
+  const role = await roleService.getRoleById(req.params.roleId, req.user);
   if (!role) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Role not found');
   }
@@ -52,20 +51,24 @@ const getRole = catchAsync(async (req, res) => {
 });
 
 const updateRole = catchAsync(async (req, res) => {
-  const updated = await roleService.updateRoleById(req.params.roleId, req.body);
+  const updated = await roleService.updateRoleById(
+    req.params.roleId,
+    req.body,
+    req.user
+  );
   res.send(updated);
 });
 
-
 const deleteRole = catchAsync(async (req, res) => {
-  await roleService.deleteRoleById(req.params.roleId);
+  await roleService.deleteRoleById(req.params.roleId, req.user);
   res.status(httpStatus.NO_CONTENT).send();
 });
 
-
-
 const assignPermissions = catchAsync(async (req, res) => {
-  const updatedRole = await roleService.assignPermissions(req.params.roleId, req.body.permissionIds);
+  const updatedRole = await roleService.assignPermissions(
+    req.params.roleId,
+    req.body.permissionIds
+  );
   res.send(updatedRole);
 });
 
@@ -73,7 +76,6 @@ const getRoleTemplates = catchAsync(async (req, res) => {
   const templates = await roleService.getRoleTemplatesByIndustry();
   res.status(200).json({ industryTemplates: templates });
 });
-
 
 const getPermissionsForRole = catchAsync(async (req, res) => {
   const roleId = req.params.roleId;
@@ -87,13 +89,15 @@ const removePermissionsFromRole = catchAsync(async (req, res) => {
   const { roleId } = req.params;
   const { permissions } = req.body;
   // Ensure the permissions are valid and remove from the role
-  const updatedRole = await roleService.removePermissionsFromRole(roleId, permissions);
+  const updatedRole = await roleService.removePermissionsFromRole(
+    roleId,
+    permissions
+  );
   res.status(httpStatus.OK).send({
     message: 'Permissions removed successfully',
     role: updatedRole,
   });
 });
-
 
 module.exports = {
   createRole,

@@ -1,11 +1,13 @@
 const express = require('express');
 const apiKeyRoute = require('./apiKey.route');
+const apiKeyApprovalRoute = require('./apiKeyApproval.route');
 const appRoute = require('./app.route');
 const authRoute = require('./auth.route');
 const dataRoute = require('./data.route');
 const docsRoute = require('./docs.route');
 const levelRoute = require('./level.route');
 const nodeRoute = require('./node.route');
+const nodeProfileRoute = require('./nodeprofile.route');
 const paymentRoute = require('./payment.route');
 const permissionRoute = require('./permission.route');
 const projectFormRoute = require('./projectForm.route');
@@ -14,6 +16,7 @@ const roleRoute = require('./role.route');
 const structureRoute = require('./structure.route');
 const userRoute = require('./user.route');
 const userFormSettingsRoute = require('./userFormSettings.route');
+const userProfileRoute = require('./userProfile.route');
 const adminRoute = require('./admin.route');
 const captureRoute = require('./capture.route');
 const departmentRoute = require('./department.route');
@@ -30,6 +33,7 @@ const storageRoute = require('./storage.route');
 const storageFolderRoute = require('./storageFolder.route');
 const submissionRoute = require('./submission.route');
 const telegramWebAppRoute = require('./telegramWebApp.route');
+const waitlistRoute = require('./waitlist.route');
 
 // declare rest of the routes: nodeLevel, nodeStructure, node etc.
 const config = require('../../config/config');
@@ -41,6 +45,10 @@ const defaultRoutes = [
   {
     path: '/api-keys', // Example: /api-keys, /api-keys/123
     route: apiKeyRoute,
+  },
+  {
+    path: '/api-key-approvals', // Example: /api-key-approvals/pending
+    route: apiKeyApprovalRoute,
   },
   {
     path: '/api-submit',
@@ -57,6 +65,10 @@ const defaultRoutes = [
   {
     path: '/user-form-settings', // Example: /user-form-settings/user/123
     route: userFormSettingsRoute,
+  },
+  {
+    path: '/user-profiles', // Example: /user-profiles/123
+    route: userProfileRoute,
   },
   {
     path: '/project-forms', // Example: /project-forms/123, /project-forms/project/abc123
@@ -97,6 +109,10 @@ const defaultRoutes = [
   {
     path: '/node', // Example: /node/123, /node/info
     route: nodeRoute,
+  },
+  {
+    path: '/nodeprofile', // Example: /nodeprofile/node/123
+    route: nodeProfileRoute,
   },
   {
     path: '/admin', // Example: /admin/123, /admin/info
@@ -157,6 +173,10 @@ const defaultRoutes = [
   {
     path: '/telegram',
     route: telegramWebAppRoute,
+  },
+  {
+    path: '/waitlist',
+    route: waitlistRoute,
   },
 ];
 

@@ -8,16 +8,34 @@ const ApiError = require('../utils/ApiError');
  * @returns {Promise<Node>}
  */
 const createNode = async (nodeBody) => {
+  // Generate nodeId if not provided
+  if (!nodeBody.nodeId) {
+    nodeBody.nodeId = await Nodes.generateNodeId();
+  }
   return Nodes.create(nodeBody);
 };
 
 /**
  * Get node by id
  * @param {ObjectId} id
+ * @param {Object} options - Query options
+ * @param {boolean} options.includeDeleted - Include soft-deleted nodes
+ * @param {string} options.populate - Fields to populate
  * @returns {Promise<Node>}
  */
-const getNodeById = async (id) => {
-  const node = await Nodes.findById(id);
+const getNodeById = async (id, options = {}) => {
+  const { includeDeleted = false, populate = 'level structure users' } =
+    options;
+
+  const query = includeDeleted
+    ? Nodes.findById(id)
+    : Nodes.findOne({ _id: id, deletedAt: null });
+
+  if (populate) {
+    query.populate(populate);
+  }
+
+  const node = await query;
   if (!node) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Node not found');
   }
@@ -45,19 +63,52 @@ const getNodeByName = async (name) => {
  */
 const updateNodeById = async (nodeId, updateBody) => {
   const node = await getNodeById(nodeId);
-  Object.assign(node, updateBody);
+
+  // Define allowed fields for update
+  const allowedFields = [
+    'level',
+    'parent',
+    'name',
+    'address',
+    'city',
+    'state',
+    'country',
+    'postalCode',
+    'dateOfEstablishment',
+    'isMain',
+    'users',
+    'isActive',
+  ];
+
+  // Only update allowed fields
+  Object.keys(updateBody).forEach((key) => {
+    if (allowedFields.includes(key)) {
+      node[key] = updateBody[key];
+    }
+  });
+
   await node.save();
   return node;
 };
 
 /**
- * Delete node by id
+ * Delete node by id (soft delete)
  * @param {ObjectId} nodeId
+ * @param {boolean} hardDelete - If true, permanently delete the node
  * @returns {Promise<Node>}
  */
-const deleteNodeById = async (nodeId) => {
+const deleteNodeById = async (nodeId, hardDelete = false) => {
   const node = await getNodeById(nodeId);
-  await node.remove();
+
+  if (hardDelete) {
+    await node.remove();
+  } else {
+    // Soft delete
+    node.deletedAt = new Date();
+    node.isActive = false;
+    await node.save();
+  }
+
   return node;
 };
 

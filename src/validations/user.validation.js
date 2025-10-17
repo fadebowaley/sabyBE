@@ -10,7 +10,6 @@ const createUser = {
   }),
 };
 
-
 const ownerCreate = {
   body: Joi.object().keys({
     firstname: Joi.string().required(),
@@ -21,7 +20,21 @@ const ownerCreate = {
     email: Joi.string().required().email(),
     password: Joi.string().required().custom(password),
     isOwner: Joi.boolean().valid(false).default(false),
+    isSuper: Joi.boolean().valid(false).default(false),
+    isSaby: Joi.boolean().valid(false).default(false),
     status: Joi.boolean().default(false),
+  }),
+};
+
+const sabyUserCreate = {
+  body: Joi.object().keys({
+    firstname: Joi.string().required(),
+    lastname: Joi.string().required(),
+    email: Joi.string().required().email(),
+    password: Joi.string().required().custom(password),
+    roles: Joi.array()
+      .items(Joi.string().regex(/^[0-9a-fA-F]{24}$/))
+      .default([]),
   }),
 };
 
@@ -63,7 +76,6 @@ const getUsers = {
   }),
 };
 
-
 const getUser = {
   params: Joi.object().keys({
     userId: Joi.string().required(),
@@ -80,16 +92,17 @@ const updateUser = {
       password: Joi.string().custom(password),
       firstname: Joi.string(),
       lastname: Joi.string(),
-      phoneNumber: Joi.string().pattern(/^[\+]?[1-9][\d]{0,15}$/),
-      isSuper: Joi.boolean().valid(false).default(false),
-      isOwner: Joi.boolean().valid(false).default(false),
+      phoneNumber: Joi.string().pattern(/^[+]?[1-9][\d]{0,15}$/),
+      isSuper: Joi.boolean(),
+      isOwner: Joi.boolean(),
+      isSaby: Joi.boolean(),
     })
     .min(1),
 };
 
 const deleteUser = {
   params: Joi.object().keys({
-     userId: Joi.string().required(),
+    userId: Joi.string().required(),
   }),
 };
 
@@ -105,13 +118,11 @@ const restoreUser = {
   }),
 };
 
-
 const softDeleteUser = {
   params: Joi.object().keys({
     userId: Joi.string().required().trim(),
   }),
 };
-
 
 const assignRoles = {
   params: Joi.object().keys({
@@ -119,11 +130,13 @@ const assignRoles = {
   }),
   body: Joi.object().keys({
     roles: Joi.alternatives()
-      .try(Joi.string().custom(objectId), Joi.array().items(Joi.string().custom(objectId)).min(1))
+      .try(
+        Joi.string().custom(objectId),
+        Joi.array().items(Joi.string().custom(objectId)).min(1)
+      )
       .required(),
   }),
 };
-
 
 module.exports = {
   createUser,
@@ -132,6 +145,7 @@ module.exports = {
   updateUser,
   deleteUser,
   ownerCreate,
+  sabyUserCreate,
   bulkCreate,
   bulkDelete,
   restoreUser,

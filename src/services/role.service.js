@@ -4,24 +4,22 @@ const { Role, Permission } = require('../models');
 const ApiError = require('../utils/ApiError');
 const roleTemplates = require('../utils/role');
 
-
-
 /**
  * Create a new role
  * @param {Object} JSON
  * @returns {Promise<Role>}
  */
 
-
 const getRoleTemplatesByIndustry = async () => {
   try {
     return roleTemplates;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message || 'Error creating roles');
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      error.message || 'Error creating roles'
+    );
   }
 };
-
-
 
 /**
  * Create a new role
@@ -31,14 +29,23 @@ const getRoleTemplatesByIndustry = async () => {
 
 const createRole = async (roleBody, user) => {
   if (!user?.isOwner && !user?.hasPermissionToCreateRoles) {
-    throw new ApiError(httpStatus.FORBIDDEN, 'You are not authorized to create roles');
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'You are not authorized to create roles'
+    );
   }
   // Ensure role name is unique per tenant
-  const existing = await Role.findOne({ name: roleBody.name, tenantId: user.tenantId });
+  const existing = await Role.findOne({
+    name: roleBody.name,
+    tenantId: user.tenantId,
+  });
   if (existing) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Role name already exists for this tenant');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Role name already exists for this tenant'
+    );
   }
-  console.log('looking up data', user )
+  console.log('looking up data', user);
   return Role.createRole(roleBody, user);
 };
 
@@ -70,7 +77,10 @@ const bulkCreateRoles = async (rolesArray, user) => {
   try {
     return await Role.bulkCreateRoles(rolesArray, user);
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message || 'Error creating roles');
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      error.message || 'Error creating roles'
+    );
   }
 };
 
@@ -140,17 +150,42 @@ const bulkCreateRoles = async (rolesArray, user) => {
 //   };
 // };
 
-
 const queryRoles = async (filter, options) => {
   // Validate and parse page and limit
-  const limit = options.limit && !isNaN(options.limit) && parseInt(options.limit, 40) > 0 ? parseInt(options.limit, 40) : 40;
-  const page = options.page && !isNaN(options.page) && parseInt(options.page, 40) > 0 ? parseInt(options.page, 40) : 1;
+  const limit =
+    options.limit && !isNaN(options.limit) && parseInt(options.limit, 40) > 0
+      ? parseInt(options.limit, 40)
+      : 40;
+  const page =
+    options.page && !isNaN(options.page) && parseInt(options.page, 40) > 0
+      ? parseInt(options.page, 40)
+      : 1;
   const skip = (page - 1) * limit;
+
+  // Apply tenant filtering based on user hierarchy
+  const { user } = options;
+  if (user?.isSaby) {
+    // SabyUser can see all roles across all tenants
+    console.log('[queryRoles] SabyUser - showing all roles across all tenants');
+    // No additional filtering needed - remove tenant restriction
+    delete filter.tenantId;
+  } else if (user?.isSuper || user?.isOwner) {
+    // SuperUser and Owner can only see roles within their tenant
+    if (user.tenantId) {
+      filter.tenantId = user.tenantId;
+      console.log(
+        `[queryRoles] SuperUser/Owner - filtering by tenantId: ${user.tenantId}`
+      );
+    }
+  } else {
+    // Ordinary users should not have access to role listing
+    throw new Error('Insufficient privileges to view role list');
+  }
 
   // Aggregation pipeline to count users for each role
   const roles = await Role.aggregate([
     {
-      $match: filter, // Match the provided filter
+      $match: filter, // Match the provided filter (now includes tenant filtering)
     },
     {
       $lookup: {
@@ -174,7 +209,11 @@ const queryRoles = async (filter, options) => {
     },
     {
       $sort: {
-        [options.sortBy || 'createdAt']: options.sortBy ? (options.sortBy.includes('desc') ? -1 : 1) : 1, // Sorting logic
+        [options.sortBy || 'createdAt']: options.sortBy
+          ? options.sortBy.includes('desc')
+            ? -1
+            : 1
+          : 1, // Sorting logic
       },
     },
     {
@@ -185,7 +224,7 @@ const queryRoles = async (filter, options) => {
     },
   ]);
 
-  // Counting the total number of documents
+  // Counting the total number of documents (with tenant filtering)
   const totalResults = await Role.countDocuments(filter);
 
   // Calculating total pages
@@ -200,26 +239,36 @@ const queryRoles = async (filter, options) => {
   };
 };
 
-
 /**
  * Get a role by its ID
  * @param {ObjectId} id
+ * @param {Object} user - Current user for tenant filtering
  * @returns {Promise<Role>}
  */
 
-const getRoleById = async (id) => {
-  return Role.findById(id);
+const getRoleById = async (id, user = null) => {
+  const query = { _id: id };
+
+  // Apply tenant filtering if user is provided
+  if (user && !user.isSaby) {
+    if (user.tenantId) {
+      query.tenantId = user.tenantId;
+    }
+  }
+
+  return Role.findOne(query);
 };
 
 /**
  * Update a role by its ID
  * @param {ObjectId} roleId
  * @param {Object} updateBody
+ * @param {Object} user - Current user for tenant filtering
  * @returns {Promise<Role>}
  */
 
-const updateRoleById = async (roleId, updateBody) => {
-  const role = await getRoleById(roleId);
+const updateRoleById = async (roleId, updateBody, user = null) => {
+  const role = await getRoleById(roleId, user);
   if (!role) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Role not found');
   }
@@ -231,11 +280,12 @@ const updateRoleById = async (roleId, updateBody) => {
 /**
  * Delete a role by its ID
  * @param {ObjectId} roleId
+ * @param {Object} user - Current user for tenant filtering
  * @returns {Promise<Role>}
  */
 
-const deleteRoleById = async (roleId) => {
-  const role = await getRoleById(roleId);
+const deleteRoleById = async (roleId, user = null) => {
+  const role = await getRoleById(roleId, user);
   if (!role) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Role not found');
   }
@@ -261,7 +311,10 @@ const deleteAllRoles = async (tenantId) => {
     const result = await Role.deleteMany({ tenantId });
     // If no roles were deleted, throw a not found error
     if (result.deletedCount === 0) {
-      throw new ApiError(httpStatus.NOT_FOUND, 'No roles found for this tenant');
+      throw new ApiError(
+        httpStatus.NOT_FOUND,
+        'No roles found for this tenant'
+      );
     }
     // Return the result with the number of deleted roles
     return {
@@ -269,7 +322,11 @@ const deleteAllRoles = async (tenantId) => {
       deletedCount: result.deletedCount,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error deleting roles', error);
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Error deleting roles',
+      error
+    );
   }
 };
 
@@ -296,15 +353,25 @@ const assignPermissions = async (roleId, inputPermissions) => {
   }
 
   // Normalize input to array
-  const incoming = Array.isArray(inputPermissions) ? inputPermissions : [inputPermissions];
+  const incoming = Array.isArray(inputPermissions)
+    ? inputPermissions
+    : [inputPermissions];
 
   // Ensure all are valid ObjectIds
-  const validObjectIds = incoming.filter((id) => mongoose.Types.ObjectId.isValid(id));
+  const validObjectIds = incoming.filter((id) =>
+    mongoose.Types.ObjectId.isValid(id)
+  );
   if (validObjectIds.length === 0) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'No valid permission IDs provided');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'No valid permission IDs provided'
+    );
   }
   // Get valid permission IDs from DB
-  const validPermissions = await Permission.find({ _id: { $in: validObjectIds } }, '_id');
+  const validPermissions = await Permission.find(
+    { _id: { $in: validObjectIds } },
+    '_id'
+  );
   const validIds = validPermissions.map((p) => p._id.toString());
   // Merge with existing, remove duplicates
   const current = role.permissions.map((p) => p.toString());
@@ -321,26 +388,35 @@ const assignPermissions = async (roleId, inputPermissions) => {
 // services/roleService.ts
 const removePermissionsFromRole = async (roleId, inputPermissions) => {
   const role = await Role.findById(roleId);
-  
+
   if (!role) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Role not found');
   }
 
   // Normalize input to array (whether it's a single permission or an array of permissions)
-  const permissionsToRemove = Array.isArray(inputPermissions) ? inputPermissions : [inputPermissions];
+  const permissionsToRemove = Array.isArray(inputPermissions)
+    ? inputPermissions
+    : [inputPermissions];
 
   // Ensure all permissions are valid ObjectIds
-  const validObjectIds = permissionsToRemove.filter((id) => mongoose.Types.ObjectId.isValid(id));
+  const validObjectIds = permissionsToRemove.filter((id) =>
+    mongoose.Types.ObjectId.isValid(id)
+  );
 
   if (validObjectIds.length === 0) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'No valid permission IDs provided');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'No valid permission IDs provided'
+    );
   }
 
   // Get the current permissions of the role
   const currentPermissions = role.permissions.map((p) => p.toString());
 
   // Filter out the permissions to remove
-  const updatedPermissions = currentPermissions.filter((perm) => !validObjectIds.includes(perm));
+  const updatedPermissions = currentPermissions.filter(
+    (perm) => !validObjectIds.includes(perm)
+  );
 
   // Only update if the permissions list has changed
   if (updatedPermissions.length !== currentPermissions.length) {

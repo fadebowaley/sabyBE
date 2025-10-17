@@ -27,9 +27,30 @@ const apiKeySchema = mongoose.Schema(
       type: [String], // e.g., ['read', 'write', 'delete']
       default: ['read'],
     },
+    category: {
+      type: String,
+      enum: [
+        'web',
+        'api',
+        'mobile',
+        'internal',
+        'external',
+        'partner',
+        'system',
+      ],
+      default: 'web',
+    },
     scope: {
-      type: String, // e.g., 'mobile', 'api', 'crm'
-      enum: ['api', 'mobile', 'web', 'internal', 'external', 'partner', 'system'],
+      type: String, // DEPRECATED: Use category instead
+      enum: [
+        'api',
+        'mobile',
+        'web',
+        'internal',
+        'external',
+        'partner',
+        'system',
+      ],
       default: 'api',
     },
     expires: {
@@ -54,6 +75,40 @@ const apiKeySchema = mongoose.Schema(
       ipAddress: { type: String },
       userAgent: { type: String },
     },
+    // NEW FIELDS FOR APPROVAL WORKFLOW
+    approvalStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected', 'auto-approved'],
+      default: 'pending',
+      index: true,
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectionReason: {
+      type: String,
+      default: null,
+    },
+    requestedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    isProductionReady: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -75,31 +130,48 @@ apiKeySchema.statics.generateKey = async function ({
   label,
   environment = 'production',
   permissions = ['read'],
-  scope = 'api',
+  category = 'web',
+  scope, // Deprecated
   rateLimit = 1000,
   expires,
+  createdBy,
 }) {
   let prefix = 'sk_';
   if (environment === 'production') {
     prefix = 'sk_live_';
+  } else if (environment === 'staging') {
+    prefix = 'sk_staging_';
   } else {
     prefix = 'sk_test_';
   }
+
+  // Generate 64-character key (industry standard: prefix + 64 hex chars)
   const rawKey = prefix + require('crypto').randomBytes(32).toString('hex');
   const hashedKey = require('crypto')
     .createHash('sha256')
     .update(rawKey)
     .digest('hex');
 
+  // Auto-approve non-production keys
+  const approvalStatus =
+    environment === 'production' ? 'pending' : 'auto-approved';
+  const isActive = environment !== 'production'; // Auto-activate non-prod keys
+
   const keyDoc = await this.create({
     tenant: tenantId,
     label,
     environment,
     permissions,
-    scope,
+    category: category || scope || 'web',
+    scope: scope || category || 'web', // Backward compatibility
     rateLimit,
     expires,
     hashedKey,
+    createdBy,
+    requestedBy: createdBy,
+    approvalStatus,
+    isActive,
+    isProductionReady: false,
   });
 
   return { rawKey, keyDoc };

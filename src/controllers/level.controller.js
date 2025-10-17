@@ -6,6 +6,12 @@ const { levelService } = require('../services');
 
 // Create a new level
 const createLevel = catchAsync(async (req, res) => {
+  console.log(
+    '[LEVEL CONTROLLER - CREATE] Creating level for tenant:',
+    req.user.tenantId
+  );
+  // SECURITY: Add tenantId from authenticated user
+  req.body.tenantId = req.user.tenantId;
   const level = await levelService.createLevel(req.body);
   res.status(httpStatus.CREATED).send(level);
 });
@@ -15,6 +21,13 @@ const getLevelById = catchAsync(async (req, res) => {
   const level = await levelService.getLevelById(req.params.levelId);
   if (!level) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Level not found');
+  }
+  // SECURITY: Verify level belongs to user's tenant
+  if (level.tenantId !== req.user.tenantId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Access denied - level belongs to different tenant'
+    );
   }
   res.send(level);
 });
@@ -30,21 +43,66 @@ const getLevelByName = catchAsync(async (req, res) => {
 
 // Update level by ID
 const updateLevelById = catchAsync(async (req, res) => {
+  console.log(
+    '[LEVEL CONTROLLER - UPDATE] Level ID:',
+    req.params.levelId,
+    'Tenant:',
+    req.user.tenantId
+  );
+  const level = await levelService.getLevelById(req.params.levelId);
+  // SECURITY: Verify level belongs to user's tenant
+  if (level.tenantId !== req.user.tenantId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Access denied - level belongs to different tenant'
+    );
+  }
+  // SECURITY: Ensure tenantId cannot be changed
+  req.body.tenantId = req.user.tenantId;
   const updatedLevel = await levelService.updateLevelById(req.params.levelId, req.body);
   res.send(updatedLevel);
 });
 
 // Delete level by ID
 const deleteLevelById = catchAsync(async (req, res) => {
+  console.log(
+    '[LEVEL CONTROLLER - DELETE] Level ID:',
+    req.params.levelId,
+    'Tenant:',
+    req.user.tenantId
+  );
+  const level = await levelService.getLevelById(req.params.levelId);
+  // SECURITY: Verify level belongs to user's tenant
+  if (level.tenantId !== req.user.tenantId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Access denied - level belongs to different tenant'
+    );
+  }
   await levelService.deleteLevelById(req.params.levelId);
   res.status(httpStatus.NO_CONTENT).send();
 });
 
 // Query levels with filters and pagination
 const queryLevels = catchAsync(async (req, res) => {
+  console.log(
+    '[LEVEL CONTROLLER - QUERY] Query params:',
+    req.query,
+    'Tenant:',
+    req.user.tenantId
+  );
+  // SECURITY: Always filter by authenticated user's tenantId
   const filter = pick(req.query, ['type', 'parent']);
+  filter.tenantId = req.user.tenantId;
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
+  console.log('[LEVEL CONTROLLER - QUERY] Filter with tenantId:', filter);
   const result = await levelService.queryLevels(filter, options);
+  console.log(
+    '[LEVEL CONTROLLER - QUERY] Found',
+    result.results?.length || 0,
+    'levels for tenant:',
+    filter.tenantId
+  );
   res.send(result);
 });
 

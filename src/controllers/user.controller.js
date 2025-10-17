@@ -11,6 +11,12 @@ const ownerCreate = catchAsync(async (req, res) => {
   res.status(httpStatus.CREATED).send(user);
 });
 
+//Function to create SabyUser (Global Admin)
+const createSabyUser = catchAsync(async (req, res) => {
+  const user = await userService.createSabyUser(req.body);
+  res.status(httpStatus.CREATED).send(user);
+});
+
 
 // Function to bulk create users
 const bulkCreate = catchAsync(async (req, res) => {
@@ -125,7 +131,12 @@ const getUsers = catchAsync(async (req, res) => {
   }
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
   options.populate = 'roles';
-  options.user = req.user; // Add the user object to options
+  options.user = req.user; // Add the user object to options for tenant filtering and hierarchy
+
+  console.log(
+    `[getUsers] User: ${req.user.email}, isSaby: ${req.user.isSaby}, isSuper: ${req.user.isSuper}, isOwner: ${req.user.isOwner}, tenantId: ${req.user.tenantId}`
+  );
+  
   const result = await userService.queryUsers(filter, options);
   res.send(result);
 });
@@ -143,8 +154,33 @@ const getUser = catchAsync(async (req, res) => {
 
 
 const updateUser = catchAsync(async (req, res) => {
-  const user = await userService.updateUserById(req.params.userId, req.body);
-  res.send(user);
+  try {
+    console.log(
+      `🔄 [UserController.updateUser] Updating user ${req.params.userId}`
+    );
+    console.log(`📊 [UserController.updateUser] Request body:`, req.body);
+    console.log(
+      `👤 [UserController.updateUser] Current user:`,
+      req.user ? `${req.user.firstname} ${req.user.lastname}` : 'No user'
+    );
+
+    const user = await userService.updateUserById(
+      req.params.userId,
+      req.body,
+      req.user
+    );
+
+    console.log(`✅ [UserController.updateUser] User updated successfully`);
+    res.send(user);
+  } catch (error) {
+    console.error(`❌ [UserController.updateUser] Update failed:`, error);
+    console.error(`❌ [UserController.updateUser] Error details:`, {
+      message: error.message,
+      statusCode: error.statusCode,
+      isOperational: error.isOperational,
+    });
+    throw error;
+  }
 });
 
 
@@ -196,6 +232,7 @@ const assignRoles = catchAsync(async (req, res) => {
 
 module.exports = {
   ownerCreate,
+  createSabyUser,
   getUsers,
   getUser,
   updateUser,
@@ -207,6 +244,6 @@ module.exports = {
   softDeleteUser,
   assignRoles,
   getUserRoles,
-  getUserNodes
+  getUserNodes,
   // bulk create
 };

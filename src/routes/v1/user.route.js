@@ -134,6 +134,9 @@ const router = express.Router();
 // Create a new user (owner only)
 router.post('/', requireAccess('create:user'), validate(userValidation.ownerCreate), userController.ownerCreate);
 
+// Create a SabyUser (global admin - only accessible via direct admin)
+router.post('/saby', auth(), validate(userValidation.sabyUserCreate), userController.createSabyUser);
+
 /**
  * @swagger
  * /users:

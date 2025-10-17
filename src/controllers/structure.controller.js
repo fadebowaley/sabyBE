@@ -23,9 +23,24 @@ const createStructure = catchAsync(async (req, res) => {
 
 // Get structure by ID
 const getStructure = catchAsync(async (req, res) => {
-  const structure = await structureService.getStructureById(req.params.structureId);
+  console.log(
+    '[STRUCTURE CONTROLLER - GET] Structure ID:',
+    req.params.structureId,
+    'Tenant:',
+    req.user.tenantId
+  );
+  const structure = await structureService.getStructureById(
+    req.params.structureId
+  );
   if (!structure) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Structure not found');
+  }
+  // SECURITY: Verify structure belongs to user's tenant
+  if (structure.tenantId !== req.user.tenantId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Access denied - structure belongs to different tenant'
+    );
   }
   res.send(structure);
 });
@@ -41,23 +56,99 @@ const getStructureByName = catchAsync(async (req, res) => {
 
 // Update structure
 const updateStructure = catchAsync(async (req, res) => {
-  const updated = await structureService.updateStructureById(req.params.structureId, req.body);
+  console.log(
+    '[STRUCTURE CONTROLLER - UPDATE] Structure ID:',
+    req.params.structureId,
+    'Tenant:',
+    req.user.tenantId
+  );
+  console.log('[STRUCTURE CONTROLLER - UPDATE] Request body:', req.body);
+
+  const structure = await structureService.getStructureById(
+    req.params.structureId
+  );
+  // SECURITY: Verify structure belongs to user's tenant
+  if (structure.tenantId !== req.user.tenantId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Access denied - structure belongs to different tenant'
+    );
+  }
+
+  // Convert parentId to parent for database (API uses parentId, DB uses parent)
+  const updateData = { ...req.body };
+  if ('parentId' in updateData) {
+    updateData.parent = updateData.parentId;
+    delete updateData.parentId;
+    console.log(
+      '[STRUCTURE CONTROLLER - UPDATE] Converted parentId to parent:',
+      updateData.parent
+    );
+  }
+
+  console.log('[STRUCTURE CONTROLLER - UPDATE] Final update data:', updateData);
+
+  const updated = await structureService.updateStructureById(
+    req.params.structureId,
+    updateData
+  );
   res.send(updated);
 });
 
 // Delete structure
 const deleteStructure = catchAsync(async (req, res) => {
+  console.log(
+    '[STRUCTURE CONTROLLER - DELETE] Structure ID:',
+    req.params.structureId,
+    'Tenant:',
+    req.user.tenantId
+  );
+  const structure = await structureService.getStructureById(
+    req.params.structureId
+  );
+  // SECURITY: Verify structure belongs to user's tenant
+  if (structure.tenantId !== req.user.tenantId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Access denied - structure belongs to different tenant'
+    );
+  }
   await structureService.deleteStructureById(req.params.structureId);
   res.status(httpStatus.NO_CONTENT).send();
 });
 
 // Query structures
 const getStructures = catchAsync(async (req, res) => {
-  const filter = pick(req.query, ['type', 'isActive', 'level', 'tenantId']);
+  console.log('[STRUCTURE CONTROLLER - QUERY] Query params:', req.query);
+  console.log(
+    '[STRUCTURE CONTROLLER - QUERY] User tenant ID:',
+    req.user?.tenantId
+  );
+
+  // CRITICAL: Always filter by the authenticated user's tenantId for security
+  const filter = pick(req.query, ['type', 'isActive', 'level']);
+  filter.tenantId = req.user.tenantId; // Force tenant isolation
+
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
-  // Add populate option to include level data
-  options.populate = 'level';
+  // Add populate option to include level and parent data
+  options.populate = 'level,parent';
+
+  console.log('[STRUCTURE CONTROLLER - QUERY] Filter with tenantId:', filter);
+  console.log(
+    '[STRUCTURE CONTROLLER - QUERY] Populate options:',
+    options.populate
+  );
   const result = await structureService.queryStructures(filter, options);
+  console.log(
+    '[STRUCTURE CONTROLLER - QUERY] Found',
+    result.results?.length || 0,
+    'structures for tenant:',
+    filter.tenantId
+  );
+  console.log(
+    '[STRUCTURE CONTROLLER - QUERY] Returning structures:',
+    result.results
+  );
   res.send(result);
 });
 

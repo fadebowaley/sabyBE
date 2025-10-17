@@ -8,7 +8,10 @@ const saveStructuresAndLevels = async (structures, tenantId, createdBy) => {
   const session = await mongoose.startSession();
   let useTransaction = false;
   try {
-    console.log('Starting session and checking transaction support...', structures);
+    console.log(
+      'Starting session and checking transaction support...',
+      structures
+    );
     // Check if transactions are supported (replica set or mongos)
     useTransaction = session.supports && session.supports.transactions;
     if (useTransaction) {
@@ -18,34 +21,85 @@ const saveStructuresAndLevels = async (structures, tenantId, createdBy) => {
     const levelMap = new Map();
     const tempIdToStructureId = new Map();
     console.log('Processing unique ranks...');
-    const uniqueRanks = [...new Set(structures.filter((s) => !s.isSpecial).map((s) => s.levelRank))];
+    const uniqueRanks = [
+      ...new Set(
+        structures.filter((s) => !s.isSpecial).map((s) => s.levelRank)
+      ),
+    ];
     for (const rank of uniqueRanks) {
       console.log(`Processing rank: ${rank}`);
-      let level = await Level.findOne({ tenantId, rank }).session(useTransaction ? session : null);
+      let level = await Level.findOne({ tenantId, rank }).session(
+        useTransaction ? session : null
+      );
       if (!level) {
         console.log(`Level not found for rank ${rank}, creating new level...`);
-        const levels = await Level.create([{ tenantId, name: `Level ${rank}`, rank }], {
-          session: useTransaction ? session : null,
-        });
+        const levels = await Level.create(
+          [{ tenantId, name: `Level ${rank}`, rank }],
+          {
+            session: useTransaction ? session : null,
+          }
+        );
         level = levels[0];
       }
       levelMap.set(rank, level._id);
     }
     console.log('Processing structures...');
-    for (const item of structures) {
+
+    // CRITICAL FIX: Sort structures by level rank to process parents before children
+    // This ensures parent IDs are in the map when children are processed
+    const sortedStructures = structures.sort(
+      (a, b) => a.levelRank - b.levelRank
+    );
+    console.log(
+      'Sorted structures by level rank:',
+      sortedStructures.map((s) => ({
+        name: s.name,
+        levelRank: s.levelRank,
+        parentTempId: s.parentTempId,
+      }))
+    );
+
+    for (const item of sortedStructures) {
       console.log(`Processing structure: ${item.name}`);
       let levelId;
       if (item.isSpecial) {
-        console.log(`Structure ${item.name} is special, creating special level...`);
-        const levels = await Level.create([{ tenantId, name: `Special-${item.name}`, rank: item.levelRank }], {
-          session: useTransaction ? session : null,
-        });
+        console.log(
+          `Structure ${item.name} is special, creating special level...`
+        );
+        const levels = await Level.create(
+          [{ tenantId, name: `Special-${item.name}`, rank: item.levelRank }],
+          {
+            session: useTransaction ? session : null,
+          }
+        );
         levelId = levels[0]._id;
       } else {
         levelId = levelMap.get(item.levelRank);
       }
-      const parentId = item.parentTempId ? tempIdToStructureId.get(item.parentTempId) : null;
+      // CRITICAL FIX: Handle both temp IDs (for new nodes) and database IDs (for existing nodes)
+      let parentId = null;
+      if (item.parentTempId) {
+        // Check if it's a temp ID in our map (new parent node)
+        if (tempIdToStructureId.has(item.parentTempId)) {
+          parentId = tempIdToStructureId.get(item.parentTempId);
+          console.log(
+            `  - Parent is NEW node (temp ID): ${item.parentTempId} → ${parentId}`
+          );
+        } else {
+          // It's already a database ID (existing parent node)
+          parentId = item.parentTempId;
+          console.log(`  - Parent is EXISTING node (database ID): ${parentId}`);
+        }
+      }
+
       console.log(`Creating structure: ${item.name}`);
+      console.log(`  - Temp ID: ${item.tempId}`);
+      console.log(`  - Parent Temp ID from frontend: ${item.parentTempId}`);
+      console.log(`  - Resolved Parent ID for database: ${parentId}`);
+      console.log(
+        `  - Current temp ID map:`,
+        Array.from(tempIdToStructureId.entries())
+      );
       const [structure] = await Structures.create(
         [
           {
@@ -58,6 +112,7 @@ const saveStructuresAndLevels = async (structures, tenantId, createdBy) => {
             isSpecial: !!item.isSpecial,
             isActive: item.isActive !== undefined ? item.isActive : true,
             type: item.type || 'administrative',
+            position: item.position || { x: 0, y: 0 },
             createdBy,
           },
         ],
@@ -65,6 +120,10 @@ const saveStructuresAndLevels = async (structures, tenantId, createdBy) => {
       );
 
       tempIdToStructureId.set(item.tempId, structure._id);
+      console.log(`  ✅ Created structure with DB ID: ${structure._id}`);
+      console.log(
+        `  ✅ Saved with parent: ${structure.parent || 'null (root node)'}`
+      );
     }
 
     if (useTransaction) {
@@ -85,8 +144,6 @@ const saveStructuresAndLevels = async (structures, tenantId, createdBy) => {
     throw error;
   }
 };
-
-
 
 const createStructure = async (structureBody) => {
   return Structures.createStructure(structureBody);
@@ -125,9 +182,16 @@ const getStructureByName = async (name) => {
  * @returns {Promise<Structure>}
  */
 const updateStructureById = async (structureId, updateBody) => {
+  console.log(
+    '[STRUCTURE SERVICE - UPDATE] Updating structure:',
+    structureId,
+    'with data:',
+    JSON.stringify(updateBody, null, 2)
+  );
   const structure = await getStructureById(structureId);
   Object.assign(structure, updateBody);
   await structure.save();
+  console.log('[STRUCTURE SERVICE - UPDATE] Structure updated successfully');
   return structure;
 };
 
@@ -137,8 +201,10 @@ const updateStructureById = async (structureId, updateBody) => {
  * @returns {Promise<Structure>}
  */
 const deleteStructureById = async (structureId) => {
+  console.log('[STRUCTURE SERVICE - DELETE] Deleting structure:', structureId);
   const structure = await getStructureById(structureId);
   await structure.remove();
+  console.log('[STRUCTURE SERVICE - DELETE] Structure deleted successfully');
   return structure;
 };
 

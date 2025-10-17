@@ -6,7 +6,17 @@ const tenantPlugin = (schema) => {
     console.log('[TenantPlugin] Options:', this.options);
 
     const user = this.options?.user;
-    if (user?.isOwner && !user?.isSuper) {
+
+    // SabyUser can see all users across all tenants
+    if (user?.isSaby) {
+      console.log(
+        '[TenantPlugin] SabyUser detected - no tenant filtering applied'
+      );
+      return next();
+    }
+
+    // SuperUser and Owner can only see users within their tenant
+    if ((user?.isSuper || user?.isOwner) && !user?.isSaby) {
       console.log('[TenantPlugin] Applying tenantId filter:', user.tenantId);
       this.setQuery({
         ...this.getQuery(),
@@ -27,7 +37,16 @@ const tenantPlugin = (schema) => {
     console.log('[TenantPlugin] paginate() - incoming options:', options);
     const user = options.user;
 
-    if (user?.isOwner && !user?.isSuper) {
+    // SabyUser can see all users across all tenants
+    if (user?.isSaby) {
+      console.log(
+        '[TenantPlugin] SabyUser detected - no tenant filtering in pagination'
+      );
+      return originalPaginate.call(this, filter, options);
+    }
+
+    // SuperUser and Owner can only see users within their tenant
+    if ((user?.isSuper || user?.isOwner) && !user?.isSaby) {
       console.log('[TenantPlugin] Adding tenantId to filter:', user.tenantId);
       console.log('[TenantPlugin] Adding tenantId to user:', user);
       filter = { ...filter, tenantId: user.tenantId };

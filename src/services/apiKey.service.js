@@ -104,19 +104,39 @@ const verifyApiKey = async (rawKey) => {
  * Create an API key
  * @param {Object} apiKeyBody
  * @param {ObjectId} tenantId
+ * @param {ObjectId} userId
+ * @param {Object} user
  * @returns {Promise<{apiKey: ApiKey, rawKey: string}>}
  */
-const createApiKey = async (apiKeyBody, tenantId) => {
+const createApiKey = async (apiKeyBody, tenantId, userId, user) => {
+  const category = apiKeyBody.category || apiKeyBody.scope || 'web';
+
+  // Validate category access
+  const apiKeyApprovalService = require('./apiKeyApproval.service');
+  if (!apiKeyApprovalService.canCreateCategory(user, category)) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      `Only SabyUser can create ${category} API keys`
+    );
+  }
+
   // Generate API key
   const { rawKey, keyDoc } = await ApiKey.generateKey({
     tenantId,
     label: apiKeyBody.label,
     environment: apiKeyBody.environment,
     permissions: apiKeyBody.permissions || ['read'],
-    scope: apiKeyBody.scope || 'api',
+    category,
+    scope: apiKeyBody.scope, // Deprecated
     rateLimit: apiKeyBody.rateLimit || 1000,
     expires: apiKeyBody.expires,
+    createdBy: userId,
   });
+
+  // If production, create approval request
+  if (apiKeyBody.environment === 'production') {
+    await apiKeyApprovalService.createApprovalRequest(keyDoc, userId, tenantId);
+  }
 
   return { apiKey: keyDoc, rawKey };
 };
@@ -132,7 +152,14 @@ const updateApiKeyById = async (apiKeyId, updateBody, tenantId) => {
   const apiKey = await getApiKeyById(apiKeyId, tenantId);
 
   // Don't allow updating tenant or hashedKey
-  const allowedUpdates = ['label', 'isActive', 'permissions', 'scope', 'rateLimit', 'expires'];
+  const allowedUpdates = [
+    'label',
+    'isActive',
+    'permissions',
+    'scope',
+    'rateLimit',
+    'expires',
+  ];
   const updates = {};
 
   allowedUpdates.forEach((field) => {
@@ -239,11 +266,26 @@ const getApiKeyAnalytics = async (apiKeyId, tenantId, options = {}) => {
       },
     ],
     topEndpoints: [
-      { endpoint: '/api/v1/users', count: Math.floor((apiKey.usageCount || 0) * 0.3) },
-      { endpoint: '/api/v1/projects', count: Math.floor((apiKey.usageCount || 0) * 0.25) },
-      { endpoint: '/api/v1/forms', count: Math.floor((apiKey.usageCount || 0) * 0.2) },
-      { endpoint: '/api/v1/analytics', count: Math.floor((apiKey.usageCount || 0) * 0.15) },
-      { endpoint: '/api/v1/auth', count: Math.floor((apiKey.usageCount || 0) * 0.1) },
+      {
+        endpoint: '/api/v1/users',
+        count: Math.floor((apiKey.usageCount || 0) * 0.3),
+      },
+      {
+        endpoint: '/api/v1/projects',
+        count: Math.floor((apiKey.usageCount || 0) * 0.25),
+      },
+      {
+        endpoint: '/api/v1/forms',
+        count: Math.floor((apiKey.usageCount || 0) * 0.2),
+      },
+      {
+        endpoint: '/api/v1/analytics',
+        count: Math.floor((apiKey.usageCount || 0) * 0.15),
+      },
+      {
+        endpoint: '/api/v1/auth',
+        count: Math.floor((apiKey.usageCount || 0) * 0.1),
+      },
     ],
     permissions: apiKey.permissions,
     scope: apiKey.scope,
@@ -290,6 +332,56 @@ const deactivateExpiredKeys = async () => {
   return result.modifiedCount;
 };
 
+/**
+ * Auto-generate web API keys on user registration
+ * @param {string} tenantId
+ * @param {ObjectId} userId
+ * @returns {Promise<{staging: object, production: object}>}
+ */
+const autoGenerateWebApiKeys = async (tenantId, userId) => {
+  const apiKeyApprovalService = require('./apiKeyApproval.service');
+
+  // 1. Create Staging Web API Key (Active immediately)
+  const stagingKey = await ApiKey.generateKey({
+    tenantId,
+    label: 'Web Staging Key (Auto-generated)',
+    environment: 'staging',
+    category: 'web',
+    permissions: ['read', 'write'],
+    rateLimit: 1000,
+    createdBy: userId,
+  });
+
+  // Staging key is auto-approved and active
+  stagingKey.keyDoc.approvalStatus = 'auto-approved';
+  stagingKey.keyDoc.isActive = true;
+  await stagingKey.keyDoc.save();
+
+  // 2. Create Production Web API Key (Pending Approval)
+  const productionKey = await ApiKey.generateKey({
+    tenantId,
+    label: 'Web Production Key (Pending Approval)',
+    environment: 'production',
+    category: 'web',
+    permissions: ['read'],
+    rateLimit: 500,
+    createdBy: userId,
+  });
+
+  // Production key stays pending with isActive=false
+  // Create approval request
+  await apiKeyApprovalService.createApprovalRequest(
+    productionKey.keyDoc,
+    userId,
+    tenantId
+  );
+
+  return {
+    staging: stagingKey,
+    production: productionKey,
+  };
+};
+
 module.exports = {
   queryApiKeys,
   getApiKeysByTenant,
@@ -303,4 +395,5 @@ module.exports = {
   getApiKeyAnalytics,
   checkRateLimit,
   deactivateExpiredKeys,
+  autoGenerateWebApiKeys,
 };

@@ -21,7 +21,12 @@ const getApiKeys = catchAsync(async (req, res) => {
   const tenantId = req.user.tenantId;
 
   // Build filter from query parameters
-  const filter = pick(req.query, ['environment', 'isActive', 'scope']);
+  const filter = pick(req.query, [
+    'environment',
+    'isActive',
+    'category',
+    'approvalStatus',
+  ]);
 
   // Convert string 'true'/'false' to boolean for isActive
   if (filter.isActive !== undefined) {
@@ -42,8 +47,10 @@ const getApiKeys = catchAsync(async (req, res) => {
     const keyObj = key.toObject();
     delete keyObj.hashedKey;
 
-    // Add status based on expiration
-    if (keyObj.expires && new Date() > keyObj.expires) {
+    // Add status based on approval and expiration
+    if (keyObj.approvalStatus === 'pending') {
+      keyObj.status = 'pending-approval';
+    } else if (keyObj.expires && new Date() > keyObj.expires) {
       keyObj.status = 'expired';
     } else if (keyObj.isActive) {
       keyObj.status = 'active';
@@ -53,14 +60,18 @@ const getApiKeys = catchAsync(async (req, res) => {
 
     // Format dates for frontend
     keyObj.created = keyObj.createdAt;
-    keyObj.lastUsed = keyObj.lastUsedAt ? getRelativeTime(keyObj.lastUsedAt) : 'Never';
+    keyObj.lastUsed = keyObj.lastUsedAt
+      ? getRelativeTime(keyObj.lastUsedAt)
+      : 'Never';
     keyObj.expiresAt = keyObj.expires;
 
-    // Add truncated key for display (first 12 chars + ...)
+    // Add truncated key for display
     if (keyObj.environment === 'production') {
-      keyObj.key = 'sk_live_' + 'x'.repeat(16) + '...';
+      keyObj.key = 'sk_live_' + '●'.repeat(20) + '...';
+    } else if (keyObj.environment === 'staging') {
+      keyObj.key = 'sk_staging_' + '●'.repeat(20) + '...';
     } else {
-      keyObj.key = 'sk_test_' + 'x'.repeat(20) + '...';
+      keyObj.key = 'sk_test_' + '●'.repeat(20) + '...';
     }
 
     return keyObj;
@@ -95,17 +106,42 @@ const getApiKeys = catchAsync(async (req, res) => {
  */
 const createApiKey = catchAsync(async (req, res) => {
   const tenantId = req.user.tenantId;
-  const { apiKey, rawKey } = await apiKeyService.createApiKey(req.body, tenantId);
+  const userId = req.user._id;
+  const user = req.user;
+
+  const { apiKey, rawKey } = await apiKeyService.createApiKey(
+    req.body,
+    tenantId,
+    userId,
+    user
+  );
 
   // Sanitize response
   const keyObj = apiKey.toObject();
   delete keyObj.hashedKey;
 
-  // Add status and formatting
-  keyObj.status = keyObj.isActive ? 'active' : 'inactive';
+  // Add status and formatting based on approval status
+  if (keyObj.approvalStatus === 'pending') {
+    keyObj.status = 'pending-approval';
+  } else if (keyObj.isActive) {
+    keyObj.status = 'active';
+  } else {
+    keyObj.status = 'inactive';
+  }
+
   keyObj.created = keyObj.createdAt;
   keyObj.lastUsed = 'Never';
   keyObj.id = keyObj._id; // Ensure id is always present
+
+  // If production and pending, add approval info
+  if (
+    apiKey.environment === 'production' &&
+    apiKey.approvalStatus === 'pending'
+  ) {
+    keyObj.pendingApproval = true;
+    keyObj.message =
+      'API key created. Awaiting SabyUser approval for production use.';
+  }
 
   res.status(httpStatus.CREATED).send({
     apiKey: keyObj,

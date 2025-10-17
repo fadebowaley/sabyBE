@@ -6,7 +6,17 @@ const { nodeService } = require('../services');
 
 // Create a new node
 const createNode = catchAsync(async (req, res) => {
+  console.log(
+    '[NODE CONTROLLER - CREATE] Creating node for tenant:',
+    req.user.tenantId
+  );
+  // SECURITY: Add tenantId from authenticated user
+  req.body.tenantId = req.user.tenantId;
   const node = await nodeService.createNode(req.body);
+  console.log(
+    '[NODE CONTROLLER - CREATE] Node created successfully:',
+    node._id
+  );
   res.status(httpStatus.CREATED).send(node);
 });
 
@@ -15,6 +25,13 @@ const getNodeById = catchAsync(async (req, res) => {
   const node = await nodeService.getNodeById(req.params.nodeId);
   if (!node) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Node not found');
+  }
+  // SECURITY: Verify node belongs to user's tenant
+  if (node.tenantId !== req.user.tenantId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Access denied - node belongs to different tenant'
+    );
   }
   res.send(node);
 });
@@ -30,22 +47,68 @@ const getNodeByName = catchAsync(async (req, res) => {
 
 // Update node by ID
 const updateNodeById = catchAsync(async (req, res) => {
-  const updatedNode = await nodeService.updateNodeById(req.params.nodeId, req.body);
+  console.log(
+    '[NODE CONTROLLER - UPDATE] Node ID:',
+    req.params.nodeId,
+    'Tenant:',
+    req.user.tenantId
+  );
+  const node = await nodeService.getNodeById(req.params.nodeId);
+  // SECURITY: Verify node belongs to user's tenant
+  if (node.tenantId !== req.user.tenantId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Access denied - node belongs to different tenant'
+    );
+  }
+  const updatedNode = await nodeService.updateNodeById(
+    req.params.nodeId,
+    req.body
+  );
   res.send(updatedNode);
 });
 
 // Delete node by ID
 const deleteNodeById = catchAsync(async (req, res) => {
+  console.log(
+    '[NODE CONTROLLER - DELETE] Node ID:',
+    req.params.nodeId,
+    'Tenant:',
+    req.user.tenantId
+  );
+  const node = await nodeService.getNodeById(req.params.nodeId);
+  // SECURITY: Verify node belongs to user's tenant
+  if (node.tenantId !== req.user.tenantId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Access denied - node belongs to different tenant'
+    );
+  }
   await nodeService.deleteNodeById(req.params.nodeId);
   res.status(httpStatus.NO_CONTENT).send();
 });
 
 // Query nodes with filters and pagination
 const queryNodes = catchAsync(async (req, res) => {
+  console.log(
+    '[NODE CONTROLLER - QUERY] Query params:',
+    req.query,
+    'Tenant:',
+    req.user.tenantId
+  );
+  // SECURITY: Always filter by authenticated user's tenantId
   const filter = pick(req.query, ['type', 'parent']);
+  filter.tenantId = req.user.tenantId;
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
   options.populate = 'level,structure,users.roles';
+  console.log('[NODE CONTROLLER - QUERY] Filter with tenantId:', filter);
   const result = await nodeService.queryNodes(filter, options);
+  console.log(
+    '[NODE CONTROLLER - QUERY] Found',
+    result.results && Array.isArray(result.results) ? result.results.length : 0,
+    'nodes for tenant:',
+    filter.tenantId
+  );
   res.send(result);
 });
 

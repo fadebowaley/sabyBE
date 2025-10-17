@@ -26,8 +26,12 @@ const userSchema = mongoose.Schema(
 
     roles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Role', default: [] }],
     isOwner: { type: Boolean, default: false },
-    isAgreed: { type: Boolean, default: false },
     isSuper: { type: Boolean, default: false },
+    isSaby: {
+      type: Boolean,
+      default: false,
+    },
+    isAgreed: { type: Boolean, default: false },
     firstname: { type: String, required: true, trim: true },
     lastname: { type: String, required: true, trim: true },
     createdBy: {
@@ -106,6 +110,16 @@ userSchema.plugin(toJSON);
 userSchema.plugin(paginate);
 userSchema.plugin(tenantPlugin);
 
+// Create partial index to ensure only one SabyUser exists
+userSchema.index(
+  { isSaby: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isSaby: true },
+    name: 'unique_saby_user',
+  }
+);
+
 /** create user body staic ethod */
 
 /**
@@ -122,7 +136,11 @@ userSchema.statics.generateUserId = function () {
  * @returns {Promise<string>}
  */
 userSchema.statics.generateHaloId = async function () {
-  const counter = await HaloCounter.findOneAndUpdate({ name: 'halo' }, { $inc: { seq: 1 } }, { new: true, upsert: true });
+  const counter = await HaloCounter.findOneAndUpdate(
+    { name: 'halo' },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
   const base36 = counter.seq.toString(36).toUpperCase().padStart(5, '0');
   return `HL-${base36}`;
 };
@@ -170,15 +188,35 @@ userSchema.statics.isEmailTaken = async function (email, excludeUserId) {
  * Create a new user
  * - Generates a unique userId for the user
  * - Generates a tenantId based on whether the user is an owner or not
+ * - Enforces user hierarchy rules
  * - Saves the user to the database
  * @param {Object} userBody - The user data
  * @returns {Promise<User>}
  */
 
 userSchema.statics.createUser = async function (userBody) {
-  console.log(userBody);
+  console.log('Creating user with body:', userBody);
+
+  // Enforce SabyUser uniqueness
+  if (userBody.isSaby) {
+    const existingSabyUser = await this.findOne({ isSaby: true });
+    if (existingSabyUser) {
+      throw new Error('Only one SabyUser can exist in the system');
+    }
+  }
+
+  // Public signup automatically becomes SuperUser and Owner
+  if (!userBody.createdBy && !userBody.isSaby) {
+    userBody.isOwner = true;
+    userBody.isSuper = true;
+    console.log('Public signup: Auto-assigned isOwner=true, isSuper=true');
+  }
+
   userBody.userId = this.generateUserId();
-  userBody.tenantId = await this.generateTenantId(userBody.isOwner, userBody.createdBy);
+  userBody.tenantId = await this.generateTenantId(
+    userBody.isOwner,
+    userBody.createdBy
+  );
   const user = new this(userBody);
   await user.save();
   return user;
@@ -192,6 +230,33 @@ userSchema.statics.createUser = async function (userBody) {
 
 userSchema.methods.isPasswordMatch = async function (password) {
   return bcrypt.compare(password, this.password);
+};
+
+/**
+ * Check if user is an ordinary user (no special privileges)
+ * @returns {boolean}
+ */
+userSchema.methods.isOrdinaryUser = function () {
+  return !this.isSaby && !this.isSuper && !this.isOwner;
+};
+
+/**
+ * Check if user can access web portal
+ * @returns {boolean}
+ */
+userSchema.methods.canAccessWebPortal = function () {
+  return this.isSaby || this.isSuper || this.isOwner;
+};
+
+/**
+ * Get user hierarchy level
+ * @returns {number} 1=SabyUser, 2=SuperUser, 3=Owner, 4=OrdinaryUser
+ */
+userSchema.methods.getHierarchyLevel = function () {
+  if (this.isSaby) return 1;
+  if (this.isSuper) return 2;
+  if (this.isOwner) return 3;
+  return 4;
 };
 
 userSchema.pre('save', async function (next) {
@@ -223,7 +288,11 @@ userSchema.statics.resetPassword = async function (userId, newPassword) {
   await user.save({ validateBeforeSave: false });
 };
 
-userSchema.statics.createBulk = async function (usersBody, createdBy, tenantId) {
+userSchema.statics.createBulk = async function (
+  usersBody,
+  createdBy,
+  tenantId
+) {
   const success = [];
   const errors = [];
   if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy)) {
@@ -237,6 +306,27 @@ userSchema.statics.createBulk = async function (usersBody, createdBy, tenantId) 
           error: 'Email is already registered',
         });
         continue;
+      }
+
+      // Enforce hierarchy rules for bulk creation
+      if (userBody.isSaby) {
+        const existingSabyUser = await this.findOne({ isSaby: true });
+        if (existingSabyUser) {
+          errors.push({
+            email: userBody.email,
+            error: 'Only one SabyUser can exist in the system',
+          });
+          continue;
+        }
+      }
+
+      // SuperUser-created users cannot be SuperUser or SabyUser
+      if (userBody.isSuper || userBody.isSaby) {
+        userBody.isSuper = false;
+        userBody.isSaby = false;
+        console.log(
+          `Bulk creation: Removed super privileges for ${userBody.email}`
+        );
       }
 
       userBody.userId = this.generateUserId();
