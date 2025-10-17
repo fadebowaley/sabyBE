@@ -84,9 +84,9 @@ jobs:
           type=semver,pattern={{major}}.{{minor}}
           type=raw,value=latest,enable={{is_default_branch}}
         labels: |
-          org.opencontainers.image.title=Halo Backend
-          org.opencontainers.image.description=Halo Backend API Service
-          org.opencontainers.image.vendor=Halo
+          org.opencontainers.image.title=Saby Backend
+          org.opencontainers.image.description=Saby Backend API Service
+          org.opencontainers.image.vendor=Saby
           org.opencontainers.image.licenses=MIT
 
     - name: 🏗️ Build and push Docker image
@@ -219,6 +219,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push
     if: |
+      (github.ref == 'refs/heads/production' && github.event_name == 'push') ||
       (startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push') ||
       (github.event_name == 'workflow_dispatch' && (inputs.environment == 'production' || inputs.environment == 'both'))
     environment: production
@@ -240,14 +241,17 @@ jobs:
           if [ -n "${{ inputs.image_tag }}" ]; then
             IMAGE_TAG="${{ inputs.image_tag }}"
           else
-            IMAGE_TAG="latest"
+            IMAGE_TAG="production"
           fi
         elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
           ENVIRONMENT="production"
           IMAGE_TAG="${GITHUB_REF#refs/tags/}"
+        elif [ "${{ github.ref }}" == "refs/heads/production" ]; then
+          ENVIRONMENT="production"
+          IMAGE_TAG="production"
         else
           ENVIRONMENT="production"
-          IMAGE_TAG="main"
+          IMAGE_TAG="latest"
         fi
         
         echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
@@ -336,22 +340,38 @@ jobs:
         name: Release ${{ github.ref_name }}
 
         body: |
-          🚀 **Halo Backend ${{ steps.version.outputs.VERSION }}**
+          🚀 **Saby Backend ${{ steps.version.outputs.VERSION }}**
              - Docker image: `ghcr.io/fadebowaley/sabybe/halobe:${{ github.ref_name }}`
           
           ## What's New
           - Production deployment completed
+          - Swagger API documentation: https://api.saby.ai/api-docs/
           - Docker image: `${{ steps.deploy.outputs.FULL_IMAGE }}`
           
           ## Deployment Details
           - **Environment**: Production
           - **Server**: ${{ steps.deploy.outputs.SERVER_HOST }}
-          - **Service**: Halo Backend
+          - **Service**: Saby Backend API
           - **Port**: 4000
+          - **API URL**: https://api.saby.ai
           - **Health Check**: ✅ Passed
         draft: false
         prerelease: false
 
+    - name: 🏥 Verify Production Deployment
+      if: success()
+      run: |
+        echo "🏥 Verifying production deployment..."
+        sleep 10
+        
+        # Test API health via SSH
+        ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no ${{ steps.deploy.outputs.SERVER_USER }}@${{ steps.deploy.outputs.SERVER_HOST }} << 'VERIFY'
+        echo "Testing API endpoints..."
+        curl -f -s http://localhost:4000/ > /dev/null && echo "✅ API responding" || echo "❌ API not responding"
+        curl -f -s http://localhost:4000/api-docs/ > /dev/null && echo "✅ Swagger accessible" || echo "⚠️  Swagger not accessible"
+        docker ps --filter name=halo-prod --format "table {{.Names}}\t{{.Status}}"
+        VERIFY
+    
     - name: 📊 Production deployment status
       if: always()
       run: |
@@ -359,6 +379,8 @@ jobs:
           echo "✅ Production deployment successful"
           echo "🌐 Production Server: ${{ steps.deploy.outputs.SERVER_HOST }}"
           echo "🐳 Image: ${{ steps.deploy.outputs.FULL_IMAGE }}"
+          echo "📚 Swagger Docs: https://api.saby.ai/api-docs/"
+          echo "🔗 API URL: https://api.saby.ai"
         else
           echo "❌ Production deployment failed"
         fi
