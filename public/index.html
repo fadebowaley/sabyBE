@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saby API - Developer Platform</title>
+    <meta name="description" content="Saby API - Build powerful applications with our comprehensive API platform. Access hierarchical networks, user management, and organizational structures.">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Background food illustrations */
+        .bg-illustrations {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.1;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .bg-illustrations::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 10 L60 30 L80 30 L65 45 L70 65 L50 55 L30 65 L35 45 L20 30 L40 30 Z' fill='%23ffffff'/%3E%3C/svg%3E") no-repeat center;
+            background-size: contain;
+        }
+
+        .bg-illustrations::after {
+            content: '';
+            position: absolute;
+            bottom: 100px;
+            left: 50px;
+            width: 80px;
+            height: 80px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M20 20 Q30 10 40 20 Q50 30 60 20 Q70 10 80 20 L80 40 Q70 50 60 40 Q50 30 40 40 Q30 50 20 40 Z' fill='%23ffffff'/%3E%3C/svg%3E") no-repeat center;
+            background-size: contain;
+        }
+
+        /* Main container */
+        .container {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Main card */
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            background-image: 
+                linear-gradient(rgba(0,0,0,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Header section */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+        }
+
+        .barcode {
+            width: 40px;
+            height: 20px;
+            background: repeating-linear-gradient(
+                90deg,
+                #000 0px,
+                #000 2px,
+                transparent 2px,
+                transparent 4px
+            );
+            margin-bottom: 5px;
+        }
+
+        .api-info {
+            text-align: right;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .api-info h3 {
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+
+        .rating {
+            color: #ffd700;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        .api-details {
+            font-size: 12px;
+            color: #888;
+        }
+
+        /* Main content */
+        .main-content {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .headline {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            position: relative;
+            font-family: 'Georgia', serif;
+        }
+
+        .headline::before {
+            content: '💬';
+            position: absolute;
+            left: -40px;
+            top: 0;
+            font-size: 1.5rem;
+        }
+
+        .description {
+            font-size: 1.1rem;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Email signup */
+        .email-section {
+            margin: 30px 0;
+        }
+
+        .email-label {
+            display: block;
+            text-align: left;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .email-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .email-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        .email-input:focus {
+            outline: none;
+            border-color: #3498db;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .cta-button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .cta-button:hover {
+            background: #34495e;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
+        }
+
+        /* API links */
+        .api-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .api-link {
+            display: block;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .api-link:hover {
+            background: #2c3e50;
+            color: white;
+            border-color: #2c3e50;
+            transform: translateY(-2px);
+        }
+
+        .api-link-icon {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        /* People illustration */
+        .people-illustration {
+            margin-top: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .person {
+            width: 30px;
+            height: 30px;
+            background: #2c3e50;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .person::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            background: #2c3e50;
+            border-radius: 50%;
+        }
+
+        .person.walking {
+            animation: walk 2s ease-in-out infinite;
+        }
+
+        .person.waving {
+            animation: wave 1.5s ease-in-out infinite;
+        }
+
+        .person.cycling {
+            width: 40px;
+            height: 20px;
+            border-radius: 10px;
+            background: #34495e;
+        }
+
+        .person.cycling::before {
+            width: 15px;
+            height: 15px;
+            top: -3px;
+        }
+
+        @keyframes walk {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(5px); }
+        }
+
+        @keyframes wave {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(10deg); }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .main-card {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+
+            .headline {
+                font-size: 2rem;
+            }
+
+            .headline::before {
+                left: -30px;
+                font-size: 1.2rem;
+            }
+
+            .email-input-group {
+                flex-direction: column;
+            }
+
+            .cta-button {
+                width: 100%;
+            }
+
+            .api-links {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .headline {
+                font-size: 1.8rem;
+            }
+
+            .headline::before {
+                display: none;
+            }
+
+            .people-illustration {
+                gap: 5px;
+            }
+
+            .person {
+                width: 25px;
+                height: 25px;
+            }
+        }
+
+        /* Loading animation */
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2c3e50;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Success message */
+        .success-message {
+            display: none;
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <!-- Background illustrations -->
+    <div class="bg-illustrations"></div>
+
+    <!-- Main container -->
+    <div class="container">
+        <div class="main-card">
+            <!-- Header -->
+            <div class="header">
+                <div>
+                    <div class="barcode"></div>
+                    <div class="barcode"></div>
+                </div>
+                <div class="api-info">
+                    <h3>Saby API</h3>
+                    <div class="rating">★★★★★</div>
+                    <div class="api-details">
+                        <div>Version 1.0.0</div>
+                        <div>99.9% Uptime</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main content -->
+            <div class="main-content">
+                <h1 class="headline">Build with Saby API</h1>
+                <p class="description">
+                    Access our comprehensive API platform to build powerful applications with hierarchical networks, 
+                    user management, and organizational structures. Start building today with our developer-friendly API.
+                </p>
+
+                <!-- Email signup -->
+                <div class="email-section">
+                    <label for="email" class="email-label">Get API Access</label>
+                    <div class="email-input-group">
+                        <input 
+                            type="email" 
+                            id="email" 
+                            class="email-input" 
+                            placeholder="developer@company.com"
+                            required
+                        >
+                        <button class="cta-button" onclick="handleSignup()">
+                            GET API ACCESS
+                        </button>
+                    </div>
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div>
+                        <p>Processing your request...</p>
+                    </div>
+                    <div class="success-message" id="success">
+                        ✅ Welcome to Saby API! Check your email for access details.
+                    </div>
+                </div>
+
+                <!-- API Links -->
+                <div class="api-links">
+                    <a href="/api-docs/" class="api-link" target="_blank">
+                        <span class="api-link-icon">📚</span>
+                        <div>API Documentation</div>
+                    </a>
+                    <a href="/v1/auth/login" class="api-link" target="_blank">
+                        <span class="api-link-icon">🔐</span>
+                        <div>Authentication</div>
+                    </a>
+                    <a href="https://github.com/fadebowaley/saby" class="api-link" target="_blank">
+                        <span class="api-link-icon">💻</span>
+                        <div>GitHub Repository</div>
+                    </a>
+                    <a href="mailto:apis@saby.ai" class="api-link">
+                        <span class="api-link-icon">📧</span>
+                        <div>Contact Support</div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- People illustration -->
+            <div class="people-illustration">
+                <div class="person walking"></div>
+                <div class="person walking"></div>
+                <div class="person"></div>
+                <div class="person"></div>
+                <div class="person waving"></div>
+                <div class="person"></div>
+                <div class="person"></div>
+                <div class="person cycling"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function handleSignup() {
+            const email = document.getElementById('email').value;
+            const loading = document.getElementById('loading');
+            const success = document.getElementById('success');
+            const button = document.querySelector('.cta-button');
+
+            if (!email || !email.includes('@')) {
+                alert('Please enter a valid email address');
+                return;
+            }
+
+            // Show loading state
+            button.style.display = 'none';
+            loading.style.display = 'block';
+
+            // Simulate API call
+            setTimeout(() => {
+                loading.style.display = 'none';
+                success.style.display = 'block';
+                
+                // In a real implementation, you would:
+                // 1. Send email to your backend
+                // 2. Store in database
+                // 3. Send welcome email
+                // 4. Provide API keys
+                
+                console.log('Developer signup:', email);
+            }, 2000);
+        }
+
+        // Handle Enter key in email input
+        document.getElementById('email').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleSignup();
+            }
+        });
+
+        // Add some interactive effects
+        document.querySelectorAll('.api-link').forEach(link => {
+            link.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-3px) scale(1.02)';
+            });
+            
+            link.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>
