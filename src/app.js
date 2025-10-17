@@ -84,12 +84,15 @@ if (config.env === 'production') {
   app.use('/v1/auth', authLimiter);
 }
 
-// Health check endpoint
-app.get('/', (req, res) => {
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Health check endpoint (moved to /health)
+app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     message:
-      '🛠️ “I will restore you to health and heal your wounds.” – Jeremiah 30:17 | Saby Staging v1.0.2 - FRESH TEST 2025-01-05 🔧',
+      '🛠️ "I will restore you to health and heal your wounds." – Jeremiah 30:17 | Saby Staging v1.0.2 - FRESH TEST 2025-01-05 🔧',
     timestamp: new Date().toISOString(),
     environment: 'staging',
     version: '1.0.0',
