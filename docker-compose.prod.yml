@@ -12,7 +12,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=4000
-      - MONGODB_URL=mongodb://mongodb:27017/halo-prod
+      - MONGODB_URL=mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-password}@mongodb:27017/halo-prod?authSource=admin
       # Remote PostgreSQL configuration
       - POSTGRES_HOST=20.169.129.160
       - POSTGRES_PORT=5432
