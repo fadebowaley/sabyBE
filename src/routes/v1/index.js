@@ -34,6 +34,19 @@ const storageFolderRoute = require('./storageFolder.route');
 const submissionRoute = require('./submission.route');
 const telegramWebAppRoute = require('./telegramWebApp.route');
 const waitlistRoute = require('./waitlist.route');
+// Reporting & Analytics Routes
+const submissionReportRoute = require('./submissionReport.route');
+const complianceReportRoute = require('./complianceReport.route');
+const validationReportRoute = require('./validationReport.route');
+const notificationReportRoute = require('./notificationReport.route');
+const analyticsReportRoute = require('./analyticsReport.route');
+const exportReportRoute = require('./exportReport.route');
+const trendAnalysisRoute = require('./trendAnalysis.route');
+// PERM Routes
+const unifiedSubmissionRoute = require('./unifiedSubmission.route');
+const eventCalendarRoute = require('./eventCalendar.route');
+const eventComplianceRoute = require('./eventCompliance.route');
+const permSubmissionRoute = require('./permSubmission.route');
 
 // declare rest of the routes: nodeLevel, nodeStructure, node etc.
 const config = require('../../config/config');
@@ -177,6 +190,52 @@ const defaultRoutes = [
   {
     path: '/waitlist',
     route: waitlistRoute,
+  },
+  // Unified Submission & PERM Routes
+  {
+    path: '/submissions',
+    route: unifiedSubmissionRoute,
+  },
+  // {
+  //   path: '/perm/submissions',
+  //   route: permSubmissionRoute,
+  // },
+  {
+    path: '/event-calendar',
+    route: eventCalendarRoute,
+  },
+  // {
+  //   path: '/event-compliance',
+  //   route: eventComplianceRoute,
+  // },
+  // Reporting Routes
+  {
+    path: '/submission-reports',
+    route: submissionReportRoute,
+  },
+  // {
+  //   path: '/compliance-reports',
+  //   route: complianceReportRoute,
+  // },
+  {
+    path: '/validation-reports',
+    route: validationReportRoute,
+  },
+  // {
+  //   path: '/notification-reports',
+  //   route: notificationReportRoute,
+  // },
+  {
+    path: '/analytics',
+    route: analyticsReportRoute,
+  },
+  {
+    path: '/export',
+    route: exportReportRoute,
+  },
+  {
+    path: '/trend-analysis',
+    route: trendAnalysisRoute,
   },
 ];
 

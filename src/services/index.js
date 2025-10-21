@@ -23,3 +23,13 @@ module.exports.storageService = require('./storage.service');
 module.exports.storageFolderService = require('./storageFolder.service');
 module.exports.awsService = require('./aws.service');
 module.exports.waitlistService = require('./waitlist.service');
+// PERM Services
+module.exports.eventCalendarService = require('./eventCalendar.service');
+module.exports.permNotificationService = require('./permNotification.service');
+module.exports.permSubmissionService = require('./permSubmission.service');
+// Reporting Services
+module.exports.submissionReportService = require('./submissionReport.service');
+module.exports.validationReportService = require('./validationReport.service');
+module.exports.analyticsReportService = require('./analyticsReport.service');
+module.exports.exportReportService = require('./exportReport.service');
+module.exports.trendAnalysisService = require('./trendAnalysis.service');
