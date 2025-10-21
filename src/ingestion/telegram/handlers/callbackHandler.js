@@ -7,8 +7,9 @@ const sessionManager = require('../session');
  */
 async function handleCallbackQuery(bot, callbackQuery) {
   const chatId = callbackQuery.message.chat.id;
-  const data = callbackQuery.data;
-  const userName = callbackQuery.from.first_name || callbackQuery.from.username || 'User';
+  const { data } = callbackQuery;
+  const userName =
+    callbackQuery.from.first_name || callbackQuery.from.username || 'User';
 
   try {
     logger.info(`🔘 Callback query received from chat ${chatId}: ${data}`);
@@ -54,14 +55,23 @@ async function handleCallbackQuery(bot, callbackQuery) {
           await handleProjectSelectionCallback(chatId, data);
         } else {
           logger.warn(`Unknown callback data: ${data}`);
-          await telegramNotificationService.sendErrorMessage(chatId, 'Unknown action. Please try again.');
+          await telegramNotificationService.sendErrorMessage(
+            chatId,
+            'Unknown action. Please try again.'
+          );
         }
     }
 
     logger.info(`✅ Callback query handled successfully for chat ${chatId}`);
   } catch (error) {
-    logger.error(`❌ Error handling callback query for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'An error occurred. Please try again.');
+    logger.error(
+      `❌ Error handling callback query for chat ${chatId}:`,
+      error.message
+    );
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'An error occurred. Please try again.'
+    );
   }
 }
 
@@ -97,7 +107,10 @@ async function handleStartFormCallback(chatId, userName) {
     await telegramNotificationService.sendProjectSelection(chatId, userName);
   } else {
     // User needs to authenticate first
-    await telegramNotificationService.sendAuthenticationPrompt(chatId, userName);
+    await telegramNotificationService.sendAuthenticationPrompt(
+      chatId,
+      userName
+    );
   }
 }
 
@@ -168,8 +181,14 @@ Use /start to begin a new form submission.`,
 
     logger.info(`✅ Session reset completed for chat ${chatId}`);
   } catch (error) {
-    logger.error(`❌ Error resetting session for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to reset session. Please try again.');
+    logger.error(
+      `❌ Error resetting session for chat ${chatId}:`,
+      error.message
+    );
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to reset session. Please try again.'
+    );
   }
 }
 
@@ -226,10 +245,18 @@ async function handleProjectSelectionCallback(chatId, data) {
     const formHandler = require('./formHandler');
     await formHandler.handleProjectSelection(bot, session, projectId);
 
-    logger.info(`✅ Project selection handled for chat ${chatId}, project: ${projectId}`);
+    logger.info(
+      `✅ Project selection handled for chat ${chatId}, project: ${projectId}`
+    );
   } catch (error) {
-    logger.error(`❌ Error handling project selection for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to select project. Please try again.');
+    logger.error(
+      `❌ Error handling project selection for chat ${chatId}:`,
+      error.message
+    );
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to select project. Please try again.'
+    );
   }
 }
 

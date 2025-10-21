@@ -1,8 +1,7 @@
 const mongoose = require('mongoose');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
-
-/****
+/** **
  *✅ Highlights:
 References: Collection, Datapoint, Event
 Supports recurrence setup

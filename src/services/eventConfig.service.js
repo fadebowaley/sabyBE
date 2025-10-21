@@ -7,27 +7,22 @@ const ApiError = require('../utils/ApiError');
  * @param {Object} configBody
  * @returns {Promise<EventConfig>}
  */
-const createEventConfig = async (configBody) => {
-  return EventConfig.create(configBody);
-};
+const createEventConfig = async (configBody) => EventConfig.create(configBody);
 
 /**
  * Get event config by ID
  * @param {ObjectId} configId
  * @returns {Promise<EventConfig>}
  */
-const getEventConfigById = async (configId) => {
-  return EventConfig.findById(configId);
-};
+const getEventConfigById = async (configId) => EventConfig.findById(configId);
 
 /**
  * Get config by associated event ID
  * @param {ObjectId} eventId
  * @returns {Promise<EventConfig>}
  */
-const getConfigByEvent = async (eventId) => {
-  return EventConfig.findOne({ event: eventId });
-};
+const getConfigByEvent = async (eventId) =>
+  EventConfig.findOne({ event: eventId });
 
 /**
  * Query for event configurations
@@ -35,9 +30,8 @@ const getConfigByEvent = async (eventId) => {
  * @param {Object} options
  * @returns {Promise<QueryResult>}
  */
-const queryEventConfigs = async (filter, options) => {
-  return EventConfig.paginate(filter, options);
-};
+const queryEventConfigs = async (filter, options) =>
+  EventConfig.paginate(filter, options);
 
 /**
  * Update event config by ID
@@ -73,9 +67,7 @@ const deleteEventConfigById = async (configId) => {
  * Delete all configurations
  * @returns {Promise<{ deletedCount: number }>}
  */
-const deleteAllConfigs = async () => {
-  return EventConfig.deleteMany({});
-};
+const deleteAllConfigs = async () => EventConfig.deleteMany({});
 
 module.exports = {
   createEventConfig,

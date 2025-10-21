@@ -10,7 +10,9 @@ const createUserFormSettings = {
       .keys({
         access: Joi.object()
           .keys({
-            type: Joi.string().valid('public', 'role-based', 'invite-only').default('public'),
+            type: Joi.string()
+              .valid('public', 'role-based', 'invite-only')
+              .default('public'),
             requiresLogin: Joi.boolean().default(false),
             allowedRoles: Joi.array().items(Joi.string()).default([]),
             submissionLimit: Joi.number().integer().min(0).default(0),
@@ -46,7 +48,9 @@ const createUserFormSettings = {
                 sendToUser: Joi.boolean().default(false),
                 sendToOwner: Joi.boolean().default(true),
                 emailTemplateId: Joi.string().default('default'),
-                customEmails: Joi.array().items(Joi.string().email()).default([]),
+                customEmails: Joi.array()
+                  .items(Joi.string().email())
+                  .default([]),
               })
               .default({}),
             onFailure: Joi.object()
@@ -59,8 +63,12 @@ const createUserFormSettings = {
           .default({}),
         ui: Joi.object()
           .keys({
-            theme: Joi.string().valid('light', 'dark', 'auto', 'custom').default('light'),
-            layout: Joi.string().valid('single-page', 'multi-step', 'wizard').default('single-page'),
+            theme: Joi.string()
+              .valid('light', 'dark', 'auto', 'custom')
+              .default('light'),
+            layout: Joi.string()
+              .valid('single-page', 'multi-step', 'wizard')
+              .default('single-page'),
             branding: Joi.object()
               .keys({
                 logoUrl: Joi.string().uri().allow(''),
@@ -83,9 +91,15 @@ const createUserFormSettings = {
             elements: Joi.array().default([]),
             formLayout: Joi.object()
               .keys({
-                spacing: Joi.string().valid('compact', 'normal', 'comfortable').default('normal'),
-                labelPosition: Joi.string().valid('top', 'left', 'floating').default('top'),
-                buttonAlignment: Joi.string().valid('left', 'center', 'right').default('left'),
+                spacing: Joi.string()
+                  .valid('compact', 'normal', 'comfortable')
+                  .default('normal'),
+                labelPosition: Joi.string()
+                  .valid('top', 'left', 'floating')
+                  .default('top'),
+                buttonAlignment: Joi.string()
+                  .valid('left', 'center', 'right')
+                  .default('left'),
               })
               .default({}),
             validation: Joi.object()
@@ -306,7 +320,9 @@ const upsertUserFormSettings = {
       .keys({
         access: Joi.object()
           .keys({
-            type: Joi.string().valid('public', 'role-based', 'invite-only').default('public'),
+            type: Joi.string()
+              .valid('public', 'role-based', 'invite-only')
+              .default('public'),
             requiresLogin: Joi.boolean().default(false),
             allowedRoles: Joi.array().items(Joi.string()).default([]),
             submissionLimit: Joi.number().integer().min(0).default(0),
@@ -342,7 +358,9 @@ const upsertUserFormSettings = {
                 sendToUser: Joi.boolean().default(false),
                 sendToOwner: Joi.boolean().default(true),
                 emailTemplateId: Joi.string().default('default'),
-                customEmails: Joi.array().items(Joi.string().email()).default([]),
+                customEmails: Joi.array()
+                  .items(Joi.string().email())
+                  .default([]),
               })
               .default({}),
             onFailure: Joi.object()
@@ -355,8 +373,12 @@ const upsertUserFormSettings = {
           .default({}),
         ui: Joi.object()
           .keys({
-            theme: Joi.string().valid('light', 'dark', 'auto', 'custom').default('light'),
-            layout: Joi.string().valid('single-page', 'multi-step', 'wizard').default('single-page'),
+            theme: Joi.string()
+              .valid('light', 'dark', 'auto', 'custom')
+              .default('light'),
+            layout: Joi.string()
+              .valid('single-page', 'multi-step', 'wizard')
+              .default('single-page'),
             branding: Joi.object()
               .keys({
                 logoUrl: Joi.string().uri().allow(''),
@@ -379,9 +401,15 @@ const upsertUserFormSettings = {
             elements: Joi.array().default([]),
             formLayout: Joi.object()
               .keys({
-                spacing: Joi.string().valid('compact', 'normal', 'comfortable').default('normal'),
-                labelPosition: Joi.string().valid('top', 'left', 'floating').default('top'),
-                buttonAlignment: Joi.string().valid('left', 'center', 'right').default('left'),
+                spacing: Joi.string()
+                  .valid('compact', 'normal', 'comfortable')
+                  .default('normal'),
+                labelPosition: Joi.string()
+                  .valid('top', 'left', 'floating')
+                  .default('top'),
+                buttonAlignment: Joi.string()
+                  .valid('left', 'center', 'right')
+                  .default('left'),
               })
               .default({}),
             validation: Joi.object()

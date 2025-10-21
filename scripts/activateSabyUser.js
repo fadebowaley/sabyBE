@@ -66,4 +66,3 @@ const activateSabyUser = async () => {
 
 // Run the script
 activateSabyUser();
-

@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { nanoid } = require('nanoid');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 const { HaloCounter } = require('./haloCounter.model');
+
 const AVATAR_BASE_URL = 'https://halocrm.s3.us-east-1.amazonaws.com/user';
 
 const userSchema = mongoose.Schema(
@@ -268,7 +269,7 @@ userSchema.pre('save', async function (next) {
     this.password = await bcrypt.hash(this.password, 8);
   }
 
-  //Add avatar only if not already set
+  // Add avatar only if not already set
   if (!this.avatar) {
     const randomNum = Math.floor(Math.random() * 15) + 1; // 1 to 15
     const paddedNum = String(randomNum).padStart(2, '0'); // e.g., 01, 02, ...
@@ -277,7 +278,7 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-//Saving user password
+// Saving user password
 userSchema.statics.resetPassword = async function (userId, newPassword) {
   const user = await this.findById(userId); // Fetch the user by ID
   if (!user) {
@@ -355,8 +356,6 @@ userSchema.statics.createBulk = async function (
   };
   return { success, errors, summary };
 };
-
-
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;

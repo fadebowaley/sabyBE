@@ -78,13 +78,15 @@ const storageSchema = mongoose.Schema(
       tags: [String],
       customFields: mongoose.Schema.Types.Mixed,
     },
-    versions: [{
-      versionId: String,
-      fileName: String,
-      fileSize: Number,
-      storageUrl: String,
-      createdAt: { type: Date, default: Date.now },
-    }],
+    versions: [
+      {
+        versionId: String,
+        fileName: String,
+        fileSize: Number,
+        storageUrl: String,
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     status: {
       type: String,
       enum: ['active', 'archived', 'deleted'],
@@ -102,7 +104,11 @@ storageSchema.plugin(paginate);
 storageSchema.plugin(tenantPlugin);
 
 storageSchema.index({ tenantId: 1, userId: 1, status: 1 });
-storageSchema.index({ originalName: 'text', 'metadata.description': 'text', 'metadata.tags': 'text' });
+storageSchema.index({
+  originalName: 'text',
+  'metadata.description': 'text',
+  'metadata.tags': 'text',
+});
 
 storageSchema.statics.generateFileId = function () {
   return `FILE-${nanoid(12)}`;

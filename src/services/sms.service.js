@@ -1,6 +1,6 @@
+const axios = require('axios');
 const config = require('../config/config');
 const logger = require('../config/logger');
-const axios = require('axios');
 
 // Log configuration details for debugging
 logger.info(`Sendar URL: ${config.sms.sendar_api_url}`);
@@ -26,21 +26,31 @@ async function sendSms(senderId, messages, walletType = '1') {
     logger.debug('Sending SMS with payload:', JSON.stringify(payload, null, 2));
 
     // Make the API request to send SMS
-    const response = await axios.post(`${config.sms.sendar_api_url}/sms/send`, payload, {
-      headers: {
-        'Api-key': config.sms.sms_api_key,
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await axios.post(
+      `${config.sms.sendar_api_url}/sms/send`,
+      payload,
+      {
+        headers: {
+          'Api-key': config.sms.sms_api_key,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
     // Log success message after receiving a response
-    logger.info('SMS request sent successfully. Response:', JSON.stringify(response.data, null, 2));
+    logger.info(
+      'SMS request sent successfully. Response:',
+      JSON.stringify(response.data, null, 2)
+    );
 
     // Return the response from the API
     return response.data;
   } catch (error) {
     // Log error message if sending SMS fails
-    logger.error('SMS sending failed. Error details:', error.response?.data || error.message);
+    logger.error(
+      'SMS sending failed. Error details:',
+      error.response?.data || error.message
+    );
     throw error; // Rethrow error to be handled by caller
   }
 }
@@ -56,20 +66,29 @@ async function getSmsStatus(uid) {
     logger.debug(`Fetching SMS status for UID: ${uid}`);
 
     // Make the API request to get SMS status
-    const response = await axios.get(`${config.sms.sendar_api_url}/get/sms/${uid}`, {
-      headers: {
-        'Api-key': config.sms.sms_api_key,
-      },
-    });
+    const response = await axios.get(
+      `${config.sms.sendar_api_url}/get/sms/${uid}`,
+      {
+        headers: {
+          'Api-key': config.sms.sms_api_key,
+        },
+      }
+    );
 
     // Log the response for debugging
-    logger.info('SMS status retrieved successfully. Response:', JSON.stringify(response.data, null, 2));
+    logger.info(
+      'SMS status retrieved successfully. Response:',
+      JSON.stringify(response.data, null, 2)
+    );
 
     // Return the status response
     return response.data;
   } catch (error) {
     // Log error message if fetching SMS status fails
-    logger.error('Failed to fetch SMS status. Error details:', error.response?.data || error.message);
+    logger.error(
+      'Failed to fetch SMS status. Error details:',
+      error.response?.data || error.message
+    );
     throw error; // Rethrow error to be handled by caller
   }
 }
@@ -86,8 +105,14 @@ const smsMessage = {
   try {
     logger.info('Starting SMS sending process...');
     const response = await sendSms('Halo', [smsMessage]); // Replace 'Halo' with your actual sender ID
-    logger.info('SMS sent successfully. Response:', JSON.stringify(response, null, 2));
+    logger.info(
+      'SMS sent successfully. Response:',
+      JSON.stringify(response, null, 2)
+    );
   } catch (smsError) {
-    logger.error('Failed to send OTP reminder SMS:', smsError.response?.data || smsError.message);
+    logger.error(
+      'Failed to send OTP reminder SMS:',
+      smsError.response?.data || smsError.message
+    );
   }
 })();

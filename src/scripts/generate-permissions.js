@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 const { generatePermissions } = require('./permissions/generate');
 const args = require('minimist')(process.argv.slice(2));
+
 const shouldSeed = args.seed || false;
 const dryRun = args['dry-run'] || false;
 const removeObsolete = args['remove-obsolete'] || false;
 const pathPrefix = args.prefix || '';
 const path = require('path');
-const baseDir = __dirname;
 
+const baseDir = __dirname;
 
 if (args.help || args.h) {
   console.log(`

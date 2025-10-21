@@ -1,7 +1,7 @@
 const httpStatus = require('http-status');
+const crypto = require('crypto');
 const { ApiKey } = require('../models');
 const ApiError = require('../utils/ApiError');
-const crypto = require('crypto');
 
 /**
  * Query for API keys with tenant filtering
@@ -36,7 +36,12 @@ const getApiKeysByTenant = async (tenantId, filter = {}, options = {}) => {
  * @returns {Promise<ApiKey>}
  */
 const getApiKeyById = async (id, tenantId) => {
-  console.log('[getApiKeyById] Looking up ApiKey by _id:', id, 'tenant:', tenantId);
+  console.log(
+    '[getApiKeyById] Looking up ApiKey by _id:',
+    id,
+    'tenant:',
+    tenantId
+  );
   const apiKey = await ApiKey.findOne({ _id: id, tenant: tenantId });
   if (!apiKey) {
     throw new ApiError(httpStatus.NOT_FOUND, 'API key not found');
@@ -66,7 +71,7 @@ const verifyApiKey = async (rawKey) => {
   }
 
   // Extract the key from the authorization header if it's in Bearer format
-  let key = rawKey.startsWith('Bearer ') ? rawKey.substring(7) : rawKey;
+  const key = rawKey.startsWith('Bearer ') ? rawKey.substring(7) : rawKey;
 
   // Only accept keys that start with sk_
   if (!key.startsWith('sk_')) {
@@ -98,7 +103,7 @@ const verifyApiKey = async (rawKey) => {
   });
 
   return apiKey;
-};;;
+};
 
 /**
  * Create an API key

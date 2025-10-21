@@ -42,7 +42,12 @@ const submitData = catchAsync(async (req, res) => {
     source: userInfo.source,
   };
 
-  if (!submissionBody.projectId || !submissionBody.payload || !submissionBody.tenantId || !submissionBody.formId) {
+  if (
+    !submissionBody.projectId ||
+    !submissionBody.payload ||
+    !submissionBody.tenantId ||
+    !submissionBody.formId
+  ) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Missing required fields');
   }
 
@@ -95,7 +100,15 @@ const submitData = catchAsync(async (req, res) => {
  * @route GET /v1/submit-api
  */
 const listSubmissions = catchAsync(async (req, res) => {
-  const filters = pick(req.query, ['tenant_id', 'project_id', 'form_id', 'node_id', 'user_id', 'status', 'source']);
+  const filters = pick(req.query, [
+    'tenant_id',
+    'project_id',
+    'form_id',
+    'node_id',
+    'user_id',
+    'status',
+    'source',
+  ]);
   const submissions = await listSubmissions(filters);
   res.send({ results: submissions });
 });
@@ -135,7 +148,16 @@ const retrySubmission = catchAsync(async (req, res) => {
  * @route GET /v1/submitData/activity-log
  */
 const getActivityLogs = catchAsync(async (req, res) => {
-  const filters = pick(req.query, ['tenantId', 'projectId', 'formId', 'userId', 'status', 'search', 'limit', 'offset']);
+  const filters = pick(req.query, [
+    'tenantId',
+    'projectId',
+    'formId',
+    'userId',
+    'status',
+    'search',
+    'limit',
+    'offset',
+  ]);
   if (filters.limit) filters.limit = parseInt(filters.limit, 10);
   if (filters.offset) filters.offset = parseInt(filters.offset, 10);
   console.log('[Backend] Activity log request:', filters);

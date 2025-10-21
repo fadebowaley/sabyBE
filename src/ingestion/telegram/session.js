@@ -19,7 +19,7 @@ class SessionManager {
       if (!session) {
         // Create new session for authentication phase
         session = new TelegramSession({
-          chatId: chatId,
+          chatId,
           status: 'authenticating',
           metadata: {
             sessionStartTime: new Date(),
@@ -40,7 +40,10 @@ class SessionManager {
 
       return session;
     } catch (error) {
-      logger.error(`❌ Error managing session for chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Error managing session for chat ${chatId}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -54,7 +57,10 @@ class SessionManager {
     try {
       return await TelegramSession.findByChatId(chatId);
     } catch (error) {
-      logger.error(`❌ Error getting session for chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Error getting session for chat ${chatId}:`,
+        error.message
+      );
       return null;
     }
   }
@@ -80,7 +86,10 @@ class SessionManager {
       logger.info(`✅ Session updated for chat ${chatId}`);
       return session;
     } catch (error) {
-      logger.error(`❌ Error updating session for chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Error updating session for chat ${chatId}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -102,7 +111,10 @@ class SessionManager {
 
       return false;
     } catch (error) {
-      logger.error(`❌ Error deleting session for chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Error deleting session for chat ${chatId}:`,
+        error.message
+      );
       return false;
     }
   }
@@ -133,7 +145,10 @@ class SessionManager {
       logger.info(`🔄 Session reset for chat ${chatId}`);
       return session;
     } catch (error) {
-      logger.error(`❌ Error resetting session for chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Error resetting session for chat ${chatId}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -171,7 +186,9 @@ class SessionManager {
 
       const totalSessions = await TelegramSession.countDocuments();
       const activeSessions = await TelegramSession.countDocuments({
-        'metadata.lastActivity': { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        'metadata.lastActivity': {
+          $gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        },
       });
 
       return {
@@ -197,7 +214,7 @@ class SessionManager {
   async getActiveSessions(userId, projectId = null) {
     try {
       const query = {
-        userId: userId,
+        userId,
         status: { $in: ['authenticating', 'filling_form', 'ready_to_submit'] },
       };
 
@@ -205,9 +222,14 @@ class SessionManager {
         query.projectId = projectId;
       }
 
-      return await TelegramSession.find(query).sort({ 'metadata.lastActivity': -1 });
+      return await TelegramSession.find(query).sort({
+        'metadata.lastActivity': -1,
+      });
     } catch (error) {
-      logger.error(`❌ Error getting active sessions for user ${userId}:`, error.message);
+      logger.error(
+        `❌ Error getting active sessions for user ${userId}:`,
+        error.message
+      );
       return [];
     }
   }

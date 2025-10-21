@@ -20,7 +20,7 @@ const telegramConfig = {
     start: '09:00',
     end: '18:00',
     timezone: 'WAT',
-    days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+    days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
   },
 
   // Email templates
@@ -69,43 +69,43 @@ User Details:
 This submission has been queued for processing.
 
 Best regards,
-Halo Forms System`
+Halo Forms System`,
   },
 
   // Web App settings
   webApp: {
     url: `${config.baseUrl || 'http://localhost:3000'}/telegram-webapp`,
     title: 'Halo Forms',
-    description: 'Complete your forms with our modern interface'
+    description: 'Complete your forms with our modern interface',
   },
 
   // Message settings
   messages: {
     welcome: {
       title: '🎉 Welcome to Halo Forms!',
-      subtitle: 'Complete forms quickly and easily'
+      subtitle: 'Complete forms quickly and easily',
     },
     help: {
       title: '❓ Halo Forms Bot Help',
-      subtitle: 'Everything you need to know'
+      subtitle: 'Everything you need to know',
     },
     support: {
       title: '🆘 Support Center',
-      subtitle: 'We\'re here to help'
-    }
+      subtitle: "We're here to help",
+    },
   },
 
   // Rate limiting
   rateLimit: {
     maxRequestsPerMinute: 30,
-    maxRequestsPerHour: 100
+    maxRequestsPerHour: 100,
   },
 
   // Session settings
   session: {
     timeoutMinutes: 30,
-    maxRetries: 3
-  }
+    maxRetries: 3,
+  },
 };
 
 module.exports = telegramConfig;

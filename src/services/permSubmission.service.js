@@ -13,11 +13,11 @@
  * - Calculate compliance metrics
  */
 
+const httpStatus = require('http-status');
+const { v4: uuidv4 } = require('uuid');
 const { postgresPool } = require('../config/postgres');
 const logger = require('../config/logger');
 const ApiError = require('../utils/ApiError');
-const httpStatus = require('http-status');
-const { v4: uuidv4 } = require('uuid');
 
 /**
  * Calculate compliance metrics based on event data

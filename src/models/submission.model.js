@@ -85,17 +85,27 @@ const SubmissionModel = {
    * Optional dynamic filtering
    */
   async getFilteredSubmissions(filters = {}) {
-    const { tenant_id, project_id, form_id, node_id, user_id, status, source } = filters;
+    const { tenant_id, project_id, form_id, node_id, user_id, status, source } =
+      filters;
     const clauses = [];
     const values = [];
 
-    if (tenant_id) clauses.push(`tenant_id = $${values.length + 1}`) && values.push(tenant_id);
-    if (project_id) clauses.push(`project_id = $${values.length + 1}`) && values.push(project_id);
-    if (form_id) clauses.push(`form_id = $${values.length + 1}`) && values.push(form_id);
-    if (node_id) clauses.push(`node_id = $${values.length + 1}`) && values.push(node_id);
-    if (user_id) clauses.push(`user_id = $${values.length + 1}`) && values.push(user_id);
-    if (status) clauses.push(`status = $${values.length + 1}`) && values.push(status);
-    if (source) clauses.push(`source = $${values.length + 1}`) && values.push(source);
+    if (tenant_id)
+      clauses.push(`tenant_id = $${values.length + 1}`) &&
+        values.push(tenant_id);
+    if (project_id)
+      clauses.push(`project_id = $${values.length + 1}`) &&
+        values.push(project_id);
+    if (form_id)
+      clauses.push(`form_id = $${values.length + 1}`) && values.push(form_id);
+    if (node_id)
+      clauses.push(`node_id = $${values.length + 1}`) && values.push(node_id);
+    if (user_id)
+      clauses.push(`user_id = $${values.length + 1}`) && values.push(user_id);
+    if (status)
+      clauses.push(`status = $${values.length + 1}`) && values.push(status);
+    if (source)
+      clauses.push(`source = $${values.length + 1}`) && values.push(source);
 
     const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
     const query = `SELECT * FROM form_submissions ${whereClause} ORDER BY created_at DESC`;
@@ -114,7 +124,10 @@ const SubmissionModel = {
    */
   async getSubmissionById(id) {
     try {
-      const result = await postgresPool.query(`SELECT * FROM form_submissions WHERE id = $1`, [id]);
+      const result = await postgresPool.query(
+        `SELECT * FROM form_submissions WHERE id = $1`,
+        [id]
+      );
       return result.rows[0];
     } catch (err) {
       console.error('❌ Error fetching submission by id:', err.message);
@@ -127,7 +140,10 @@ const SubmissionModel = {
    */
   async deleteSubmission(form_id) {
     try {
-      const result = await postgresPool.query(`DELETE FROM form_submissions WHERE form_id = $1 RETURNING *`, [form_id]);
+      const result = await postgresPool.query(
+        `DELETE FROM form_submissions WHERE form_id = $1 RETURNING *`,
+        [form_id]
+      );
       return result.rows;
     } catch (err) {
       console.error('❌ Error deleting submissions by form_id:', err.message);

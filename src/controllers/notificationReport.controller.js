@@ -135,7 +135,9 @@ const getPendingNotifications = catchAsync(async (req, res) => {
     });
   }
 
-  const notifications = await permNotificationService.getPendingNotifications(tenant_id);
+  const notifications = await permNotificationService.getPendingNotifications(
+    tenant_id
+  );
 
   res.status(httpStatus.OK).send({
     success: true,
@@ -205,9 +207,17 @@ const getNotificationHistory = catchAsync(async (req, res) => {
  */
 const getNotificationsByType = catchAsync(async (req, res) => {
   const { type } = req.params;
-  const filters = pick(req.query, ['tenant_id', 'project_id', 'status', 'limit']);
+  const filters = pick(req.query, [
+    'tenant_id',
+    'project_id',
+    'status',
+    'limit',
+  ]);
 
-  const notifications = await permNotificationService.getNotificationsByType(type, filters);
+  const notifications = await permNotificationService.getNotificationsByType(
+    type,
+    filters
+  );
 
   res.status(httpStatus.OK).send({
     success: true,
@@ -292,7 +302,10 @@ const cancelNotification = catchAsync(async (req, res) => {
   const { id } = req.params;
   const { reason } = req.body;
 
-  const notification = await permNotificationService.cancelNotification(id, reason);
+  const notification = await permNotificationService.cancelNotification(
+    id,
+    reason
+  );
 
   res.status(httpStatus.OK).send({
     success: true,
@@ -315,7 +328,9 @@ const bulkRetryNotifications = catchAsync(async (req, res) => {
     });
   }
 
-  const notifications = await permNotificationService.bulkRetryNotifications(ids);
+  const notifications = await permNotificationService.bulkRetryNotifications(
+    ids
+  );
 
   res.status(httpStatus.OK).send({
     success: true,
@@ -360,12 +375,16 @@ const cleanupNotifications = catchAsync(async (req, res) => {
   let deletedCount = 0;
 
   if (!status || status === 'sent') {
-    const sentCount = await permNotificationService.deleteSentNotifications(cutoffDate);
+    const sentCount = await permNotificationService.deleteSentNotifications(
+      cutoffDate
+    );
     deletedCount += sentCount;
   }
 
   if (!status || status === 'failed') {
-    const failedCount = await permNotificationService.deleteFailedNotifications(cutoffDate);
+    const failedCount = await permNotificationService.deleteFailedNotifications(
+      cutoffDate
+    );
     deletedCount += failedCount;
   }
 

@@ -5,10 +5,10 @@
  * Handles calendar generation, event scheduling, and calendar queries.
  */
 
+const httpStatus = require('http-status');
 const { postgresPool } = require('../config/postgres');
 const logger = require('../config/logger');
 const ApiError = require('../utils/ApiError');
-const httpStatus = require('http-status');
 
 /**
  * Get calendar for a specific tenant, project, and month

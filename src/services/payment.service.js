@@ -7,9 +7,7 @@ const ApiError = require('../utils/ApiError');
  * @param {Object} paymentBody
  * @returns {Promise<Payment>}
  */
-const createPayment = async (paymentBody) => {
-  return Payment.create(paymentBody);
-};
+const createPayment = async (paymentBody) => Payment.create(paymentBody);
 
 /**
  * Get payment by id
@@ -70,27 +68,22 @@ const deletePaymentById = async (paymentId) => {
  * @param {number} [options.page] - Current page (default = 1)
  * @returns {Promise<QueryResult>}
  */
-const queryPayments = async (filter, options) => {
-  return Payment.paginate(filter, options);
-};
+const queryPayments = async (filter, options) =>
+  Payment.paginate(filter, options);
 
 /**
  * Get payments by status
  * @param {string} status - Payment status
  * @returns {Promise<Array<Payment>>}
  */
-const getPaymentsByStatus = async (status) => {
-  return Payment.find({ status });
-};
+const getPaymentsByStatus = async (status) => Payment.find({ status });
 
 /**
  * Get payments by user
  * @param {ObjectId} userId
  * @returns {Promise<Array<Payment>>}
  */
-const getPaymentsByUser = async (userId) => {
-  return Payment.find({ userId });
-};
+const getPaymentsByUser = async (userId) => Payment.find({ userId });
 
 /**
  * Process payment

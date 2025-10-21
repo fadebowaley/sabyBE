@@ -88,7 +88,8 @@ async function createAdditionalProjects() {
             type: 'textarea',
             label: 'Additional Feedback',
             required: false,
-            placeholder: 'Please share your thoughts, suggestions, or concerns...',
+            placeholder:
+              'Please share your thoughts, suggestions, or concerns...',
             validation: { maxLength: 500 },
           },
         ],
@@ -310,7 +311,10 @@ async function createAdditionalProjects() {
             label: 'Priority Level',
             required: true,
             options: [
-              { value: 'emergency', label: '🚨 Emergency (immediate attention)' },
+              {
+                value: 'emergency',
+                label: '🚨 Emergency (immediate attention)',
+              },
               { value: 'urgent', label: '⚠️ Urgent (within 24 hours)' },
               { value: 'normal', label: '📋 Normal (within 3-5 days)' },
               { value: 'low', label: '📝 Low (when convenient)' },
@@ -337,7 +341,10 @@ async function createAdditionalProjects() {
             type: 'file',
             label: 'Upload Photos (optional)',
             required: false,
-            validation: { maxSize: 5, allowedTypes: ['image/jpeg', 'image/png'] },
+            validation: {
+              maxSize: 5,
+              allowedTypes: ['image/jpeg', 'image/png'],
+            },
           },
           {
             id: 'preferred_time',
@@ -365,17 +372,19 @@ async function createAdditionalProjects() {
         // Check if project already exists
         const existingProject = await ProjectForm.findOne({
           projectId: projectData.projectId,
-          tenantId: tenantId,
+          tenantId,
         });
 
         if (existingProject) {
-          console.log(`   ⚠️  Project ${projectData.projectId} already exists, skipping...`);
+          console.log(
+            `   ⚠️  Project ${projectData.projectId} already exists, skipping...`
+          );
           continue;
         }
 
         const projectForm = new ProjectForm({
           projectId: projectData.projectId,
-          tenantId: tenantId,
+          tenantId,
           createdBy: user._id,
           configuration: projectData.configuration,
           elements: projectData.elements,
@@ -392,23 +401,33 @@ async function createAdditionalProjects() {
 
         console.log(`   ✅ Created: ${projectData.configuration.projectName}`);
         console.log(`      Project ID: ${projectData.projectId}`);
-        console.log(`      Elements: ${projectData.elements.length} form fields`);
+        console.log(
+          `      Elements: ${projectData.elements.length} form fields`
+        );
         console.log(`      Category: ${projectData.configuration.category}`);
         console.log('');
       } catch (error) {
-        console.log(`   ❌ Failed to create ${projectData.projectId}: ${error.message}`);
+        console.log(
+          `   ❌ Failed to create ${projectData.projectId}: ${error.message}`
+        );
         errors.push({ projectId: projectData.projectId, error: error.message });
       }
     }
 
     console.log('\n📊 Summary:');
-    console.log(`   ✅ Successfully created: ${createdProjects.length} projects`);
+    console.log(
+      `   ✅ Successfully created: ${createdProjects.length} projects`
+    );
     console.log(`   ❌ Failed: ${errors.length} projects`);
 
     if (createdProjects.length > 0) {
       console.log('\n🎉 New projects available for Telegram bot:');
       createdProjects.forEach((project, index) => {
-        console.log(`   ${index + 1}. ${project.configuration.projectName} (${project.projectId})`);
+        console.log(
+          `   ${index + 1}. ${project.configuration.projectName} (${
+            project.projectId
+          })`
+        );
       });
     }
 

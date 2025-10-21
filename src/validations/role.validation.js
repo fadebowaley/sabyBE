@@ -1,8 +1,6 @@
 const Joi = require('joi');
 const { objectId } = require('./custom.validation');
 
-
-
 const createRole = {
   body: Joi.object().keys({
     roleName: Joi.string().required(),
@@ -21,8 +19,6 @@ const getRoles = {
   }),
 };
 
-
-
 const getRole = {
   params: Joi.object().keys({
     roleId: Joi.string().required().custom(objectId),
@@ -35,7 +31,7 @@ const updateRole = {
   }),
   body: Joi.object({
     name: Joi.string(),
-  })
+  }),
 };
 
 const deleteRole = {
@@ -43,9 +39,6 @@ const deleteRole = {
     roleId: Joi.string().required().custom(objectId),
   }),
 };
-
-
-
 
 const getPermissionsForRole = {
   params: Joi.object().keys({
@@ -67,18 +60,19 @@ const removePermissionsFromRole = {
   }),
 };
 
-
 const assignPermissions = {
   params: Joi.object().keys({
     roleId: Joi.string().required().custom(objectId),
   }),
   body: Joi.object().keys({
     permissionIds: Joi.alternatives()
-      .try(Joi.string().custom(objectId), Joi.array().items(Joi.string().custom(objectId)).min(1))
+      .try(
+        Joi.string().custom(objectId),
+        Joi.array().items(Joi.string().custom(objectId)).min(1)
+      )
       .required(),
   }),
 };
-
 
 const bulkCreateRoles = {
   body: Joi.object().keys({
@@ -97,7 +91,6 @@ const bulkCreateRoles = {
   }),
 };
 
-
 module.exports = {
   createRole,
   getRoles,
@@ -107,5 +100,5 @@ module.exports = {
   bulkCreateRoles,
   assignPermissions,
   getPermissionsForRole,
-  removePermissionsFromRole
+  removePermissionsFromRole,
 };

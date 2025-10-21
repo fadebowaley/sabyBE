@@ -17,7 +17,9 @@ exports.handlePhoneAuthentication = async (phoneNumber, session) => {
     const user = await userService.getUserByPhone(phoneNumber);
 
     if (!user) {
-      logger.warn(`❌ Phone authentication failed for ${phoneNumber}: User not found`);
+      logger.warn(
+        `❌ Phone authentication failed for ${phoneNumber}: User not found`
+      );
       await whatsappNotificationService.sendAuthenticationFailure(
         phoneNumber,
         'User not found. Please contact your administrator.'
@@ -26,15 +28,23 @@ exports.handlePhoneAuthentication = async (phoneNumber, session) => {
     }
 
     // Use the user's actual tenantId
-    const tenantId = user.tenantId;
+    const { tenantId } = user;
     logger.info(`🔍 Using user's tenantId: ${tenantId}`);
 
     // Validate user by phone number with their actual tenant
-    const userValidation = await whatsappValidationService.validateUserByPhone(phoneNumber, tenantId);
+    const userValidation = await whatsappValidationService.validateUserByPhone(
+      phoneNumber,
+      tenantId
+    );
 
     if (!userValidation.valid) {
-      logger.warn(`❌ Phone authentication failed for ${phoneNumber}: ${userValidation.error}`);
-      await whatsappNotificationService.sendAuthenticationFailure(phoneNumber, userValidation.error);
+      logger.warn(
+        `❌ Phone authentication failed for ${phoneNumber}: ${userValidation.error}`
+      );
+      await whatsappNotificationService.sendAuthenticationFailure(
+        phoneNumber,
+        userValidation.error
+      );
       return;
     }
 
@@ -47,19 +57,28 @@ exports.handlePhoneAuthentication = async (phoneNumber, session) => {
     session.metadata.phoneNumber = phoneNumber;
     session.metadata.userEmail = validatedUser.email; // Store user email for notifications
     session.metadata.userName =
-      validatedUser.name || `${validatedUser.firstname || ''} ${validatedUser.lastname || ''}`.trim();
+      validatedUser.name ||
+      `${validatedUser.firstname || ''} ${validatedUser.lastname || ''}`.trim();
     await session.save();
 
-    logger.info(`✅ Phone authentication successful for ${phoneNumber} (User ID: ${validatedUser._id})`);
+    logger.info(
+      `✅ Phone authentication successful for ${phoneNumber} (User ID: ${validatedUser._id})`
+    );
 
     // Get available projects for the user
-    logger.info(`🔍 Getting available projects for tenant: ${validatedUser.tenantId}`);
-    const availableProjectsResult = await formHandler.getAvailableProjects(validatedUser.tenantId);
+    logger.info(
+      `🔍 Getting available projects for tenant: ${validatedUser.tenantId}`
+    );
+    const availableProjectsResult = await formHandler.getAvailableProjects(
+      validatedUser.tenantId
+    );
     logger.info(`🔍 Available projects result:`, availableProjectsResult);
 
     // Handle paginated result
     const availableProjects =
-      availableProjectsResult && availableProjectsResult.results ? availableProjectsResult.results : availableProjectsResult;
+      availableProjectsResult && availableProjectsResult.results
+        ? availableProjectsResult.results
+        : availableProjectsResult;
     logger.info(`🔍 Available projects array:`, availableProjects);
 
     if (!availableProjects || availableProjects.length === 0) {
@@ -71,13 +90,23 @@ exports.handlePhoneAuthentication = async (phoneNumber, session) => {
     }
 
     // Send authentication success message with project selection
-    await whatsappNotificationService.sendAuthenticationSuccess(phoneNumber, validatedUser, availableProjects);
+    await whatsappNotificationService.sendAuthenticationSuccess(
+      phoneNumber,
+      validatedUser,
+      availableProjects
+    );
 
     logger.info(`✅ Authentication success message sent to ${phoneNumber}`);
   } catch (error) {
-    logger.error(`❌ Error processing phone authentication for ${phoneNumber}:`, error.message);
+    logger.error(
+      `❌ Error processing phone authentication for ${phoneNumber}:`,
+      error.message
+    );
     logger.error(`❌ Full error details:`, error);
-    await whatsappNotificationService.sendAuthenticationFailure(phoneNumber, 'Authentication failed. Please try again.');
+    await whatsappNotificationService.sendAuthenticationFailure(
+      phoneNumber,
+      'Authentication failed. Please try again.'
+    );
   }
 };
 
@@ -87,20 +116,32 @@ exports.handlePhoneAuthentication = async (phoneNumber, session) => {
  * @param {string} selectedProjectName - Selected project name
  * @param {Object} session - User session object
  */
-exports.handleProjectSelection = async (phoneNumber, selectedProjectName, session) => {
+exports.handleProjectSelection = async (
+  phoneNumber,
+  selectedProjectName,
+  session
+) => {
   try {
-    logger.info(`📋 Processing project selection for ${phoneNumber}: "${selectedProjectName}"`);
+    logger.info(
+      `📋 Processing project selection for ${phoneNumber}: "${selectedProjectName}"`
+    );
 
     // Get available projects
-    const availableProjectsResult = await formHandler.getAvailableProjects(session.tenantId);
+    const availableProjectsResult = await formHandler.getAvailableProjects(
+      session.tenantId
+    );
 
     // Handle paginated result
     const availableProjects =
-      availableProjectsResult && availableProjectsResult.results ? availableProjectsResult.results : availableProjectsResult;
+      availableProjectsResult && availableProjectsResult.results
+        ? availableProjectsResult.results
+        : availableProjectsResult;
 
     // Find the selected project
     const selectedProject = availableProjects.find(
-      (project) => project.configuration?.projectName === selectedProjectName || project.projectId === selectedProjectName
+      (project) =>
+        project.configuration?.projectName === selectedProjectName ||
+        project.projectId === selectedProjectName
     );
 
     if (!selectedProject) {
@@ -112,13 +153,22 @@ exports.handleProjectSelection = async (phoneNumber, selectedProjectName, sessio
     }
 
     // Validate project access
-    const projectValidation = await whatsappValidationService.validateProjectForm(selectedProject.projectId, {
-      tenantId: session.tenantId,
-    });
+    const projectValidation =
+      await whatsappValidationService.validateProjectForm(
+        selectedProject.projectId,
+        {
+          tenantId: session.tenantId,
+        }
+      );
 
     if (!projectValidation.valid) {
-      logger.warn(`❌ Project validation failed for ${selectedProject.projectId}: ${projectValidation.error}`);
-      await whatsappNotificationService.sendAuthenticationFailure(phoneNumber, projectValidation.error);
+      logger.warn(
+        `❌ Project validation failed for ${selectedProject.projectId}: ${projectValidation.error}`
+      );
+      await whatsappNotificationService.sendAuthenticationFailure(
+        phoneNumber,
+        projectValidation.error
+      );
       return;
     }
 
@@ -129,13 +179,21 @@ exports.handleProjectSelection = async (phoneNumber, selectedProjectName, sessio
     session.currentStep = 0;
     await session.save();
 
-    logger.info(`✅ Project selected: ${selectedProject.projectId} for ${phoneNumber}`);
+    logger.info(
+      `✅ Project selected: ${selectedProject.projectId} for ${phoneNumber}`
+    );
 
     // Start form filling process
     await startFormFilling(phoneNumber, session);
   } catch (error) {
-    logger.error(`❌ Error processing project selection for ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to select project. Please try again.');
+    logger.error(
+      `❌ Error processing project selection for ${phoneNumber}:`,
+      error.message
+    );
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'Failed to select project. Please try again.'
+    );
   }
 };
 
@@ -149,21 +207,37 @@ async function getAvailableProjects(tenantId) {
     logger.info(`🔍 getAvailableProjects called with tenantId: ${tenantId}`);
 
     // Get active and published project forms for the tenant
-    const projectsResult = await projectFormService.getProjectFormsByTenant(tenantId, {
-      status: 'active',
-      'metadata.deploymentStatus': 'published',
-      deletedAt: null,
-    });
+    const projectsResult = await projectFormService.getProjectFormsByTenant(
+      tenantId,
+      {
+        status: 'active',
+        'metadata.deploymentStatus': 'published',
+        deletedAt: null,
+      }
+    );
 
-    logger.info(`🔍 projectFormService.getProjectFormsByTenant result:`, projectsResult);
+    logger.info(
+      `🔍 projectFormService.getProjectFormsByTenant result:`,
+      projectsResult
+    );
 
     // Handle paginated result
-    const projects = projectsResult && projectsResult.results ? projectsResult.results : projectsResult;
-    logger.info(`🔍 Projects type: ${typeof projects}, length: ${projects ? projects.length : 'undefined'}`);
+    const projects =
+      projectsResult && projectsResult.results
+        ? projectsResult.results
+        : projectsResult;
+    logger.info(
+      `🔍 Projects type: ${typeof projects}, length: ${
+        projects ? projects.length : 'undefined'
+      }`
+    );
 
     return projects || [];
   } catch (error) {
-    logger.error(`❌ Error getting available projects for tenant ${tenantId}:`, error.message);
+    logger.error(
+      `❌ Error getting available projects for tenant ${tenantId}:`,
+      error.message
+    );
     logger.error(`❌ Full error details:`, error);
     return [];
   }
@@ -177,21 +251,43 @@ async function getAvailableProjects(tenantId) {
 async function startFormFilling(phoneNumber, session) {
   try {
     // Get project form details
-    const projectForm = await projectFormService.getProjectFormByProjectId(session.projectId);
+    const projectForm = await projectFormService.getProjectFormByProjectId(
+      session.projectId
+    );
 
-    if (!projectForm || !projectForm.elements || projectForm.elements.length === 0) {
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'No form questions available for this project.');
+    if (
+      !projectForm ||
+      !projectForm.elements ||
+      projectForm.elements.length === 0
+    ) {
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'No form questions available for this project.'
+      );
       return;
     }
 
     // Send the first question
     const firstQuestion = projectForm.elements[0];
-    await whatsappNotificationService.sendFormQuestion(phoneNumber, firstQuestion, 0, projectForm.elements.length);
+    await whatsappNotificationService.sendFormQuestion(
+      phoneNumber,
+      firstQuestion,
+      0,
+      projectForm.elements.length
+    );
 
-    logger.info(`✅ Started form filling for ${phoneNumber} (${projectForm.elements.length} questions)`);
+    logger.info(
+      `✅ Started form filling for ${phoneNumber} (${projectForm.elements.length} questions)`
+    );
   } catch (error) {
-    logger.error(`❌ Error starting form filling for ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to start form. Please try again.');
+    logger.error(
+      `❌ Error starting form filling for ${phoneNumber}:`,
+      error.message
+    );
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'Failed to start form. Please try again.'
+    );
   }
 }
 
@@ -217,7 +313,13 @@ exports.handleManualPhone = async (phoneNumber, session) => {
     // Use the same logic as phone authentication
     await exports.handlePhoneAuthentication(phoneNumber, session);
   } catch (error) {
-    logger.error(`❌ Error processing manual phone input for ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to process phone number. Please try again.');
+    logger.error(
+      `❌ Error processing manual phone input for ${phoneNumber}:`,
+      error.message
+    );
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'Failed to process phone number. Please try again.'
+    );
   }
 };

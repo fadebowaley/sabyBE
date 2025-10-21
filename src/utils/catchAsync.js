@@ -1,4 +1,3 @@
-
 /**
  * A utility function that wraps async route handlers to handle errors automatically
  *

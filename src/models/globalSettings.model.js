@@ -12,8 +12,14 @@ const globalSettingsSchema = new mongoose.Schema(
     organizationName: { type: String, default: 'Default Organization Name' },
     logoUrl: { type: String },
     primaryColor: { type: String, default: '#0000FF' }, // Default: Blue
-    contactEmail: { type: String, validate: [validator.isEmail, 'Invalid email format'] },
-    contactPhone: { type: String, validate: [validator.isMobilePhone, 'Invalid phone number'] },
+    contactEmail: {
+      type: String,
+      validate: [validator.isEmail, 'Invalid email format'],
+    },
+    contactPhone: {
+      type: String,
+      validate: [validator.isMobilePhone, 'Invalid phone number'],
+    },
     websiteUrl: { type: String, validate: [validator.isURL, 'Invalid URL'] },
     socialLinks: { type: Object, default: {} }, // { facebook: "", twitter: "", linkedin: "", instagram: "" }
     timezone: { type: String, default: 'UTC' },
@@ -36,7 +42,10 @@ const globalSettingsSchema = new mongoose.Schema(
     enablePayments: { type: Boolean, default: true }, // Enable payment processing
     currency: { type: String, default: 'USD' },
     exchangeRates: { type: Object, default: {} }, // Multi-currency support
-    donationCategories: { type: [String], default: ['General Fund', 'Project Fund', 'Special Fund'] },
+    donationCategories: {
+      type: [String],
+      default: ['General Fund', 'Project Fund', 'Special Fund'],
+    },
     supportedPaymentGateways: {
       type: [String],
       default: ['paypal', 'stripe', 'square'],

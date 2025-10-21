@@ -49,7 +49,10 @@ class WhatsAppNotificationService {
       logger.info(`✅ Text message sent to ${phoneNumber}`);
       return response.data;
     } catch (error) {
-      logger.error(`❌ Error sending text message to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending text message to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -96,7 +99,10 @@ class WhatsAppNotificationService {
       logger.info(`✅ Button message sent to ${phoneNumber}`);
       return response.data;
     } catch (error) {
-      logger.error(`❌ Error sending button message to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending button message to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -148,7 +154,10 @@ class WhatsAppNotificationService {
       logger.info(`✅ List message sent to ${phoneNumber}`);
       return response.data;
     } catch (error) {
-      logger.error(`❌ Error sending list message to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending list message to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -241,7 +250,10 @@ Commands you can use:
       // Use simple text message instead of buttons
       await this.sendTextMessage(phoneNumber, supportMessage);
     } catch (error) {
-      logger.error(`❌ Error sending support message to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending support message to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -276,7 +288,10 @@ Commands you can use:
       // Use simple text message instead of buttons
       await this.sendTextMessage(phoneNumber, statusMessage);
     } catch (error) {
-      logger.error(`❌ Error sending status message to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending status message to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -312,7 +327,10 @@ What would you like to do?
 
       await this.sendButtonMessage(phoneNumber, menuMessage, buttons);
     } catch (error) {
-      logger.error(`❌ Error sending main menu to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending main menu to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -344,7 +362,10 @@ Available Commands:
       // Use simple text message instead of buttons
       await this.sendTextMessage(phoneNumber, resetMessage);
     } catch (error) {
-      logger.error(`❌ Error sending reset confirmation to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending reset confirmation to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -373,7 +394,10 @@ Send 1, 2, 3, or 4 to continue!`;
       // Use simple text message instead of buttons
       await this.sendTextMessage(phoneNumber, welcomeMessage);
     } catch (error) {
-      logger.error(`❌ Error sending welcome message to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending welcome message to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -390,7 +414,12 @@ Send 1, 2, 3, or 4 to continue!`;
       const userName = user.firstname || user.name || 'User';
 
       const projectOptions = availableProjects
-        .map((project, index) => `${index + 1}. ${project.configuration?.projectName || project.projectId}`)
+        .map(
+          (project, index) =>
+            `${index + 1}. ${
+              project.configuration?.projectName || project.projectId
+            }`
+        )
         .join('\n');
 
       const message = `🎉 Welcome back, ${userName}!
@@ -408,7 +437,10 @@ Send the number of your choice (1, 2, 3, etc.)`;
       // Use simple text message instead of list
       await this.sendTextMessage(phoneNumber, message);
     } catch (error) {
-      logger.error(`❌ Error sending authentication success to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending authentication success to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -442,7 +474,10 @@ Need help? Contact our support team.`;
       // Use simple text message instead of buttons
       await this.sendTextMessage(phoneNumber, failureMessage);
     } catch (error) {
-      logger.error(`❌ Error sending authentication failure to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending authentication failure to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -457,7 +492,8 @@ Need help? Contact our support team.`;
    */
   async sendFormQuestion(phoneNumber, question, step, totalSteps) {
     try {
-      const questionLabel = question.properties?.label || question.label || `Question ${step + 1}`;
+      const questionLabel =
+        question.properties?.label || question.label || `Question ${step + 1}`;
       const isRequired = question.properties?.required ? ' *' : '';
       const questionType = question.type;
       const description = question.properties?.description || '';
@@ -488,7 +524,9 @@ Need help? Contact our support team.`;
         case 'radio':
           const options = question.properties?.options || [];
           if (options.length > 0) {
-            message += `Please select one option:\n${options.map((opt, i) => `${i + 1}. ${opt}`).join('\n')}`;
+            message += `Please select one option:\n${options
+              .map((opt, i) => `${i + 1}. ${opt}`)
+              .join('\n')}`;
           } else {
             message += `Please provide your selection.`;
           }
@@ -519,7 +557,10 @@ Need help? Contact our support team.`;
 
       await this.sendTextMessage(phoneNumber, message);
     } catch (error) {
-      logger.error(`❌ Error sending form question to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending form question to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -543,7 +584,10 @@ Please correct the error and try again.`;
 
       await this.sendButtonMessage(phoneNumber, errorMessage, buttons);
     } catch (error) {
-      logger.error(`❌ Error sending validation error to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending validation error to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -572,7 +616,10 @@ Your form is ready for submission. What would you like to do?`;
 
       await this.sendButtonMessage(phoneNumber, completionMessage, buttons);
     } catch (error) {
-      logger.error(`❌ Error sending form completion to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending form completion to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -599,11 +646,18 @@ Your form is ready for submission. What would you like to do?`;
 
 Thank you for using Halo Forms!`;
 
-      const buttons = [{ text: '📋 Submit Another' }, { text: '🏠 Main Menu' }, { text: '📊 Check Status' }];
+      const buttons = [
+        { text: '📋 Submit Another' },
+        { text: '🏠 Main Menu' },
+        { text: '📊 Check Status' },
+      ];
 
       await this.sendButtonMessage(phoneNumber, successMessage, buttons);
     } catch (error) {
-      logger.error(`❌ Error sending submission success to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending submission success to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -627,11 +681,18 @@ Thank you for using Halo Forms!`;
 
 We apologize for the inconvenience.`;
 
-      const buttons = [{ text: '🔄 Try Again' }, { text: '📞 Contact Support' }, { text: '🏠 Main Menu' }];
+      const buttons = [
+        { text: '🔄 Try Again' },
+        { text: '📞 Contact Support' },
+        { text: '🏠 Main Menu' },
+      ];
 
       await this.sendButtonMessage(phoneNumber, failureMessage, buttons);
     } catch (error) {
-      logger.error(`❌ Error sending submission failure to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending submission failure to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -659,7 +720,10 @@ Commands you can use:
       // Use simple text message instead of buttons
       await this.sendTextMessage(phoneNumber, errorMessage);
     } catch (error) {
-      logger.error(`❌ Error sending error message to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending error message to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -674,7 +738,10 @@ Commands you can use:
     try {
       await this.sendTextMessage(phoneNumber, message);
     } catch (error) {
-      logger.error(`❌ Error sending message with clear keyboard to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending message with clear keyboard to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -699,9 +766,17 @@ Choose a project to start filling out forms:
 
 *Available Projects (${projects.length}):*`;
 
-      await this.sendListMessage(phoneNumber, message, '📋 Select Project', projectList);
+      await this.sendListMessage(
+        phoneNumber,
+        message,
+        '📋 Select Project',
+        projectList
+      );
     } catch (error) {
-      logger.error(`❌ Error sending project selection to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending project selection to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -719,11 +794,18 @@ To access forms, you need to authenticate first.
 
 Please share your phone number to continue.`;
 
-      const buttons = [{ text: '📱 Share Phone Number' }, { text: '❓ Help' }, { text: '🆘 Support' }];
+      const buttons = [
+        { text: '📱 Share Phone Number' },
+        { text: '❓ Help' },
+        { text: '🆘 Support' },
+      ];
 
       await this.sendButtonMessage(phoneNumber, promptMessage, buttons);
     } catch (error) {
-      logger.error(`❌ Error sending authentication prompt to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending authentication prompt to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -763,7 +845,10 @@ Let's get started! I'm processing your authentication...`;
 
       await this.sendTextMessage(phoneNumber, welcomeMessage);
     } catch (error) {
-      logger.error(`❌ Error sending enhanced welcome message to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending enhanced welcome message to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -806,7 +891,10 @@ Type /support to contact our support team.
 
       await this.sendTextMessage(phoneNumber, helpMessage);
     } catch (error) {
-      logger.error(`❌ Error sending help message to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending help message to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -850,7 +938,10 @@ We'll get back to you within 2-4 hours during business hours.`;
 
       await this.sendTextMessage(phoneNumber, supportMessage);
     } catch (error) {
-      logger.error(`❌ Error sending support message to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending support message to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -889,7 +980,10 @@ Need to start a new form? Type /start to begin!`;
 
       await this.sendTextMessage(phoneNumber, statusMessage);
     } catch (error) {
-      logger.error(`❌ Error sending status message to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending status message to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -908,11 +1002,19 @@ Hello ${userName}! What would you like to do?
 
 *Available Options:*`;
 
-      const buttons = [{ text: '📝 Fill Forms' }, { text: '📊 My Status' }, { text: '❓ Help' }, { text: '🆘 Support' }];
+      const buttons = [
+        { text: '📝 Fill Forms' },
+        { text: '📊 My Status' },
+        { text: '❓ Help' },
+        { text: '🆘 Support' },
+      ];
 
       await this.sendButtonMessage(phoneNumber, menuMessage, buttons);
     } catch (error) {
-      logger.error(`❌ Error sending main menu to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending main menu to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -942,7 +1044,10 @@ Are you sure you want to reset your current session?
 
       await this.sendButtonMessage(phoneNumber, resetMessage, buttons);
     } catch (error) {
-      logger.error(`❌ Error sending reset confirmation to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending reset confirmation to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -956,7 +1061,12 @@ Are you sure you want to reset your current session?
   async sendProjectList(phoneNumber, projects) {
     try {
       const projectOptions = projects
-        .map((project, index) => `${index + 1}. ${project.configuration?.projectName || project.projectId}`)
+        .map(
+          (project, index) =>
+            `${index + 1}. ${
+              project.configuration?.projectName || project.projectId
+            }`
+        )
         .join('\n');
 
       const message = `📋 *Available Projects*
@@ -970,7 +1080,10 @@ Send the number of your choice (1, 2, 3, etc.)`;
       // Use simple text message instead of interactive list
       await this.sendTextMessage(phoneNumber, message);
     } catch (error) {
-      logger.error(`❌ Error sending project list to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending project list to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -984,7 +1097,12 @@ Send the number of your choice (1, 2, 3, etc.)`;
   async sendFormSelectionMenu(phoneNumber, projects) {
     try {
       const formOptions = projects
-        .map((project, index) => `${index + 1}. ${project.configuration?.projectName || project.projectId}`)
+        .map(
+          (project, index) =>
+            `${index + 1}. ${
+              project.configuration?.projectName || project.projectId
+            }`
+        )
         .join('\n');
 
       const message = `📝 *Available Forms*
@@ -998,7 +1116,10 @@ Send the number of your choice (1, 2, 3, etc.)`;
       // Use simple text message instead of interactive list
       await this.sendTextMessage(phoneNumber, message);
     } catch (error) {
-      logger.error(`❌ Error sending form selection menu to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending form selection menu to ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }

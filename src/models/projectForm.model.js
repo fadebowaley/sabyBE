@@ -74,7 +74,11 @@ const UserSettingsSchema = new mongoose.Schema(
     ui: {
       theme: { type: String, default: 'default' },
       primaryColor: { type: String, default: '#3b82f6' },
-      layout: { type: String, enum: ['single', 'multi-step'], default: 'single' },
+      layout: {
+        type: String,
+        enum: ['single', 'multi-step'],
+        default: 'single',
+      },
       showProgressBar: { type: Boolean, default: true },
     },
     builder: {
@@ -192,10 +196,20 @@ ProjectFormSchema.statics.generateProjectId = function () {
  * @param {ObjectId} createdBy - The user creating the project
  * @returns {Promise<ProjectForm>}
  */
-ProjectFormSchema.statics.createProjectForm = async function (projectData, tenantId, createdBy) {
+ProjectFormSchema.statics.createProjectForm = async function (
+  projectData,
+  tenantId,
+  createdBy
+) {
   // Generate unique project ID
-  console.log('🎯 [ProjectForm] Creating project form with elements:', projectData);
-  console.log('🎯 [ProjectForm] Elements count:', projectData.elements ? projectData.elements.length : 0);
+  console.log(
+    '🎯 [ProjectForm] Creating project form with elements:',
+    projectData
+  );
+  console.log(
+    '🎯 [ProjectForm] Elements count:',
+    projectData.elements ? projectData.elements.length : 0
+  );
 
   if (projectData.elements && projectData.elements.length > 0) {
     projectData.elements.forEach((element, index) => {
@@ -216,7 +230,12 @@ ProjectFormSchema.statics.createProjectForm = async function (projectData, tenan
       ...projectData.metadata,
       elementsCount: projectData.elements ? projectData.elements.length : 0,
       hasValidation: projectData.elements
-        ? projectData.elements.some((el) => el.properties && el.properties.validation && el.properties.validation.required)
+        ? projectData.elements.some(
+            (el) =>
+              el.properties &&
+              el.properties.validation &&
+              el.properties.validation.required
+          )
         : false,
       lastModified: new Date(),
     },
@@ -234,7 +253,11 @@ ProjectFormSchema.statics.createProjectForm = async function (projectData, tenan
  * @param {ObjectId} [excludeProjectId] - The project ID to exclude from check
  * @returns {Promise<boolean>}
  */
-ProjectFormSchema.statics.isProjectNameTaken = async function (projectName, tenantId, excludeProjectId) {
+ProjectFormSchema.statics.isProjectNameTaken = async function (
+  projectName,
+  tenantId,
+  excludeProjectId
+) {
   const query = {
     'configuration.projectName': projectName,
     tenantId,
@@ -265,7 +288,10 @@ ProjectFormSchema.methods.incrementViews = async function () {
  */
 ProjectFormSchema.methods.incrementSubmissions = async function () {
   this.analytics.submissions += 1;
-  this.analytics.conversionRate = this.analytics.views > 0 ? (this.analytics.submissions / this.analytics.views) * 100 : 0;
+  this.analytics.conversionRate =
+    this.analytics.views > 0
+      ? (this.analytics.submissions / this.analytics.views) * 100
+      : 0;
   await this.save();
 };
 
@@ -388,7 +414,9 @@ ProjectFormSchema.methods.generateEmbedHtml = function (options = {}) {
 <!-- Optional: Auto-resize script -->
 <script>
   window.addEventListener('message', function(event) {
-    if (event.data.type === 'halo-form-resize' && event.data.projectId === '${this.projectId}') {
+    if (event.data.type === 'halo-form-resize' && event.data.projectId === '${
+      this.projectId
+    }') {
       const iframe = document.querySelector('iframe[src*="${this.projectId}"]');
       if (iframe && event.data.height) {
         iframe.style.height = event.data.height + 'px';
@@ -474,7 +502,8 @@ ProjectFormSchema.methods.generateJavaScriptLoader = function (options = {}) {
       showLoader,
       responsive: true,
       validation: this.metadata.hasValidation,
-      allowMultipleSubmissions: this.userSettings.behavior.allowMultipleSubmissions,
+      allowMultipleSubmissions:
+        this.userSettings.behavior.allowMultipleSubmissions,
     },
   };
 
@@ -561,12 +590,17 @@ ProjectFormSchema.methods.generateIntegrationGuide = function (
     api: {
       endpoint: urls.api,
       method: 'GET',
-      authentication: this.configuration.security === 'private' ? 'Bearer token required' : 'Public access',
+      authentication:
+        this.configuration.security === 'private'
+          ? 'Bearer token required'
+          : 'Public access',
       submitEndpoint: urls.apiSubmit,
       submitMethod: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(this.configuration.security === 'private' && { Authorization: 'Bearer YOUR_API_TOKEN' }),
+        ...(this.configuration.security === 'private' && {
+          Authorization: 'Bearer YOUR_API_TOKEN',
+        }),
       },
     },
   };
@@ -581,7 +615,10 @@ ProjectFormSchema.pre('save', function (next) {
   if (this.elements) {
     this.metadata.elementsCount = this.elements.length;
     this.metadata.hasValidation = this.elements.some(
-      (el) => el.properties && el.properties.validation && el.properties.validation.required
+      (el) =>
+        el.properties &&
+        el.properties.validation &&
+        el.properties.validation.required
     );
   }
 

@@ -15,7 +15,8 @@ const initializeSocket = (server) => {
   io.use((socket, next) => {
     const token =
       socket.handshake.auth.token ||
-      (socket.handshake.headers.authorization && socket.handshake.headers.authorization.replace('Bearer ', ''));
+      (socket.handshake.headers.authorization &&
+        socket.handshake.headers.authorization.replace('Bearer ', ''));
 
     if (!token) {
       return next(new Error('Authentication error'));
@@ -32,7 +33,9 @@ const initializeSocket = (server) => {
   });
 
   io.on('connection', (socket) => {
-    console.log(`🔌 Socket connected: ${socket.id} (User: ${socket.userId}, Tenant: ${socket.tenantId})`);
+    console.log(
+      `🔌 Socket connected: ${socket.id} (User: ${socket.userId}, Tenant: ${socket.tenantId})`
+    );
 
     // Join tenant-specific room for activity updates
     if (socket.tenantId) {

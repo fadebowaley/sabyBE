@@ -6,7 +6,7 @@ const logger = require('../../config/logger');
 // Import our services
 const whatsappValidationService = require('./services/whatsappValidation.service');
 const whatsappNotificationService = require('./services/whatsappNotification.service');
-const { projectFormService } = require("../../services");
+const { projectFormService } = require('../../services');
 
 // Import handlers
 const authHandler = require('./handlers/authHandler');
@@ -58,7 +58,9 @@ async function verifyWhatsAppConnection() {
     });
 
     if (response.status === 200) {
-      logger.info(`✅ WhatsApp Business API connected for phone number: ${response.data.phone_number}`);
+      logger.info(
+        `✅ WhatsApp Business API connected for phone number: ${response.data.phone_number}`
+      );
       return true;
     }
   } catch (error) {
@@ -76,7 +78,10 @@ async function getOrCreateSession(phoneNumber) {
   try {
     return await sessionManager.getOrCreate(phoneNumber);
   } catch (error) {
-    logger.error(`❌ Error managing session for phone ${phoneNumber}:`, error.message);
+    logger.error(
+      `❌ Error managing session for phone ${phoneNumber}:`,
+      error.message
+    );
     throw error;
   }
 }
@@ -90,13 +95,25 @@ async function handleWebhook(webhookData) {
     // Log the raw webhook data first
     console.log('🔍 RAW WEBHOOK DATA:', webhookData);
     console.log('🔍 RAW WEBHOOK DATA TYPE:', typeof webhookData);
-    console.log('🔍 RAW WEBHOOK DATA STRINGIFIED:', JSON.stringify(webhookData));
+    console.log(
+      '🔍 RAW WEBHOOK DATA STRINGIFIED:',
+      JSON.stringify(webhookData)
+    );
 
-    logger.info('📨 WhatsApp webhook received:', JSON.stringify(webhookData, null, 2));
+    logger.info(
+      '📨 WhatsApp webhook received:',
+      JSON.stringify(webhookData, null, 2)
+    );
     logger.info('🔍 Webhook data keys:', Object.keys(webhookData || {}));
     logger.info('🔍 Webhook data type:', typeof webhookData);
-    logger.info('🔍 Webhook data length:', JSON.stringify(webhookData || {}).length);
-    logger.info('🔍 Webhook data is null/undefined:', webhookData === null || webhookData === undefined);
+    logger.info(
+      '🔍 Webhook data length:',
+      JSON.stringify(webhookData || {}).length
+    );
+    logger.info(
+      '🔍 Webhook data is null/undefined:',
+      webhookData === null || webhookData === undefined
+    );
 
     // Handle different webhook structures
     if (webhookData.object === 'whatsapp_business_account') {
@@ -153,7 +170,10 @@ async function handleWebhook(webhookData) {
     // Handle different webhook object types and structures
     const objectType = changes.value?.object;
     logger.info(`🔍 Webhook object type: ${objectType}`);
-    logger.info(`🔍 Changes value keys:`, changes.value ? Object.keys(changes.value) : 'No value object');
+    logger.info(
+      `🔍 Changes value keys:`,
+      changes.value ? Object.keys(changes.value) : 'No value object'
+    );
 
     // Handle different webhook structures
     if (objectType === 'whatsapp_business_account') {
@@ -173,7 +193,10 @@ async function handleWebhook(webhookData) {
       return;
     } else {
       logger.warn(`❌ Unsupported webhook object type: ${objectType}`);
-      logger.warn('🔍 Full changes object for debugging:', JSON.stringify(changes, null, 2));
+      logger.warn(
+        '🔍 Full changes object for debugging:',
+        JSON.stringify(changes, null, 2)
+      );
 
       // Try to extract messages from any structure
       if (changes.value?.messages) {
@@ -211,7 +234,9 @@ async function handleWhatsAppBusinessWebhook(webhookValue) {
     logger.info('📱 Messages found:', messages ? messages.length : 0);
 
     if (!messages || messages.length === 0) {
-      logger.info('📱 No messages found in webhook (status update or other event)');
+      logger.info(
+        '📱 No messages found in webhook (status update or other event)'
+      );
       logger.info('📱 Available keys in webhook:', Object.keys(webhookValue));
       return;
     }
@@ -220,7 +245,10 @@ async function handleWhatsAppBusinessWebhook(webhookValue) {
     for (const message of messages) {
       // Check if message has errors
       if (message.errors && message.errors.length > 0) {
-        logger.warn(`⚠️ Message has errors:`, JSON.stringify(message.errors, null, 2));
+        logger.warn(
+          `⚠️ Message has errors:`,
+          JSON.stringify(message.errors, null, 2)
+        );
 
         // Send error message to user
         try {
@@ -265,7 +293,7 @@ async function handleWhatsAppBusinessWebhook(webhookValue) {
 async function processMessage(message) {
   const phoneNumber = message.from;
   const messageType = message.type;
-  const timestamp = message.timestamp;
+  const { timestamp } = message;
 
   try {
     logger.info(`💬 Processing ${messageType} message from ${phoneNumber}`);
@@ -310,7 +338,10 @@ async function processMessage(message) {
         );
     }
   } catch (error) {
-    logger.error(`❌ Error processing message from ${phoneNumber}:`, error.message);
+    logger.error(
+      `❌ Error processing message from ${phoneNumber}:`,
+      error.message
+    );
     logger.error(`❌ Error stack:`, error.stack);
 
     // Send a more helpful error message
@@ -347,11 +378,15 @@ async function handleTextMessage(message, session) {
     if (session.userId && session.tenantId) {
       // Check if the text is a project name (for project selection)
       try {
-        const availableProjects = await formHandler.getAvailableProjects(session.tenantId);
+        const availableProjects = await formHandler.getAvailableProjects(
+          session.tenantId
+        );
 
         if (availableProjects && availableProjects.length > 0) {
           const selectedProject = availableProjects.find(
-            (project) => project.configuration?.projectName === text || project.projectId === text
+            (project) =>
+              project.configuration?.projectName === text ||
+              project.projectId === text
           );
 
           if (selectedProject) {
@@ -365,8 +400,15 @@ async function handleTextMessage(message, session) {
             await session.save();
 
             // Get the first question
-            const projectForm = await projectFormService.getProjectFormByProjectId(selectedProject.projectId);
-            if (projectForm && projectForm.elements && projectForm.elements.length > 0) {
+            const projectForm =
+              await projectFormService.getProjectFormByProjectId(
+                selectedProject.projectId
+              );
+            if (
+              projectForm &&
+              projectForm.elements &&
+              projectForm.elements.length > 0
+            ) {
               await whatsappNotificationService.sendFormQuestion(
                 phoneNumber,
                 projectForm.elements[0],
@@ -383,7 +425,10 @@ async function handleTextMessage(message, session) {
           }
         }
       } catch (error) {
-        logger.error(`❌ Error checking project selection for ${phoneNumber}:`, error.message);
+        logger.error(
+          `❌ Error checking project selection for ${phoneNumber}:`,
+          error.message
+        );
       }
     }
 
@@ -402,7 +447,10 @@ async function handleTextMessage(message, session) {
 
     if (text === '📊 My Status') {
       const userName = session.metadata?.userName || 'User';
-      await whatsappNotificationService.sendStatusMessage(phoneNumber, userName);
+      await whatsappNotificationService.sendStatusMessage(
+        phoneNumber,
+        userName
+      );
       return;
     }
 
@@ -413,7 +461,10 @@ async function handleTextMessage(message, session) {
 
     if (text === '🔄 Reset Session') {
       const userName = session.metadata?.userName || 'User';
-      await whatsappNotificationService.sendResetConfirmation(phoneNumber, userName);
+      await whatsappNotificationService.sendResetConfirmation(
+        phoneNumber,
+        userName
+      );
       return;
     }
 
@@ -463,13 +514,19 @@ Use /start to begin a new form submission.`
         await authHandler.handlePhoneAuthentication(phoneNumber, session);
     }
   } catch (error) {
-    logger.error(`❌ Error handling text message from ${phoneNumber}:`, error.message);
+    logger.error(
+      `❌ Error handling text message from ${phoneNumber}:`,
+      error.message
+    );
     logger.error(`❌ Error stack:`, error.stack);
     logger.error(`❌ Session status:`, session.status);
     logger.error(`❌ Text content:`, text);
 
     try {
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to process your message. Please try again.');
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'Failed to process your message. Please try again.'
+      );
     } catch (sendError) {
       logger.error(`❌ Failed to send error message:`, sendError.message);
     }
@@ -507,8 +564,14 @@ async function handleImageMessage(message, session) {
         );
     }
   } catch (error) {
-    logger.error(`❌ Error handling image message from ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to process image. Please try again.');
+    logger.error(
+      `❌ Error handling image message from ${phoneNumber}:`,
+      error.message
+    );
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'Failed to process image. Please try again.'
+    );
   }
 }
 
@@ -523,7 +586,9 @@ async function handleDocumentMessage(message, session) {
   const documentName = message.document?.filename;
 
   try {
-    logger.info(`📄 Document message from ${phoneNumber}, ID: ${documentId}, Name: ${documentName}`);
+    logger.info(
+      `📄 Document message from ${phoneNumber}, ID: ${documentId}, Name: ${documentName}`
+    );
 
     // Handle based on session status
     switch (session.status) {
@@ -535,7 +600,11 @@ async function handleDocumentMessage(message, session) {
           fileSize: 0, // WhatsApp doesn't provide file size in webhook
           mimeType: message.document?.mime_type || 'application/octet-stream',
         };
-        await formHandler.handleFileUpload(phoneNumber, documentFileInfo, session);
+        await formHandler.handleFileUpload(
+          phoneNumber,
+          documentFileInfo,
+          session
+        );
         break;
       default:
         await whatsappNotificationService.sendErrorMessage(
@@ -544,8 +613,14 @@ async function handleDocumentMessage(message, session) {
         );
     }
   } catch (error) {
-    logger.error(`❌ Error handling document message from ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to process document. Please try again.');
+    logger.error(
+      `❌ Error handling document message from ${phoneNumber}:`,
+      error.message
+    );
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'Failed to process document. Please try again.'
+    );
   }
 }
 
@@ -564,7 +639,11 @@ async function handleButtonMessage(message, session) {
     // Handle based on session status
     switch (session.status) {
       case 'selecting_project':
-        await formHandler.handleProjectSelection(phoneNumber, buttonText, session);
+        await formHandler.handleProjectSelection(
+          phoneNumber,
+          buttonText,
+          session
+        );
         break;
       case 'filling_form':
         await formHandler.handleFormAnswer(phoneNumber, buttonText, session);
@@ -576,7 +655,10 @@ async function handleButtonMessage(message, session) {
         );
     }
   } catch (error) {
-    logger.error(`❌ Error handling button message from ${phoneNumber}:`, error.message);
+    logger.error(
+      `❌ Error handling button message from ${phoneNumber}:`,
+      error.message
+    );
     await whatsappNotificationService.sendErrorMessage(
       phoneNumber,
       'Failed to process button interaction. Please try again.'
@@ -592,11 +674,14 @@ async function handleButtonMessage(message, session) {
 async function handleInteractiveMessage(message, session) {
   const phoneNumber = message.from;
   const interactiveType = message.interactive?.type;
-  const response = message.interactive?.list_reply || message.interactive?.button_reply;
+  const response =
+    message.interactive?.list_reply || message.interactive?.button_reply;
 
   try {
     logger.info(
-      `🔄 Interactive message from ${phoneNumber}, Type: ${interactiveType}, Response: ${JSON.stringify(response)}`
+      `🔄 Interactive message from ${phoneNumber}, Type: ${interactiveType}, Response: ${JSON.stringify(
+        response
+      )}`
     );
 
     // Send a helpful message explaining that interactive messages are not supported
@@ -605,7 +690,10 @@ async function handleInteractiveMessage(message, session) {
       'Interactive messages are not supported in this context. Please send text messages or use the number options provided.'
     );
   } catch (error) {
-    logger.error(`❌ Error handling interactive message from ${phoneNumber}:`, error.message);
+    logger.error(
+      `❌ Error handling interactive message from ${phoneNumber}:`,
+      error.message
+    );
     await whatsappNotificationService.sendErrorMessage(
       phoneNumber,
       'Failed to process interactive message. Please try again.'
@@ -642,12 +730,18 @@ async function handleMenuOption(option, phoneNumber, session) {
         await authHandler.handlePhoneAuthentication(phoneNumber, session);
     }
   } catch (error) {
-    logger.error(`❌ Error handling menu option from ${phoneNumber}:`, error.message);
+    logger.error(
+      `❌ Error handling menu option from ${phoneNumber}:`,
+      error.message
+    );
     logger.error(`❌ Error stack:`, error.stack);
     logger.error(`❌ Option:`, option);
 
     try {
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to process option. Please try again.');
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'Failed to process option. Please try again.'
+      );
     } catch (sendError) {
       logger.error(`❌ Failed to send error message:`, sendError.message);
     }
@@ -662,7 +756,9 @@ async function handleMenuOption(option, phoneNumber, session) {
  * @returns {string|false} Challenge string if valid, false otherwise
  */
 function verifyWebhook(mode, token, challenge) {
-  logger.info(`🔍 Webhook verification - Mode: ${mode}, Token: ${token}, Expected: ${VERIFY_TOKEN}`);
+  logger.info(
+    `🔍 Webhook verification - Mode: ${mode}, Token: ${token}, Expected: ${VERIFY_TOKEN}`
+  );
 
   if (mode === 'subscribe' && token === VERIFY_TOKEN) {
     logger.info('✅ WhatsApp webhook verification successful');

@@ -6,7 +6,7 @@ async function createNewProjectForm() {
   await mongoose.connect(config.mongoose.url, config.mongoose.options);
 
   const newProjectForm = {
-    projectId: 'proj_EMAIL_INGESTION_TEST_' + Date.now(),
+    projectId: `proj_EMAIL_INGESTION_TEST_${Date.now()}`,
     tenantId: '7vR-Ldacit',
     createdBy: '507f1f77bcf86cd799439011',
     configuration: {
@@ -15,11 +15,11 @@ async function createNewProjectForm() {
         { name: 'Full Name', type: 'text', required: true },
         { name: 'Email Address', type: 'email', required: true },
         { name: 'Phone Number', type: 'text', required: false },
-        { name: 'Message', type: 'text', required: true }
-      ]
+        { name: 'Message', type: 'text', required: true },
+      ],
     },
     status: 'active',
-    deployed: true
+    deployed: true,
   };
 
   const project = await ProjectForm.create(newProjectForm);
@@ -27,7 +27,7 @@ async function createNewProjectForm() {
   await mongoose.connection.close();
 }
 
-createNewProjectForm().catch(e => {
+createNewProjectForm().catch((e) => {
   console.error('❌ Failed to create ProjectForm:', e.message);
   process.exit(1);
 });

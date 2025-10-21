@@ -18,7 +18,7 @@ const { apiKeyService } = require('../services');
  * GET /api-keys?page=1&limit=10&environment=production&isActive=true
  */
 const getApiKeys = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
+  const { tenantId } = req.user;
 
   // Build filter from query parameters
   const filter = pick(req.query, [
@@ -40,7 +40,11 @@ const getApiKeys = catchAsync(async (req, res) => {
     options.sortBy = 'createdAt:desc';
   }
 
-  const result = await apiKeyService.getApiKeysByTenant(tenantId, filter, options);
+  const result = await apiKeyService.getApiKeysByTenant(
+    tenantId,
+    filter,
+    options
+  );
 
   // Hide the raw hashed keys in response
   const sanitizedResults = result.results.map((key) => {
@@ -67,11 +71,11 @@ const getApiKeys = catchAsync(async (req, res) => {
 
     // Add truncated key for display
     if (keyObj.environment === 'production') {
-      keyObj.key = 'sk_live_' + '●'.repeat(20) + '...';
+      keyObj.key = `sk_live_${'●'.repeat(20)}...`;
     } else if (keyObj.environment === 'staging') {
-      keyObj.key = 'sk_staging_' + '●'.repeat(20) + '...';
+      keyObj.key = `sk_staging_${'●'.repeat(20)}...`;
     } else {
-      keyObj.key = 'sk_test_' + '●'.repeat(20) + '...';
+      keyObj.key = `sk_test_${'●'.repeat(20)}...`;
     }
 
     return keyObj;
@@ -105,9 +109,9 @@ const getApiKeys = catchAsync(async (req, res) => {
  * }
  */
 const createApiKey = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
+  const { tenantId } = req.user;
   const userId = req.user._id;
-  const user = req.user;
+  const { user } = req;
 
   const { apiKey, rawKey } = await apiKeyService.createApiKey(
     req.body,
@@ -157,7 +161,7 @@ const createApiKey = catchAsync(async (req, res) => {
  * GET /api-keys/60d5ec49f1b2c8b1f8e4e1a1
  */
 const getApiKey = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
+  const { tenantId } = req.user;
   const apiKey = await apiKeyService.getApiKeyById(req.params.keyId, tenantId);
   const keyObj = apiKey.toObject();
   delete keyObj.hashedKey;
@@ -172,13 +176,15 @@ const getApiKey = catchAsync(async (req, res) => {
   }
 
   keyObj.created = keyObj.createdAt;
-  keyObj.lastUsed = keyObj.lastUsedAt ? getRelativeTime(keyObj.lastUsedAt) : 'Never';
+  keyObj.lastUsed = keyObj.lastUsedAt
+    ? getRelativeTime(keyObj.lastUsedAt)
+    : 'Never';
 
   // Add truncated key for display
   if (keyObj.environment === 'production') {
-    keyObj.key = 'sk_live_' + '●'.repeat(20) + '...';
+    keyObj.key = `sk_live_${'●'.repeat(20)}...`;
   } else {
-    keyObj.key = 'sk_test_' + '●'.repeat(20) + '...';
+    keyObj.key = `sk_test_${'●'.repeat(20)}...`;
   }
 
   res.send(keyObj);
@@ -198,8 +204,12 @@ const getApiKey = catchAsync(async (req, res) => {
  * }
  */
 const updateApiKey = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
-  const apiKey = await apiKeyService.updateApiKeyById(req.params.keyId, req.body, tenantId);
+  const { tenantId } = req.user;
+  const apiKey = await apiKeyService.updateApiKeyById(
+    req.params.keyId,
+    req.body,
+    tenantId
+  );
   const keyObj = apiKey.toObject();
   delete keyObj.hashedKey;
 
@@ -213,7 +223,9 @@ const updateApiKey = catchAsync(async (req, res) => {
   }
 
   keyObj.created = keyObj.createdAt;
-  keyObj.lastUsed = keyObj.lastUsedAt ? getRelativeTime(keyObj.lastUsedAt) : 'Never';
+  keyObj.lastUsed = keyObj.lastUsedAt
+    ? getRelativeTime(keyObj.lastUsedAt)
+    : 'Never';
 
   res.send(keyObj);
 });
@@ -226,7 +238,7 @@ const updateApiKey = catchAsync(async (req, res) => {
  * DELETE /api-keys/60d5ec49f1b2c8b1f8e4e1a1
  */
 const deleteApiKey = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
+  const { tenantId } = req.user;
   console.log('req.params.keyId', req.params.keyId);
   await apiKeyService.deleteApiKeyById(req.params.keyId, tenantId);
   res.status(httpStatus.NO_CONTENT).send();
@@ -244,7 +256,7 @@ const deleteApiKey = catchAsync(async (req, res) => {
  * GET /api-keys/60d5ec49f1b2c8b1f8e4e1a1/analytics?granularity=day
  */
 const getApiKeyAnalytics = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
+  const { tenantId } = req.user;
 
   const options = {
     startDate: req.query.startDate ? new Date(req.query.startDate) : undefined,
@@ -252,7 +264,11 @@ const getApiKeyAnalytics = catchAsync(async (req, res) => {
     granularity: req.query.granularity || 'day',
   };
 
-  const analytics = await apiKeyService.getApiKeyAnalytics(req.params.keyId, tenantId, options);
+  const analytics = await apiKeyService.getApiKeyAnalytics(
+    req.params.keyId,
+    tenantId,
+    options
+  );
   res.send(analytics);
 });
 
@@ -264,8 +280,11 @@ const getApiKeyAnalytics = catchAsync(async (req, res) => {
  * POST /api-keys/60d5ec49f1b2c8b1f8e4e1a1/regenerate
  */
 const regenerateApiKey = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
-  const { apiKey, rawKey } = await apiKeyService.regenerateApiKey(req.params.keyId, tenantId);
+  const { tenantId } = req.user;
+  const { apiKey, rawKey } = await apiKeyService.regenerateApiKey(
+    req.params.keyId,
+    tenantId
+  );
 
   const keyObj = apiKey.toObject();
   delete keyObj.hashedKey;
@@ -295,13 +314,14 @@ const getRelativeTime = (date) => {
 
   if (diffInMinutes < 1) {
     return 'Just now';
-  } else if (diffInMinutes < 60) {
-    return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
-  } else if (diffInHours < 24) {
-    return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
-  } else {
-    return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
   }
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+  }
+  if (diffInHours < 24) {
+    return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+  }
+  return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
 };
 
 module.exports = {

@@ -29,7 +29,10 @@ const getSetting = catchAsync(async (req, res) => {
 
 // Update a setting
 const updateSetting = catchAsync(async (req, res) => {
-  const updated = await settingsService.updateSettingById(req.params.settingId, req.body);
+  const updated = await settingsService.updateSettingById(
+    req.params.settingId,
+    req.body
+  );
   res.send(updated);
 });
 
@@ -41,7 +44,7 @@ const deleteSetting = catchAsync(async (req, res) => {
 
 // Delete all settings for a node
 const deleteAllSettingsForNode = catchAsync(async (req, res) => {
-  const nodeId = req.params.nodeId;
+  const { nodeId } = req.params;
   const result = await settingsService.deleteAllSettingsForNode(nodeId);
   res.status(httpStatus.OK).json({
     message: `All settings for node ${nodeId} deleted.`,
@@ -51,9 +54,13 @@ const deleteAllSettingsForNode = catchAsync(async (req, res) => {
 
 // Assign datapoints and reports to a setting
 const assignDatapointsAndReports = catchAsync(async (req, res) => {
-  const settingId = req.params.settingId;
+  const { settingId } = req.params;
   const { datapoints, reports } = req.body;
-  const result = await settingsService.assignDatapointsAndReports(settingId, datapoints, reports);
+  const result = await settingsService.assignDatapointsAndReports(
+    settingId,
+    datapoints,
+    reports
+  );
   res.send(result);
 });
 

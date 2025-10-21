@@ -232,8 +232,8 @@ const queryRoles = async (filter, options) => {
 
   return {
     results: roles,
-    page: page,
-    limit: limit,
+    page,
+    limit,
     totalPages,
     totalResults,
   };

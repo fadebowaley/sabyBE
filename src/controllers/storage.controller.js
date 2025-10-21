@@ -28,7 +28,7 @@ const uploadMultipleFiles = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'No files uploaded');
   }
 
-  const filesData = req.files.map(file => ({
+  const filesData = req.files.map((file) => ({
     ...file,
     folderId: req.body.folderId,
   }));
@@ -79,14 +79,23 @@ const deleteFile = catchAsync(async (req, res) => {
 });
 
 const shareFile = catchAsync(async (req, res) => {
-  const shareOptions = pick(req.body, ['expiryDate', 'allowDownload', 'allowPreview', 'password']);
+  const shareOptions = pick(req.body, [
+    'expiryDate',
+    'allowDownload',
+    'allowPreview',
+    'password',
+  ]);
 
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
   };
 
-  const shareResult = await storageService.shareFile(req.params.fileId, shareOptions, userInfo);
+  const shareResult = await storageService.shareFile(
+    req.params.fileId,
+    shareOptions,
+    userInfo
+  );
   res.send(shareResult);
 });
 
@@ -105,13 +114,23 @@ const downloadSharedFile = catchAsync(async (req, res) => {
   const file = await storageService.getSharedFile(shareToken, password);
 
   if (!file.shareSettings.allowDownload) {
-    throw new ApiError(httpStatus.FORBIDDEN, 'Download not allowed for this file');
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Download not allowed for this file'
+    );
   }
 
   // Generate presigned URL for download
-  const { StorageProviderFactory } = require('../services/providers/storageProvider');
-  const provider = StorageProviderFactory.create(file.storageProvider || 'aws-s3');
-  const downloadUrl = await provider.generatePresignedUrl(file.storagePath, 300); // 5 minutes
+  const {
+    StorageProviderFactory,
+  } = require('../services/providers/storageProvider');
+  const provider = StorageProviderFactory.create(
+    file.storageProvider || 'aws-s3'
+  );
+  const downloadUrl = await provider.generatePresignedUrl(
+    file.storagePath,
+    300
+  ); // 5 minutes
 
   res.send({ downloadUrl, fileName: file.originalName });
 });
@@ -156,16 +175,21 @@ const moveFile = catchAsync(async (req, res) => {
 
 const copyFile = catchAsync(async (req, res) => {
   const { folderId, newName } = req.body;
- 
+
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
   };
 
-  const originalFile = await storageService.getFileById(req.params.fileId, userInfo);
+  const originalFile = await storageService.getFileById(
+    req.params.fileId,
+    userInfo
+  );
 
   // Copy file in cloud storage
-  const { StorageProviderFactory } = require('../services/providers/storageProvider');
+  const {
+    StorageProviderFactory,
+  } = require('../services/providers/storageProvider');
   const { nanoid } = require('nanoid');
   const path = require('path');
 
@@ -173,7 +197,9 @@ const copyFile = catchAsync(async (req, res) => {
   const uniqueFileName = `${nanoid(16)}${fileExtension}`;
   const newStoragePath = `${userInfo.tenantId}/${userInfo.userId}/${uniqueFileName}`;
 
-  const provider = StorageProviderFactory.create(originalFile.storageProvider || 'aws-s3');
+  const provider = StorageProviderFactory.create(
+    originalFile.storageProvider || 'aws-s3'
+  );
   await provider.copy(originalFile.storagePath, newStoragePath);
 
   // Create new file record
@@ -189,7 +215,10 @@ const copyFile = catchAsync(async (req, res) => {
     fileExtension: originalFile.fileExtension,
     storageProvider: originalFile.storageProvider,
     storagePath: newStoragePath,
-    storageUrl: originalFile.storageUrl.replace(originalFile.storagePath, newStoragePath),
+    storageUrl: originalFile.storageUrl.replace(
+      originalFile.storagePath,
+      newStoragePath
+    ),
   });
 
   res.status(httpStatus.CREATED).send(copiedFile);

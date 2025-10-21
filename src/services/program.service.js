@@ -7,18 +7,15 @@ const ApiError = require('../utils/ApiError');
  * @param {Object} programBody
  * @returns {Promise<Program>}
  */
-const createProgram = async (programBody) => {
-  return Program.create(programBody);
-};
+const createProgram = async (programBody) => Program.create(programBody);
 
 /**
  * Bulk import programs
  * @param {Array} programArray
  * @returns {Promise<Array<Program>>}
  */
-const bulkImportPrograms = async (programArray) => {
-  return Program.insertMany(programArray);
-};
+const bulkImportPrograms = async (programArray) =>
+  Program.insertMany(programArray);
 
 /**
  * Query for programs
@@ -36,9 +33,7 @@ const queryPrograms = async (filter, options) => {
  * @param {ObjectId} id
  * @returns {Promise<Program>}
  */
-const getProgramById = async (id) => {
-  return Program.findById(id);
-};
+const getProgramById = async (id) => Program.findById(id);
 
 /**
  * Update program by ID
@@ -74,9 +69,7 @@ const deleteProgramById = async (programId) => {
  * Delete all programs
  * @returns {Promise<{ deletedCount: number }>}
  */
-const deleteAllPrograms = async () => {
-  return Program.deleteMany({});
-};
+const deleteAllPrograms = async () => Program.deleteMany({});
 
 /**
  * Assign data points or events to a program
@@ -90,7 +83,9 @@ const assignToProgram = async (programId, payload) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Program not found');
   }
   program.events = [...new Set([...program.events, ...(payload.events || [])])];
-  program.dataPoints = [...new Set([...program.dataPoints, ...(payload.dataPoints || [])])];
+  program.dataPoints = [
+    ...new Set([...program.dataPoints, ...(payload.dataPoints || [])]),
+  ];
   await program.save();
   return program;
 };

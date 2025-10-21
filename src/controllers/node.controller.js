@@ -132,7 +132,10 @@ const getChildNodes = catchAsync(async (req, res) => {
 
 // Move node to a new parent
 const moveNodeToParent = catchAsync(async (req, res) => {
-  const updatedNode = await nodeService.moveNodeToParent(req.params.nodeId, req.body.parentId);
+  const updatedNode = await nodeService.moveNodeToParent(
+    req.params.nodeId,
+    req.body.parentId
+  );
   res.send(updatedNode);
 });
 
@@ -156,7 +159,10 @@ const deactivateNode = catchAsync(async (req, res) => {
 
 // Assign users to a node
 const assignUsersToNode = catchAsync(async (req, res) => {
-  const updatedNode = await nodeService.assignUsersToNode(req.params.nodeId, req.body.userIds);
+  const updatedNode = await nodeService.assignUsersToNode(
+    req.params.nodeId,
+    req.body.userIds
+  );
   res.send(updatedNode);
 });
 

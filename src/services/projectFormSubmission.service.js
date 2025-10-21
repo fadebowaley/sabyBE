@@ -10,17 +10,30 @@ const ApiError = require('../utils/ApiError');
  * @param {ObjectId} submittedBy - The user who submitted (may be null for anonymous)
  * @returns {Promise<ProjectFormSubmission>}
  */
-const createSubmission = async (submissionData, projectId, tenantId, submittedBy = null) => {
+const createSubmission = async (
+  submissionData,
+  projectId,
+  tenantId,
+  submittedBy = null
+) => {
   // If tenantId is null, we need to get it from the project
   if (!tenantId) {
-    const projectForm = await ProjectForm.findOne({ projectId, deletedAt: null });
+    const projectForm = await ProjectForm.findOne({
+      projectId,
+      deletedAt: null,
+    });
     if (!projectForm) {
       throw new ApiError(httpStatus.NOT_FOUND, 'Project form not found');
     }
     tenantId = projectForm.tenantId;
   }
 
-  return ProjectFormSubmission.createSubmission(submissionData, projectId, tenantId, submittedBy);
+  return ProjectFormSubmission.createSubmission(
+    submissionData,
+    projectId,
+    tenantId,
+    submittedBy
+  );
 };
 
 /**
@@ -51,7 +64,9 @@ const querySubmissions = async (filter, options) => {
  */
 const getSubmissionById = async (id, options = {}) => {
   const populateFields = options.populate || 'submittedBy projectFormId';
-  const submission = await ProjectFormSubmission.findById(id).populate(populateFields);
+  const submission = await ProjectFormSubmission.findById(id).populate(
+    populateFields
+  );
 
   if (!submission || submission.deletedAt) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
@@ -87,9 +102,8 @@ const getSubmissionBySubmissionId = async (submissionId, options = {}) => {
  * @param {Object} options - Query options
  * @returns {Promise<QueryResult>}
  */
-const getSubmissionsByProject = async (projectId, filter = {}, options = {}) => {
-  return ProjectFormSubmission.getSubmissionsByProject(projectId, filter, options);
-};
+const getSubmissionsByProject = async (projectId, filter = {}, options = {}) =>
+  ProjectFormSubmission.getSubmissionsByProject(projectId, filter, options);
 
 /**
  * Get submissions by tenant
@@ -98,9 +112,8 @@ const getSubmissionsByProject = async (projectId, filter = {}, options = {}) => 
  * @param {Object} options - Query options
  * @returns {Promise<QueryResult>}
  */
-const getSubmissionsByTenant = async (tenantId, filter = {}, options = {}) => {
-  return ProjectFormSubmission.getSubmissionsByTenant(tenantId, filter, options);
-};
+const getSubmissionsByTenant = async (tenantId, filter = {}, options = {}) =>
+  ProjectFormSubmission.getSubmissionsByTenant(tenantId, filter, options);
 
 /**
  * Update submission status
@@ -110,7 +123,12 @@ const getSubmissionsByTenant = async (tenantId, filter = {}, options = {}) => {
  * @param {string} notes - Processing notes
  * @returns {Promise<ProjectFormSubmission>}
  */
-const updateSubmissionStatus = async (submissionId, status, processedBy, notes = '') => {
+const updateSubmissionStatus = async (
+  submissionId,
+  status,
+  processedBy,
+  notes = ''
+) => {
   const submission = await getSubmissionById(submissionId);
 
   submission.status = status;
@@ -281,7 +299,10 @@ const exportSubmissions = async (projectId, format = 'csv', exportedBy) => {
     .sort({ submittedAt: -1 });
 
   if (submissions.length === 0) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'No submissions found for this project');
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'No submissions found for this project'
+    );
   }
 
   // This is a simplified export - in a real implementation, you would:
@@ -299,10 +320,16 @@ const exportSubmissions = async (projectId, format = 'csv', exportedBy) => {
 
   // For now, return a mock download URL
   // In production, this would be the actual file URL
-  const downloadUrl = `${process.env.BACKEND_URL}/api/v1/exports/${projectId}_${Date.now()}.${format}`;
+  const downloadUrl = `${
+    process.env.BACKEND_URL
+  }/api/v1/exports/${projectId}_${Date.now()}.${format}`;
 
   // Track the export
-  await Promise.all(submissions.map((submission) => submission.addExport(exportedBy, format, downloadUrl)));
+  await Promise.all(
+    submissions.map((submission) =>
+      submission.addExport(exportedBy, format, downloadUrl)
+    )
+  );
 
   return {
     downloadUrl,

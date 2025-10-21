@@ -35,7 +35,7 @@ const tenantPlugin = (schema) => {
 
   schema.statics.paginate = async function (filter = {}, options = {}) {
     console.log('[TenantPlugin] paginate() - incoming options:', options);
-    const user = options.user;
+    const { user } = options;
 
     // SabyUser can see all users across all tenants
     if (user?.isSaby) {

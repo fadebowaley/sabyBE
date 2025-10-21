@@ -21,7 +21,11 @@ function extractMetadataFields(structured) {
     source: ['source'],
     status: ['status'],
     project_name: ['project_name', 'projectName', 'project name'],
-    project_category: ['project_category', 'projectCategory', 'project category'],
+    project_category: [
+      'project_category',
+      'projectCategory',
+      'project category',
+    ],
   };
 
   // Extract metadata fields from structured data
@@ -56,17 +60,29 @@ function buildSubmissionPayload(parsedEmail, tenant, validationResult = null) {
   const emailMetadata = extractMetadataFields(body.structured || {});
 
   // Use tenant ID from validation result if available, otherwise fall back to email metadata or tenant defaults
-  const discoveredTenantId = validationResult?.projectForm?.tenantId || emailMetadata.tenantId || tenant.tenantId;
+  const discoveredTenantId =
+    validationResult?.projectForm?.tenantId ||
+    emailMetadata.tenantId ||
+    tenant.tenantId;
 
   const submissionPayload = {
-    //TODO:: We are replacing these values wiith real Node IDs and others from Database
+    // TODO:: We are replacing these values wiith real Node IDs and others from Database
     tenantId: discoveredTenantId,
     projectId: emailMetadata.projectId || tenant.defaultProjectId,
-    project_name: emailMetadata['project_name'] || validationResult?.projectForm?.configuration?.projectName || 'Email Form',
-    project_category: emailMetadata['project_category'] || 'General',
-    formId: emailMetadata.formId || validationResult?.projectForm?._id || 'email-form-' + Date.now(),
-    nodeId: emailMetadata.nodeId || 'email-node-' + Date.now(),
-    userId: emailMetadata.userId || validationResult?.sender?._id || '507f1f77bcf86cd799439011',
+    project_name:
+      emailMetadata.project_name ||
+      validationResult?.projectForm?.configuration?.projectName ||
+      'Email Form',
+    project_category: emailMetadata.project_category || 'General',
+    formId:
+      emailMetadata.formId ||
+      validationResult?.projectForm?._id ||
+      `email-form-${Date.now()}`,
+    nodeId: emailMetadata.nodeId || `email-node-${Date.now()}`,
+    userId:
+      emailMetadata.userId ||
+      validationResult?.sender?._id ||
+      '507f1f77bcf86cd799439011',
     source: emailMetadata.source || 'email',
     status: emailMetadata.status || 'submitted',
     metadata: {
@@ -75,7 +91,7 @@ function buildSubmissionPayload(parsedEmail, tenant, validationResult = null) {
       subject,
       date,
       messageId: parsedEmail.messageId,
-      emailMetadata: emailMetadata, // Include extracted metadata for debugging
+      emailMetadata, // Include extracted metadata for debugging
       validation: validationResult
         ? {
             validated: validationResult.valid,
@@ -90,7 +106,8 @@ function buildSubmissionPayload(parsedEmail, tenant, validationResult = null) {
     payload: {
       text: body.text,
       html: body.html,
-      structured: validationResult?.formValidation?.validatedData || body.structured,
+      structured:
+        validationResult?.formValidation?.validatedData || body.structured,
       attachments: attachments.map((a) => ({
         filename: a.filename,
         contentType: a.contentType,
@@ -109,7 +126,9 @@ function buildSubmissionPayload(parsedEmail, tenant, validationResult = null) {
  */
 async function parseEmailToSubmission(parsedEmail, tenant) {
   if (!tenant) {
-    throw new Error('Tenant configuration not supplied to parseEmailToSubmission');
+    throw new Error(
+      'Tenant configuration not supplied to parseEmailToSubmission'
+    );
   }
 
   console.log('[Parser] Parsed email:', parsedEmail.subject);
@@ -124,12 +143,17 @@ async function parseEmailToSubmission(parsedEmail, tenant) {
   };
 
   // Perform comprehensive validation (tenant ID will be discovered dynamically)
-  const validationResult = await emailValidationService.validateEmailSubmission(parsedEmail, submissionData);
+  const validationResult = await emailValidationService.validateEmailSubmission(
+    parsedEmail,
+    submissionData
+  );
 
   console.log('[Parser] Validation result:', validationResult);
 
   // Check if validation failed due to duplicate submission
-  const duplicateError = validationResult.errors.find((error) => error.step === 'duplicate_validation');
+  const duplicateError = validationResult.errors.find(
+    (error) => error.step === 'duplicate_validation'
+  );
   if (duplicateError) {
     logger.warn(`❌ Duplicate submission rejected: ${duplicateError.error}`);
     return {
@@ -142,7 +166,11 @@ async function parseEmailToSubmission(parsedEmail, tenant) {
 
   // Check if validation failed for other reasons
   if (!validationResult.valid) {
-    logger.warn(`❌ Email validation failed: ${validationResult.errors.map((e) => e.error).join(', ')}`);
+    logger.warn(
+      `❌ Email validation failed: ${validationResult.errors
+        .map((e) => e.error)
+        .join(', ')}`
+    );
     return {
       success: false,
       reason: 'validation_failed',
@@ -162,7 +190,11 @@ async function parseEmailToSubmission(parsedEmail, tenant) {
   console.log('[Parser] Returning submission:', submissionData);
 
   // Build submission payload with validation results
-  const submissionPayload = buildSubmissionPayload(parsedEmail, tenant, validationResult);
+  const submissionPayload = buildSubmissionPayload(
+    parsedEmail,
+    tenant,
+    validationResult
+  );
 
   return {
     success: true,

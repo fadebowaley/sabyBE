@@ -47,13 +47,22 @@ async function handleButtonPress(phoneNumber, buttonText, session) {
 
       default:
         logger.warn(`Unknown button text: ${buttonText}`);
-        await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Unknown action. Please try again.');
+        await whatsappNotificationService.sendErrorMessage(
+          phoneNumber,
+          'Unknown action. Please try again.'
+        );
     }
 
     logger.info(`✅ Button press handled successfully for ${phoneNumber}`);
   } catch (error) {
-    logger.error(`❌ Error handling button press for ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(phoneNumber, 'An error occurred. Please try again.');
+    logger.error(
+      `❌ Error handling button press for ${phoneNumber}:`,
+      error.message
+    );
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'An error occurred. Please try again.'
+    );
   }
 }
 
@@ -64,20 +73,36 @@ async function handleButtonPress(phoneNumber, buttonText, session) {
  * @param {string} selectedTitle - Selected item title
  * @param {Object} session - User session object
  */
-async function handleListSelection(phoneNumber, selectedId, selectedTitle, session) {
+async function handleListSelection(
+  phoneNumber,
+  selectedId,
+  selectedTitle,
+  session
+) {
   try {
-    logger.info(`📋 List selection from ${phoneNumber}: "${selectedTitle}" (ID: ${selectedId})`);
+    logger.info(
+      `📋 List selection from ${phoneNumber}: "${selectedTitle}" (ID: ${selectedId})`
+    );
 
     if (selectedId.startsWith('project_')) {
       const projectId = selectedId.replace('project_', '');
       await handleProjectSelectionCallback(phoneNumber, projectId, session);
     } else {
       logger.warn(`Unknown list selection ID: ${selectedId}`);
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Unknown selection. Please try again.');
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'Unknown selection. Please try again.'
+      );
     }
   } catch (error) {
-    logger.error(`❌ Error handling list selection for ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(phoneNumber, 'An error occurred. Please try again.');
+    logger.error(
+      `❌ Error handling list selection for ${phoneNumber}:`,
+      error.message
+    );
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'An error occurred. Please try again.'
+    );
   }
 }
 
@@ -161,8 +186,14 @@ Send "start" to begin a new form submission.`
 
     logger.info(`✅ Session reset completed for ${phoneNumber}`);
   } catch (error) {
-    logger.error(`❌ Error resetting session for ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to reset session. Please try again.');
+    logger.error(
+      `❌ Error resetting session for ${phoneNumber}:`,
+      error.message
+    );
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'Failed to reset session. Please try again.'
+    );
   }
 }
 
@@ -204,10 +235,18 @@ async function handleProjectSelectionCallback(phoneNumber, projectId, session) {
     const formHandler = require('./formHandler');
     await formHandler.startFormFilling(phoneNumber, session);
 
-    logger.info(`✅ Project selection handled for ${phoneNumber}, project: ${projectId}`);
+    logger.info(
+      `✅ Project selection handled for ${phoneNumber}, project: ${projectId}`
+    );
   } catch (error) {
-    logger.error(`❌ Error handling project selection for ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to select project. Please try again.');
+    logger.error(
+      `❌ Error handling project selection for ${phoneNumber}:`,
+      error.message
+    );
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'Failed to select project. Please try again.'
+    );
   }
 }
 

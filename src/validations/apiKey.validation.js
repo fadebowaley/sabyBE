@@ -95,7 +95,9 @@ const getApiKeyAnalytics = {
   query: Joi.object().keys({
     startDate: Joi.date(),
     endDate: Joi.date().min(Joi.ref('startDate')),
-    granularity: Joi.string().valid('hour', 'day', 'week', 'month').default('day'),
+    granularity: Joi.string()
+      .valid('hour', 'day', 'week', 'month')
+      .default('day'),
   }),
 };
 

@@ -1,8 +1,7 @@
 const mongoose = require('mongoose');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
-
-/****
+/** **
  *References: Node, Datapoint, Report.
 Contains a key and config to support any kind of setting (feature toggles, thresholds, visibility, etc.).
 Static methods:

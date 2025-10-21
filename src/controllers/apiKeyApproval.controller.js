@@ -91,7 +91,7 @@ const rejectApiKey = catchAsync(async (req, res) => {
  * @returns {Object} Paginated production keys
  */
 const getProductionKeys = catchAsync(async (req, res) => {
-  const user = req.user;
+  const { user } = req;
   const tenantId = user.isSaby ? null : user.tenantId;
 
   const filter = pick(req.query, ['category', 'tenant']);
@@ -113,4 +113,3 @@ module.exports = {
   rejectApiKey,
   getProductionKeys,
 };
-

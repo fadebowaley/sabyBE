@@ -21,7 +21,9 @@ const getPayment = catchAsync(async (req, res) => {
 
 // Get payment by reference
 const getPaymentByReference = catchAsync(async (req, res) => {
-  const payment = await paymentService.getPaymentByReference(req.params.reference);
+  const payment = await paymentService.getPaymentByReference(
+    req.params.reference
+  );
   if (!payment) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Payment not found');
   }
@@ -30,7 +32,10 @@ const getPaymentByReference = catchAsync(async (req, res) => {
 
 // Update payment by ID
 const updatePayment = catchAsync(async (req, res) => {
-  const updatedPayment = await paymentService.updatePaymentById(req.params.paymentId, req.body);
+  const updatedPayment = await paymentService.updatePaymentById(
+    req.params.paymentId,
+    req.body
+  );
   res.send(updatedPayment);
 });
 
@@ -86,7 +91,9 @@ const refundPayment = catchAsync(async (req, res) => {
 
 // Generate payment receipt
 const generatePaymentReceipt = catchAsync(async (req, res) => {
-  const receipt = await paymentService.generatePaymentReceipt(req.params.paymentId);
+  const receipt = await paymentService.generatePaymentReceipt(
+    req.params.paymentId
+  );
   res.send(receipt);
 });
 

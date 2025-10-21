@@ -2,7 +2,11 @@ const mongoose = require('mongoose');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
 const FrequencySchema = new mongoose.Schema({
-  mode: { type: String, enum: ['one-time', 'recurring', 'date-range', 'specific-dates'], default: 'one-time' },
+  mode: {
+    type: String,
+    enum: ['one-time', 'recurring', 'date-range', 'specific-dates'],
+    default: 'one-time',
+  },
   recurring: { type: String, enum: ['daily', 'weekly', 'monthly', 'yearly'] },
   dateRange: {
     from: { type: Date },
@@ -82,11 +86,20 @@ const FormDefinitionSchema = new mongoose.Schema(
     description: String,
     category: {
       type: String,
-      enum: ['HR-EMPLOYEES', 'PROPERTIES', 'FINANCES', 'ATTENDANCE', 'MARKET PRICES', 'CUSTOM'],
+      enum: [
+        'HR-EMPLOYEES',
+        'PROPERTIES',
+        'FINANCES',
+        'ATTENDANCE',
+        'MARKET PRICES',
+        'CUSTOM',
+      ],
       default: 'CUSTOM',
     },
     tenantId: { type: String, index: true },
-    assignedNodeLevels: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Level' }],
+    assignedNodeLevels: [
+      { type: mongoose.Schema.Types.ObjectId, ref: 'Level' },
+    ],
     assignedNodes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Nodes' }],
     fields: [FormFieldSchema],
 
@@ -111,7 +124,11 @@ const FormDefinitionSchema = new mongoose.Schema(
       uploadTo: { type: String, enum: ['s3', 'gcs', 'local'], default: 's3' },
     },
 
-    status: { type: String, enum: ['draft', 'published', 'archived'], default: 'draft' },
+    status: {
+      type: String,
+      enum: ['draft', 'published', 'archived'],
+      default: 'draft',
+    },
   },
   { timestamps: true }
 );
@@ -122,7 +139,6 @@ FormDefinitionSchema.plugin(tenantPlugin);
 
 // Inside your FormDefinitionSchema file
 FormDefinitionSchema.statics.createForm = async function (payload, tenantId) {
-
   const { title, fields } = payload;
 
   // Check for duplicate title within the same tenant

@@ -23,9 +23,17 @@ const ResponseStatusSchema = new mongoose.Schema({
 
 const FormResponseSchema = new mongoose.Schema(
   {
-    formId: { type: mongoose.Schema.Types.ObjectId, ref: 'FormDefinition', required: true },
+    formId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'FormDefinition',
+      required: true,
+    },
     tenantId: { type: String, required: true },
-    nodeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Nodes', required: true },
+    nodeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Nodes',
+      required: true,
+    },
     submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 
     responseData: mongoose.Schema.Types.Mixed, // flexible JSON structure

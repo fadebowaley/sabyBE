@@ -1,9 +1,17 @@
-
 const Joi = require('joi');
 const { objectId } = require('./custom.validation');
 
 // Define the allowed actions
-const ACTIONS = ['view', 'create', 'update', 'delete', 'manage', 'assign', 'approve', 'export'];
+const ACTIONS = [
+  'view',
+  'create',
+  'update',
+  'delete',
+  'manage',
+  'assign',
+  'approve',
+  'export',
+];
 
 // Validation for creating a single permission
 const createPermission = {
@@ -30,7 +38,6 @@ const queryPermissions = {
     page: Joi.number().integer().min(1),
   }),
 };
-
 
 // Validation for getting a specific permission by name
 const getPermission = {

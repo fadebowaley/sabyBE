@@ -8,7 +8,11 @@ if (config.env !== 'test') {
   transport
     .verify()
     .then(() => logger.info('Connected to email server'))
-    .catch(() => logger.warn('Unable to connect to email server. Make sure you have configured the SMTP options in .env'));
+    .catch(() =>
+      logger.warn(
+        'Unable to connect to email server. Make sure you have configured the SMTP options in .env'
+      )
+    );
 }
 
 /**
@@ -30,7 +34,6 @@ const sendEmail = async (to, subject, text) => {
  * @returns {Promise}
  *
  */
-
 
 const sendResetPasswordEmail = async (to, token) => {
   const subject = 'Reset password';
@@ -59,7 +62,6 @@ If you did not create an account, then ignore this email.`;
   await sendEmail(to, subject, text);
 };
 
-
 /**
  * Send OTP email
  * @param {string} to - Email of the user
@@ -74,16 +76,14 @@ If you did not initiate this request, please ignore this email.`;
   await sendEmail(to, subject, text);
 };
 
-
 module.exports = {
   transport,
   sendEmail,
   sendOtpEmail,
   sendResetPasswordEmail,
   sendVerificationEmail,
-  //send Welcome message
-  //send order esage
-  //send jointing the team
-  //sent password rest and verified
-
+  // send Welcome message
+  // send order esage
+  // send jointing the team
+  // sent password rest and verified
 };

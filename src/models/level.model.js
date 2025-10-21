@@ -24,7 +24,10 @@ levelSchema.plugin(tenantPlugin);
  * @typedef NodeLevel
  */
 
-levelSchema.index({ rank: 1 }, { unique: true, partialFilterExpression: { isSpecial: { $ne: true } } });
+levelSchema.index(
+  { rank: 1 },
+  { unique: true, partialFilterExpression: { isSpecial: { $ne: true } } }
+);
 
 /**
  * Static method to create a new level
@@ -32,9 +35,10 @@ levelSchema.index({ rank: 1 }, { unique: true, partialFilterExpression: { isSpec
  * @returns {Promise<NodeLevel>}
  */
 
-
-
-levelSchema.statics.getLevelsByHierarchy = async function (tenantId, hierarchy) {
+levelSchema.statics.getLevelsByHierarchy = async function (
+  tenantId,
+  hierarchy
+) {
   return this.find({ tenantId, rank: hierarchy });
 };
 
@@ -42,7 +46,6 @@ levelSchema.statics.getLevelsByHierarchy = async function (tenantId, hierarchy) 
 levelSchema.statics.getOrderedLevels = async function () {
   return this.find().sort({ rank: 1 });
 };
-
 
 const Level = mongoose.model('Level', levelSchema);
 module.exports = Level;

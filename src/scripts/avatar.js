@@ -31,6 +31,8 @@ const connectToDB = async () => {
     console.log(`Updated user ${user.email} -> avatar-${paddedNum}.webp`);
   }
 
-  console.log(`✅ Done assigning avatars to ${usersWithoutAvatar.length} users.`);
+  console.log(
+    `✅ Done assigning avatars to ${usersWithoutAvatar.length} users.`
+  );
   process.exit();
 })();

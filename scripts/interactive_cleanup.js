@@ -10,7 +10,7 @@ const Nodes = require('../src/models/node.model');
 /**
  * Interactive Database Cleanup Tool
  * Super Admin tool for selective tenant and collection cleanup
- * 
+ *
  * Features:
  * - List all tenants with owner information
  * - Select specific tenant to operate on
@@ -28,19 +28,31 @@ class InteractiveDatabaseCleanup {
       roles: { deleted: 0, errors: 0, details: [] },
       levels: { deleted: 0, errors: 0, details: [] },
       structures: { deleted: 0, errors: 0, details: [] },
-      nodes: { deleted: 0, errors: 0, details: [] }
+      nodes: { deleted: 0, errors: 0, details: [] },
     };
-    
+
     // Define cleanup order (reverse of creation order)
     this.cleanupOrder = ['nodes', 'structures', 'levels', 'users', 'roles'];
-    
+
     // Define available collections
     this.availableCollections = {
-      'users': { name: 'Users', description: 'User accounts (except tenant owner)' },
-      'roles': { name: 'Roles', description: 'User roles (except Support Agent)' },
-      'levels': { name: 'Levels', description: 'Organizational hierarchy levels' },
-      'structures': { name: 'Structures', description: 'Organizational structures' },
-      'nodes': { name: 'Nodes', description: 'Physical/logical nodes' }
+      users: {
+        name: 'Users',
+        description: 'User accounts (except tenant owner)',
+      },
+      roles: {
+        name: 'Roles',
+        description: 'User roles (except Support Agent)',
+      },
+      levels: {
+        name: 'Levels',
+        description: 'Organizational hierarchy levels',
+      },
+      structures: {
+        name: 'Structures',
+        description: 'Organizational structures',
+      },
+      nodes: { name: 'Nodes', description: 'Physical/logical nodes' },
     };
   }
 
@@ -54,7 +66,6 @@ class InteractiveDatabaseCleanup {
       // Connect to MongoDB
       await mongoose.connect(config.mongoose.url, config.mongoose.options);
       console.log('✅ Connected to MongoDB\n');
-
     } catch (error) {
       console.error('❌ Initialization failed:', error.message);
       throw error;
@@ -67,18 +78,30 @@ class InteractiveDatabaseCleanup {
   async getAllTenants() {
     try {
       // Get all tenant owners (users with isOwner: true)
-      const owners = await User.find({ isOwner: true }).select('email firstname lastname tenantId createdAt');
-      
+      const owners = await User.find({ isOwner: true }).select(
+        'email firstname lastname tenantId createdAt'
+      );
+
       const tenants = [];
       for (const owner of owners) {
         // Count users in this tenant
-        const userCount = await User.countDocuments({ tenantId: owner.tenantId });
-        
+        const userCount = await User.countDocuments({
+          tenantId: owner.tenantId,
+        });
+
         // Count other entities
-        const roleCount = await Role.countDocuments({ tenantId: owner.tenantId });
-        const levelCount = await Level.countDocuments({ tenantId: owner.tenantId });
-        const structureCount = await Structures.countDocuments({ tenantId: owner.tenantId });
-        const nodeCount = await Nodes.countDocuments({ tenantId: owner.tenantId });
+        const roleCount = await Role.countDocuments({
+          tenantId: owner.tenantId,
+        });
+        const levelCount = await Level.countDocuments({
+          tenantId: owner.tenantId,
+        });
+        const structureCount = await Structures.countDocuments({
+          tenantId: owner.tenantId,
+        });
+        const nodeCount = await Nodes.countDocuments({
+          tenantId: owner.tenantId,
+        });
 
         tenants.push({
           tenantId: owner.tenantId,
@@ -90,11 +113,14 @@ class InteractiveDatabaseCleanup {
           levelCount,
           structureCount,
           nodeCount,
-          totalRecords: userCount + roleCount + levelCount + structureCount + nodeCount
+          totalRecords:
+            userCount + roleCount + levelCount + structureCount + nodeCount,
         });
       }
 
-      return tenants.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      return tenants.sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
     } catch (error) {
       console.error('❌ Failed to get tenants:', error.message);
       throw error;
@@ -106,16 +132,32 @@ class InteractiveDatabaseCleanup {
    */
   displayTenants(tenants) {
     console.log('📊 AVAILABLE TENANTS:\n');
-    console.log('=' .repeat(120));
-    console.log('| # | Tenant ID    | Owner Name           | Owner Email              | Users | Roles | Levels | Structures | Nodes | Total |');
-    console.log('=' .repeat(120));
-    
+    console.log('='.repeat(120));
+    console.log(
+      '| # | Tenant ID    | Owner Name           | Owner Email              | Users | Roles | Levels | Structures | Nodes | Total |'
+    );
+    console.log('='.repeat(120));
+
     tenants.forEach((tenant, index) => {
-      const row = `| ${(index + 1).toString().padStart(2)} | ${tenant.tenantId.padEnd(12)} | ${tenant.ownerName.padEnd(19)} | ${tenant.ownerEmail.padEnd(24)} | ${tenant.userCount.toString().padStart(5)} | ${tenant.roleCount.toString().padStart(5)} | ${tenant.levelCount.toString().padStart(6)} | ${tenant.structureCount.toString().padStart(10)} | ${tenant.nodeCount.toString().padStart(5)} | ${tenant.totalRecords.toString().padStart(5)} |`;
+      const row = `| ${(index + 1)
+        .toString()
+        .padStart(2)} | ${tenant.tenantId.padEnd(
+        12
+      )} | ${tenant.ownerName.padEnd(19)} | ${tenant.ownerEmail.padEnd(
+        24
+      )} | ${tenant.userCount.toString().padStart(5)} | ${tenant.roleCount
+        .toString()
+        .padStart(5)} | ${tenant.levelCount
+        .toString()
+        .padStart(6)} | ${tenant.structureCount
+        .toString()
+        .padStart(10)} | ${tenant.nodeCount
+        .toString()
+        .padStart(5)} | ${tenant.totalRecords.toString().padStart(5)} |`;
       console.log(row);
     });
-    
-    console.log('=' .repeat(120));
+
+    console.log('='.repeat(120));
     console.log('');
   }
 
@@ -125,7 +167,7 @@ class InteractiveDatabaseCleanup {
   async selectTenant() {
     try {
       const tenants = await this.getAllTenants();
-      
+
       if (tenants.length === 0) {
         console.log('❌ No tenants found in the database.');
         return false;
@@ -135,7 +177,7 @@ class InteractiveDatabaseCleanup {
 
       const choices = tenants.map((tenant, index) => ({
         name: `${tenant.tenantId} - ${tenant.ownerName} (${tenant.ownerEmail}) - ${tenant.totalRecords} records`,
-        value: tenant
+        value: tenant,
       }));
 
       const { selectedTenant } = await inquirer.prompt([
@@ -143,16 +185,18 @@ class InteractiveDatabaseCleanup {
           type: 'list',
           name: 'selectedTenant',
           message: 'Select a tenant to operate on:',
-          choices: choices,
-          pageSize: 10
-        }
+          choices,
+          pageSize: 10,
+        },
       ]);
 
       this.tenantId = selectedTenant.tenantId;
       this.tenantOwner = selectedTenant;
-      
+
       console.log(`\n✅ Selected Tenant: ${this.tenantId}`);
-      console.log(`   Owner: ${this.tenantOwner.ownerName} (${this.tenantOwner.ownerEmail})`);
+      console.log(
+        `   Owner: ${this.tenantOwner.ownerName} (${this.tenantOwner.ownerEmail})`
+      );
       console.log(`   Total Records: ${this.tenantOwner.totalRecords}\n`);
 
       return true;
@@ -167,29 +211,31 @@ class InteractiveDatabaseCleanup {
    */
   async selectCollections() {
     try {
-      const choices = Object.entries(this.availableCollections).map(([key, info]) => ({
-        name: `${key} - ${info.description}`,
-        value: key,
-        checked: false
-      }));
+      const choices = Object.entries(this.availableCollections).map(
+        ([key, info]) => ({
+          name: `${key} - ${info.description}`,
+          value: key,
+          checked: false,
+        })
+      );
 
       const { collections } = await inquirer.prompt([
         {
           type: 'checkbox',
           name: 'collections',
           message: 'Select collections to clean:',
-          choices: choices,
+          choices,
           validate: (input) => {
             if (input.length === 0) {
               return 'Please select at least one collection.';
             }
             return true;
-          }
-        }
+          },
+        },
       ]);
 
       this.selectedCollections = collections;
-      
+
       console.log(`\n✅ Selected Collections: ${collections.join(', ')}\n`);
       return true;
     } catch (error) {
@@ -204,15 +250,15 @@ class InteractiveDatabaseCleanup {
   async previewData() {
     try {
       console.log('🔍 PREVIEWING DATA TO BE DELETED:\n');
-      console.log('=' .repeat(80));
+      console.log('='.repeat(80));
 
       for (const collection of this.selectedCollections) {
         const count = await this.getCollectionCount(collection);
         const sample = await this.getCollectionSample(collection);
-        
+
         console.log(`\n📁 ${collection.toUpperCase()}:`);
         console.log(`   Total Records: ${count}`);
-        
+
         if (sample.length > 0) {
           console.log(`   Sample Records:`);
           sample.forEach((item, index) => {
@@ -225,7 +271,7 @@ class InteractiveDatabaseCleanup {
         }
       }
 
-      console.log('\n' + '=' .repeat(80));
+      console.log(`\n${'='.repeat(80)}`);
       return true;
     } catch (error) {
       console.error('❌ Preview failed:', error.message);
@@ -239,14 +285,14 @@ class InteractiveDatabaseCleanup {
   async getCollectionCount(collection) {
     switch (collection) {
       case 'users':
-        return await User.countDocuments({ 
+        return await User.countDocuments({
           tenantId: this.tenantId,
-          email: { $ne: this.tenantOwner.ownerEmail }
+          email: { $ne: this.tenantOwner.ownerEmail },
         });
       case 'roles':
-        return await Role.countDocuments({ 
+        return await Role.countDocuments({
           tenantId: this.tenantId,
-          name: { $ne: 'Support Agent' }
+          name: { $ne: 'Support Agent' },
         });
       case 'levels':
         return await Level.countDocuments({ tenantId: this.tenantId });
@@ -265,24 +311,31 @@ class InteractiveDatabaseCleanup {
   async getCollectionSample(collection, limit = 5) {
     switch (collection) {
       case 'users':
-        return await User.find({ 
+        return await User.find({
           tenantId: this.tenantId,
-          email: { $ne: this.tenantOwner.ownerEmail }
-        }).select('email firstname lastname').limit(limit);
+          email: { $ne: this.tenantOwner.ownerEmail },
+        })
+          .select('email firstname lastname')
+          .limit(limit);
       case 'roles':
-        return await Role.find({ 
+        return await Role.find({
           tenantId: this.tenantId,
-          name: { $ne: 'Support Agent' }
-        }).select('name description').limit(limit);
+          name: { $ne: 'Support Agent' },
+        })
+          .select('name description')
+          .limit(limit);
       case 'levels':
         return await Level.find({ tenantId: this.tenantId })
-          .select('name description rank').limit(limit);
+          .select('name description rank')
+          .limit(limit);
       case 'structures':
         return await Structures.find({ tenantId: this.tenantId })
-          .select('name type description').limit(limit);
+          .select('name type description')
+          .limit(limit);
       case 'nodes':
         return await Nodes.find({ tenantId: this.tenantId })
-          .select('name level structure').limit(limit);
+          .select('name level structure')
+          .limit(limit);
       default:
         return [];
     }
@@ -298,8 +351,8 @@ class InteractiveDatabaseCleanup {
           type: 'confirm',
           name: 'confirmed',
           message: `⚠️  Are you sure you want to delete data from tenant "${this.tenantId}"? This action cannot be undone!`,
-          default: false
-        }
+          default: false,
+        },
       ]);
 
       return confirmed;
@@ -317,7 +370,7 @@ class InteractiveDatabaseCleanup {
 
     try {
       // Sort collections by cleanup order
-      const orderedCollections = this.cleanupOrder.filter(col => 
+      const orderedCollections = this.cleanupOrder.filter((col) =>
         this.selectedCollections.includes(col)
       );
 
@@ -338,7 +391,7 @@ class InteractiveDatabaseCleanup {
   async cleanupCollection(collectionName) {
     const collectionInfo = this.availableCollections[collectionName];
     console.log(`🗑️  Cleaning up ${collectionInfo.name}...`);
-    
+
     try {
       switch (collectionName) {
         case 'users':
@@ -360,7 +413,9 @@ class InteractiveDatabaseCleanup {
           console.log(`   ❌ Unknown collection: ${collectionName}`);
       }
     } catch (error) {
-      console.log(`   ❌ ${collectionInfo.name} cleanup failed: ${error.message}`);
+      console.log(
+        `   ❌ ${collectionInfo.name} cleanup failed: ${error.message}`
+      );
     }
   }
 
@@ -370,7 +425,7 @@ class InteractiveDatabaseCleanup {
   async cleanupNodes() {
     try {
       const nodes = await Nodes.find({ tenantId: this.tenantId });
-      
+
       for (const node of nodes) {
         try {
           await Nodes.deleteNodeById(node._id, this.tenantId);
@@ -378,7 +433,7 @@ class InteractiveDatabaseCleanup {
           this.cleanupResults.nodes.details.push({
             name: node.name,
             id: node._id,
-            status: 'deleted'
+            status: 'deleted',
           });
           console.log(`   ✅ Deleted node: ${node.name}`);
         } catch (error) {
@@ -386,13 +441,17 @@ class InteractiveDatabaseCleanup {
           this.cleanupResults.nodes.details.push({
             name: node.name,
             error: error.message,
-            status: 'failed'
+            status: 'failed',
           });
-          console.log(`   ❌ Failed to delete node "${node.name}": ${error.message}`);
+          console.log(
+            `   ❌ Failed to delete node "${node.name}": ${error.message}`
+          );
         }
       }
 
-      console.log(`   📊 Nodes: ${this.cleanupResults.nodes.deleted} deleted, ${this.cleanupResults.nodes.errors} errors\n`);
+      console.log(
+        `   📊 Nodes: ${this.cleanupResults.nodes.deleted} deleted, ${this.cleanupResults.nodes.errors} errors\n`
+      );
     } catch (error) {
       console.log(`   ❌ Nodes cleanup failed: ${error.message}`);
     }
@@ -404,7 +463,7 @@ class InteractiveDatabaseCleanup {
   async cleanupStructures() {
     try {
       const structures = await Structures.find({ tenantId: this.tenantId });
-      
+
       for (const structure of structures) {
         try {
           await Structures.deleteStructure(structure._id);
@@ -412,7 +471,7 @@ class InteractiveDatabaseCleanup {
           this.cleanupResults.structures.details.push({
             name: structure.name,
             id: structure._id,
-            status: 'deleted'
+            status: 'deleted',
           });
           console.log(`   ✅ Deleted structure: ${structure.name}`);
         } catch (error) {
@@ -420,13 +479,17 @@ class InteractiveDatabaseCleanup {
           this.cleanupResults.structures.details.push({
             name: structure.name,
             error: error.message,
-            status: 'failed'
+            status: 'failed',
           });
-          console.log(`   ❌ Failed to delete structure "${structure.name}": ${error.message}`);
+          console.log(
+            `   ❌ Failed to delete structure "${structure.name}": ${error.message}`
+          );
         }
       }
 
-      console.log(`   📊 Structures: ${this.cleanupResults.structures.deleted} deleted, ${this.cleanupResults.structures.errors} errors\n`);
+      console.log(
+        `   📊 Structures: ${this.cleanupResults.structures.deleted} deleted, ${this.cleanupResults.structures.errors} errors\n`
+      );
     } catch (error) {
       console.log(`   ❌ Structures cleanup failed: ${error.message}`);
     }
@@ -438,7 +501,7 @@ class InteractiveDatabaseCleanup {
   async cleanupLevels() {
     try {
       const levels = await Level.find({ tenantId: this.tenantId });
-      
+
       for (const level of levels) {
         try {
           await Level.findByIdAndDelete(level._id);
@@ -446,7 +509,7 @@ class InteractiveDatabaseCleanup {
           this.cleanupResults.levels.details.push({
             name: level.name,
             id: level._id,
-            status: 'deleted'
+            status: 'deleted',
           });
           console.log(`   ✅ Deleted level: ${level.name}`);
         } catch (error) {
@@ -454,13 +517,17 @@ class InteractiveDatabaseCleanup {
           this.cleanupResults.levels.details.push({
             name: level.name,
             error: error.message,
-            status: 'failed'
+            status: 'failed',
           });
-          console.log(`   ❌ Failed to delete level "${level.name}": ${error.message}`);
+          console.log(
+            `   ❌ Failed to delete level "${level.name}": ${error.message}`
+          );
         }
       }
 
-      console.log(`   📊 Levels: ${this.cleanupResults.levels.deleted} deleted, ${this.cleanupResults.levels.errors} errors\n`);
+      console.log(
+        `   📊 Levels: ${this.cleanupResults.levels.deleted} deleted, ${this.cleanupResults.levels.errors} errors\n`
+      );
     } catch (error) {
       console.log(`   ❌ Levels cleanup failed: ${error.message}`);
     }
@@ -471,11 +538,11 @@ class InteractiveDatabaseCleanup {
    */
   async cleanupUsers() {
     try {
-      const users = await User.find({ 
+      const users = await User.find({
         tenantId: this.tenantId,
-        email: { $ne: this.tenantOwner.ownerEmail }
+        email: { $ne: this.tenantOwner.ownerEmail },
       });
-      
+
       for (const user of users) {
         try {
           user.deletedAt = new Date();
@@ -484,7 +551,7 @@ class InteractiveDatabaseCleanup {
           this.cleanupResults.users.details.push({
             email: user.email,
             id: user._id,
-            status: 'deleted'
+            status: 'deleted',
           });
           console.log(`   ✅ Deleted user: ${user.email}`);
         } catch (error) {
@@ -492,13 +559,17 @@ class InteractiveDatabaseCleanup {
           this.cleanupResults.users.details.push({
             email: user.email,
             error: error.message,
-            status: 'failed'
+            status: 'failed',
           });
-          console.log(`   ❌ Failed to delete user "${user.email}": ${error.message}`);
+          console.log(
+            `   ❌ Failed to delete user "${user.email}": ${error.message}`
+          );
         }
       }
 
-      console.log(`   📊 Users: ${this.cleanupResults.users.deleted} deleted, ${this.cleanupResults.users.errors} errors\n`);
+      console.log(
+        `   📊 Users: ${this.cleanupResults.users.deleted} deleted, ${this.cleanupResults.users.errors} errors\n`
+      );
     } catch (error) {
       console.log(`   ❌ Users cleanup failed: ${error.message}`);
     }
@@ -509,11 +580,11 @@ class InteractiveDatabaseCleanup {
    */
   async cleanupRoles() {
     try {
-      const roles = await Role.find({ 
+      const roles = await Role.find({
         tenantId: this.tenantId,
-        name: { $ne: 'Support Agent' }
+        name: { $ne: 'Support Agent' },
       });
-      
+
       for (const role of roles) {
         try {
           await Role.findByIdAndDelete(role._id);
@@ -521,7 +592,7 @@ class InteractiveDatabaseCleanup {
           this.cleanupResults.roles.details.push({
             name: role.name,
             id: role._id,
-            status: 'deleted'
+            status: 'deleted',
           });
           console.log(`   ✅ Deleted role: ${role.name}`);
         } catch (error) {
@@ -529,13 +600,17 @@ class InteractiveDatabaseCleanup {
           this.cleanupResults.roles.details.push({
             name: role.name,
             error: error.message,
-            status: 'failed'
+            status: 'failed',
           });
-          console.log(`   ❌ Failed to delete role "${role.name}": ${error.message}`);
+          console.log(
+            `   ❌ Failed to delete role "${role.name}": ${error.message}`
+          );
         }
       }
 
-      console.log(`   📊 Roles: ${this.cleanupResults.roles.deleted} deleted, ${this.cleanupResults.roles.errors} errors\n`);
+      console.log(
+        `   📊 Roles: ${this.cleanupResults.roles.deleted} deleted, ${this.cleanupResults.roles.errors} errors\n`
+      );
     } catch (error) {
       console.log(`   ❌ Roles cleanup failed: ${error.message}`);
     }
@@ -546,13 +621,15 @@ class InteractiveDatabaseCleanup {
    */
   generateReport() {
     console.log('📊 INTERACTIVE CLEANUP SUMMARY REPORT\n');
-    console.log('=' .repeat(60));
+    console.log('='.repeat(60));
     console.log(`Tenant ID: ${this.tenantId}`);
-    console.log(`Owner: ${this.tenantOwner.ownerName} (${this.tenantOwner.ownerEmail})`);
-    console.log('=' .repeat(60));
-    
+    console.log(
+      `Owner: ${this.tenantOwner.ownerName} (${this.tenantOwner.ownerEmail})`
+    );
+    console.log('='.repeat(60));
+
     // Only show results for collections that were processed
-    this.selectedCollections.forEach(collection => {
+    this.selectedCollections.forEach((collection) => {
       const result = this.cleanupResults[collection];
       console.log(`\n${collection.toUpperCase()}:`);
       console.log(`  🗑️  Deleted: ${result.deleted}`);
@@ -560,17 +637,19 @@ class InteractiveDatabaseCleanup {
       console.log(`  📁 Total: ${result.deleted + result.errors}`);
     });
 
-    const totalDeleted = this.selectedCollections.reduce((sum, col) => 
-      sum + this.cleanupResults[col].deleted, 0
+    const totalDeleted = this.selectedCollections.reduce(
+      (sum, col) => sum + this.cleanupResults[col].deleted,
+      0
     );
-    const totalErrors = this.selectedCollections.reduce((sum, col) => 
-      sum + this.cleanupResults[col].errors, 0
+    const totalErrors = this.selectedCollections.reduce(
+      (sum, col) => sum + this.cleanupResults[col].errors,
+      0
     );
-    
-    console.log('\n' + '=' .repeat(60));
+
+    console.log(`\n${'='.repeat(60)}`);
     console.log(`TOTAL: ${totalDeleted} deleted, ${totalErrors} errors`);
-    console.log('=' .repeat(60));
-    
+    console.log('='.repeat(60));
+
     if (totalErrors === 0) {
       console.log('🎉 Interactive cleanup completed successfully!');
     } else {
@@ -592,7 +671,7 @@ class InteractiveDatabaseCleanup {
  */
 async function runInteractiveCleanup() {
   const cleanup = new InteractiveDatabaseCleanup();
-  
+
   try {
     // Initialize
     await cleanup.initialize();
@@ -630,7 +709,6 @@ async function runInteractiveCleanup() {
 
     // Step 6: Generate report
     cleanup.generateReport();
-
   } catch (error) {
     console.error('❌ Interactive cleanup failed:', error.message);
   } finally {

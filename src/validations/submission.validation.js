@@ -9,10 +9,21 @@ const submitData = {
     nodeId: Joi.string().optional().description('Node identifier'),
     userId: Joi.string().optional().description('User identifier'),
     source: Joi.string()
-      .valid('mobile', 'api', 'email', 'telegram', 'whatsapp', 'iot', 'web', 'unknown')
+      .valid(
+        'mobile',
+        'api',
+        'email',
+        'telegram',
+        'whatsapp',
+        'iot',
+        'web',
+        'unknown'
+      )
       .default('unknown')
       .description('Origin of data'),
-    payload: Joi.object().required().description('Submitted data (form fields, etc.)'),
+    payload: Joi.object()
+      .required()
+      .description('Submitted data (form fields, etc.)'),
     meta: Joi.object().optional().description('Additional metadata'),
     status: Joi.string().optional().description('Submission status'),
     project_name: Joi.string().max(128),
@@ -47,7 +58,7 @@ const listSubmissions = {
     user_id: Joi.string(),
     status: Joi.string(),
     source: Joi.string(),
-     project_name: Joi.string().max(128),
+    project_name: Joi.string().max(128),
     project_category: Joi.string().max(64),
   }),
 };

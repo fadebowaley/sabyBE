@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
-/***
+/** *
  * Summary of statement.model.js:
 References: Node, Collection, userId, and tenantId.
 Fields: amount, type, description, balanceAfter, reference, status, metadata.
@@ -91,7 +91,7 @@ statementSchema.plugin(tenantPlugin);
  * @returns {string}
  */
 statementSchema.statics.generateReference = function () {
-  return 'TXN-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+  return `TXN-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
 };
 
 /**

@@ -19,7 +19,9 @@ const getSubmissionsTimeline = {
     start_date: Joi.date().iso().optional(),
     end_date: Joi.date().iso().optional(),
     group_by: Joi.string().valid('hour', 'day', 'week', 'month').default('day'),
-    trend_type: Joi.string().valid('count', 'compliance', 'approval_rate').default('count'),
+    trend_type: Joi.string()
+      .valid('count', 'compliance', 'approval_rate')
+      .default('count'),
   }),
 };
 
@@ -90,4 +92,3 @@ module.exports = {
   getGrowthMetrics,
   getPredictiveInsights,
 };
-

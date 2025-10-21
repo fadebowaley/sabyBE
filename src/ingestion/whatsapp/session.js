@@ -19,7 +19,7 @@ class SessionManager {
       if (!session) {
         // Create new session for authentication phase
         session = new WhatsAppSession({
-          phoneNumber: phoneNumber,
+          phoneNumber,
           status: 'authenticating',
           metadata: {
             sessionStartTime: new Date(),
@@ -32,7 +32,9 @@ class SessionManager {
           formId: null,
         });
         await session.save();
-        logger.info(`📝 Created new authentication session for phone ${phoneNumber}`);
+        logger.info(
+          `📝 Created new authentication session for phone ${phoneNumber}`
+        );
       } else {
         // Update activity
         await session.updateActivity();
@@ -40,7 +42,10 @@ class SessionManager {
 
       return session;
     } catch (error) {
-      logger.error(`❌ Error managing session for phone ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error managing session for phone ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -54,7 +59,10 @@ class SessionManager {
     try {
       return await WhatsAppSession.findByPhoneNumber(phoneNumber);
     } catch (error) {
-      logger.error(`❌ Error getting session for phone ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error getting session for phone ${phoneNumber}:`,
+        error.message
+      );
       return null;
     }
   }
@@ -80,7 +88,10 @@ class SessionManager {
       logger.info(`✅ Session updated for phone ${phoneNumber}`);
       return session;
     } catch (error) {
-      logger.error(`❌ Error updating session for phone ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error updating session for phone ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -102,7 +113,10 @@ class SessionManager {
 
       return false;
     } catch (error) {
-      logger.error(`❌ Error deleting session for phone ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error deleting session for phone ${phoneNumber}:`,
+        error.message
+      );
       return false;
     }
   }
@@ -133,7 +147,10 @@ class SessionManager {
       logger.info(`🔄 Session reset for phone ${phoneNumber}`);
       return session;
     } catch (error) {
-      logger.error(`❌ Error resetting session for phone ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error resetting session for phone ${phoneNumber}:`,
+        error.message
+      );
       throw error;
     }
   }
@@ -171,7 +188,9 @@ class SessionManager {
 
       const totalSessions = await WhatsAppSession.countDocuments();
       const activeSessions = await WhatsAppSession.countDocuments({
-        'metadata.lastActivity': { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        'metadata.lastActivity': {
+          $gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        },
       });
 
       return {
@@ -197,7 +216,7 @@ class SessionManager {
   async getActiveSessions(userId, projectId = null) {
     try {
       const query = {
-        userId: userId,
+        userId,
         status: { $in: ['authenticating', 'filling_form', 'ready_to_submit'] },
       };
 
@@ -205,9 +224,14 @@ class SessionManager {
         query.projectId = projectId;
       }
 
-      return await WhatsAppSession.find(query).sort({ 'metadata.lastActivity': -1 });
+      return await WhatsAppSession.find(query).sort({
+        'metadata.lastActivity': -1,
+      });
     } catch (error) {
-      logger.error(`❌ Error getting active sessions for user ${userId}:`, error.message);
+      logger.error(
+        `❌ Error getting active sessions for user ${userId}:`,
+        error.message
+      );
       return [];
     }
   }

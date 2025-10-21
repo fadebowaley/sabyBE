@@ -325,7 +325,9 @@ class ActivityLog {
     }
 
     if (older_than_days) {
-      query += ` AND created_at < NOW() - INTERVAL '${parseInt(older_than_days)} days'`;
+      query += ` AND created_at < NOW() - INTERVAL '${parseInt(
+        older_than_days
+      )} days'`;
     }
 
     if (status) {

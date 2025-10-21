@@ -23,7 +23,9 @@ exports.handleSubmit = async (phoneNumber, userAction, session) => {
       answersCount: session.answers ? session.answers.size : 0,
     });
 
-    logger.info(`📤 Processing submission action for ${phoneNumber}: "${userAction}"`);
+    logger.info(
+      `📤 Processing submission action for ${phoneNumber}: "${userAction}"`
+    );
 
     // Handle different submission actions
     switch (userAction) {
@@ -63,8 +65,14 @@ exports.handleSubmit = async (phoneNumber, userAction, session) => {
   } catch (error) {
     console.log(`🔍 [DEBUG] ERROR in handleSubmit:`, error);
     console.log(`🔍 [DEBUG] Error stack:`, error.stack);
-    logger.error(`❌ Error processing submission action for ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to process submission. Please try again.');
+    logger.error(
+      `❌ Error processing submission action for ${phoneNumber}:`,
+      error.message
+    );
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'Failed to process submission. Please try again.'
+    );
   }
 };
 
@@ -81,22 +89,35 @@ async function processFormSubmission(phoneNumber, session) {
     logger.info(`📤 Processing form submission for ${phoneNumber}`);
 
     // Get project form details
-    console.log(`🔍 [DEBUG] Getting project form by projectId: ${session.projectId}`);
-    const projectForm = await projectFormService.getProjectFormByProjectId(session.projectId);
+    console.log(
+      `🔍 [DEBUG] Getting project form by projectId: ${session.projectId}`
+    );
+    const projectForm = await projectFormService.getProjectFormByProjectId(
+      session.projectId
+    );
     console.log(
       `🔍 [DEBUG] Project form found:`,
       projectForm
         ? {
             projectId: projectForm.projectId,
-            projectName: projectForm.configuration && projectForm.configuration.projectName,
-            elementsCount: projectForm.elements ? projectForm.elements.length : 0,
+            projectName:
+              projectForm.configuration &&
+              projectForm.configuration.projectName,
+            elementsCount: projectForm.elements
+              ? projectForm.elements.length
+              : 0,
           }
         : 'NOT FOUND'
     );
 
     if (!projectForm) {
-      console.log(`🔍 [DEBUG] Project form not found for projectId: ${session.projectId}`);
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Project form not found.');
+      console.log(
+        `🔍 [DEBUG] Project form not found for projectId: ${session.projectId}`
+      );
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'Project form not found.'
+      );
       return;
     }
 
@@ -144,7 +165,9 @@ async function processFormSubmission(phoneNumber, session) {
 
     // Submit the form
     console.log(`🔍 [DEBUG] Submitting form to submission service`);
-    const submissionResult = await submissionService.createSubmission(submissionData);
+    const submissionResult = await submissionService.createSubmission(
+      submissionData
+    );
     console.log(`🔍 [DEBUG] Submission result:`, submissionResult);
 
     if (submissionResult.success) {
@@ -154,18 +177,35 @@ async function processFormSubmission(phoneNumber, session) {
       await session.save();
 
       // Send success notification
-      await whatsappNotificationService.sendSubmissionSuccess(phoneNumber, submissionResult.jobId, projectForm);
+      await whatsappNotificationService.sendSubmissionSuccess(
+        phoneNumber,
+        submissionResult.jobId,
+        projectForm
+      );
 
-      logger.info(`✅ Form submitted successfully for ${phoneNumber} (Job ID: ${submissionResult.jobId})`);
+      logger.info(
+        `✅ Form submitted successfully for ${phoneNumber} (Job ID: ${submissionResult.jobId})`
+      );
     } else {
-      await whatsappNotificationService.sendSubmissionFailure(phoneNumber, submissionResult.error);
-      logger.error(`❌ Form submission failed for ${phoneNumber}: ${submissionResult.error}`);
+      await whatsappNotificationService.sendSubmissionFailure(
+        phoneNumber,
+        submissionResult.error
+      );
+      logger.error(
+        `❌ Form submission failed for ${phoneNumber}: ${submissionResult.error}`
+      );
     }
   } catch (error) {
     console.log(`🔍 [DEBUG] ERROR in processFormSubmission:`, error);
     console.log(`🔍 [DEBUG] Error stack:`, error.stack);
-    logger.error(`❌ Error processing form submission for ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendSubmissionFailure(phoneNumber, 'Failed to submit form. Please try again.');
+    logger.error(
+      `❌ Error processing form submission for ${phoneNumber}:`,
+      error.message
+    );
+    await whatsappNotificationService.sendSubmissionFailure(
+      phoneNumber,
+      'Failed to submit form. Please try again.'
+    );
   }
 }
 
@@ -185,7 +225,10 @@ function convertAnswersToStructured(answers, projectForm) {
     const answer = answers.get(answerKey);
 
     if (answer !== undefined) {
-      const fieldName = element.properties && element.properties.label ? element.properties.label : element.id;
+      const fieldName =
+        element.properties && element.properties.label
+          ? element.properties.label
+          : element.id;
       const normalizedFieldName = normalizeFieldName(fieldName);
       structuredAnswers[normalizedFieldName] = {
         value: answer,
@@ -222,14 +265,21 @@ async function reviewAnswers(phoneNumber, session) {
   try {
     logger.info(`📋 Reviewing answers for ${phoneNumber}`);
 
-    const projectForm = await projectFormService.getProjectFormByProjectId(session.projectId);
+    const projectForm = await projectFormService.getProjectFormByProjectId(
+      session.projectId
+    );
     if (!projectForm) {
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Project form not found.');
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'Project form not found.'
+      );
       return;
     }
 
     const elements = projectForm.elements || [];
-    let reviewMessage = `📋 *Form Review*\n\n*Project:* ${projectForm.configuration?.projectName || session.projectId}\n\n`;
+    let reviewMessage = `📋 *Form Review*\n\n*Project:* ${
+      projectForm.configuration?.projectName || session.projectId
+    }\n\n`;
 
     for (let i = 0; i < elements.length; i++) {
       const element = elements[i];
@@ -249,17 +299,29 @@ async function reviewAnswers(phoneNumber, session) {
       }
     }
 
-    reviewMessage += `*Total Questions:* ${elements.length}\n*Answered:* ${session.answers.size}\n*Missing:* ${
-      elements.length - session.answers.size
-    }`;
+    reviewMessage += `*Total Questions:* ${elements.length}\n*Answered:* ${
+      session.answers.size
+    }\n*Missing:* ${elements.length - session.answers.size}`;
 
-    await whatsappNotificationService.sendMessageWithClearKeyboard(phoneNumber, reviewMessage);
+    await whatsappNotificationService.sendMessageWithClearKeyboard(
+      phoneNumber,
+      reviewMessage
+    );
 
     // Send submission options
-    await whatsappNotificationService.sendFormCompletion(phoneNumber, projectForm);
+    await whatsappNotificationService.sendFormCompletion(
+      phoneNumber,
+      projectForm
+    );
   } catch (error) {
-    logger.error(`❌ Error reviewing answers for ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to review answers. Please try again.');
+    logger.error(
+      `❌ Error reviewing answers for ${phoneNumber}:`,
+      error.message
+    );
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'Failed to review answers. Please try again.'
+    );
   }
 }
 
@@ -279,16 +341,33 @@ async function startOver(phoneNumber, session) {
     await session.save();
 
     // Start form filling again
-    const projectForm = await projectFormService.getProjectFormByProjectId(session.projectId);
-    if (projectForm && projectForm.elements && projectForm.elements.length > 0) {
+    const projectForm = await projectFormService.getProjectFormByProjectId(
+      session.projectId
+    );
+    if (
+      projectForm &&
+      projectForm.elements &&
+      projectForm.elements.length > 0
+    ) {
       const firstQuestion = projectForm.elements[0];
-      await whatsappNotificationService.sendFormQuestion(phoneNumber, firstQuestion, 0, projectForm.elements.length);
+      await whatsappNotificationService.sendFormQuestion(
+        phoneNumber,
+        firstQuestion,
+        0,
+        projectForm.elements.length
+      );
     } else {
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'No form questions available for this project.');
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'No form questions available for this project.'
+      );
     }
   } catch (error) {
     logger.error(`❌ Error starting over for ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to start over. Please try again.');
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'Failed to start over. Please try again.'
+    );
   }
 }
 
@@ -311,19 +390,38 @@ async function startNewSubmission(phoneNumber, session) {
 
     // Get available projects and show selection
     const projectFormService = require('../../../services/projectForm.service');
-    const availableProjects = await projectFormService.getProjectFormsByTenant(session.tenantId, {
-      status: 'active',
-      'metadata.deploymentStatus': 'published',
-    });
+    const availableProjects = await projectFormService.getProjectFormsByTenant(
+      session.tenantId,
+      {
+        status: 'active',
+        'metadata.deploymentStatus': 'published',
+      }
+    );
 
-    if (availableProjects && availableProjects.results && availableProjects.results.length > 0) {
-      await whatsappNotificationService.sendProjectSelection(phoneNumber, availableProjects.results);
+    if (
+      availableProjects &&
+      availableProjects.results &&
+      availableProjects.results.length > 0
+    ) {
+      await whatsappNotificationService.sendProjectSelection(
+        phoneNumber,
+        availableProjects.results
+      );
     } else {
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'No projects available for your account.');
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'No projects available for your account.'
+      );
     }
   } catch (error) {
-    logger.error(`❌ Error starting new submission for ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to start new submission. Please try again.');
+    logger.error(
+      `❌ Error starting new submission for ${phoneNumber}:`,
+      error.message
+    );
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'Failed to start new submission. Please try again.'
+    );
   }
 }
 
@@ -352,8 +450,14 @@ async function cancelSubmission(phoneNumber, session) {
     // Send main menu
     await whatsappNotificationService.sendMainMenu(phoneNumber);
   } catch (error) {
-    logger.error(`❌ Error cancelling submission for ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to cancel submission. Please try again.');
+    logger.error(
+      `❌ Error cancelling submission for ${phoneNumber}:`,
+      error.message
+    );
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'Failed to cancel submission. Please try again.'
+    );
   }
 }
 
@@ -367,5 +471,5 @@ function formatFileSize(bytes) {
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 }

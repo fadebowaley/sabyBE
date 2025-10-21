@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
-/****
+/** **
  *tenantId, userId, and node references: ✔️
 
 Auto-generated departmentId: ✔️
@@ -77,7 +77,7 @@ departmentSchema.plugin(tenantPlugin);
  * @returns {string}
  */
 departmentSchema.statics.generateDepartmentId = function () {
-  return 'DPT-' + Math.random().toString().slice(2, 10);
+  return `DPT-${Math.random().toString().slice(2, 10)}`;
 };
 
 /**
@@ -99,7 +99,10 @@ departmentSchema.statics.createDepartment = async function (body) {
  * @returns {Promise<boolean>}
  */
 departmentSchema.statics.isNameTaken = async function (name, nodeId) {
-  const existing = await this.findOne({ name: new RegExp(`^${name}$`, 'i'), node: nodeId });
+  const existing = await this.findOne({
+    name: new RegExp(`^${name}$`, 'i'),
+    node: nodeId,
+  });
   return !!existing;
 };
 

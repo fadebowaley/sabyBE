@@ -1,5 +1,5 @@
-const ApiError = require('../utils/ApiError');
 const httpStatus = require('http-status');
+const ApiError = require('../utils/ApiError');
 
 /**
  * Middleware factory to validate that a resource belongs to the user's tenant
@@ -146,4 +146,3 @@ const createTenantValidator = (
 
 module.exports = validateTenant;
 module.exports.createTenantValidator = createTenantValidator;
-

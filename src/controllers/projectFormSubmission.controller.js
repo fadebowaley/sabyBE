@@ -11,7 +11,10 @@ const createSubmission = catchAsync(async (req, res) => {
   const { projectId, submissionData, submittedAt, metadata } = req.body;
 
   if (!projectId || !submissionData) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Missing required fields: projectId and submissionData');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Missing required fields: projectId and submissionData'
+    );
   }
 
   console.log('📝 [Form Submission Controller] Received submission:', {
@@ -44,7 +47,12 @@ const createSubmission = catchAsync(async (req, res) => {
  * Get all submissions (with filtering)
  */
 const getSubmissions = catchAsync(async (req, res) => {
-  const filter = pick(req.query, ['projectId', 'status', 'submittedBy', 'submittedAt']);
+  const filter = pick(req.query, [
+    'projectId',
+    'status',
+    'submittedBy',
+    'submittedAt',
+  ]);
 
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
 
@@ -53,7 +61,10 @@ const getSubmissions = catchAsync(async (req, res) => {
     filter.tenantId = req.user.tenantId;
   }
 
-  const result = await projectFormSubmissionService.querySubmissions(filter, options);
+  const result = await projectFormSubmissionService.querySubmissions(
+    filter,
+    options
+  );
 
   res.send(result);
 });
@@ -66,7 +77,11 @@ const getSubmissionsByProject = catchAsync(async (req, res) => {
   const filter = pick(req.query, ['status', 'submittedBy', 'submittedAt']);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
 
-  const result = await projectFormSubmissionService.getSubmissionsByProject(projectId, filter, options);
+  const result = await projectFormSubmissionService.getSubmissionsByProject(
+    projectId,
+    filter,
+    options
+  );
 
   res.send(result);
 });
@@ -76,10 +91,19 @@ const getSubmissionsByProject = catchAsync(async (req, res) => {
  */
 const getSubmissionsByTenant = catchAsync(async (req, res) => {
   const { tenantId } = req.params;
-  const filter = pick(req.query, ['projectId', 'status', 'submittedBy', 'submittedAt']);
+  const filter = pick(req.query, [
+    'projectId',
+    'status',
+    'submittedBy',
+    'submittedAt',
+  ]);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
 
-  const result = await projectFormSubmissionService.getSubmissionsByTenant(tenantId, filter, options);
+  const result = await projectFormSubmissionService.getSubmissionsByTenant(
+    tenantId,
+    filter,
+    options
+  );
 
   res.send(result);
 });
@@ -91,7 +115,10 @@ const getSubmission = catchAsync(async (req, res) => {
   const { submissionId } = req.params;
   const options = pick(req.query, ['populate']);
 
-  const submission = await projectFormSubmissionService.getSubmissionById(submissionId, options);
+  const submission = await projectFormSubmissionService.getSubmissionById(
+    submissionId,
+    options
+  );
 
   res.send(submission);
 });
@@ -103,7 +130,12 @@ const updateSubmissionStatus = catchAsync(async (req, res) => {
   const { submissionId } = req.params;
   const { status, notes } = req.body;
 
-  const submission = await projectFormSubmissionService.updateSubmissionStatus(submissionId, status, req.user._id, notes);
+  const submission = await projectFormSubmissionService.updateSubmissionStatus(
+    submissionId,
+    status,
+    req.user._id,
+    notes
+  );
 
   res.send({
     message: 'Submission status updated successfully',
@@ -129,7 +161,11 @@ const exportSubmissions = catchAsync(async (req, res) => {
   const { projectId } = req.params;
   const { format = 'csv' } = req.query;
 
-  const result = await projectFormSubmissionService.exportSubmissions(projectId, format, req.user._id);
+  const result = await projectFormSubmissionService.exportSubmissions(
+    projectId,
+    format,
+    req.user._id
+  );
 
   res.send({
     message: 'Export completed successfully',
@@ -144,7 +180,9 @@ const exportSubmissions = catchAsync(async (req, res) => {
 const getSubmissionStats = catchAsync(async (req, res) => {
   const { projectId } = req.params;
 
-  const stats = await projectFormSubmissionService.getSubmissionStats(projectId);
+  const stats = await projectFormSubmissionService.getSubmissionStats(
+    projectId
+  );
 
   res.send(stats);
 });

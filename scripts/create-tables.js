@@ -2,7 +2,7 @@
 
 /**
  * PostgreSQL Database Table Creation Script
- * 
+ *
  * This script creates all required tables in the remote PostgreSQL database
  * using the SQL file: src/scripts/create_all_tables.sql
  */
@@ -17,7 +17,9 @@ const dbConfig = {
   host: process.env.POSTGRES_HOST || '20.169.129.160',
   port: process.env.POSTGRES_PORT || 5432,
   user: process.env.POSTGRES_USER || 'sabyagentic_user',
-  password: process.env.POSTGRES_PASSWORD || 'WcKoT/m9hFGMaiztjci/reLyMVln9qE0ReAaHc0Cb8E=',
+  password:
+    process.env.POSTGRES_PASSWORD ||
+    'WcKoT/m9hFGMaiztjci/reLyMVln9qE0ReAaHc0Cb8E=',
   database: process.env.POSTGRES_DB || 'halograph',
   ssl: false,
   connectionTimeoutMillis: 10000,

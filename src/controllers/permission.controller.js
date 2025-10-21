@@ -8,7 +8,10 @@ const { permissionService } = require('../services');
  * Create a permission
  */
 const createPermission = catchAsync(async (req, res) => {
-  const permission = await permissionService.createPermission(req.body, req.user);
+  const permission = await permissionService.createPermission(
+    req.body,
+    req.user
+  );
   res.status(httpStatus.CREATED).send(permission);
 });
 
@@ -24,12 +27,13 @@ const getPermissions = catchAsync(async (req, res) => {
   res.send(result);
 });
 
-
 /**
  * Get permission by name
  */
 const getPermission = catchAsync(async (req, res) => {
-  const permission = await permissionService.getPermissionByName(req.params.permissionName);
+  const permission = await permissionService.getPermissionByName(
+    req.params.permissionName
+  );
   if (!permission) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Permission not found');
   }
@@ -40,7 +44,10 @@ const getPermission = catchAsync(async (req, res) => {
  * Update permission by name
  */
 const updatePermission = catchAsync(async (req, res) => {
-  const permission = await permissionService.updatePermissionByName(req.params.permissionName, req.body);
+  const permission = await permissionService.updatePermissionByName(
+    req.params.permissionName,
+    req.body
+  );
   res.send(permission);
 });
 

@@ -9,9 +9,14 @@ const ApiError = require('../utils/ApiError');
  */
 const createUserFormSettings = async (settingsBody) => {
   // Check if settings already exist for this user
-  const existingSettings = await UserFormSettings.findOne({ user: settingsBody.user });
+  const existingSettings = await UserFormSettings.findOne({
+    user: settingsBody.user,
+  });
   if (existingSettings) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Form settings already exist for this user');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Form settings already exist for this user'
+    );
   }
 
   // Verify user exists
@@ -42,18 +47,16 @@ const queryUserFormSettings = async (filter, options) => {
  * @param {ObjectId} id
  * @returns {Promise<UserFormSettings>}
  */
-const getUserFormSettingsById = async (id) => {
-  return UserFormSettings.findById(id).populate('user');
-};
+const getUserFormSettingsById = async (id) =>
+  UserFormSettings.findById(id).populate('user');
 
 /**
  * Get user form settings by user id
  * @param {ObjectId} userId
  * @returns {Promise<UserFormSettings>}
  */
-const getUserFormSettingsByUserId = async (userId) => {
-  return UserFormSettings.findOne({ user: userId }).populate('user');
-};
+const getUserFormSettingsByUserId = async (userId) =>
+  UserFormSettings.findOne({ user: userId }).populate('user');
 
 /**
  * Update user form settings by id
@@ -137,10 +140,9 @@ const upsertUserFormSettings = async (userId, settingsBody) => {
     Object.assign(existingSettings, settingsBody);
     await existingSettings.save();
     return existingSettings;
-  } else {
-    // Create new settings
-    return UserFormSettings.create({ ...settingsBody, user: userId });
   }
+  // Create new settings
+  return UserFormSettings.create({ ...settingsBody, user: userId });
 };
 
 module.exports = {

@@ -10,7 +10,9 @@ const createDepartment = {
     departmentId: Joi.string().required().alphanum(),
     name: Joi.string().required().trim(),
     description: Joi.string().trim().max(200),
-    status: Joi.string().valid('active', 'inactive', 'archived').default('active'),
+    status: Joi.string()
+      .valid('active', 'inactive', 'archived')
+      .default('active'),
   }),
 };
 
@@ -63,7 +65,9 @@ const importDepartments = {
       departmentId: Joi.string().required().alphanum(),
       name: Joi.string().required().trim(),
       description: Joi.string().trim().max(200),
-      status: Joi.string().valid('active', 'inactive', 'archived').default('active'),
+      status: Joi.string()
+        .valid('active', 'inactive', 'archived')
+        .default('active'),
     })
   ),
 };

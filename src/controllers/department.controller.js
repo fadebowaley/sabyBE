@@ -12,7 +12,9 @@ const createDepartment = catchAsync(async (req, res) => {
 
 // Get department by ID
 const getDepartmentById = catchAsync(async (req, res) => {
-  const department = await departmentService.getDepartmentById(req.params.departmentId);
+  const department = await departmentService.getDepartmentById(
+    req.params.departmentId
+  );
   if (!department) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Department not found');
   }
@@ -29,7 +31,10 @@ const queryDepartments = catchAsync(async (req, res) => {
 
 // Update department by ID
 const updateDepartmentById = catchAsync(async (req, res) => {
-  const updatedDepartment = await departmentService.updateDepartmentById(req.params.departmentId, req.body);
+  const updatedDepartment = await departmentService.updateDepartmentById(
+    req.params.departmentId,
+    req.body
+  );
   res.send(updatedDepartment);
 });
 
@@ -41,13 +46,18 @@ const deleteDepartmentById = catchAsync(async (req, res) => {
 
 // Assign node to department
 const assignNodeToDepartment = catchAsync(async (req, res) => {
-  const updatedDepartment = await departmentService.assignNodeToDepartment(req.params.departmentId, req.body.nodeId);
+  const updatedDepartment = await departmentService.assignNodeToDepartment(
+    req.params.departmentId,
+    req.body.nodeId
+  );
   res.send(updatedDepartment);
 });
 
 // Delete all departments by tenant
 const deleteAllDepartmentsByTenant = catchAsync(async (req, res) => {
-  const result = await departmentService.deleteAllDepartmentsByTenant(req.user.tenantId);
+  const result = await departmentService.deleteAllDepartmentsByTenant(
+    req.user.tenantId
+  );
   res.status(httpStatus.NO_CONTENT).send();
 });
 

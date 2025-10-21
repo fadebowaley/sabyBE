@@ -20,12 +20,18 @@ const formElementSchema = Joi.object({
     min: Joi.number().allow(null),
     max: Joi.number().allow(null),
     step: Joi.number().allow(null),
-    paragraphAlignment: Joi.string().valid('left', 'center', 'right').default('left'),
+    paragraphAlignment: Joi.string()
+      .valid('left', 'center', 'right')
+      .default('left'),
     conditional: Joi.boolean().default(false),
     colSpan: Joi.number().integer().min(1).max(12).default(12),
     headerLevel: Joi.string().allow(''),
-    headerAlignment: Joi.string().valid('left', 'center', 'right').default('centre'),
-    textAlign: Joi.string().valid('left', 'center', 'right', 'justify').default('left'),
+    headerAlignment: Joi.string()
+      .valid('left', 'center', 'right')
+      .default('centre'),
+    textAlign: Joi.string()
+      .valid('left', 'center', 'right', 'justify')
+      .default('left'),
     acceptedTypes: Joi.string().default('.jpg,.png,.pdf'),
     defaultValue: Joi.any(),
     defaultCountry: Joi.string().allow(''),
@@ -35,7 +41,9 @@ const formElementSchema = Joi.object({
 const projectConfigurationSchema = Joi.object({
   projectName: Joi.string().required().trim().min(1).max(100),
   tags: Joi.array().items(Joi.string().trim()).default([]),
-  accessibility: Joi.array().items(Joi.string().valid('api', 'embedded', 'javascript', 'mobile')).default([]),
+  accessibility: Joi.array()
+    .items(Joi.string().valid('api', 'embedded', 'javascript', 'mobile'))
+    .default([]),
   security: Joi.string().valid('public', 'private').default('private'),
 });
 
@@ -83,7 +91,9 @@ const metadataSchema = Joi.object({
   elementsCount: Joi.number().default(0),
   hasValidation: Joi.boolean().default(false),
   lastModified: Joi.date().default(Date.now),
-  deploymentStatus: Joi.string().valid('draft', 'published', 'archived').default('draft'),
+  deploymentStatus: Joi.string()
+    .valid('draft', 'published', 'archived')
+    .default('draft'),
 });
 
 // Validation schemas
@@ -105,7 +115,11 @@ const getProjectForms = {
     'configuration.projectName': Joi.string(),
     'configuration.tags': Joi.string(),
     'configuration.security': Joi.string().valid('public', 'private'),
-    'metadata.deploymentStatus': Joi.string().valid('draft', 'published', 'archived'),
+    'metadata.deploymentStatus': Joi.string().valid(
+      'draft',
+      'published',
+      'archived'
+    ),
     tenantId: Joi.string(),
     q: Joi.string(),
     sortBy: Joi.string(),
@@ -123,7 +137,11 @@ const getProjectFormsByTenant = {
     status: Joi.string().valid('active', 'inactive', 'archived'),
     'configuration.projectName': Joi.string(),
     'configuration.tags': Joi.string(),
-    'metadata.deploymentStatus': Joi.string().valid('draft', 'published', 'archived'),
+    'metadata.deploymentStatus': Joi.string().valid(
+      'draft',
+      'published',
+      'archived'
+    ),
     sortBy: Joi.string(),
     limit: Joi.number().integer().min(1).max(100),
     page: Joi.number().integer().min(1),
@@ -139,7 +157,11 @@ const getProjectFormsByUser = {
     status: Joi.string().valid('active', 'inactive', 'archived'),
     'configuration.projectName': Joi.string(),
     'configuration.tags': Joi.string(),
-    'metadata.deploymentStatus': Joi.string().valid('draft', 'published', 'archived'),
+    'metadata.deploymentStatus': Joi.string().valid(
+      'draft',
+      'published',
+      'archived'
+    ),
     sortBy: Joi.string(),
     limit: Joi.number().integer().min(1).max(100),
     page: Joi.number().integer().min(1),
@@ -254,7 +276,9 @@ const bulkOperations = {
     operations: Joi.array()
       .items(
         Joi.object().keys({
-          type: Joi.string().valid('delete', 'restore', 'publish', 'archive').required(),
+          type: Joi.string()
+            .valid('delete', 'restore', 'publish', 'archive')
+            .required(),
           projectFormId: Joi.string().custom(objectId).required(),
         })
       )

@@ -16,7 +16,6 @@ const createUser = async (userBody) => {
   return User.createUser(userBody);
 };
 
-
 const ownerCreate = async (userBody) => {
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(
@@ -93,9 +92,8 @@ const createSabyUser = async (userBody) => {
 //   };
 // };
 
-const bulkCreate = async (usersBody, createdBy, tenantId) => {
-  return await User.createBulk(usersBody, createdBy, tenantId);
-};
+const bulkCreate = async (usersBody, createdBy, tenantId) =>
+  await User.createBulk(usersBody, createdBy, tenantId);
 
 const bulkSoftDeleteByTenantId = async (tenantId) => {
   // Initialize an array to store success and error results
@@ -145,13 +143,13 @@ const restoreUsersByTenantId = async (tenantId) => {
   try {
     // Find soft-deleted users with the provided tenantId
     const usersToRestore = await User.find({
-      tenantId: tenantId,
+      tenantId,
       deletedAt: { $ne: null },
     });
     const restoredUsers = [];
     const failedUsers = [];
 
-    for (let user of usersToRestore) {
+    for (const user of usersToRestore) {
       try {
         // Restore the user
         user.deletedAt = null; // Nullify the deletedAt field to restore the user
@@ -278,9 +276,7 @@ const getUserHierarchyLevel = (user) => {
  * @returns {Promise<User>}
  */
 
-const getUserById = async (id) => {
-  return User.findById(id);
-};
+const getUserById = async (id) => User.findById(id);
 
 /**
  * Get user by email
@@ -288,9 +284,7 @@ const getUserById = async (id) => {
  * @returns {Promise<User>}
  */
 
-const getUserByEmail = async (email) => {
-  return User.findOne({ email });
-};
+const getUserByEmail = async (email) => User.findOne({ email });
 
 /**
  * Get user by phone number (handles + and no +, trims spaces)
@@ -309,7 +303,7 @@ const getUserByPhone = async (phoneNumber) => {
   }
   if (!normalized.startsWith('+')) {
     console.log(`[getUserByPhone] Trying with +: +${normalized}`);
-    user = await User.findOne({ phoneNumber: '+' + normalized });
+    user = await User.findOne({ phoneNumber: `+${normalized}` });
     if (user) {
       console.log(`[getUserByPhone] Found with +: ${user.email}`);
       return user;

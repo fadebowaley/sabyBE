@@ -104,7 +104,9 @@ structureSchema.statics = {
   // Update: Update a structure by ID
   async updateStructure(id, updateData) {
     try {
-      const structure = await this.findByIdAndUpdate(id, updateData, { new: true }).exec();
+      const structure = await this.findByIdAndUpdate(id, updateData, {
+        new: true,
+      }).exec();
       if (!structure) throw new Error('Structure not found');
       return structure;
     } catch (error) {
@@ -144,7 +146,11 @@ structureSchema.statics.generateHaloId = async function (name) {
     .padEnd(2, 'X'); // e.g., "MO" from "Mother"
   console.log('haloId after replace:', prefix);
 
-  const counter = await HaloCounter.findOneAndUpdate({ name: 'halo' }, { $inc: { seq: 1 } }, { new: true, upsert: true });
+  const counter = await HaloCounter.findOneAndUpdate(
+    { name: 'halo' },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
   const base36 = counter.seq.toString(36).toUpperCase().padStart(5, '0');
   return `${prefix}-${base36}`;
 };
@@ -157,7 +163,9 @@ structureSchema.pre('save', async function (next) {
   try {
     if (this.parent) {
       const parentDoc = await this.constructor.findById(this.parent);
-      this.path = parentDoc.path ? `${parentDoc.path}/${this._id}` : `${this.parent}/${this._id}`;
+      this.path = parentDoc.path
+        ? `${parentDoc.path}/${this._id}`
+        : `${this.parent}/${this._id}`;
     } else {
       // No parent: this structure is the root for its tenant.
       this.path = `${this._id}`;

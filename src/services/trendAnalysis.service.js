@@ -41,19 +41,19 @@ const getSubmissionsTimeline = async (filters = {}) => {
     let groupByClause = '';
     switch (group_by) {
       case 'hour':
-        groupByClause = 'DATE_TRUNC(\'hour\', fs.created_at)';
+        groupByClause = "DATE_TRUNC('hour', fs.created_at)";
         break;
       case 'day':
-        groupByClause = 'DATE_TRUNC(\'day\', fs.created_at)';
+        groupByClause = "DATE_TRUNC('day', fs.created_at)";
         break;
       case 'week':
-        groupByClause = 'DATE_TRUNC(\'week\', fs.created_at)';
+        groupByClause = "DATE_TRUNC('week', fs.created_at)";
         break;
       case 'month':
-        groupByClause = 'DATE_TRUNC(\'month\', fs.created_at)';
+        groupByClause = "DATE_TRUNC('month', fs.created_at)";
         break;
       default:
-        groupByClause = 'DATE_TRUNC(\'day\', fs.created_at)';
+        groupByClause = "DATE_TRUNC('day', fs.created_at)";
     }
 
     let trendMetric = '';
@@ -65,7 +65,8 @@ const getSubmissionsTimeline = async (filters = {}) => {
         trendMetric = 'AVG(fs.event_compliance_percentage)';
         break;
       case 'approval_rate':
-        trendMetric = 'ROUND(COUNT(CASE WHEN fs.status = \'approved\' THEN 1 END) * 100.0 / COUNT(*), 2)';
+        trendMetric =
+          "ROUND(COUNT(CASE WHEN fs.status = 'approved' THEN 1 END) * 100.0 / COUNT(*), 2)";
         break;
       default:
         trendMetric = 'COUNT(*)';
@@ -94,28 +95,28 @@ const getSubmissionsTimeline = async (filters = {}) => {
     values.push(tenant_id);
 
     const result = await postgresPool.query(query, values);
-    
+
     // Calculate trend direction and growth rate
     const trends = result.rows.map((row, index) => {
       const prevRow = index > 0 ? result.rows[index - 1] : null;
       let trend_direction = 'stable';
       let growth_rate = 0;
-      
+
       if (prevRow && prevRow.trend_value !== null && row.trend_value !== null) {
         const change = row.trend_value - prevRow.trend_value;
         const prevValue = prevRow.trend_value;
-        
+
         if (prevValue !== 0) {
           growth_rate = Math.round((change / prevValue) * 100 * 100) / 100;
         }
-        
+
         if (change > 0) {
           trend_direction = 'increasing';
         } else if (change < 0) {
           trend_direction = 'decreasing';
         }
       }
-      
+
       return {
         ...row,
         trend_direction,
@@ -160,16 +161,16 @@ const getComplianceTimeline = async (filters = {}) => {
     let groupByClause = '';
     switch (group_by) {
       case 'day':
-        groupByClause = 'DATE_TRUNC(\'day\', ect.created_at)';
+        groupByClause = "DATE_TRUNC('day', ect.created_at)";
         break;
       case 'week':
-        groupByClause = 'DATE_TRUNC(\'week\', ect.created_at)';
+        groupByClause = "DATE_TRUNC('week', ect.created_at)";
         break;
       case 'month':
-        groupByClause = 'DATE_TRUNC(\'month\', ect.created_at)';
+        groupByClause = "DATE_TRUNC('month', ect.created_at)";
         break;
       default:
-        groupByClause = 'DATE_TRUNC(\'day\', ect.created_at)';
+        groupByClause = "DATE_TRUNC('day', ect.created_at)";
     }
 
     const query = `
@@ -199,28 +200,32 @@ const getComplianceTimeline = async (filters = {}) => {
     values.push(tenant_id);
 
     const result = await postgresPool.query(query, values);
-    
+
     // Calculate trend direction and growth rate
     const trends = result.rows.map((row, index) => {
       const prevRow = index > 0 ? result.rows[index - 1] : null;
       let trend_direction = 'stable';
       let growth_rate = 0;
-      
-      if (prevRow && prevRow.avg_completeness !== null && row.avg_completeness !== null) {
+
+      if (
+        prevRow &&
+        prevRow.avg_completeness !== null &&
+        row.avg_completeness !== null
+      ) {
         const change = row.avg_completeness - prevRow.avg_completeness;
         const prevValue = prevRow.avg_completeness;
-        
+
         if (prevValue !== 0) {
           growth_rate = Math.round((change / prevValue) * 100 * 100) / 100;
         }
-        
+
         if (change > 0) {
           trend_direction = 'improving';
         } else if (change < 0) {
           trend_direction = 'declining';
         }
       }
-      
+
       return {
         ...row,
         trend_direction,
@@ -265,16 +270,16 @@ const getValidationTimeline = async (filters = {}) => {
     let groupByClause = '';
     switch (group_by) {
       case 'day':
-        groupByClause = 'DATE_TRUNC(\'day\', sv.validated_at)';
+        groupByClause = "DATE_TRUNC('day', sv.validated_at)";
         break;
       case 'week':
-        groupByClause = 'DATE_TRUNC(\'week\', sv.validated_at)';
+        groupByClause = "DATE_TRUNC('week', sv.validated_at)";
         break;
       case 'month':
-        groupByClause = 'DATE_TRUNC(\'month\', sv.validated_at)';
+        groupByClause = "DATE_TRUNC('month', sv.validated_at)";
         break;
       default:
-        groupByClause = 'DATE_TRUNC(\'day\', sv.validated_at)';
+        groupByClause = "DATE_TRUNC('day', sv.validated_at)";
     }
 
     const query = `
@@ -304,28 +309,32 @@ const getValidationTimeline = async (filters = {}) => {
     values.push(tenant_id);
 
     const result = await postgresPool.query(query, values);
-    
+
     // Calculate trend direction and growth rate
     const trends = result.rows.map((row, index) => {
       const prevRow = index > 0 ? result.rows[index - 1] : null;
       let trend_direction = 'stable';
       let growth_rate = 0;
-      
-      if (prevRow && prevRow.success_rate !== null && row.success_rate !== null) {
+
+      if (
+        prevRow &&
+        prevRow.success_rate !== null &&
+        row.success_rate !== null
+      ) {
         const change = row.success_rate - prevRow.success_rate;
         const prevValue = prevRow.success_rate;
-        
+
         if (prevValue !== 0) {
           growth_rate = Math.round((change / prevValue) * 100 * 100) / 100;
         }
-        
+
         if (change > 0) {
           trend_direction = 'improving';
         } else if (change < 0) {
           trend_direction = 'declining';
         }
       }
-      
+
       return {
         ...row,
         trend_direction,
@@ -345,11 +354,7 @@ const getValidationTimeline = async (filters = {}) => {
  */
 const getSeasonalPatterns = async (filters = {}) => {
   try {
-    const {
-      tenant_id,
-      project_id,
-      years_back = 2,
-    } = filters;
+    const { tenant_id, project_id, years_back = 2 } = filters;
 
     const query = `
       WITH monthly_data AS (
@@ -415,11 +420,7 @@ const getSeasonalPatterns = async (filters = {}) => {
  */
 const getGrowthMetrics = async (filters = {}) => {
   try {
-    const {
-      tenant_id,
-      project_id,
-      period_months = 12,
-    } = filters;
+    const { tenant_id, project_id, period_months = 12 } = filters;
 
     const query = `
       WITH monthly_growth AS (
@@ -491,11 +492,7 @@ const getGrowthMetrics = async (filters = {}) => {
  */
 const getPredictiveInsights = async (filters = {}) => {
   try {
-    const {
-      tenant_id,
-      project_id,
-      forecast_months = 3,
-    } = filters;
+    const { tenant_id, project_id, forecast_months = 3 } = filters;
 
     const query = `
       WITH recent_trends AS (

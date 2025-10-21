@@ -85,7 +85,9 @@ async function buildHierarchy(node) {
   let current = node.parent;
 
   while (current) {
-    const parentNode = await node.constructor.findById(current).populate('level');
+    const parentNode = await node.constructor
+      .findById(current)
+      .populate('level');
     if (!parentNode) throw new Error('Invalid parent reference.');
 
     identity.unshift(parentNode._id);
@@ -123,7 +125,10 @@ nodeSchema.pre('save', async function (next) {
       console.log('Structure level:', structure.level);
       console.log('Structure level toString():', structure.level.toString());
       console.log('Node level toString():', this.level.toString());
-      console.log('Levels match?', structure.level.toString() === this.level.toString());
+      console.log(
+        'Levels match?',
+        structure.level.toString() === this.level.toString()
+      );
 
       if (structure.level.toString() !== this.level.toString()) {
         throw new Error('Node level must match structure level');
@@ -145,7 +150,9 @@ nodeSchema.pre('save', async function (next) {
 // Static method to update parent and re-calculate hierarchy
 nodeSchema.statics.updateNodeParent = async function (nodeId, newParentId) {
   const node = await this.findById(nodeId);
-  const newParent = newParentId ? await this.findById(newParentId).populate('level') : null;
+  const newParent = newParentId
+    ? await this.findById(newParentId).populate('level')
+    : null;
   if (!node) throw new Error('Node not found');
   if (newParentId && !newParent) throw new Error('New parent not found');
 

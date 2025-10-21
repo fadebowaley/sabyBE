@@ -27,7 +27,7 @@ async function createTeamUsers() {
     console.log(`   Tenant ID: ${fadebowale.tenantId}`);
     console.log(`   User ID: ${fadebowale._id}`);
 
-        // Step 2: Find the "Support Agent" role
+    // Step 2: Find the "Support Agent" role
     console.log('\n2️⃣ Finding "Support Agent" role...');
     const userRole = await Role.findOne({ name: 'Support Agent' });
 
@@ -107,18 +107,28 @@ async function createTeamUsers() {
         // Check if user already exists
         const existingUser = await User.findOne({ email: userData.email });
         if (existingUser) {
-          console.log(`   ⚠️  User ${userData.email} already exists, skipping...`);
+          console.log(
+            `   ⚠️  User ${userData.email} already exists, skipping...`
+          );
           continue;
         }
 
         // Create user using the static method
         const newUser = await User.createUser(userData);
         createdUsers.push(newUser);
-        console.log(`   ✅ Created user: ${newUser.email} (${newUser.firstname} ${newUser.lastname})`);
-        console.log(`      Phone: ${newUser.phoneNumber} (Verified: ${newUser.isPhoneVerified})`);
-        console.log(`      User ID: ${newUser.userId}, Halo ID: ${newUser.haloId}`);
+        console.log(
+          `   ✅ Created user: ${newUser.email} (${newUser.firstname} ${newUser.lastname})`
+        );
+        console.log(
+          `      Phone: ${newUser.phoneNumber} (Verified: ${newUser.isPhoneVerified})`
+        );
+        console.log(
+          `      User ID: ${newUser.userId}, Halo ID: ${newUser.haloId}`
+        );
       } catch (error) {
-        console.log(`   ❌ Failed to create user ${userData.email}: ${error.message}`);
+        console.log(
+          `   ❌ Failed to create user ${userData.email}: ${error.message}`
+        );
         errors.push({ email: userData.email, error: error.message });
       }
     }

@@ -30,7 +30,14 @@ const whatsappSessionSchema = mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['authenticating', 'selecting_project', 'filling_form', 'ready_to_submit', 'submitted', 'completed'],
+      enum: [
+        'authenticating',
+        'selecting_project',
+        'filling_form',
+        'ready_to_submit',
+        'submitted',
+        'completed',
+      ],
       default: 'authenticating',
     },
     currentStep: {
@@ -103,7 +110,10 @@ whatsappSessionSchema.statics.findByPhoneNumber = function (phoneNumber) {
   return this.findOne({ phoneNumber });
 };
 
-whatsappSessionSchema.statics.findActiveByUserId = function (userId, projectId) {
+whatsappSessionSchema.statics.findActiveByUserId = function (
+  userId,
+  projectId
+) {
   return this.findOne({
     userId,
     projectId,
@@ -111,7 +121,9 @@ whatsappSessionSchema.statics.findActiveByUserId = function (userId, projectId) 
   });
 };
 
-whatsappSessionSchema.statics.cleanupExpiredSessions = function (ttlHours = 24) {
+whatsappSessionSchema.statics.cleanupExpiredSessions = function (
+  ttlHours = 24
+) {
   const cutoffTime = new Date(Date.now() - ttlHours * 60 * 60 * 1000);
   return this.deleteMany({
     lastActivity: { $lt: cutoffTime },
@@ -119,6 +131,9 @@ whatsappSessionSchema.statics.cleanupExpiredSessions = function (ttlHours = 24) 
   });
 };
 
-const WhatsAppSession = mongoose.model('WhatsAppSession', whatsappSessionSchema);
+const WhatsAppSession = mongoose.model(
+  'WhatsAppSession',
+  whatsappSessionSchema
+);
 
 module.exports = WhatsAppSession;

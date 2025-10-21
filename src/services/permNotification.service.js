@@ -13,10 +13,10 @@
  * - Cleanup old notifications
  */
 
+const httpStatus = require('http-status');
 const { postgresPool } = require('../config/postgres');
 const logger = require('../config/logger');
 const ApiError = require('../utils/ApiError');
-const httpStatus = require('http-status');
 
 /**
  * Create a new notification

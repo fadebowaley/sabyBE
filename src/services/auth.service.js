@@ -38,9 +38,12 @@ const loginUserWithEmailAndPassword = async (
   return user;
 };
 
-
 const logout = async (refreshToken) => {
-  const refreshTokenDoc = await Token.findOne({ token: refreshToken, type: tokenTypes.REFRESH, blacklisted: false });
+  const refreshTokenDoc = await Token.findOne({
+    token: refreshToken,
+    type: tokenTypes.REFRESH,
+    blacklisted: false,
+  });
   if (!refreshTokenDoc) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Not found');
   }
@@ -57,7 +60,10 @@ const logout = async (refreshToken) => {
 
 const refreshAuth = async (refreshToken) => {
   try {
-    const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
+    const refreshTokenDoc = await tokenService.verifyToken(
+      refreshToken,
+      tokenTypes.REFRESH
+    );
     const user = await userService.getUserById(refreshTokenDoc.user);
     if (!user) {
       throw new Error();
@@ -80,7 +86,10 @@ const refreshAuth = async (refreshToken) => {
 const resetPassword = async (resetPasswordToken, newPassword) => {
   try {
     console.log('Verifying reset password token...');
-    const resetPasswordTokenDoc = await tokenService.verifyToken(resetPasswordToken, tokenTypes.RESET_PASSWORD);
+    const resetPasswordTokenDoc = await tokenService.verifyToken(
+      resetPasswordToken,
+      tokenTypes.RESET_PASSWORD
+    );
 
     const userId = resetPasswordTokenDoc.user;
     console.log(`Resetting password for user ID: ${userId}`);
@@ -106,7 +115,10 @@ const resetPassword = async (resetPasswordToken, newPassword) => {
  */
 const verifyEmail = async (verifyEmailToken) => {
   try {
-    const verifyEmailTokenDoc = await tokenService.verifyToken(verifyEmailToken, tokenTypes.VERIFY_EMAIL);
+    const verifyEmailTokenDoc = await tokenService.verifyToken(
+      verifyEmailToken,
+      tokenTypes.VERIFY_EMAIL
+    );
     const user = await userService.getUserById(verifyEmailTokenDoc.user);
     if (!user) {
       throw new Error();
@@ -122,14 +134,14 @@ const verifyEmail = async (verifyEmailToken) => {
  * Generate a 6-digit OTP
  * @returns {string}
  */
-const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+const generateOtp = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
 
 /**
  * Send OTP to user via email and update user model
  * @param {Object} user - The user instance
  * @returns {Promise<void>}
  */
-
 
 const sendUserOtp = async (user) => {
   const otp = generateOtp();
@@ -154,7 +166,6 @@ const sendUserOtp = async (user) => {
   return { email: user.email, otp };
 };
 
-
 /**
  * Verify user's OTP
  * @param {string} email - The user’s email
@@ -163,7 +174,6 @@ const sendUserOtp = async (user) => {
  */
 
 const verifyOtp = async (email, otp) => {
-
   const user = await userService.getUserByEmail(email);
   if (!user) {
     return { success: false, user: null };
@@ -184,15 +194,12 @@ const verifyOtp = async (email, otp) => {
         otpVerified: true,
         otp: null,
         otpExpires: null,
-        status:true
+        status: true,
       },
     }
   );
   return { success: true, user };
 };
-
-
-
 
 module.exports = {
   loginUserWithEmailAndPassword,

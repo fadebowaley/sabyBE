@@ -5,11 +5,15 @@ const createFolder = {
   body: Joi.object().keys({
     name: Joi.string().required().trim().min(1).max(255),
     parentFolder: Joi.string().custom(objectId).optional(),
-    metadata: Joi.object().keys({
-      description: Joi.string().optional(),
-      color: Joi.string().pattern(/^#[0-9A-F]{6}$/i).optional(),
-      icon: Joi.string().optional(),
-    }).optional(),
+    metadata: Joi.object()
+      .keys({
+        description: Joi.string().optional(),
+        color: Joi.string()
+          .pattern(/^#[0-9A-F]{6}$/i)
+          .optional(),
+        icon: Joi.string().optional(),
+      })
+      .optional(),
   }),
 };
 
@@ -45,14 +49,20 @@ const updateFolder = {
   params: Joi.object().keys({
     folderId: Joi.string().custom(objectId).required(),
   }),
-  body: Joi.object().keys({
-    name: Joi.string().trim().min(1).max(255).optional(),
-    metadata: Joi.object().keys({
-      description: Joi.string().optional(),
-      color: Joi.string().pattern(/^#[0-9A-F]{6}$/i).optional(),
-      icon: Joi.string().optional(),
-    }).optional(),
-  }).min(1),
+  body: Joi.object()
+    .keys({
+      name: Joi.string().trim().min(1).max(255).optional(),
+      metadata: Joi.object()
+        .keys({
+          description: Joi.string().optional(),
+          color: Joi.string()
+            .pattern(/^#[0-9A-F]{6}$/i)
+            .optional(),
+          icon: Joi.string().optional(),
+        })
+        .optional(),
+    })
+    .min(1),
 };
 
 const deleteFolder = {
@@ -95,12 +105,14 @@ const updateFolderPermissions = {
     folderId: Joi.string().custom(objectId).required(),
   }),
   body: Joi.object().keys({
-    permissions: Joi.array().items(
-      Joi.object().keys({
-        userId: Joi.string().custom(objectId).required(),
-        permission: Joi.string().valid('read', 'write', 'admin').required(),
-      })
-    ).required(),
+    permissions: Joi.array()
+      .items(
+        Joi.object().keys({
+          userId: Joi.string().custom(objectId).required(),
+          permission: Joi.string().valid('read', 'write', 'admin').required(),
+        })
+      )
+      .required(),
   }),
 };
 

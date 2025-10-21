@@ -7,18 +7,14 @@ const ApiError = require('../utils/ApiError');
  * @param {Object} appBody
  * @returns {Promise<App>}
  */
-const createApp = async (appBody) => {
-  return App.create(appBody);
-};
+const createApp = async (appBody) => App.create(appBody);
 
 /**
  * Bulk create apps for tenant/user
  * @param {Array} appArray
  * @returns {Promise<Array<App>>}
  */
-const bulkCreateApps = async (appArray) => {
-  return App.insertMany(appArray);
-};
+const bulkCreateApps = async (appArray) => App.insertMany(appArray);
 
 /**
  * Assign an app to a user or tenant
@@ -40,9 +36,7 @@ const assignApp = async (appId, assignmentData) => {
  * @param {ObjectId} id
  * @returns {Promise<App>}
  */
-const getAppById = async (id) => {
-  return App.findById(id);
-};
+const getAppById = async (id) => App.findById(id);
 
 /**
  * Query apps by filter and options
@@ -50,9 +44,7 @@ const getAppById = async (id) => {
  * @param {Object} options
  * @returns {Promise<QueryResult>}
  */
-const queryApps = async (filter, options) => {
-  return App.paginate(filter, options);
-};
+const queryApps = async (filter, options) => App.paginate(filter, options);
 
 /**
  * Get all apps for a user or tenant
@@ -118,9 +110,7 @@ const deleteAppById = async (appId) => {
  * @param {ObjectId} tenantId
  * @returns {Promise}
  */
-const deleteAppsByTenant = async (tenantId) => {
-  return App.deleteMany({ tenantId });
-};
+const deleteAppsByTenant = async (tenantId) => App.deleteMany({ tenantId });
 
 module.exports = {
   createApp,

@@ -7,9 +7,8 @@ const ApiError = require('../utils/ApiError');
  * @param {Object} collectionBody
  * @returns {Promise<Collection>}
  */
-const createCollection = async (collectionBody) => {
-  return Collection.create(collectionBody);
-};
+const createCollection = async (collectionBody) =>
+  Collection.create(collectionBody);
 
 /**
  * Query for collections
@@ -20,18 +19,15 @@ const createCollection = async (collectionBody) => {
  * @param {number} [options.page] - Current page (default = 1)
  * @returns {Promise<QueryResult>}
  */
-const queryCollections = async (filter, options) => {
-  return Collection.paginate(filter, options);
-};
+const queryCollections = async (filter, options) =>
+  Collection.paginate(filter, options);
 
 /**
  * Get collection by id
  * @param {ObjectId} id
  * @returns {Promise<Collection>}
  */
-const getCollectionById = async (id) => {
-  return Collection.findById(id);
-};
+const getCollectionById = async (id) => Collection.findById(id);
 
 /**
  * Get collection by id
@@ -68,9 +64,8 @@ const deleteCollectionById = async (collectionId) => {
  * @param {string} tenantId
  * @returns {Promise<Collection[]>}
  */
-const getCollectionsByTenantId = async (tenantId) => {
-  return Collection.find({ tenantId });
-};
+const getCollectionsByTenantId = async (tenantId) =>
+  Collection.find({ tenantId });
 
 module.exports = {
   createCollection,

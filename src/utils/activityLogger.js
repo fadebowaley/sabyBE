@@ -71,4 +71,3 @@ const logActivity = async (activityData) => {
 };
 
 module.exports = { logActivity };
-

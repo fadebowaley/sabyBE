@@ -45,7 +45,10 @@ class CommandHandler {
           return await this.handleUnknown(phoneNumber, command);
       }
     } catch (error) {
-      logger.error(`❌ Error handling command for ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error handling command for ${phoneNumber}:`,
+        error.message
+      );
       await whatsappNotificationService.sendErrorMessage(
         phoneNumber,
         'Sorry, there was an error processing your command. Please try again.'
@@ -75,10 +78,18 @@ class CommandHandler {
       // Send enhanced welcome message
       await whatsappNotificationService.sendEnhancedWelcomeMessage(phoneNumber);
 
-      logger.info(`✅ /start command processed successfully for ${phoneNumber}`);
+      logger.info(
+        `✅ /start command processed successfully for ${phoneNumber}`
+      );
     } catch (error) {
-      logger.error(`❌ Error handling /start for ${phoneNumber}:`, error.message);
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to start the bot. Please try again.');
+      logger.error(
+        `❌ Error handling /start for ${phoneNumber}:`,
+        error.message
+      );
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'Failed to start the bot. Please try again.'
+      );
     }
   }
 
@@ -96,8 +107,14 @@ class CommandHandler {
 
       logger.info(`✅ /help command processed successfully for ${phoneNumber}`);
     } catch (error) {
-      logger.error(`❌ Error handling /help for ${phoneNumber}:`, error.message);
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to show help. Please try again.');
+      logger.error(
+        `❌ Error handling /help for ${phoneNumber}:`,
+        error.message
+      );
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'Failed to show help. Please try again.'
+      );
     }
   }
 
@@ -112,11 +129,19 @@ class CommandHandler {
       logger.info(`🆘 /support command received from ${phoneNumber}`);
 
       const userName = session.metadata?.userName || 'User';
-      await whatsappNotificationService.sendSupportMessage(phoneNumber, userName);
+      await whatsappNotificationService.sendSupportMessage(
+        phoneNumber,
+        userName
+      );
 
-      logger.info(`✅ /support command processed successfully for ${phoneNumber}`);
+      logger.info(
+        `✅ /support command processed successfully for ${phoneNumber}`
+      );
     } catch (error) {
-      logger.error(`❌ Error handling /support for ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error handling /support for ${phoneNumber}:`,
+        error.message
+      );
       await whatsappNotificationService.sendErrorMessage(
         phoneNumber,
         'Failed to show support information. Please try again.'
@@ -135,12 +160,23 @@ class CommandHandler {
       logger.info(`📊 /status command received from ${phoneNumber}`);
 
       const userName = session.metadata?.userName || 'User';
-      await whatsappNotificationService.sendStatusMessage(phoneNumber, userName);
+      await whatsappNotificationService.sendStatusMessage(
+        phoneNumber,
+        userName
+      );
 
-      logger.info(`✅ /status command processed successfully for ${phoneNumber}`);
+      logger.info(
+        `✅ /status command processed successfully for ${phoneNumber}`
+      );
     } catch (error) {
-      logger.error(`❌ Error handling /status for ${phoneNumber}:`, error.message);
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to show status. Please try again.');
+      logger.error(
+        `❌ Error handling /status for ${phoneNumber}:`,
+        error.message
+      );
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'Failed to show status. Please try again.'
+      );
     }
   }
 
@@ -159,8 +195,14 @@ class CommandHandler {
 
       logger.info(`✅ /menu command processed successfully for ${phoneNumber}`);
     } catch (error) {
-      logger.error(`❌ Error handling /menu for ${phoneNumber}:`, error.message);
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to show menu. Please try again.');
+      logger.error(
+        `❌ Error handling /menu for ${phoneNumber}:`,
+        error.message
+      );
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'Failed to show menu. Please try again.'
+      );
     }
   }
 
@@ -175,12 +217,23 @@ class CommandHandler {
       logger.info(`🔄 /reset command received from ${phoneNumber}`);
 
       const userName = session.metadata?.userName || 'User';
-      await whatsappNotificationService.sendResetConfirmation(phoneNumber, userName);
+      await whatsappNotificationService.sendResetConfirmation(
+        phoneNumber,
+        userName
+      );
 
-      logger.info(`✅ /reset command processed successfully for ${phoneNumber}`);
+      logger.info(
+        `✅ /reset command processed successfully for ${phoneNumber}`
+      );
     } catch (error) {
-      logger.error(`❌ Error handling /reset for ${phoneNumber}:`, error.message);
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to reset session. Please try again.');
+      logger.error(
+        `❌ Error handling /reset for ${phoneNumber}:`,
+        error.message
+      );
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'Failed to reset session. Please try again.'
+      );
     }
   }
 
@@ -208,10 +261,18 @@ class CommandHandler {
         'Operation cancelled. Type /start to begin again.'
       );
 
-      logger.info(`✅ /cancel command processed successfully for ${phoneNumber}`);
+      logger.info(
+        `✅ /cancel command processed successfully for ${phoneNumber}`
+      );
     } catch (error) {
-      logger.error(`❌ Error handling /cancel for ${phoneNumber}:`, error.message);
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to cancel operation. Please try again.');
+      logger.error(
+        `❌ Error handling /cancel for ${phoneNumber}:`,
+        error.message
+      );
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'Failed to cancel operation. Please try again.'
+      );
     }
   }
 
@@ -235,7 +296,9 @@ class CommandHandler {
       }
 
       // Get available projects
-      const availableProjects = await this.getAvailableProjects(session.tenantId);
+      const availableProjects = await this.getAvailableProjects(
+        session.tenantId
+      );
 
       if (!availableProjects || availableProjects.length === 0) {
         await whatsappNotificationService.sendErrorMessage(
@@ -246,12 +309,23 @@ class CommandHandler {
       }
 
       // Send project list
-      await whatsappNotificationService.sendProjectList(phoneNumber, availableProjects);
+      await whatsappNotificationService.sendProjectList(
+        phoneNumber,
+        availableProjects
+      );
 
-      logger.info(`✅ /projects command processed successfully for ${phoneNumber}`);
+      logger.info(
+        `✅ /projects command processed successfully for ${phoneNumber}`
+      );
     } catch (error) {
-      logger.error(`❌ Error handling /projects for ${phoneNumber}:`, error.message);
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to show projects. Please try again.');
+      logger.error(
+        `❌ Error handling /projects for ${phoneNumber}:`,
+        error.message
+      );
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'Failed to show projects. Please try again.'
+      );
     }
   }
 
@@ -275,7 +349,9 @@ class CommandHandler {
       }
 
       // Get available projects (forms)
-      const availableProjects = await this.getAvailableProjects(session.tenantId);
+      const availableProjects = await this.getAvailableProjects(
+        session.tenantId
+      );
 
       if (!availableProjects || availableProjects.length === 0) {
         await whatsappNotificationService.sendErrorMessage(
@@ -286,12 +362,23 @@ class CommandHandler {
       }
 
       // Send form selection menu
-      await whatsappNotificationService.sendFormSelectionMenu(phoneNumber, availableProjects);
+      await whatsappNotificationService.sendFormSelectionMenu(
+        phoneNumber,
+        availableProjects
+      );
 
-      logger.info(`✅ /forms command processed successfully for ${phoneNumber}`);
+      logger.info(
+        `✅ /forms command processed successfully for ${phoneNumber}`
+      );
     } catch (error) {
-      logger.error(`❌ Error handling /forms for ${phoneNumber}:`, error.message);
-      await whatsappNotificationService.sendErrorMessage(phoneNumber, 'Failed to show forms. Please try again.');
+      logger.error(
+        `❌ Error handling /forms for ${phoneNumber}:`,
+        error.message
+      );
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'Failed to show forms. Please try again.'
+      );
     }
   }
 
@@ -302,7 +389,9 @@ class CommandHandler {
    */
   static async handleUnknown(phoneNumber, command) {
     try {
-      logger.info(`❓ Unknown command received from ${phoneNumber}: ${command}`);
+      logger.info(
+        `❓ Unknown command received from ${phoneNumber}: ${command}`
+      );
 
       await whatsappNotificationService.sendMessageWithClearKeyboard(
         phoneNumber,
@@ -324,7 +413,10 @@ Type /help for more information.`
 
       logger.info(`✅ Unknown command handled for ${phoneNumber}`);
     } catch (error) {
-      logger.error(`❌ Error handling unknown command for ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error handling unknown command for ${phoneNumber}:`,
+        error.message
+      );
       await whatsappNotificationService.sendErrorMessage(
         phoneNumber,
         "Sorry, I didn't understand that command. Type /help for available commands."
@@ -339,10 +431,11 @@ Type /help for more information.`
    */
   static async getAvailableProjects(tenantId) {
     try {
-      const availableProjectsResult = await projectFormService.getProjectFormsByTenant(tenantId, {
-        status: 'active',
-        'metadata.deploymentStatus': 'published',
-      });
+      const availableProjectsResult =
+        await projectFormService.getProjectFormsByTenant(tenantId, {
+          status: 'active',
+          'metadata.deploymentStatus': 'published',
+        });
 
       // Handle paginated result
       const availableProjects =
@@ -352,7 +445,10 @@ Type /help for more information.`
 
       return availableProjects || [];
     } catch (error) {
-      logger.error(`❌ Error getting available projects for tenant ${tenantId}:`, error.message);
+      logger.error(
+        `❌ Error getting available projects for tenant ${tenantId}:`,
+        error.message
+      );
       return [];
     }
   }

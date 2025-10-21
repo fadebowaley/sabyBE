@@ -36,7 +36,6 @@ module.exports = {
   defaultFormSettings,
 };
 
-
 module.exports = {
   defaultFormSettings,
 };
@@ -44,11 +43,9 @@ module.exports = {
   defaultFormSettings,
 };
 
-
 module.exports = {
   defaultFormSettings,
 };
 module.exports = {
   defaultFormSettings,
 };
-

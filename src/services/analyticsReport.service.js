@@ -43,16 +43,16 @@ const getSubmissionSummary = async (filters = {}) => {
         groupByClause = 'DATE(fs.created_at)';
         break;
       case 'week':
-        groupByClause = 'DATE_TRUNC(\'week\', fs.created_at)';
+        groupByClause = "DATE_TRUNC('week', fs.created_at)";
         break;
       case 'month':
-        groupByClause = 'DATE_TRUNC(\'month\', fs.created_at)';
+        groupByClause = "DATE_TRUNC('month', fs.created_at)";
         break;
       case 'year':
-        groupByClause = 'DATE_TRUNC(\'year\', fs.created_at)';
+        groupByClause = "DATE_TRUNC('year', fs.created_at)";
         break;
       default:
-        groupByClause = 'DATE_TRUNC(\'month\', fs.created_at)';
+        groupByClause = "DATE_TRUNC('month', fs.created_at)";
     }
 
     const query = `
@@ -93,12 +93,7 @@ const getSubmissionSummary = async (filters = {}) => {
  */
 const getSubmissionsByStatus = async (filters = {}) => {
   try {
-    const {
-      tenant_id,
-      project_id,
-      start_date,
-      end_date,
-    } = filters;
+    const { tenant_id, project_id, start_date, end_date } = filters;
 
     let dateFilter = '';
     const values = [];
@@ -148,11 +143,7 @@ const getSubmissionsByStatus = async (filters = {}) => {
  */
 const getSubmissionsByMonth = async (filters = {}) => {
   try {
-    const {
-      tenant_id,
-      project_id,
-      year = new Date().getFullYear(),
-    } = filters;
+    const { tenant_id, project_id, year = new Date().getFullYear() } = filters;
 
     const query = `
       SELECT 
@@ -171,7 +162,9 @@ const getSubmissionsByMonth = async (filters = {}) => {
       ORDER BY month
     `;
 
-    const values = project_id ? [tenant_id, project_id, year] : [tenant_id, year];
+    const values = project_id
+      ? [tenant_id, project_id, year]
+      : [tenant_id, year];
     const result = await postgresPool.query(query, values);
     return result.rows;
   } catch (error) {
@@ -185,12 +178,7 @@ const getSubmissionsByMonth = async (filters = {}) => {
  */
 const getComplianceRates = async (filters = {}) => {
   try {
-    const {
-      tenant_id,
-      project_id,
-      start_date,
-      end_date,
-    } = filters;
+    const { tenant_id, project_id, start_date, end_date } = filters;
 
     let dateFilter = '';
     const values = [];
@@ -248,13 +236,7 @@ const getComplianceRates = async (filters = {}) => {
  */
 const getComplianceByNode = async (filters = {}) => {
   try {
-    const {
-      tenant_id,
-      project_id,
-      start_date,
-      end_date,
-      limit = 50,
-    } = filters;
+    const { tenant_id, project_id, start_date, end_date, limit = 50 } = filters;
 
     let dateFilter = '';
     const values = [];
@@ -311,13 +293,7 @@ const getComplianceByNode = async (filters = {}) => {
  */
 const getValidationFailures = async (filters = {}) => {
   try {
-    const {
-      tenant_id,
-      project_id,
-      start_date,
-      end_date,
-      limit = 50,
-    } = filters;
+    const { tenant_id, project_id, start_date, end_date, limit = 50 } = filters;
 
     let dateFilter = '';
     const values = [];
@@ -376,12 +352,7 @@ const getValidationFailures = async (filters = {}) => {
  */
 const getNotificationDelivery = async (filters = {}) => {
   try {
-    const {
-      tenant_id,
-      project_id,
-      start_date,
-      end_date,
-    } = filters;
+    const { tenant_id, project_id, start_date, end_date } = filters;
 
     let dateFilter = '';
     const values = [];
@@ -461,19 +432,19 @@ const getActivityTrends = async (filters = {}) => {
     let groupByClause = '';
     switch (group_by) {
       case 'hour':
-        groupByClause = 'DATE_TRUNC(\'hour\', sal.created_at)';
+        groupByClause = "DATE_TRUNC('hour', sal.created_at)";
         break;
       case 'day':
-        groupByClause = 'DATE_TRUNC(\'day\', sal.created_at)';
+        groupByClause = "DATE_TRUNC('day', sal.created_at)";
         break;
       case 'week':
-        groupByClause = 'DATE_TRUNC(\'week\', sal.created_at)';
+        groupByClause = "DATE_TRUNC('week', sal.created_at)";
         break;
       case 'month':
-        groupByClause = 'DATE_TRUNC(\'month\', sal.created_at)';
+        groupByClause = "DATE_TRUNC('month', sal.created_at)";
         break;
       default:
-        groupByClause = 'DATE_TRUNC(\'day\', sal.created_at)';
+        groupByClause = "DATE_TRUNC('day', sal.created_at)";
     }
 
     const query = `
@@ -510,13 +481,7 @@ const getActivityTrends = async (filters = {}) => {
  */
 const getTopPerformingNodes = async (filters = {}) => {
   try {
-    const {
-      tenant_id,
-      project_id,
-      start_date,
-      end_date,
-      limit = 20,
-    } = filters;
+    const { tenant_id, project_id, start_date, end_date, limit = 20 } = filters;
 
     let dateFilter = '';
     const values = [];
@@ -574,12 +539,7 @@ const getTopPerformingNodes = async (filters = {}) => {
  */
 const getDataQualityMetrics = async (filters = {}) => {
   try {
-    const {
-      tenant_id,
-      project_id,
-      start_date,
-      end_date,
-    } = filters;
+    const { tenant_id, project_id, start_date, end_date } = filters;
 
     let dateFilter = '';
     const values = [];

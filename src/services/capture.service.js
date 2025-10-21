@@ -7,27 +7,22 @@ const ApiError = require('../utils/ApiError');
  * @param {Object} captureBody
  * @returns {Promise<Capture>}
  */
-const createCapture = async (captureBody) => {
-  return Capture.create(captureBody);
-};
+const createCapture = async (captureBody) => Capture.create(captureBody);
 
 /**
  * Bulk insert of captured data
  * @param {Array} captureArray
  * @returns {Promise<Array<Capture>>}
  */
-const bulkInsertCaptures = async (captureArray) => {
-  return Capture.insertMany(captureArray);
-};
+const bulkInsertCaptures = async (captureArray) =>
+  Capture.insertMany(captureArray);
 
 /**
  * Get capture by ID
  * @param {ObjectId} id
  * @returns {Promise<Capture>}
  */
-const getCaptureById = async (id) => {
-  return Capture.findById(id);
-};
+const getCaptureById = async (id) => Capture.findById(id);
 
 /**
  * Query captures with filter and options
@@ -35,18 +30,16 @@ const getCaptureById = async (id) => {
  * @param {Object} options
  * @returns {Promise<QueryResult>}
  */
-const queryCaptures = async (filter, options) => {
-  return Capture.paginate(filter, options);
-};
+const queryCaptures = async (filter, options) =>
+  Capture.paginate(filter, options);
 
 /**
  * Query all data for a datapoint
  * @param {ObjectId} datapointId
  * @returns {Promise<Array<Capture>>}
  */
-const getCapturesByDatapoint = async (datapointId) => {
-  return Capture.find({ datapointId });
-};
+const getCapturesByDatapoint = async (datapointId) =>
+  Capture.find({ datapointId });
 
 /**
  * Update capture by ID
@@ -83,9 +76,8 @@ const deleteCaptureById = async (captureId) => {
  * @param {ObjectId} tenantId
  * @returns {Promise<{ deletedCount: number }>}
  */
-const deleteAllCapturesByTenant = async (tenantId) => {
-  return Capture.deleteMany({ tenantId });
-};
+const deleteAllCapturesByTenant = async (tenantId) =>
+  Capture.deleteMany({ tenantId });
 
 /**
  * Export captures for a datapoint

@@ -70,11 +70,7 @@ const getSubmissionsByStatus = catchAsync(async (req, res) => {
  * Get submissions breakdown by month
  */
 const getSubmissionsByMonth = catchAsync(async (req, res) => {
-  const filters = pick(req.query, [
-    'tenant_id',
-    'project_id',
-    'year',
-  ]);
+  const filters = pick(req.query, ['tenant_id', 'project_id', 'year']);
 
   const data = await analyticsReportService.getSubmissionsByMonth(filters);
 
@@ -295,7 +291,10 @@ const getDashboardOverview = catchAsync(async (req, res) => {
     topNodes,
     qualityMetrics,
   ] = await Promise.all([
-    analyticsReportService.getSubmissionSummary({ ...filters, group_by: 'month' }),
+    analyticsReportService.getSubmissionSummary({
+      ...filters,
+      group_by: 'month',
+    }),
     analyticsReportService.getSubmissionsByStatus(filters),
     analyticsReportService.getComplianceRates(filters),
     analyticsReportService.getTopPerformingNodes({ ...filters, limit: 10 }),

@@ -7,9 +7,7 @@ const ApiError = require('../utils/ApiError');
  * @param {Object} adminBody
  * @returns {Promise<Admin>}
  */
-const createAdmin = async (adminBody) => {
-  return Admin.create(adminBody);
-};
+const createAdmin = async (adminBody) => Admin.create(adminBody);
 
 /**
  * Assign or update role for an admin
@@ -31,9 +29,7 @@ const assignRole = async (adminId, roleData) => {
  * @param {ObjectId} id
  * @returns {Promise<Admin>}
  */
-const getAdminById = async (id) => {
-  return Admin.findById(id);
-};
+const getAdminById = async (id) => Admin.findById(id);
 
 /**
  * Query all admins based on filters
@@ -41,18 +37,14 @@ const getAdminById = async (id) => {
  * @param {Object} options
  * @returns {Promise<QueryResult>}
  */
-const queryAdmins = async (filter, options) => {
-  return Admin.paginate(filter, options);
-};
+const queryAdmins = async (filter, options) => Admin.paginate(filter, options);
 
 /**
  * Get all admins for a tenant
  * @param {ObjectId} tenantId
  * @returns {Promise<Array<Admin>>}
  */
-const getAdminsByTenant = async (tenantId) => {
-  return Admin.find({ tenantId });
-};
+const getAdminsByTenant = async (tenantId) => Admin.find({ tenantId });
 
 /**
  * Update admin by ID
@@ -89,9 +81,7 @@ const deleteAdminById = async (adminId) => {
  * @param {ObjectId} tenantId
  * @returns {Promise}
  */
-const deleteAdminsByTenant = async (tenantId) => {
-  return Admin.deleteMany({ tenantId });
-};
+const deleteAdminsByTenant = async (tenantId) => Admin.deleteMany({ tenantId });
 
 module.exports = {
   createAdmin,

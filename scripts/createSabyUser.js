@@ -120,4 +120,3 @@ const createSabyUser = async () => {
 
 // Run the script
 createSabyUser();
-

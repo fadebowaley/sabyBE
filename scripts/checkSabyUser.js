@@ -66,4 +66,3 @@ const checkSabyUser = async () => {
 
 // Run the script
 checkSabyUser();
-

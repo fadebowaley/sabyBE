@@ -9,8 +9,8 @@ const catchAsync = require('../utils/catchAsync');
  * @param {Array<string>} requiredPermissions - Array of required permissions
  * @returns {Function} Express middleware function
  */
-const apiKeyAuth = (requiredPermissions = []) => {
-  return catchAsync(async (req, res, next) => {
+const apiKeyAuth = (requiredPermissions = []) =>
+  catchAsync(async (req, res, next) => {
     // Extract API key from headers
     let apiKey = req.header('x-api-key') || req.header('X-API-Key');
 
@@ -33,22 +33,32 @@ const apiKeyAuth = (requiredPermissions = []) => {
       // Check if the API key has required permissions
       if (requiredPermissions.length > 0) {
         const hasPermission = requiredPermissions.some(
-          (permission) => apiKeyDoc.permissions.includes(permission) || apiKeyDoc.permissions.includes('admin')
+          (permission) =>
+            apiKeyDoc.permissions.includes(permission) ||
+            apiKeyDoc.permissions.includes('admin')
         );
 
         if (!hasPermission) {
           throw new ApiError(
             httpStatus.FORBIDDEN,
-            `API key requires one of the following permissions: ${requiredPermissions.join(', ')}`
+            `API key requires one of the following permissions: ${requiredPermissions.join(
+              ', '
+            )}`
           );
         }
       }
 
       // Check rate limiting
-      const isWithinRateLimit = await apiKeyService.checkRateLimit(apiKeyDoc._id, apiKeyDoc.usageCount);
+      const isWithinRateLimit = await apiKeyService.checkRateLimit(
+        apiKeyDoc._id,
+        apiKeyDoc.usageCount
+      );
 
       if (!isWithinRateLimit) {
-        throw new ApiError(httpStatus.TOO_MANY_REQUESTS, 'API key rate limit exceeded');
+        throw new ApiError(
+          httpStatus.TOO_MANY_REQUESTS,
+          'API key rate limit exceeded'
+        );
       }
 
       // Add API key info to request for downstream middleware/controllers
@@ -80,7 +90,6 @@ const apiKeyAuth = (requiredPermissions = []) => {
       throw error;
     }
   });
-};
 
 /**
  * Combined authentication middleware that supports both JWT and API key auth
@@ -88,22 +97,24 @@ const apiKeyAuth = (requiredPermissions = []) => {
  * @param {string|Array<string>} permissions - Required permissions
  * @returns {Function} Express middleware function
  */
-const hybridAuth = (permissions = []) => {
-  return catchAsync(async (req, res, next) => {
+const hybridAuth = (permissions = []) =>
+  catchAsync(async (req, res, next) => {
     // Check if JWT token is present
-    const jwtToken = req.header('Authorization')?.startsWith('Bearer ') && !req.header('Authorization')?.includes('sk_');
+    const jwtToken =
+      req.header('Authorization')?.startsWith('Bearer ') &&
+      !req.header('Authorization')?.includes('sk_');
 
     if (jwtToken) {
       // Use regular JWT auth
       const auth = require('./auth');
       return auth(permissions)(req, res, next);
-    } else {
-      // Use API key auth
-      const permissionsArray = Array.isArray(permissions) ? permissions : [permissions];
-      return apiKeyAuth(permissionsArray)(req, res, next);
     }
+    // Use API key auth
+    const permissionsArray = Array.isArray(permissions)
+      ? permissions
+      : [permissions];
+    return apiKeyAuth(permissionsArray)(req, res, next);
   });
-};
 
 /**
  * Scope validation middleware
@@ -111,21 +122,22 @@ const hybridAuth = (permissions = []) => {
  * @param {string} requiredScope - Required scope (e.g., 'api', 'mobile', 'crm')
  * @returns {Function} Express middleware function
  */
-const validateScope = (requiredScope) => {
-  return (req, res, next) => {
-    if (!req.apiKey) {
-      throw new ApiError(httpStatus.UNAUTHORIZED, 'API key authentication required');
-    }
+const validateScope = (requiredScope) => (req, res, next) => {
+  if (!req.apiKey) {
+    throw new ApiError(
+      httpStatus.UNAUTHORIZED,
+      'API key authentication required'
+    );
+  }
 
-    if (req.apiKey.scope !== requiredScope && req.apiKey.scope !== 'admin') {
-      throw new ApiError(
-        httpStatus.FORBIDDEN,
-        `API key scope '${req.apiKey.scope}' does not have access to '${requiredScope}' resources`
-      );
-    }
+  if (req.apiKey.scope !== requiredScope && req.apiKey.scope !== 'admin') {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      `API key scope '${req.apiKey.scope}' does not have access to '${requiredScope}' resources`
+    );
+  }
 
-    next();
-  };
+  next();
 };
 
 /**
@@ -134,21 +146,22 @@ const validateScope = (requiredScope) => {
  * @param {string} requiredEnvironment - Required environment
  * @returns {Function} Express middleware function
  */
-const validateEnvironment = (requiredEnvironment) => {
-  return (req, res, next) => {
-    if (!req.apiKey) {
-      throw new ApiError(httpStatus.UNAUTHORIZED, 'API key authentication required');
-    }
+const validateEnvironment = (requiredEnvironment) => (req, res, next) => {
+  if (!req.apiKey) {
+    throw new ApiError(
+      httpStatus.UNAUTHORIZED,
+      'API key authentication required'
+    );
+  }
 
-    if (req.apiKey.environment !== requiredEnvironment) {
-      throw new ApiError(
-        httpStatus.FORBIDDEN,
-        `API key is for '${req.apiKey.environment}' environment, but '${requiredEnvironment}' is required`
-      );
-    }
+  if (req.apiKey.environment !== requiredEnvironment) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      `API key is for '${req.apiKey.environment}' environment, but '${requiredEnvironment}' is required`
+    );
+  }
 
-    next();
-  };
+  next();
 };
 
 /**
@@ -156,8 +169,8 @@ const validateEnvironment = (requiredEnvironment) => {
  * @param {number} customLimit - Custom rate limit (optional)
  * @returns {Function} Express middleware function
  */
-const apiKeyRateLimit = (customLimit) => {
-  return catchAsync(async (req, res, next) => {
+const apiKeyRateLimit = (customLimit) =>
+  catchAsync(async (req, res, next) => {
     if (!req.apiKey) {
       return next();
     }
@@ -171,7 +184,10 @@ const apiKeyRateLimit = (customLimit) => {
 
     // Here you would typically query a rate limiting store (Redis)
     // For now, we'll use the basic check from the service
-    const isWithinLimit = await apiKeyService.checkRateLimit(req.apiKey.id, req.apiKey.usageCount);
+    const isWithinLimit = await apiKeyService.checkRateLimit(
+      req.apiKey.id,
+      req.apiKey.usageCount
+    );
 
     if (!isWithinLimit) {
       res.set({
@@ -192,7 +208,6 @@ const apiKeyRateLimit = (customLimit) => {
 
     next();
   });
-};
 
 module.exports = {
   apiKeyAuth,

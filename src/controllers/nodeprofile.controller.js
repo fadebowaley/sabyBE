@@ -135,4 +135,3 @@ module.exports = {
   deleteProfile,
   upsertProfile,
 };
-

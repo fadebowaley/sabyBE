@@ -12,8 +12,14 @@ app.use(express.urlencoded({ extended: true }));
 
 // WhatsApp webhook routes
 app.get('/webhook', (req, res) => {
-  const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query;
-  logger.info(`🔍 WhatsApp webhook verification - Mode: ${mode}, Token: ${token}, Expected: ${whatsappBot.VERIFY_TOKEN}`);
+  const {
+    'hub.mode': mode,
+    'hub.verify_token': token,
+    'hub.challenge': challenge,
+  } = req.query;
+  logger.info(
+    `🔍 WhatsApp webhook verification - Mode: ${mode}, Token: ${token}, Expected: ${whatsappBot.VERIFY_TOKEN}`
+  );
 
   const verificationResult = whatsappBot.verifyWebhook(mode, token, challenge);
 

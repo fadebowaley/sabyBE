@@ -3,7 +3,6 @@ const httpStatus = require('http-status');
 const { Structures, Level } = require('../models');
 const ApiError = require('../utils/ApiError');
 
-
 const saveStructuresAndLevels = async (structures, tenantId, createdBy) => {
   const session = await mongoose.startSession();
   let useTransaction = false;
@@ -145,9 +144,8 @@ const saveStructuresAndLevels = async (structures, tenantId, createdBy) => {
   }
 };
 
-const createStructure = async (structureBody) => {
-  return Structures.createStructure(structureBody);
-};
+const createStructure = async (structureBody) =>
+  Structures.createStructure(structureBody);
 
 /**
  * Get structure by id
@@ -218,21 +216,17 @@ const deleteStructureById = async (structureId) => {
  * @returns {Promise<QueryResult>}
  */
 
-
 const queryStructures = async (filter, options) => {
   const structure = await Structures.paginate(filter, options);
   return structure;
 };
-
 
 /**
  * Get structures by type
  * @param {string} type - Structure type
  * @returns {Promise<Array<Structure>>}
  */
-const getStructuresByType = async (type) => {
-  return Structures.find({ type });
-};
+const getStructuresByType = async (type) => Structures.find({ type });
 
 /**
  * Get parent structure
@@ -252,9 +246,8 @@ const getParentStructure = async (structureId) => {
  * @param {ObjectId} structureId
  * @returns {Promise<Array<Structure>>}
  */
-const getChildStructures = async (structureId) => {
-  return Structure.find({ parentId: structureId });
-};
+const getChildStructures = async (structureId) =>
+  Structure.find({ parentId: structureId });
 
 /**
  * Move structure to new parent

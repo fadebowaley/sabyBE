@@ -29,9 +29,8 @@ const createProfile = async (profileBody) => {
  * @param {ObjectId} nodeId
  * @returns {Promise<ChurchProfile>}
  */
-const getProfileByNodeId = async (nodeId) => {
-  return ChurchProfile.findOne({ church: nodeId }).populate('church');
-};
+const getProfileByNodeId = async (nodeId) =>
+  ChurchProfile.findOne({ church: nodeId }).populate('church');
 
 /**
  * Get profile by ID
@@ -101,10 +100,9 @@ const upsertProfile = async (nodeId, profileData) => {
   if (existingProfile) {
     // Update existing profile
     return updateProfileById(existingProfile._id, profileData);
-  } else {
-    // Create new profile
-    return createProfile(profileData);
   }
+  // Create new profile
+  return createProfile(profileData);
 };
 
 module.exports = {
@@ -115,4 +113,3 @@ module.exports = {
   deleteProfileById,
   upsertProfile,
 };
-

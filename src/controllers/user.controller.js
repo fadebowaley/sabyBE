@@ -4,29 +4,32 @@ const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { userService } = require('../services');
 
-//Function to create users by owner Profile
+// Function to create users by owner Profile
 const ownerCreate = catchAsync(async (req, res) => {
   req.body.createdBy = req.user._id; // 🔐 enforce ownership context
   const user = await userService.ownerCreate(req.body);
   res.status(httpStatus.CREATED).send(user);
 });
 
-//Function to create SabyUser (Global Admin)
+// Function to create SabyUser (Global Admin)
 const createSabyUser = catchAsync(async (req, res) => {
   const user = await userService.createSabyUser(req.body);
   res.status(httpStatus.CREATED).send(user);
 });
 
-
 // Function to bulk create users
 const bulkCreate = catchAsync(async (req, res) => {
   const createdBy = req.user.id;
-  const tenantId = req.user.tenantId;
-   console.log(req.user)
+  const { tenantId } = req.user;
+  console.log(req.user);
   // Validate that createdBy is a valid ObjectId if required
 
   // Call the bulkCreate method from the user service
-  const { success: createdUsers, errors, summary } = await userService.bulkCreate(req.body, createdBy, tenantId);
+  const {
+    success: createdUsers,
+    errors,
+    summary,
+  } = await userService.bulkCreate(req.body, createdBy, tenantId);
 
   // Return the response
   if (createdUsers.length > 0 || errors.length > 0) {
@@ -38,9 +41,10 @@ const bulkCreate = catchAsync(async (req, res) => {
     });
   }
   // If no users were created or errors exist
-  res.status(httpStatus.BAD_REQUEST).send({ message: 'No users were created or all had errors', errors });
+  res
+    .status(httpStatus.BAD_REQUEST)
+    .send({ message: 'No users were created or all had errors', errors });
 });
-
 
 // Function to soft delete users by tenantId and isOwner flag
 const bulkDelete = catchAsync(async (req, res) => {
@@ -48,15 +52,22 @@ const bulkDelete = catchAsync(async (req, res) => {
 
   // Validate if tenantId is provided
   if (!tenantId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Tenant ID is required for deletion');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Tenant ID is required for deletion'
+    );
   }
 
   // Call the service to perform the bulk soft delete
-  const { successReport, errorReport } = await userService.bulkSoftDeleteByTenantId(tenantId);
+  const { successReport, errorReport } =
+    await userService.bulkSoftDeleteByTenantId(tenantId);
 
   // If no users were soft-deleted, return an error
   if (successReport.length === 0 && errorReport.length === 0) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'No users found to soft delete for the provided tenant ID');
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'No users found to soft delete for the provided tenant ID'
+    );
   }
 
   // Return success response with report
@@ -72,14 +83,21 @@ const restoreUsers = catchAsync(async (req, res) => {
   const { tenantId } = req.body; // Expecting a single tenantId in the request body
 
   if (!tenantId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Tenant ID is required for restoring');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Tenant ID is required for restoring'
+    );
   }
   // Call the restore function in userService
-  const { restoredUsers, failedUsers } = await userService.restoreUsersByTenantId(tenantId);
+  const { restoredUsers, failedUsers } =
+    await userService.restoreUsersByTenantId(tenantId);
 
   // Check if any users were restored
   if (restoredUsers.length === 0) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'No soft-deleted users found with the provided tenant ID');
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'No soft-deleted users found with the provided tenant ID'
+    );
   }
 
   // Return success response with detailed report
@@ -95,7 +113,10 @@ const restoreUser = catchAsync(async (req, res) => {
   const { userId } = req.params; // Expecting a userId as a URL parameter
 
   if (!userId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'User ID is required for restoring');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'User ID is required for restoring'
+    );
   }
 
   // Call the restore function in userService
@@ -113,9 +134,15 @@ const restoreUser = catchAsync(async (req, res) => {
   });
 });
 
-//getting all users or users based on tenantid of owner
+// getting all users or users based on tenantid of owner
 const getUsers = catchAsync(async (req, res) => {
-  const filter = pick(req.query, ['firstname', 'lastname', 'userId', 'email', 'avatar']);
+  const filter = pick(req.query, [
+    'firstname',
+    'lastname',
+    'userId',
+    'email',
+    'avatar',
+  ]);
   const { q } = req.query;
 
   // If userId is passed (10-digit string), search by that field directly
@@ -126,7 +153,12 @@ const getUsers = catchAsync(async (req, res) => {
   if (q) {
     const regex = new RegExp(q, 'i'); // case-insensitive
     filter = {
-      $or: [{ firstname: regex }, { lastname: regex }, { email: regex }, { userId: regex }],
+      $or: [
+        { firstname: regex },
+        { lastname: regex },
+        { email: regex },
+        { userId: regex },
+      ],
     };
   }
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
@@ -136,14 +168,12 @@ const getUsers = catchAsync(async (req, res) => {
   console.log(
     `[getUsers] User: ${req.user.email}, isSaby: ${req.user.isSaby}, isSuper: ${req.user.isSuper}, isOwner: ${req.user.isOwner}, tenantId: ${req.user.tenantId}`
   );
-  
+
   const result = await userService.queryUsers(filter, options);
   res.send(result);
 });
 
-
-
-//Function to get a particular user
+// Function to get a particular user
 const getUser = catchAsync(async (req, res) => {
   const user = await userService.getUserById(req.params.userId);
   if (!user) {
@@ -151,7 +181,6 @@ const getUser = catchAsync(async (req, res) => {
   }
   res.send(user);
 });
-
 
 const updateUser = catchAsync(async (req, res) => {
   try {
@@ -183,7 +212,6 @@ const updateUser = catchAsync(async (req, res) => {
   }
 });
 
-
 const deleteUser = catchAsync(async (req, res) => {
   await userService.deleteUserById(req.params.userId);
   res.status(httpStatus.NO_CONTENT).send();
@@ -209,10 +237,9 @@ const getUserNodes = catchAsync(async (req, res) => {
   res.send(nodes);
 });
 
-
 const softDeleteUser = catchAsync(async (req, res) => {
   const { userId } = req.params; // Get the userId from URL parameters
-  console.log('user-look', userId)
+  console.log('user-look', userId);
   const { deletedUser, error } = await userService.softDeleteUserById(userId);
   if (error) {
     throw new ApiError(httpStatus.NOT_FOUND, error);
@@ -223,7 +250,6 @@ const softDeleteUser = catchAsync(async (req, res) => {
     deletedUser,
   });
 });
-
 
 const assignRoles = catchAsync(async (req, res) => {
   const userRole = await userService.assignRoles(req.params.id, req.body.roles);

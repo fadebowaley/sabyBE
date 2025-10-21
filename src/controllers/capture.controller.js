@@ -12,7 +12,9 @@ const createCapture = catchAsync(async (req, res) => {
 
 // Bulk insert captures
 const bulkInsertCaptures = catchAsync(async (req, res) => {
-  const captures = await captureService.bulkInsertCaptures(req.body.capturesArray);
+  const captures = await captureService.bulkInsertCaptures(
+    req.body.capturesArray
+  );
   res.status(httpStatus.CREATED).json({
     message: `${captures.length} captures successfully inserted.`,
     data: captures,
@@ -38,13 +40,18 @@ const queryCaptures = catchAsync(async (req, res) => {
 
 // Get captures by datapoint
 const getCapturesByDatapoint = catchAsync(async (req, res) => {
-  const captures = await captureService.getCapturesByDatapoint(req.params.datapointId);
+  const captures = await captureService.getCapturesByDatapoint(
+    req.params.datapointId
+  );
   res.send(captures);
 });
 
 // Update a capture by ID
 const updateCaptureById = catchAsync(async (req, res) => {
-  const updated = await captureService.updateCaptureById(req.params.captureId, req.body);
+  const updated = await captureService.updateCaptureById(
+    req.params.captureId,
+    req.body
+  );
   res.send(updated);
 });
 
@@ -56,7 +63,7 @@ const deleteCaptureById = catchAsync(async (req, res) => {
 
 // Delete all captures for a tenant
 const deleteAllCapturesByTenant = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
+  const { tenantId } = req.user;
   const result = await captureService.deleteAllCapturesByTenant(tenantId);
   res.status(httpStatus.OK).json({
     message: result.message,
@@ -66,7 +73,9 @@ const deleteAllCapturesByTenant = catchAsync(async (req, res) => {
 
 // Export captures by datapoint
 const exportCapturesByDatapoint = catchAsync(async (req, res) => {
-  const exportData = await captureService.exportCapturesByDatapoint(req.params.datapointId);
+  const exportData = await captureService.exportCapturesByDatapoint(
+    req.params.datapointId
+  );
   res.send(exportData);
 });
 

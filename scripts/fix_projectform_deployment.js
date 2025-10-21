@@ -8,7 +8,7 @@ async function fixProjectFormDeployment() {
   const projectId = 'proj_EMAIL_INGESTION_TEST_1753867697280';
 
   const updateResult = await ProjectForm.findOneAndUpdate(
-    { projectId: projectId },
+    { projectId },
     {
       $set: {
         status: 'active',
@@ -24,7 +24,10 @@ async function fixProjectFormDeployment() {
     console.log('   - Project ID:', updateResult.projectId);
     console.log('   - Status:', updateResult.status);
     console.log('   - Deployed:', updateResult.deployed);
-    console.log('   - Metadata.deploymentStatus:', updateResult.metadata?.deploymentStatus);
+    console.log(
+      '   - Metadata.deploymentStatus:',
+      updateResult.metadata?.deploymentStatus
+    );
   } else {
     console.log('❌ ProjectForm not found:', projectId);
   }

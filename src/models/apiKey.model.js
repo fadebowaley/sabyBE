@@ -123,7 +123,6 @@ apiKeySchema.plugin(paginate);
  * @typedef ApiKey
  */
 
-
 // models/apiKey.model.js
 apiKeySchema.statics.generateKey = async function ({
   tenantId,
@@ -176,8 +175,6 @@ apiKeySchema.statics.generateKey = async function ({
 
   return { rawKey, keyDoc };
 };
-
-
 
 const ApiKey = mongoose.model('ApiKey', apiKeySchema);
 

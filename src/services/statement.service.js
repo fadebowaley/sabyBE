@@ -36,9 +36,8 @@ const createStatement = async (statementBody, userId) => {
  * @param {number} [options.page] - Current page (default = 1)
  * @returns {Promise<QueryResult>}
  */
-const queryStatements = async (filter, options) => {
-  return Statement.paginate(filter, options);
-};
+const queryStatements = async (filter, options) =>
+  Statement.paginate(filter, options);
 
 /**
  * Get statement by ID

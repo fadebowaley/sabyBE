@@ -95,11 +95,17 @@ const exportWaitlist = catchAsync(async (req, res) => {
 
   if (format === 'csv') {
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=waitlist-export-${Date.now()}.csv`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=waitlist-export-${Date.now()}.csv`
+    );
     res.send(data);
   } else {
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename=waitlist-export-${Date.now()}.json`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=waitlist-export-${Date.now()}.json`
+    );
     res.send({
       success: true,
       count: data.length,

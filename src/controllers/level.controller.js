@@ -59,7 +59,10 @@ const updateLevelById = catchAsync(async (req, res) => {
   }
   // SECURITY: Ensure tenantId cannot be changed
   req.body.tenantId = req.user.tenantId;
-  const updatedLevel = await levelService.updateLevelById(req.params.levelId, req.body);
+  const updatedLevel = await levelService.updateLevelById(
+    req.params.levelId,
+    req.body
+  );
   res.send(updatedLevel);
 });
 
@@ -126,7 +129,10 @@ const getChildLevels = catchAsync(async (req, res) => {
 
 // Move level to a new parent
 const moveLevelToParent = catchAsync(async (req, res) => {
-  const updatedLevel = await levelService.moveLevelToParent(req.params.levelId, req.body.parentId);
+  const updatedLevel = await levelService.moveLevelToParent(
+    req.params.levelId,
+    req.body.parentId
+  );
   res.send(updatedLevel);
 });
 
@@ -147,10 +153,16 @@ const getNextLevel = catchAsync(async (req, res) => {
   const { currentRank, tenantId } = req.query;
 
   if (!currentRank || !tenantId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'currentRank and tenantId are required');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'currentRank and tenantId are required'
+    );
   }
 
-  const nextLevel = await levelService.getNextLevel(parseInt(currentRank), tenantId);
+  const nextLevel = await levelService.getNextLevel(
+    parseInt(currentRank),
+    tenantId
+  );
   res.send(nextLevel);
 });
 
@@ -159,10 +171,16 @@ const getPreviousLevel = catchAsync(async (req, res) => {
   const { currentRank, tenantId } = req.query;
 
   if (!currentRank || !tenantId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'currentRank and tenantId are required');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'currentRank and tenantId are required'
+    );
   }
 
-  const previousLevel = await levelService.getPreviousLevel(parseInt(currentRank), tenantId);
+  const previousLevel = await levelService.getPreviousLevel(
+    parseInt(currentRank),
+    tenantId
+  );
   res.send(previousLevel);
 });
 

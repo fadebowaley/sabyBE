@@ -25,10 +25,12 @@ const logger = require('../config/logger');
  * }
  */
 
-
 const register = catchAsync(async (req, res) => {
   // Create user with otpVerified = false
-  const user = await userService.createUser({ ...req.body, otpVerified: false });
+  const user = await userService.createUser({
+    ...req.body,
+    otpVerified: false,
+  });
   // Generate and send OTP
   await authService.sendUserOtp(user);
   // Do not send tokens yet — user must verify OTP first
@@ -41,9 +43,6 @@ const register = catchAsync(async (req, res) => {
     },
   });
 });
-
-
-
 
 /**
  * Login with email and password
@@ -62,7 +61,7 @@ const login = catchAsync(async (req, res) => {
   const { email, password } = req.body;
   const user = await authService.loginUserWithEmailAndPassword(email, password);
   const tokens = await tokenService.generateAuthTokens(user);
-  
+
   // Send comprehensive user data for frontend
   const userResponse = {
     id: user.id,
@@ -85,7 +84,7 @@ const login = catchAsync(async (req, res) => {
     createdAt: user.createdAt,
     roles: user.roles,
   };
-  
+
   res.send({ user: userResponse, tokens });
 });
 
@@ -131,7 +130,9 @@ const refreshTokens = catchAsync(async (req, res) => {
  * }
  */
 const forgotPassword = catchAsync(async (req, res) => {
-  const resetPasswordToken = await tokenService.generateResetPasswordToken(req.body.email);
+  const resetPasswordToken = await tokenService.generateResetPasswordToken(
+    req.body.email
+  );
   await emailService.sendResetPasswordEmail(req.body.email, resetPasswordToken);
   res.status(httpStatus.NO_CONTENT).send();
 });
@@ -160,7 +161,9 @@ const resetPassword = catchAsync(async (req, res) => {
  * Authorization: Bearer <access_token>
  */
 const sendVerificationEmail = catchAsync(async (req, res) => {
-  const verifyEmailToken = await tokenService.generateVerifyEmailToken(req.user);
+  const verifyEmailToken = await tokenService.generateVerifyEmailToken(
+    req.user
+  );
   await emailService.sendVerificationEmail(req.user.email, verifyEmailToken);
   res.status(httpStatus.NO_CONTENT).send();
 });
@@ -175,7 +178,6 @@ const verifyEmail = catchAsync(async (req, res) => {
   await authService.verifyEmail(req.query.token);
   res.status(httpStatus.NO_CONTENT).send();
 });
-
 
 /**
  * Verify OTP controller
@@ -212,8 +214,6 @@ const verifyOtp = catchAsync(async (req, res) => {
   });
 });
 
-
-
 /**
  * Resend OTP controller
  */
@@ -227,11 +227,10 @@ const resendOtp = catchAsync(async (req, res) => {
   if (user.otpVerified) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'User is already verified');
   }
-  const result  = await authService.sendUserOtp(user);
-  console.log(result)
+  const result = await authService.sendUserOtp(user);
+  console.log(result);
   res.status(httpStatus.OK).send({ message: 'OTP resent successfully' });
 });
-
 
 module.exports = {
   register,

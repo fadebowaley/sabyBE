@@ -42,10 +42,18 @@ const getSubmissionsTimeline = catchAsync(async (req, res) => {
       trend_analysis: {
         first_period: result[0]?.period || null,
         last_period: result[result.length - 1]?.period || null,
-        total_submissions: result.reduce((sum, row) => sum + (row.total_count || 0), 0),
-        avg_trend_value: result.length > 0 
-          ? Math.round(result.reduce((sum, row) => sum + (row.trend_value || 0), 0) / result.length * 100) / 100
-          : 0,
+        total_submissions: result.reduce(
+          (sum, row) => sum + (row.total_count || 0),
+          0
+        ),
+        avg_trend_value:
+          result.length > 0
+            ? Math.round(
+                (result.reduce((sum, row) => sum + (row.trend_value || 0), 0) /
+                  result.length) *
+                  100
+              ) / 100
+            : 0,
       },
     },
   });
@@ -79,12 +87,28 @@ const getComplianceTimeline = catchAsync(async (req, res) => {
       compliance_analysis: {
         first_period: result[0]?.period || null,
         last_period: result[result.length - 1]?.period || null,
-        avg_completeness: result.length > 0 
-          ? Math.round(result.reduce((sum, row) => sum + (row.avg_completeness || 0), 0) / result.length * 100) / 100
-          : 0,
-        avg_completion_rate: result.length > 0 
-          ? Math.round(result.reduce((sum, row) => sum + (row.completion_rate || 0), 0) / result.length * 100) / 100
-          : 0,
+        avg_completeness:
+          result.length > 0
+            ? Math.round(
+                (result.reduce(
+                  (sum, row) => sum + (row.avg_completeness || 0),
+                  0
+                ) /
+                  result.length) *
+                  100
+              ) / 100
+            : 0,
+        avg_completion_rate:
+          result.length > 0
+            ? Math.round(
+                (result.reduce(
+                  (sum, row) => sum + (row.completion_rate || 0),
+                  0
+                ) /
+                  result.length) *
+                  100
+              ) / 100
+            : 0,
       },
     },
   });
@@ -118,10 +142,18 @@ const getValidationTimeline = catchAsync(async (req, res) => {
       validation_analysis: {
         first_period: result[0]?.period || null,
         last_period: result[result.length - 1]?.period || null,
-        avg_success_rate: result.length > 0 
-          ? Math.round(result.reduce((sum, row) => sum + (row.success_rate || 0), 0) / result.length * 100) / 100
-          : 0,
-        total_validations: result.reduce((sum, row) => sum + (row.total_validations || 0), 0),
+        avg_success_rate:
+          result.length > 0
+            ? Math.round(
+                (result.reduce((sum, row) => sum + (row.success_rate || 0), 0) /
+                  result.length) *
+                  100
+              ) / 100
+            : 0,
+        total_validations: result.reduce(
+          (sum, row) => sum + (row.total_validations || 0),
+          0
+        ),
       },
     },
   });
@@ -131,11 +163,7 @@ const getValidationTimeline = catchAsync(async (req, res) => {
  * Get seasonal patterns analysis
  */
 const getSeasonalPatterns = catchAsync(async (req, res) => {
-  const filters = pick(req.query, [
-    'tenant_id',
-    'project_id',
-    'years_back',
-  ]);
+  const filters = pick(req.query, ['tenant_id', 'project_id', 'years_back']);
 
   // Set default tenant_id from auth if not provided
   if (!filters.tenant_id && req.user?.tenantId) {
@@ -151,16 +179,40 @@ const getSeasonalPatterns = catchAsync(async (req, res) => {
       total_months: result.length,
       filters_applied: filters,
       seasonal_analysis: {
-        high_activity_months: result.filter(r => r.activity_level === 'high_activity').length,
-        low_activity_months: result.filter(r => r.activity_level === 'low_activity').length,
-        high_performance_months: result.filter(r => r.performance_level === 'high_performance').length,
-        low_performance_months: result.filter(r => r.performance_level === 'low_performance').length,
-        avg_submissions: result.length > 0 
-          ? Math.round(result.reduce((sum, row) => sum + (row.avg_submissions || 0), 0) / result.length * 100) / 100
-          : 0,
-        avg_compliance: result.length > 0 
-          ? Math.round(result.reduce((sum, row) => sum + (row.avg_compliance || 0), 0) / result.length * 100) / 100
-          : 0,
+        high_activity_months: result.filter(
+          (r) => r.activity_level === 'high_activity'
+        ).length,
+        low_activity_months: result.filter(
+          (r) => r.activity_level === 'low_activity'
+        ).length,
+        high_performance_months: result.filter(
+          (r) => r.performance_level === 'high_performance'
+        ).length,
+        low_performance_months: result.filter(
+          (r) => r.performance_level === 'low_performance'
+        ).length,
+        avg_submissions:
+          result.length > 0
+            ? Math.round(
+                (result.reduce(
+                  (sum, row) => sum + (row.avg_submissions || 0),
+                  0
+                ) /
+                  result.length) *
+                  100
+              ) / 100
+            : 0,
+        avg_compliance:
+          result.length > 0
+            ? Math.round(
+                (result.reduce(
+                  (sum, row) => sum + (row.avg_compliance || 0),
+                  0
+                ) /
+                  result.length) *
+                  100
+              ) / 100
+            : 0,
       },
     },
   });
@@ -170,11 +222,7 @@ const getSeasonalPatterns = catchAsync(async (req, res) => {
  * Get growth metrics analysis
  */
 const getGrowthMetrics = catchAsync(async (req, res) => {
-  const filters = pick(req.query, [
-    'tenant_id',
-    'project_id',
-    'period_months',
-  ]);
+  const filters = pick(req.query, ['tenant_id', 'project_id', 'period_months']);
 
   // Set default tenant_id from auth if not provided
   if (!filters.tenant_id && req.user?.tenantId) {
@@ -192,24 +240,44 @@ const getGrowthMetrics = catchAsync(async (req, res) => {
       growth_analysis: {
         first_month: result[0]?.month || null,
         last_month: result[result.length - 1]?.month || null,
-        avg_submission_growth: result.length > 0 
-          ? Math.round(result
-              .filter(r => r.submission_growth_rate !== null)
-              .reduce((sum, row) => sum + (row.submission_growth_rate || 0), 0) / 
-              result.filter(r => r.submission_growth_rate !== null).length * 100) / 100
-          : 0,
-        avg_node_growth: result.length > 0 
-          ? Math.round(result
-              .filter(r => r.node_growth_rate !== null)
-              .reduce((sum, row) => sum + (row.node_growth_rate || 0), 0) / 
-              result.filter(r => r.node_growth_rate !== null).length * 100) / 100
-          : 0,
-        avg_compliance_growth: result.length > 0 
-          ? Math.round(result
-              .filter(r => r.compliance_growth_rate !== null)
-              .reduce((sum, row) => sum + (row.compliance_growth_rate || 0), 0) / 
-              result.filter(r => r.compliance_growth_rate !== null).length * 100) / 100
-          : 0,
+        avg_submission_growth:
+          result.length > 0
+            ? Math.round(
+                (result
+                  .filter((r) => r.submission_growth_rate !== null)
+                  .reduce(
+                    (sum, row) => sum + (row.submission_growth_rate || 0),
+                    0
+                  ) /
+                  result.filter((r) => r.submission_growth_rate !== null)
+                    .length) *
+                  100
+              ) / 100
+            : 0,
+        avg_node_growth:
+          result.length > 0
+            ? Math.round(
+                (result
+                  .filter((r) => r.node_growth_rate !== null)
+                  .reduce((sum, row) => sum + (row.node_growth_rate || 0), 0) /
+                  result.filter((r) => r.node_growth_rate !== null).length) *
+                  100
+              ) / 100
+            : 0,
+        avg_compliance_growth:
+          result.length > 0
+            ? Math.round(
+                (result
+                  .filter((r) => r.compliance_growth_rate !== null)
+                  .reduce(
+                    (sum, row) => sum + (row.compliance_growth_rate || 0),
+                    0
+                  ) /
+                  result.filter((r) => r.compliance_growth_rate !== null)
+                    .length) *
+                  100
+              ) / 100
+            : 0,
       },
     },
   });

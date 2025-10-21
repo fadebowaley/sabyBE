@@ -34,5 +34,8 @@ userFormSettingsSchema.plugin(tenantPlugin);
 /**
  * @typedef UserFormSettings
  */
-const UserFormSettings = mongoose.model('UserFormSettings', userFormSettingsSchema);
+const UserFormSettings = mongoose.model(
+  'UserFormSettings',
+  userFormSettingsSchema
+);
 module.exports = UserFormSettings;

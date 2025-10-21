@@ -12,7 +12,9 @@ const createProgram = catchAsync(async (req, res) => {
 
 // Bulk import programs
 const bulkImportPrograms = catchAsync(async (req, res) => {
-  const programs = await programService.bulkImportPrograms(req.body.programsArray);
+  const programs = await programService.bulkImportPrograms(
+    req.body.programsArray
+  );
   res.status(httpStatus.CREATED).json({
     message: `${programs.length} programs successfully created.`,
     data: programs,
@@ -38,7 +40,10 @@ const getProgram = catchAsync(async (req, res) => {
 
 // Update a program by ID
 const updateProgram = catchAsync(async (req, res) => {
-  const updated = await programService.updateProgramById(req.params.programId, req.body);
+  const updated = await programService.updateProgramById(
+    req.params.programId,
+    req.body
+  );
   res.send(updated);
 });
 
@@ -50,7 +55,7 @@ const deleteProgram = catchAsync(async (req, res) => {
 
 // Delete all programs for a specific tenant or condition
 const deleteAllPrograms = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
+  const { tenantId } = req.user;
   const result = await programService.deleteAllPrograms(tenantId);
   res.status(httpStatus.OK).json({
     message: `All programs for tenant ${tenantId} deleted.`,
@@ -60,7 +65,10 @@ const deleteAllPrograms = catchAsync(async (req, res) => {
 
 // Assign a program to a node, user, or other entity
 const assignToProgram = catchAsync(async (req, res) => {
-  const updatedProgram = await programService.assignToProgram(req.params.programId, req.body);
+  const updatedProgram = await programService.assignToProgram(
+    req.params.programId,
+    req.body
+  );
   res.send(updatedProgram);
 });
 

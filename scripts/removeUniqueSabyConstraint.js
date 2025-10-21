@@ -20,7 +20,7 @@ const removeUniqueConstraint = async () => {
     await mongoose.connect(config.mongoose.url, config.mongoose.options);
     console.log('✅ Connected to MongoDB\n');
 
-    const db = mongoose.connection.db;
+    const { db } = mongoose.connection;
     const collection = db.collection('users');
 
     // Check existing indexes

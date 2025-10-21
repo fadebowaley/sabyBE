@@ -18,7 +18,7 @@ const sessionManager = require('./session');
 
 // Create bot instance
 const bot = new TelegramBot(config.telegram.botToken, {
-  polling: config.env === 'development' ? true : false,
+  polling: config.env === 'development',
   webHook: config.env === 'production' ? { port: 8443 } : false,
 });
 
@@ -35,7 +35,9 @@ async function initializeBot() {
 
     // Set up webhook for production
     if (config.env === 'production' && config.telegram.webhookUrl) {
-      await bot.setWebHook(`${config.telegram.webhookUrl}/bot${config.telegram.botToken}`);
+      await bot.setWebHook(
+        `${config.telegram.webhookUrl}/bot${config.telegram.botToken}`
+      );
       logger.info('✅ Webhook set successfully');
     }
 
@@ -60,7 +62,10 @@ async function getOrCreateSession(chatId) {
   try {
     return await sessionManager.getOrCreate(chatId);
   } catch (error) {
-    logger.error(`❌ Error managing session for chat ${chatId}:`, error.message);
+    logger.error(
+      `❌ Error managing session for chat ${chatId}:`,
+      error.message
+    );
     throw error;
   }
 }
@@ -97,12 +102,18 @@ bot.onText(/\/start/, async (msg) => {
     await session.save();
 
     // Send enhanced welcome message
-    await telegramNotificationService.sendEnhancedWelcomeMessage(chatId, userName);
+    await telegramNotificationService.sendEnhancedWelcomeMessage(
+      chatId,
+      userName
+    );
 
     logger.info(`✅ Enhanced welcome message sent to chat ${chatId}`);
   } catch (error) {
     logger.error(`❌ Error handling /start for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to start bot. Please try again.');
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to start bot. Please try again.'
+    );
   }
 });
 
@@ -119,7 +130,10 @@ bot.onText(/\/help/, async (msg) => {
     logger.info(`✅ Help message sent to chat ${chatId}`);
   } catch (error) {
     logger.error(`❌ Error handling /help for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to show help. Please try again.');
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to show help. Please try again.'
+    );
   }
 });
 
@@ -131,12 +145,20 @@ bot.onText(/\/support/, async (msg) => {
   const userName = msg.from.first_name || msg.from.username || 'User';
 
   try {
-    logger.info(`🆘 /support command received from chat ${chatId} (${userName})`);
+    logger.info(
+      `🆘 /support command received from chat ${chatId} (${userName})`
+    );
     await telegramNotificationService.sendSupportMessage(chatId, userName);
     logger.info(`✅ Support message sent to chat ${chatId}`);
   } catch (error) {
-    logger.error(`❌ Error handling /support for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to show support. Please try again.');
+    logger.error(
+      `❌ Error handling /support for chat ${chatId}:`,
+      error.message
+    );
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to show support. Please try again.'
+    );
   }
 });
 
@@ -148,12 +170,20 @@ bot.onText(/\/status/, async (msg) => {
   const userName = msg.from.first_name || msg.from.username || 'User';
 
   try {
-    logger.info(`📊 /status command received from chat ${chatId} (${userName})`);
+    logger.info(
+      `📊 /status command received from chat ${chatId} (${userName})`
+    );
     await telegramNotificationService.sendStatusMessage(chatId, userName);
     logger.info(`✅ Status message sent to chat ${chatId}`);
   } catch (error) {
-    logger.error(`❌ Error handling /status for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to show status. Please try again.');
+    logger.error(
+      `❌ Error handling /status for chat ${chatId}:`,
+      error.message
+    );
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to show status. Please try again.'
+    );
   }
 });
 
@@ -170,7 +200,10 @@ bot.onText(/\/menu/, async (msg) => {
     logger.info(`✅ Main menu sent to chat ${chatId}`);
   } catch (error) {
     logger.error(`❌ Error handling /menu for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to show menu. Please try again.');
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to show menu. Please try again.'
+    );
   }
 });
 
@@ -187,7 +220,10 @@ bot.onText(/\/reset/, async (msg) => {
     logger.info(`✅ Reset confirmation sent to chat ${chatId}`);
   } catch (error) {
     logger.error(`❌ Error handling /reset for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to reset session. Please try again.');
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to reset session. Please try again.'
+    );
   }
 });
 
@@ -213,8 +249,14 @@ bot.onText(/\/cancel/, async (msg) => {
       'Operation cancelled. Type /start to begin again.'
     );
   } catch (error) {
-    logger.error(`❌ Error handling /cancel for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to cancel operation. Please try again.');
+    logger.error(
+      `❌ Error handling /cancel for chat ${chatId}:`,
+      error.message
+    );
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to cancel operation. Please try again.'
+    );
   }
 });
 
@@ -223,10 +265,12 @@ bot.onText(/\/cancel/, async (msg) => {
  */
 bot.on('contact', async (msg) => {
   const chatId = msg.chat.id;
-  const contact = msg.contact;
+  const { contact } = msg;
 
   try {
-    logger.info(`📱 Contact received from chat ${chatId} (${contact.phone_number})`);
+    logger.info(
+      `📱 Contact received from chat ${chatId} (${contact.phone_number})`
+    );
 
     // Update session with phone number
     const session = await getOrCreateSession(chatId);
@@ -236,8 +280,14 @@ bot.on('contact', async (msg) => {
     // Handle phone contact through auth handler
     await authHandler.handlePhoneContact(bot, msg, session);
   } catch (error) {
-    logger.error(`❌ Error handling contact for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to process phone number. Please try again.');
+    logger.error(
+      `❌ Error handling contact for chat ${chatId}:`,
+      error.message
+    );
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to process phone number. Please try again.'
+    );
   }
 });
 
@@ -246,7 +296,7 @@ bot.on('contact', async (msg) => {
  */
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
-  const text = msg.text;
+  const { text } = msg;
 
   // Skip commands and non-text messages
   if (!text || text.startsWith('/')) return;
@@ -267,13 +317,19 @@ bot.on('message', async (msg) => {
       await session.save();
 
       // Send welcome message with phone number request
-      await telegramNotificationService.sendWelcomeMessage(chatId, msg.from.first_name);
+      await telegramNotificationService.sendWelcomeMessage(
+        chatId,
+        msg.from.first_name
+      );
       return;
     }
 
     if (text === '📞 Contact Support') {
       logger.info(`📞 Contact Support button pressed for chat ${chatId}`);
-      await telegramNotificationService.sendSupportMessage(chatId, msg.from.first_name);
+      await telegramNotificationService.sendSupportMessage(
+        chatId,
+        msg.from.first_name
+      );
       return;
     }
 
@@ -309,19 +365,28 @@ Available: 9 AM - 6 PM WAT (Monday - Friday)`
 
     if (text === '🏠 Back to Menu') {
       logger.info(`🏠 Back to Menu button pressed for chat ${chatId}`);
-      await telegramNotificationService.sendMainMenu(chatId, msg.from.first_name);
+      await telegramNotificationService.sendMainMenu(
+        chatId,
+        msg.from.first_name
+      );
       return;
     }
 
     if (text === '🏠 Main Menu') {
       logger.info(`🏠 Main Menu button pressed for chat ${chatId}`);
-      await telegramNotificationService.sendMainMenu(chatId, msg.from.first_name);
+      await telegramNotificationService.sendMainMenu(
+        chatId,
+        msg.from.first_name
+      );
       return;
     }
 
     if (text === '📊 My Status') {
       logger.info(`📊 My Status button pressed for chat ${chatId}`);
-      await telegramNotificationService.sendStatusMessage(chatId, msg.from.first_name);
+      await telegramNotificationService.sendStatusMessage(
+        chatId,
+        msg.from.first_name
+      );
       return;
     }
 
@@ -333,7 +398,10 @@ Available: 9 AM - 6 PM WAT (Monday - Friday)`
 
     if (text === '🔄 Reset Session') {
       logger.info(`🔄 Reset Session button pressed for chat ${chatId}`);
-      await telegramNotificationService.sendResetConfirmation(chatId, msg.from.first_name);
+      await telegramNotificationService.sendResetConfirmation(
+        chatId,
+        msg.from.first_name
+      );
       return;
     }
 
@@ -360,7 +428,10 @@ Use /start to begin a new form submission.`
 
     if (text === '❌ Cancel') {
       logger.info(`❌ Reset cancelled for chat ${chatId}`);
-      await telegramNotificationService.sendMainMenu(chatId, msg.from.first_name);
+      await telegramNotificationService.sendMainMenu(
+        chatId,
+        msg.from.first_name
+      );
       return;
     }
 
@@ -373,14 +444,17 @@ Use /start to begin a new form submission.`
     if (session && session.userId && session.tenantId) {
       try {
         const projectFormService = require('../../services/projectForm.service');
-        const availableProjects = await projectFormService.getProjectFormsByTenant(session.tenantId, {
-          status: 'active',
-          'metadata.deploymentStatus': 'published',
-        });
+        const availableProjects =
+          await projectFormService.getProjectFormsByTenant(session.tenantId, {
+            status: 'active',
+            'metadata.deploymentStatus': 'published',
+          });
 
         if (availableProjects && availableProjects.results) {
           const selectedProject = availableProjects.results.find(
-            (project) => project.configuration?.projectName === text || project.projectId === text
+            (project) =>
+              project.configuration?.projectName === text ||
+              project.projectId === text
           );
 
           if (selectedProject) {
@@ -394,8 +468,15 @@ Use /start to begin a new form submission.`
             await session.save();
 
             // Get the first question
-            const projectForm = await projectFormService.getProjectFormByProjectId(selectedProject.projectId);
-            if (projectForm && projectForm.elements && projectForm.elements.length > 0) {
+            const projectForm =
+              await projectFormService.getProjectFormByProjectId(
+                selectedProject.projectId
+              );
+            if (
+              projectForm &&
+              projectForm.elements &&
+              projectForm.elements.length > 0
+            ) {
               await telegramNotificationService.sendFormQuestion(
                 chatId,
                 projectForm.elements[0],
@@ -403,13 +484,19 @@ Use /start to begin a new form submission.`
                 projectForm.elements.length
               );
             } else {
-              await telegramNotificationService.sendErrorMessage(chatId, 'No form questions available for this project.');
+              await telegramNotificationService.sendErrorMessage(
+                chatId,
+                'No form questions available for this project.'
+              );
             }
             return;
           }
         }
       } catch (error) {
-        logger.error(`❌ Error checking project selection for chat ${chatId}:`, error.message);
+        logger.error(
+          `❌ Error checking project selection for chat ${chatId}:`,
+          error.message
+        );
       }
     }
 
@@ -442,12 +529,21 @@ Use /start to begin a new form submission.`
         // Unknown status - reset to authentication
         session.status = 'authenticating';
         await session.save();
-        await telegramNotificationService.sendWelcomeMessage(chatId, msg.from.first_name);
+        await telegramNotificationService.sendWelcomeMessage(
+          chatId,
+          msg.from.first_name
+        );
         break;
     }
   } catch (error) {
-    logger.error(`❌ Error handling message for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to process message. Please try again.');
+    logger.error(
+      `❌ Error handling message for chat ${chatId}:`,
+      error.message
+    );
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to process message. Please try again.'
+    );
   }
 });
 
@@ -465,11 +561,17 @@ bot.on('photo', async (msg) => {
     if (session.status === 'filling_form') {
       await formHandler.handleFileUpload(bot, msg, session, 'photo');
     } else {
-      await telegramNotificationService.sendErrorMessage(chatId, 'Please complete the form first before uploading files.');
+      await telegramNotificationService.sendErrorMessage(
+        chatId,
+        'Please complete the form first before uploading files.'
+      );
     }
   } catch (error) {
     logger.error(`❌ Error handling photo for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to process photo. Please try again.');
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to process photo. Please try again.'
+    );
   }
 });
 
@@ -487,11 +589,20 @@ bot.on('document', async (msg) => {
     if (session.status === 'filling_form') {
       await formHandler.handleFileUpload(bot, msg, session, 'document');
     } else {
-      await telegramNotificationService.sendErrorMessage(chatId, 'Please complete the form first before uploading files.');
+      await telegramNotificationService.sendErrorMessage(
+        chatId,
+        'Please complete the form first before uploading files.'
+      );
     }
   } catch (error) {
-    logger.error(`❌ Error handling document for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to process document. Please try again.');
+    logger.error(
+      `❌ Error handling document for chat ${chatId}:`,
+      error.message
+    );
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to process document. Please try again.'
+    );
   }
 });
 

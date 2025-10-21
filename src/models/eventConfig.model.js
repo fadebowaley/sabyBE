@@ -1,8 +1,7 @@
 const mongoose = require('mongoose');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
-
-/***
+/** *
  *  Key Features:
 Attached to an Event
 Handles:

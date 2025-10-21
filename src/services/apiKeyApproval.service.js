@@ -64,13 +64,12 @@ const getPendingApprovals = async (filter = {}, options = {}) => {
  * @param {Object} options - Query options
  * @returns {Promise<QueryResult>}
  */
-const getApprovals = async (filter = {}, options = {}) => {
-  return ApiKeyApproval.paginate(filter, {
+const getApprovals = async (filter = {}, options = {}) =>
+  ApiKeyApproval.paginate(filter, {
     ...options,
     populate: 'apiKey requestedBy approvedBy rejectedBy',
     sortBy: options.sortBy || 'createdAt:desc',
   });
-};
 
 /**
  * Approve API key (SabyUser only)

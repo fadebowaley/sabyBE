@@ -89,4 +89,3 @@ const verifyAndFixPassword = async () => {
 
 // Run the script
 verifyAndFixPassword();
-

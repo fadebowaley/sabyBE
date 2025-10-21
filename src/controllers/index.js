@@ -12,4 +12,4 @@ module.exports.appController = require('./app.controller');
 module.exports.adminController = require('./admin.controller');
 module.exports.storageController = require('./storage.controller');
 module.exports.storageFolderController = require('./storageFolder.controller');
-module.exports.submissionController = require('./submission.controller')
+module.exports.submissionController = require('./submission.controller');

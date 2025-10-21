@@ -7,9 +7,7 @@ const ApiError = require('../utils/ApiError');
  * @param {Object} levelBody
  * @returns {Promise<Level>}
  */
-const createLevel = async (levelBody) => {
-  return Level.createLevel(levelBody);
-};
+const createLevel = async (levelBody) => Level.createLevel(levelBody);
 
 /**
  * Get level by id
@@ -49,17 +47,24 @@ const updateLevelById = async (levelId, updateBody) => {
   // Require tenantId in updateBody for this operation
   const { tenantId } = updateBody;
   if (!tenantId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId is required to update a level');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'tenantId is required to update a level'
+    );
   }
 
   // Find the level by both tenantId and _id (levelId)
   const level = await Level.findOne({ _id: levelId, tenantId });
   if (!level) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Level not found for the given tenant');
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'Level not found for the given tenant'
+    );
   }
 
   // If updating rank or isSpecial
-  const isSpecial = updateBody.isSpecial !== undefined ? updateBody.isSpecial : level.isSpecial;
+  const isSpecial =
+    updateBody.isSpecial !== undefined ? updateBody.isSpecial : level.isSpecial;
   const rank = updateBody.rank !== undefined ? updateBody.rank : level.rank;
 
   if (!isSpecial) {
@@ -72,7 +77,10 @@ const updateLevelById = async (levelId, updateBody) => {
     });
 
     if (existing) {
-      throw new ApiError(httpStatus.BAD_REQUEST, 'Another non-special level with the same rank already exists for this tenant.');
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'Another non-special level with the same rank already exists for this tenant.'
+      );
     }
   }
 
@@ -102,18 +110,15 @@ const deleteLevelById = async (levelId) => {
  * @returns {Promise<QueryResult>}
  */
 
-const queryLevels = async (filter, options) => {
-  return Level.paginate(filter, options);
-};
+const queryLevels = async (filter, options) => Level.paginate(filter, options);
 
 /**
  * Get levels by hierarchy
  * @param {number} hierarchy - Hierarchy level
  * @returns {Promise<Array<Level>>}
  */
-const getLevelsByHierarchy = async (tenantId, hierarchy) => {
-  return Level.getLevelsByHierarchy(tenantId, hierarchy);
-};
+const getLevelsByHierarchy = async (tenantId, hierarchy) =>
+  Level.getLevelsByHierarchy(tenantId, hierarchy);
 
 /**
  * Get parent level
@@ -133,9 +138,7 @@ const getParentLevel = async (levelId) => {
  * @param {ObjectId} levelId
  * @returns {Promise<Array<Level>>}
  */
-const getChildLevels = async (levelId) => {
-  return Level.find({ parentId: levelId });
-};
+const getChildLevels = async (levelId) => Level.find({ parentId: levelId });
 
 /**
  * Move level to new parent
@@ -189,11 +192,14 @@ const getNextLevel = async (currentRank, tenantId) => {
   const nextLevel = await Level.findOne({
     tenantId,
     rank: currentRank + 1,
-    deletedAt: null
+    deletedAt: null,
   });
 
   if (!nextLevel) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Next level not found in hierarchy');
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'Next level not found in hierarchy'
+    );
   }
 
   return nextLevel;
@@ -210,11 +216,14 @@ const getPreviousLevel = async (currentRank, tenantId) => {
   const previousLevel = await Level.findOne({
     tenantId,
     rank: currentRank - 1,
-    deletedAt: null
+    deletedAt: null,
   });
 
   if (!previousLevel) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Previous level not found in hierarchy');
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'Previous level not found in hierarchy'
+    );
   }
 
   return previousLevel;

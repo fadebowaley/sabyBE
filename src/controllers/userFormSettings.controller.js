@@ -5,7 +5,9 @@ const catchAsync = require('../utils/catchAsync');
 const { userFormSettingsService } = require('../services');
 
 const createUserFormSettings = catchAsync(async (req, res) => {
-  const settings = await userFormSettingsService.createUserFormSettings(req.body);
+  const settings = await userFormSettingsService.createUserFormSettings(
+    req.body
+  );
   res.status(httpStatus.CREATED).send(settings);
 });
 
@@ -14,12 +16,17 @@ const getUserFormSettings = catchAsync(async (req, res) => {
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
   options.populate = 'user';
 
-  const result = await userFormSettingsService.queryUserFormSettings(filter, options);
+  const result = await userFormSettingsService.queryUserFormSettings(
+    filter,
+    options
+  );
   res.send(result);
 });
 
 const getUserFormSettingsById = catchAsync(async (req, res) => {
-  const settings = await userFormSettingsService.getUserFormSettingsById(req.params.settingsId);
+  const settings = await userFormSettingsService.getUserFormSettingsById(
+    req.params.settingsId
+  );
   if (!settings) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User form settings not found');
   }
@@ -27,7 +34,9 @@ const getUserFormSettingsById = catchAsync(async (req, res) => {
 });
 
 const getUserFormSettingsByUserId = catchAsync(async (req, res) => {
-  const settings = await userFormSettingsService.getUserFormSettingsByUserId(req.params.userId);
+  const settings = await userFormSettingsService.getUserFormSettingsByUserId(
+    req.params.userId
+  );
   if (!settings) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User form settings not found');
   }
@@ -35,27 +44,40 @@ const getUserFormSettingsByUserId = catchAsync(async (req, res) => {
 });
 
 const updateUserFormSettings = catchAsync(async (req, res) => {
-  const settings = await userFormSettingsService.updateUserFormSettingsById(req.params.settingsId, req.body);
+  const settings = await userFormSettingsService.updateUserFormSettingsById(
+    req.params.settingsId,
+    req.body
+  );
   res.send(settings);
 });
 
 const updateUserFormSettingsByUserId = catchAsync(async (req, res) => {
-  const settings = await userFormSettingsService.updateUserFormSettingsByUserId(req.params.userId, req.body);
+  const settings = await userFormSettingsService.updateUserFormSettingsByUserId(
+    req.params.userId,
+    req.body
+  );
   res.send(settings);
 });
 
 const deleteUserFormSettings = catchAsync(async (req, res) => {
-  await userFormSettingsService.deleteUserFormSettingsById(req.params.settingsId);
+  await userFormSettingsService.deleteUserFormSettingsById(
+    req.params.settingsId
+  );
   res.status(httpStatus.NO_CONTENT).send();
 });
 
 const deleteUserFormSettingsByUserId = catchAsync(async (req, res) => {
-  await userFormSettingsService.deleteUserFormSettingsByUserId(req.params.userId);
+  await userFormSettingsService.deleteUserFormSettingsByUserId(
+    req.params.userId
+  );
   res.status(httpStatus.NO_CONTENT).send();
 });
 
 const upsertUserFormSettings = catchAsync(async (req, res) => {
-  const settings = await userFormSettingsService.upsertUserFormSettings(req.params.userId, req.body);
+  const settings = await userFormSettingsService.upsertUserFormSettings(
+    req.params.userId,
+    req.body
+  );
   res.send(settings);
 });
 

@@ -19,7 +19,6 @@ const logger = require('./config/logger');
 
 const app = express();
 
-
 if (config.env !== 'test') {
   app.use(morgan.successHandler);
   app.use(morgan.errorHandler);
@@ -56,7 +55,6 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };
-
 
 /*
 Access-Control-Allow-Origin: http://localhost:3000
@@ -111,9 +109,12 @@ app.get('/whatsapp/webhook', (req, res) => {
 
   // Build query string manually
   const queryParams = new URLSearchParams();
-  if (req.query['hub.mode']) queryParams.append('hub.mode', req.query['hub.mode']);
-  if (req.query['hub.verify_token']) queryParams.append('hub.verify_token', req.query['hub.verify_token']);
-  if (req.query['hub.challenge']) queryParams.append('hub.challenge', req.query['hub.challenge']);
+  if (req.query['hub.mode'])
+    queryParams.append('hub.mode', req.query['hub.mode']);
+  if (req.query['hub.verify_token'])
+    queryParams.append('hub.verify_token', req.query['hub.verify_token']);
+  if (req.query['hub.challenge'])
+    queryParams.append('hub.challenge', req.query['hub.challenge']);
 
   const url = `http://localhost:4001/webhook?${queryParams.toString()}`;
   logger.info('Proxying to:', url);
@@ -171,7 +172,10 @@ app.post('/whatsapp/webhook', (req, res) => {
 });
 
 // Serve static files
-app.use('/telegram-webapp', express.static(path.join(__dirname, '../public/telegram-webapp')));
+app.use(
+  '/telegram-webapp',
+  express.static(path.join(__dirname, '../public/telegram-webapp'))
+);
 
 // send back a 404 error for any unknown api request
 app.use((req, res, next) => {

@@ -3,7 +3,7 @@ const validator = require('validator'); // Validator is used for validating inpu
 const { toJSON, paginate, tenantPlugin } = require('./plugins'); // toJSON plugin is used to convert Mongoose documents to JSON format, while paginate helps in paginating results.
 
 // Subdocument schema for a captured datapoint
-//const appSchema = mongoose.Schema(
+// const appSchema = mongoose.Schema(
 
 const CapturedDataPointSchema = mongoose.Schema(
   {
@@ -47,7 +47,6 @@ const ServiceDataSchema = mongoose.Schema(
   },
   { timestamps: true }
 );
-
 
 const ServiceData = mongoose.model('ServiceDatas', ServiceDataSchema);
 module.exports = ServiceData;

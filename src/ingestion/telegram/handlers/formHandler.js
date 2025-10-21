@@ -18,15 +18,25 @@ exports.handleProjectSelection = async (bot, msg, session) => {
     console.log(`🔍 [DEBUG] Selected project name: "${selectedProjectName}"`);
     console.log(`🔍 [DEBUG] Session tenantId: ${session.tenantId}`);
 
-    logger.info(`📋 Processing project selection for chat ${chatId}: "${selectedProjectName}"`);
+    logger.info(
+      `📋 Processing project selection for chat ${chatId}: "${selectedProjectName}"`
+    );
 
     // Get available projects
-    console.log(`🔍 [DEBUG] Calling getAvailableProjects for tenant: ${session.tenantId}`);
+    console.log(
+      `🔍 [DEBUG] Calling getAvailableProjects for tenant: ${session.tenantId}`
+    );
     const availableProjects = await getAvailableProjects(session.tenantId);
     console.log(`🔍 [DEBUG] getAvailableProjects returned:`, availableProjects);
-    console.log(`🔍 [DEBUG] Type of availableProjects:`, typeof availableProjects);
+    console.log(
+      `🔍 [DEBUG] Type of availableProjects:`,
+      typeof availableProjects
+    );
     console.log(`🔍 [DEBUG] Is array:`, Array.isArray(availableProjects));
-    console.log(`🔍 [DEBUG] Length:`, availableProjects ? availableProjects.length : 'undefined');
+    console.log(
+      `🔍 [DEBUG] Length:`,
+      availableProjects ? availableProjects.length : 'undefined'
+    );
 
     if (availableProjects && availableProjects.length > 0) {
       console.log(
@@ -40,7 +50,9 @@ exports.handleProjectSelection = async (bot, msg, session) => {
     }
 
     // Find the selected project
-    console.log(`🔍 [DEBUG] Searching for project with name: "${selectedProjectName}"`);
+    console.log(
+      `🔍 [DEBUG] Searching for project with name: "${selectedProjectName}"`
+    );
 
     // Strip emoji prefixes from the selected project name
     const cleanSelectedName = selectedProjectName
@@ -52,7 +64,8 @@ exports.handleProjectSelection = async (bot, msg, session) => {
     console.log(`🔍 [DEBUG] Cleaned project name: "${cleanSelectedName}"`);
 
     const selectedProject = availableProjects.find((project) => {
-      const matchesName = project.configuration?.projectName === cleanSelectedName;
+      const matchesName =
+        project.configuration?.projectName === cleanSelectedName;
       const matchesId = project.projectId === cleanSelectedName;
       console.log(
         `🔍 [DEBUG] Project "${project.configuration?.projectName}" (${project.projectId}): name match=${matchesName}, id match=${matchesId}`
@@ -72,7 +85,9 @@ exports.handleProjectSelection = async (bot, msg, session) => {
     );
 
     if (!selectedProject) {
-      console.log(`🔍 [DEBUG] No project found matching: "${selectedProjectName}"`);
+      console.log(
+        `🔍 [DEBUG] No project found matching: "${selectedProjectName}"`
+      );
       await telegramNotificationService.sendErrorMessage(
         chatId,
         'Invalid project selection. Please choose from the available projects.'
@@ -81,14 +96,18 @@ exports.handleProjectSelection = async (bot, msg, session) => {
     }
 
     // Update session with project information
-    console.log(`🔍 [DEBUG] Updating session with project: ${selectedProject.projectId}`);
+    console.log(
+      `🔍 [DEBUG] Updating session with project: ${selectedProject.projectId}`
+    );
     session.projectId = selectedProject.projectId;
     session.formId = selectedProject._id;
     session.status = 'filling_form';
     session.currentStep = 0;
     await session.save();
 
-    logger.info(`✅ Project selected: ${selectedProject.projectId} for chat ${chatId}`);
+    logger.info(
+      `✅ Project selected: ${selectedProject.projectId} for chat ${chatId}`
+    );
 
     // Start form filling process
     console.log(`🔍 [DEBUG] Starting form filling process`);
@@ -96,9 +115,15 @@ exports.handleProjectSelection = async (bot, msg, session) => {
   } catch (error) {
     console.log(`🔍 [DEBUG] ERROR in project selection:`, error);
     console.log(`🔍 [DEBUG] Error stack:`, error.stack);
-    logger.error(`❌ Error processing project selection for chat ${chatId}:`, error.message);
+    logger.error(
+      `❌ Error processing project selection for chat ${chatId}:`,
+      error.message
+    );
     logger.error(`❌ Full error details:`, error);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to select project. Please try again.');
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to select project. Please try again.'
+    );
   }
 };
 
@@ -113,28 +138,43 @@ exports.handleFormStep = async (bot, msg, session) => {
   const userAnswer = msg.text;
 
   try {
-    logger.info(`📝 Processing form step for chat ${chatId} (step ${session.currentStep}): "${userAnswer}"`);
+    logger.info(
+      `📝 Processing form step for chat ${chatId} (step ${session.currentStep}): "${userAnswer}"`
+    );
 
     // Get current project form
-    const projectForm = await projectFormService.getProjectFormByProjectId(session.projectId);
+    const projectForm = await projectFormService.getProjectFormByProjectId(
+      session.projectId
+    );
 
     if (!projectForm || !projectForm.elements) {
-      await telegramNotificationService.sendErrorMessage(chatId, 'Form not found or has no questions.');
+      await telegramNotificationService.sendErrorMessage(
+        chatId,
+        'Form not found or has no questions.'
+      );
       return;
     }
 
     const currentQuestion = projectForm.elements[session.currentStep];
 
     if (!currentQuestion) {
-      await telegramNotificationService.sendErrorMessage(chatId, 'Invalid form step.');
+      await telegramNotificationService.sendErrorMessage(
+        chatId,
+        'Invalid form step.'
+      );
       return;
     }
 
     // Validate the answer
-    const validationResult = telegramValidationService.validateFieldValue(userAnswer, currentQuestion);
+    const validationResult = telegramValidationService.validateFieldValue(
+      userAnswer,
+      currentQuestion
+    );
 
     if (!validationResult.valid) {
-      logger.warn(`❌ Validation failed for step ${session.currentStep}: ${validationResult.error}`);
+      logger.warn(
+        `❌ Validation failed for step ${session.currentStep}: ${validationResult.error}`
+      );
       await telegramNotificationService.sendValidationError(chatId, {
         field: currentQuestion.properties?.label || currentQuestion.id,
         error: validationResult.error,
@@ -153,7 +193,12 @@ exports.handleFormStep = async (bot, msg, session) => {
     if (nextStep < projectForm.elements.length) {
       // Send next question
       const nextQuestion = projectForm.elements[nextStep];
-      await telegramNotificationService.sendFormQuestion(chatId, nextQuestion, nextStep, projectForm.elements.length);
+      await telegramNotificationService.sendFormQuestion(
+        chatId,
+        nextQuestion,
+        nextStep,
+        projectForm.elements.length
+      );
 
       logger.info(`✅ Next question sent for step ${nextStep}`);
     } else {
@@ -166,8 +211,14 @@ exports.handleFormStep = async (bot, msg, session) => {
       logger.info(`✅ Form completed for chat ${chatId}`);
     }
   } catch (error) {
-    logger.error(`❌ Error processing form step for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to process answer. Please try again.');
+    logger.error(
+      `❌ Error processing form step for chat ${chatId}:`,
+      error.message
+    );
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to process answer. Please try again.'
+    );
   }
 };
 
@@ -185,23 +236,34 @@ exports.handleFileUpload = async (bot, msg, session, fileType) => {
     logger.info(`📎 Processing ${fileType} upload for chat ${chatId}`);
 
     // Get current project form
-    const projectForm = await projectFormService.getProjectFormByProjectId(session.projectId);
+    const projectForm = await projectFormService.getProjectFormByProjectId(
+      session.projectId
+    );
 
     if (!projectForm || !projectForm.elements) {
-      await telegramNotificationService.sendErrorMessage(chatId, 'Form not found or has no questions.');
+      await telegramNotificationService.sendErrorMessage(
+        chatId,
+        'Form not found or has no questions.'
+      );
       return;
     }
 
     const currentQuestion = projectForm.elements[session.currentStep];
 
     if (!currentQuestion) {
-      await telegramNotificationService.sendErrorMessage(chatId, 'Invalid form step.');
+      await telegramNotificationService.sendErrorMessage(
+        chatId,
+        'Invalid form step.'
+      );
       return;
     }
 
     // Check if current question accepts files
     if (currentQuestion.type !== 'file') {
-      await telegramNotificationService.sendErrorMessage(chatId, 'This question does not accept file uploads.');
+      await telegramNotificationService.sendErrorMessage(
+        chatId,
+        'This question does not accept file uploads.'
+      );
       return;
     }
 
@@ -217,7 +279,7 @@ exports.handleFileUpload = async (bot, msg, session, fileType) => {
         mimeType: 'image/jpeg',
       };
     } else if (fileType === 'document') {
-      const document = msg.document;
+      const { document } = msg;
       fileInfo = {
         fileId: document.file_id,
         fileName: document.file_name,
@@ -227,7 +289,10 @@ exports.handleFileUpload = async (bot, msg, session, fileType) => {
     }
 
     if (!fileInfo) {
-      await telegramNotificationService.sendErrorMessage(chatId, 'Failed to process file upload.');
+      await telegramNotificationService.sendErrorMessage(
+        chatId,
+        'Failed to process file upload.'
+      );
       return;
     }
 
@@ -244,7 +309,9 @@ exports.handleFileUpload = async (bot, msg, session, fileType) => {
     // Store file information
     await session.addAnswer(session.currentStep, fileInfo);
 
-    logger.info(`✅ File uploaded for step ${session.currentStep}: ${fileInfo.fileName}`);
+    logger.info(
+      `✅ File uploaded for step ${session.currentStep}: ${fileInfo.fileName}`
+    );
 
     // Check if there are more questions
     const nextStep = session.currentStep + 1;
@@ -252,7 +319,12 @@ exports.handleFileUpload = async (bot, msg, session, fileType) => {
     if (nextStep < projectForm.elements.length) {
       // Send next question
       const nextQuestion = projectForm.elements[nextStep];
-      await telegramNotificationService.sendFormQuestion(chatId, nextQuestion, nextStep, projectForm.elements.length);
+      await telegramNotificationService.sendFormQuestion(
+        chatId,
+        nextQuestion,
+        nextStep,
+        projectForm.elements.length
+      );
     } else {
       // Form completed
       session.status = 'ready_to_submit';
@@ -261,8 +333,14 @@ exports.handleFileUpload = async (bot, msg, session, fileType) => {
       await telegramNotificationService.sendFormCompletion(chatId, projectForm);
     }
   } catch (error) {
-    logger.error(`❌ Error processing file upload for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to process file upload. Please try again.');
+    logger.error(
+      `❌ Error processing file upload for chat ${chatId}:`,
+      error.message
+    );
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to process file upload. Please try again.'
+    );
   }
 };
 
@@ -273,35 +351,61 @@ exports.handleFileUpload = async (bot, msg, session, fileType) => {
  */
 async function getAvailableProjects(tenantId) {
   try {
-    console.log(`🔍 [DEBUG] getAvailableProjects called with tenantId: ${tenantId}`);
+    console.log(
+      `🔍 [DEBUG] getAvailableProjects called with tenantId: ${tenantId}`
+    );
 
     // Get active and published project forms for the tenant
-    console.log(`🔍 [DEBUG] Calling projectFormService.getProjectFormsByTenant`);
-    const projectsResult = await projectFormService.getProjectFormsByTenant(tenantId, {
-      status: 'active',
-      'metadata.deploymentStatus': 'published',
-      deletedAt: null,
-    });
+    console.log(
+      `🔍 [DEBUG] Calling projectFormService.getProjectFormsByTenant`
+    );
+    const projectsResult = await projectFormService.getProjectFormsByTenant(
+      tenantId,
+      {
+        status: 'active',
+        'metadata.deploymentStatus': 'published',
+        deletedAt: null,
+      }
+    );
 
-    console.log(`🔍 [DEBUG] projectFormService.getProjectFormsByTenant returned:`, projectsResult);
+    console.log(
+      `🔍 [DEBUG] projectFormService.getProjectFormsByTenant returned:`,
+      projectsResult
+    );
     console.log(`🔍 [DEBUG] Type of projectsResult:`, typeof projectsResult);
-    console.log(`🔍 [DEBUG] Has results property:`, projectsResult && projectsResult.hasOwnProperty('results'));
-    console.log(`🔍 [DEBUG] Results property:`, projectsResult ? projectsResult.results : 'undefined');
+    console.log(
+      `🔍 [DEBUG] Has results property:`,
+      projectsResult && projectsResult.hasOwnProperty('results')
+    );
+    console.log(
+      `🔍 [DEBUG] Results property:`,
+      projectsResult ? projectsResult.results : 'undefined'
+    );
 
     // Handle paginated result
-    const projects = projectsResult && projectsResult.results ? projectsResult.results : projectsResult;
+    const projects =
+      projectsResult && projectsResult.results
+        ? projectsResult.results
+        : projectsResult;
     console.log(`🔍 [DEBUG] Final projects array:`, projects);
     console.log(`🔍 [DEBUG] Type of final projects:`, typeof projects);
     console.log(`🔍 [DEBUG] Is array:`, Array.isArray(projects));
     console.log(`🔍 [DEBUG] Length:`, projects ? projects.length : 'undefined');
 
-    logger.info(`🔍 getAvailableProjects for tenant ${tenantId}: found ${projects ? projects.length : 0} projects`);
+    logger.info(
+      `🔍 getAvailableProjects for tenant ${tenantId}: found ${
+        projects ? projects.length : 0
+      } projects`
+    );
 
     return projects || [];
   } catch (error) {
     console.log(`🔍 [DEBUG] ERROR in getAvailableProjects:`, error);
     console.log(`🔍 [DEBUG] Error stack:`, error.stack);
-    logger.error(`❌ Error getting available projects for tenant ${tenantId}:`, error.message);
+    logger.error(
+      `❌ Error getting available projects for tenant ${tenantId}:`,
+      error.message
+    );
     return [];
   }
 }
@@ -312,25 +416,47 @@ async function getAvailableProjects(tenantId) {
  * @param {Object} session - User session object
  */
 async function startFormFilling(bot, session) {
-  const chatId = session.chatId;
+  const { chatId } = session;
 
   try {
     // Get project form details
-    const projectForm = await projectFormService.getProjectFormByProjectId(session.projectId);
+    const projectForm = await projectFormService.getProjectFormByProjectId(
+      session.projectId
+    );
 
-    if (!projectForm || !projectForm.elements || projectForm.elements.length === 0) {
-      await telegramNotificationService.sendErrorMessage(chatId, 'No form questions available for this project.');
+    if (
+      !projectForm ||
+      !projectForm.elements ||
+      projectForm.elements.length === 0
+    ) {
+      await telegramNotificationService.sendErrorMessage(
+        chatId,
+        'No form questions available for this project.'
+      );
       return;
     }
 
     // Send the first question
     const firstQuestion = projectForm.elements[0];
-    await telegramNotificationService.sendFormQuestion(chatId, firstQuestion, 0, projectForm.elements.length);
+    await telegramNotificationService.sendFormQuestion(
+      chatId,
+      firstQuestion,
+      0,
+      projectForm.elements.length
+    );
 
-    logger.info(`✅ Started form filling for chat ${chatId} (${projectForm.elements.length} questions)`);
+    logger.info(
+      `✅ Started form filling for chat ${chatId} (${projectForm.elements.length} questions)`
+    );
   } catch (error) {
-    logger.error(`❌ Error starting form filling for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to start form. Please try again.');
+    logger.error(
+      `❌ Error starting form filling for chat ${chatId}:`,
+      error.message
+    );
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to start form. Please try again.'
+    );
   }
 }
 
@@ -341,7 +467,9 @@ async function startFormFilling(bot, session) {
  */
 exports.getCurrentQuestion = async (session) => {
   try {
-    const projectForm = await projectFormService.getProjectFormByProjectId(session.projectId);
+    const projectForm = await projectFormService.getProjectFormByProjectId(
+      session.projectId
+    );
 
     if (!projectForm || !projectForm.elements) {
       return null;
@@ -349,7 +477,10 @@ exports.getCurrentQuestion = async (session) => {
 
     return projectForm.elements[session.currentStep] || null;
   } catch (error) {
-    logger.error(`❌ Error getting current question for session ${session.chatId}:`, error.message);
+    logger.error(
+      `❌ Error getting current question for session ${session.chatId}:`,
+      error.message
+    );
     return null;
   }
 };
@@ -360,34 +491,59 @@ exports.getCurrentQuestion = async (session) => {
  * @param {Object} session - User session object
  */
 exports.reviewAnswers = async (bot, session) => {
-  const chatId = session.chatId;
+  const { chatId } = session;
 
   try {
-    const projectForm = await projectFormService.getProjectFormByProjectId(session.projectId);
+    const projectForm = await projectFormService.getProjectFormByProjectId(
+      session.projectId
+    );
 
     if (!projectForm || !projectForm.elements) {
-      await telegramNotificationService.sendErrorMessage(chatId, 'Form not found.');
+      await telegramNotificationService.sendErrorMessage(
+        chatId,
+        'Form not found.'
+      );
       return;
     }
 
-    let reviewMessage = `📋 Form Review\n\nProject: ${projectForm.configuration?.projectName || session.projectId}\n\n`;
+    let reviewMessage = `📋 Form Review\n\nProject: ${
+      projectForm.configuration?.projectName || session.projectId
+    }\n\n`;
 
     for (let i = 0; i < projectForm.elements.length; i++) {
       const question = projectForm.elements[i];
       const answer = session.answers.get(i.toString());
 
-      reviewMessage += `${i + 1}. ${question.properties?.label || question.id}\n`;
-      reviewMessage += `   Answer: ${answer ? (typeof answer === 'object' ? answer.fileName : answer) : 'Not answered'}\n\n`;
+      reviewMessage += `${i + 1}. ${
+        question.properties?.label || question.id
+      }\n`;
+      reviewMessage += `   Answer: ${
+        answer
+          ? typeof answer === 'object'
+            ? answer.fileName
+            : answer
+          : 'Not answered'
+      }\n\n`;
     }
 
     await bot.sendMessage(chatId, reviewMessage, {
       reply_markup: {
-        keyboard: [[{ text: '✅ Submit Form' }], [{ text: '🔄 Start Over' }], [{ text: '❌ Cancel' }]],
+        keyboard: [
+          [{ text: '✅ Submit Form' }],
+          [{ text: '🔄 Start Over' }],
+          [{ text: '❌ Cancel' }],
+        ],
         resize_keyboard: true,
       },
     });
   } catch (error) {
-    logger.error(`❌ Error reviewing answers for chat ${chatId}:`, error.message);
-    await telegramNotificationService.sendErrorMessage(chatId, 'Failed to review answers. Please try again.');
+    logger.error(
+      `❌ Error reviewing answers for chat ${chatId}:`,
+      error.message
+    );
+    await telegramNotificationService.sendErrorMessage(
+      chatId,
+      'Failed to review answers. Please try again.'
+    );
   }
 };

@@ -5,10 +5,10 @@
  * Calculates completeness, tracks compliance status, manages compliance records.
  */
 
+const httpStatus = require('http-status');
 const { postgresPool } = require('../config/postgres');
 const logger = require('../config/logger');
 const ApiError = require('../utils/ApiError');
-const httpStatus = require('http-status');
 
 /**
  * Get compliance tracking records

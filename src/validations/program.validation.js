@@ -8,11 +8,21 @@ const createProgram = {
     userId: Joi.string().required().alphanum(),
     title: Joi.string().required().trim(),
     description: Joi.string().trim(),
-    frequency: Joi.string().valid('daily', 'weekly', 'monthly', 'custom').required(),
+    frequency: Joi.string()
+      .valid('daily', 'weekly', 'monthly', 'custom')
+      .required(),
     startDate: Joi.date().required(),
     endDate: Joi.date(),
     daysOfWeek: Joi.array().items(
-      Joi.string().valid('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+      Joi.string().valid(
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday'
+      )
     ),
     collections: Joi.array().items(Joi.custom(objectId)),
     datapoints: Joi.array().items(Joi.custom(objectId)),
@@ -29,11 +39,21 @@ const bulkImportPrograms = {
       userId: Joi.string().required().alphanum(),
       title: Joi.string().required().trim(),
       description: Joi.string().trim(),
-      frequency: Joi.string().valid('daily', 'weekly', 'monthly', 'custom').required(),
+      frequency: Joi.string()
+        .valid('daily', 'weekly', 'monthly', 'custom')
+        .required(),
       startDate: Joi.date().required(),
       endDate: Joi.date(),
       daysOfWeek: Joi.array().items(
-        Joi.string().valid('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+        Joi.string().valid(
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+          'Sunday'
+        )
       ),
       collections: Joi.array().items(Joi.custom(objectId)),
       datapoints: Joi.array().items(Joi.custom(objectId)),
@@ -73,7 +93,15 @@ const updateProgram = {
       startDate: Joi.date(),
       endDate: Joi.date(),
       daysOfWeek: Joi.array().items(
-        Joi.string().valid('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+        Joi.string().valid(
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+          'Sunday'
+        )
       ),
       collections: Joi.array().items(Joi.custom(objectId)),
       datapoints: Joi.array().items(Joi.custom(objectId)),

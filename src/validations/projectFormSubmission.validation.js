@@ -21,7 +21,13 @@ const createSubmission = {
 const getSubmissions = {
   query: Joi.object().keys({
     projectId: Joi.string(),
-    status: Joi.string().valid('submitted', 'processing', 'completed', 'failed', 'archived'),
+    status: Joi.string().valid(
+      'submitted',
+      'processing',
+      'completed',
+      'failed',
+      'archived'
+    ),
     submittedBy: Joi.string().custom(objectId),
     submittedAt: Joi.date().iso(),
     sortBy: Joi.string(),
@@ -36,7 +42,13 @@ const getSubmissionsByProject = {
     projectId: Joi.string().required(),
   }),
   query: Joi.object().keys({
-    status: Joi.string().valid('submitted', 'processing', 'completed', 'failed', 'archived'),
+    status: Joi.string().valid(
+      'submitted',
+      'processing',
+      'completed',
+      'failed',
+      'archived'
+    ),
     submittedBy: Joi.string().custom(objectId),
     submittedAt: Joi.date().iso(),
     sortBy: Joi.string(),
@@ -52,7 +64,13 @@ const getSubmissionsByTenant = {
   }),
   query: Joi.object().keys({
     projectId: Joi.string(),
-    status: Joi.string().valid('submitted', 'processing', 'completed', 'failed', 'archived'),
+    status: Joi.string().valid(
+      'submitted',
+      'processing',
+      'completed',
+      'failed',
+      'archived'
+    ),
     submittedBy: Joi.string().custom(objectId),
     submittedAt: Joi.date().iso(),
     sortBy: Joi.string(),
@@ -76,7 +94,9 @@ const updateSubmissionStatus = {
     submissionId: Joi.string().custom(objectId).required(),
   }),
   body: Joi.object().keys({
-    status: Joi.string().valid('submitted', 'processing', 'completed', 'failed', 'archived').required(),
+    status: Joi.string()
+      .valid('submitted', 'processing', 'completed', 'failed', 'archived')
+      .required(),
     notes: Joi.string().allow(''),
   }),
 };

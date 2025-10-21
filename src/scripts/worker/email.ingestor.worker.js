@@ -18,11 +18,15 @@ const envInterval = process.env.EMAIL_INGESTOR_INTERVAL_MS;
 let INTERVAL_MS = envInterval ? Number(envInterval) : 60000;
 
 if (Number.isNaN(INTERVAL_MS) || INTERVAL_MS < 10000) {
-  logger.error(`Invalid EMAIL_INGESTOR_INTERVAL_MS: "${envInterval}". Using default 60000ms`);
+  logger.error(
+    `Invalid EMAIL_INGESTOR_INTERVAL_MS: "${envInterval}". Using default 60000ms`
+  );
   INTERVAL_MS = 60000;
 }
 
-logger.info(`📧 Email Ingestor Worker started – polling every ${INTERVAL_MS / 1000}s`);
+logger.info(
+  `📧 Email Ingestor Worker started – polling every ${INTERVAL_MS / 1000}s`
+);
 
 // Connect to MongoDB
 const connectToDatabase = async () => {
@@ -30,7 +34,10 @@ const connectToDatabase = async () => {
     await mongoose.connect(config.mongoose.url, config.mongoose.options);
     logger.info('✅ Email Ingestor Worker connected to MongoDB');
   } catch (error) {
-    logger.error('❌ Email Ingestor Worker failed to connect to MongoDB:', error.message);
+    logger.error(
+      '❌ Email Ingestor Worker failed to connect to MongoDB:',
+      error.message
+    );
     process.exit(1);
   }
 };

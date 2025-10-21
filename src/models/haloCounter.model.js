@@ -13,8 +13,12 @@ const haloNCounterSchema = new mongoose.Schema({
 });
 
 // Create models with OverwriteModelError protection
-const HaloCounter = mongoose.models.HaloCounter || mongoose.model('HaloCounter', haloCounterSchema, 'halo_counters');
-const HaloNCounter = mongoose.models.HaloNCounter || mongoose.model('HaloNCounter', haloNCounterSchema, 'halo_counters');
+const HaloCounter =
+  mongoose.models.HaloCounter ||
+  mongoose.model('HaloCounter', haloCounterSchema, 'halo_counters');
+const HaloNCounter =
+  mongoose.models.HaloNCounter ||
+  mongoose.model('HaloNCounter', haloNCounterSchema, 'halo_counters');
 
 // Export both models
 module.exports = {

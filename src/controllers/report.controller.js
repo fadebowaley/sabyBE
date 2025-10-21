@@ -38,7 +38,10 @@ const getReport = catchAsync(async (req, res) => {
 
 // Update a report by ID
 const updateReport = catchAsync(async (req, res) => {
-  const updated = await reportService.updateReportById(req.params.reportId, req.body);
+  const updated = await reportService.updateReportById(
+    req.params.reportId,
+    req.body
+  );
   res.send(updated);
 });
 
@@ -50,7 +53,7 @@ const deleteReport = catchAsync(async (req, res) => {
 
 // Delete all reports for a specific tenant or condition
 const deleteAllReports = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
+  const { tenantId } = req.user;
   const result = await reportService.deleteAllReports(tenantId);
   res.status(httpStatus.OK).json({
     message: `All reports for tenant ${tenantId} deleted.`,

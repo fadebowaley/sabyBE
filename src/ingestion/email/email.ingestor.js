@@ -2,13 +2,19 @@
 
 const Imap = require('imap-simple');
 const { simpleParser } = require('mailparser');
-const { getTenantsWithEmailConfig, isAuthorizedSender } = require('./email.tenants.config');
+const {
+  getTenantsWithEmailConfig,
+  isAuthorizedSender,
+} = require('./email.tenants.config');
 const { parseEmailToSubmission } = require('./email.parser');
 const { queueSubmission } = require('../../services/submission.service');
 const logger = require('../../config/logger');
 
 const processTenantInbox = async (tenant) => {
-  console.log('[Ingestor] Starting processTenantInbox for tenant:', tenant.tenantId);
+  console.log(
+    '[Ingestor] Starting processTenantInbox for tenant:',
+    tenant.tenantId
+  );
   const imapConfig = {
     imap: {
       user: tenant.email,
@@ -50,30 +56,42 @@ const processTenantInbox = async (tenant) => {
         // Check if parsing/validation failed
         if (!submission.success) {
           if (submission.reason === 'duplicate_submission') {
-            logger.warn(`[REJECT] Duplicate submission from ${senderEmail}: ${submission.error}`);
+            logger.warn(
+              `[REJECT] Duplicate submission from ${senderEmail}: ${submission.error}`
+            );
           } else if (submission.reason === 'validation_failed') {
-            logger.warn(`[REJECT] Email validation failed for ${senderEmail}:`, {
-              errors: submission.errors.map((e) => e.error).join(', '),
-            });
+            logger.warn(
+              `[REJECT] Email validation failed for ${senderEmail}:`,
+              {
+                errors: submission.errors.map((e) => e.error).join(', '),
+              }
+            );
           } else {
-            logger.warn(`[REJECT] Email processing failed for ${senderEmail}: ${submission.reason}`);
+            logger.warn(
+              `[REJECT] Email processing failed for ${senderEmail}: ${submission.reason}`
+            );
           }
           continue;
         }
 
         // Check validation results
-        const validation = submission.data.metadata.validation;
+        const { validation } = submission.data.metadata;
         console.log('[Ingestor] Validation result:', validation);
 
         if (!validation || !validation.validated) {
           // Log validation errors
           if (validation && validation.validationErrors) {
-            logger.warn(`[REJECT] Email validation failed for ${senderEmail}:`, {
-              errors: validation.validationErrors,
-              warnings: validation.validationWarnings,
-            });
+            logger.warn(
+              `[REJECT] Email validation failed for ${senderEmail}:`,
+              {
+                errors: validation.validationErrors,
+                warnings: validation.validationWarnings,
+              }
+            );
           } else {
-            logger.warn(`[REJECT] Email validation failed for ${senderEmail}: No validation result`);
+            logger.warn(
+              `[REJECT] Email validation failed for ${senderEmail}: No validation result`
+            );
           }
           continue;
         }
@@ -82,12 +100,18 @@ const processTenantInbox = async (tenant) => {
         console.log('[Ingestor] Queuing submission:', submission.data);
         await queueSubmission(submission.data);
 
-        logger.info(`[✓] Queued validated email from ${senderEmail} for tenant ${tenant.tenantId}`, {
-          projectId: submission.data.projectId,
-          senderId: validation.senderId,
-          projectFormId: validation.projectFormId,
-          warnings: (validation.validationWarnings && validation.validationWarnings.length) || 0,
-        });
+        logger.info(
+          `[✓] Queued validated email from ${senderEmail} for tenant ${tenant.tenantId}`,
+          {
+            projectId: submission.data.projectId,
+            senderId: validation.senderId,
+            projectFormId: validation.projectFormId,
+            warnings:
+              (validation.validationWarnings &&
+                validation.validationWarnings.length) ||
+              0,
+          }
+        );
       } catch (error) {
         console.log('[Ingestor] Error processing email:', error.message);
         // Continue processing other emails

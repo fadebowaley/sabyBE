@@ -11,9 +11,15 @@ const ApiError = require('../utils/ApiError');
  */
 const createProjectForm = async (projectFormBody, tenantId, createdBy) => {
   // Check if project name is already taken within the tenant
-  const isNameTaken = await ProjectForm.isProjectNameTaken(projectFormBody.configuration.projectName, tenantId);
+  const isNameTaken = await ProjectForm.isProjectNameTaken(
+    projectFormBody.configuration.projectName,
+    tenantId
+  );
   if (isNameTaken) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'A project with this name already exists in your workspace');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'A project with this name already exists in your workspace'
+    );
   }
   return ProjectForm.createProjectForm(projectFormBody, tenantId, createdBy);
 };
@@ -121,14 +127,19 @@ const getProjectFormsByUser = async (userId, filter = {}, options = {}) => {
  * @param {Object} options - Update options
  * @returns {Promise<ProjectForm>}
  */
-const updateProjectFormById = async (projectFormId, updateBody, options = {}) => {
+const updateProjectFormById = async (
+  projectFormId,
+  updateBody,
+  options = {}
+) => {
   const projectForm = await getProjectFormById(projectFormId);
 
   // Check if project name is being updated and if it's already taken
   if (
     updateBody.configuration &&
     updateBody.configuration.projectName &&
-    updateBody.configuration.projectName !== projectForm.configuration.projectName
+    updateBody.configuration.projectName !==
+      projectForm.configuration.projectName
   ) {
     const isNameTaken = await ProjectForm.isProjectNameTaken(
       updateBody.configuration.projectName,
@@ -137,7 +148,10 @@ const updateProjectFormById = async (projectFormId, updateBody, options = {}) =>
     );
 
     if (isNameTaken) {
-      throw new ApiError(httpStatus.BAD_REQUEST, 'A project with this name already exists in your workspace');
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'A project with this name already exists in your workspace'
+      );
     }
   }
 
@@ -163,7 +177,11 @@ const updateProjectFormById = async (projectFormId, updateBody, options = {}) =>
  * @param {Object} options - Update options
  * @returns {Promise<ProjectForm>}
  */
-const updateProjectFormByProjectId = async (projectId, updateBody, options = {}) => {
+const updateProjectFormByProjectId = async (
+  projectId,
+  updateBody,
+  options = {}
+) => {
   const projectForm = await getProjectFormByProjectId(projectId);
   return updateProjectFormById(projectForm._id, updateBody, options);
 };

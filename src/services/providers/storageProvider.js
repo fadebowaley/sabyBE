@@ -35,7 +35,7 @@ class AWSS3Provider {
       ContentType: contentType,
       ServerSideEncryption: 'AES256',
     };
-    
+
     const result = await this.s3.upload(params).promise();
     return {
       url: result.Location,
@@ -49,7 +49,7 @@ class AWSS3Provider {
       Bucket: this.bucket,
       Key: key,
     };
-    
+
     return this.s3.deleteObject(params).promise();
   }
 
@@ -59,7 +59,7 @@ class AWSS3Provider {
       Key: key,
       Expires: expiresIn,
     };
-    
+
     return this.s3.getSignedUrl('getObject', params);
   }
 
@@ -69,7 +69,7 @@ class AWSS3Provider {
       CopySource: `${this.bucket}/${sourceKey}`,
       Key: destinationKey,
     };
-    
+
     return this.s3.copyObject(params).promise();
   }
 }
@@ -80,11 +80,11 @@ class GoogleDriveProvider {
       process.env.GOOGLE_DRIVE_CLIENT_ID,
       process.env.GOOGLE_DRIVE_CLIENT_SECRET
     );
-    
+
     this.auth.setCredentials({
       refresh_token: process.env.GOOGLE_DRIVE_REFRESH_TOKEN,
     });
-    
+
     this.drive = google.drive({ version: 'v3', auth: this.auth });
     this.parentFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
   }
@@ -102,7 +102,7 @@ class GoogleDriveProvider {
 
     const response = await this.drive.files.create({
       resource: fileMetadata,
-      media: media,
+      media,
       fields: 'id,webViewLink,webContentLink',
     });
 
@@ -116,16 +116,16 @@ class GoogleDriveProvider {
 
   async delete(fileId) {
     return this.drive.files.delete({
-      fileId: fileId,
+      fileId,
     });
   }
 
   async generatePresignedUrl(fileId, expiresIn = 3600) {
     const response = await this.drive.files.get({
-      fileId: fileId,
+      fileId,
       fields: 'webContentLink',
     });
-    
+
     return response.data.webContentLink;
   }
 
@@ -151,15 +151,15 @@ class UploadThingProvider {
 
   async upload(buffer, key, contentType) {
     const file = new File([buffer], key, { type: contentType });
-    
+
     const response = await this.utapi.uploadFiles([file]);
-    
+
     if (response.error) {
       throw new Error(`UploadThing upload failed: ${response.error.message}`);
     }
 
     const uploadedFile = response.data[0];
-    
+
     return {
       url: uploadedFile.url,
       key: uploadedFile.key,

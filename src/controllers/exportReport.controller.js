@@ -31,11 +31,19 @@ const exportSubmissionsCSV = catchAsync(async (req, res) => {
   ]);
 
   const data = await exportReportService.exportSubmissionsCSV(filters);
-  const stats = await exportReportService.getExportStats({ ...filters, data_type: 'submissions' });
+  const stats = await exportReportService.getExportStats({
+    ...filters,
+    data_type: 'submissions',
+  });
 
   // Set CSV headers
   res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', `attachment; filename="submissions_export_${new Date().toISOString().split('T')[0]}.csv"`);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="submissions_export_${
+      new Date().toISOString().split('T')[0]
+    }.csv"`
+  );
 
   const headers = [
     'id',
@@ -80,7 +88,10 @@ const exportSubmissionsJSON = catchAsync(async (req, res) => {
   ]);
 
   const data = await exportReportService.exportSubmissionsJSON(filters);
-  const stats = await exportReportService.getExportStats({ ...filters, data_type: 'submissions' });
+  const stats = await exportReportService.getExportStats({
+    ...filters,
+    data_type: 'submissions',
+  });
 
   res.status(httpStatus.OK).send({
     success: true,
@@ -115,11 +126,19 @@ const exportComplianceCSV = catchAsync(async (req, res) => {
   ]);
 
   const data = await exportReportService.exportComplianceCSV(filters);
-  const stats = await exportReportService.getExportStats({ ...filters, data_type: 'compliance' });
+  const stats = await exportReportService.getExportStats({
+    ...filters,
+    data_type: 'compliance',
+  });
 
   // Set CSV headers
   res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', `attachment; filename="compliance_export_${new Date().toISOString().split('T')[0]}.csv"`);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="compliance_export_${
+      new Date().toISOString().split('T')[0]
+    }.csv"`
+  );
 
   const headers = [
     'id',
@@ -156,7 +175,10 @@ const exportComplianceJSON = catchAsync(async (req, res) => {
   ]);
 
   const data = await exportReportService.exportComplianceJSON(filters);
-  const stats = await exportReportService.getExportStats({ ...filters, data_type: 'compliance' });
+  const stats = await exportReportService.getExportStats({
+    ...filters,
+    data_type: 'compliance',
+  });
 
   res.status(httpStatus.OK).send({
     success: true,
@@ -190,11 +212,19 @@ const exportValidationsCSV = catchAsync(async (req, res) => {
   ]);
 
   const data = await exportReportService.exportValidationsCSV(filters);
-  const stats = await exportReportService.getExportStats({ ...filters, data_type: 'validations' });
+  const stats = await exportReportService.getExportStats({
+    ...filters,
+    data_type: 'validations',
+  });
 
   // Set CSV headers
   res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', `attachment; filename="validations_export_${new Date().toISOString().split('T')[0]}.csv"`);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="validations_export_${
+      new Date().toISOString().split('T')[0]
+    }.csv"`
+  );
 
   const headers = [
     'id',
@@ -237,7 +267,10 @@ const exportValidationsJSON = catchAsync(async (req, res) => {
   ]);
 
   const data = await exportReportService.exportValidationsJSON(filters);
-  const stats = await exportReportService.getExportStats({ ...filters, data_type: 'validations' });
+  const stats = await exportReportService.getExportStats({
+    ...filters,
+    data_type: 'validations',
+  });
 
   res.status(httpStatus.OK).send({
     success: true,
@@ -271,11 +304,19 @@ const exportNotificationsCSV = catchAsync(async (req, res) => {
   ]);
 
   const data = await exportReportService.exportNotificationsCSV(filters);
-  const stats = await exportReportService.getExportStats({ ...filters, data_type: 'notifications' });
+  const stats = await exportReportService.getExportStats({
+    ...filters,
+    data_type: 'notifications',
+  });
 
   // Set CSV headers
   res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', `attachment; filename="notifications_export_${new Date().toISOString().split('T')[0]}.csv"`);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="notifications_export_${
+      new Date().toISOString().split('T')[0]
+    }.csv"`
+  );
 
   const headers = [
     'id',
@@ -314,7 +355,10 @@ const exportNotificationsJSON = catchAsync(async (req, res) => {
   ]);
 
   const data = await exportReportService.exportNotificationsJSON(filters);
-  const stats = await exportReportService.getExportStats({ ...filters, data_type: 'notifications' });
+  const stats = await exportReportService.getExportStats({
+    ...filters,
+    data_type: 'notifications',
+  });
 
   res.status(httpStatus.OK).send({
     success: true,
@@ -348,11 +392,19 @@ const exportActivityLogsCSV = catchAsync(async (req, res) => {
   ]);
 
   const data = await exportReportService.exportActivityLogsCSV(filters);
-  const stats = await exportReportService.getExportStats({ ...filters, data_type: 'activity_logs' });
+  const stats = await exportReportService.getExportStats({
+    ...filters,
+    data_type: 'activity_logs',
+  });
 
   // Set CSV headers
   res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', `attachment; filename="activity_logs_export_${new Date().toISOString().split('T')[0]}.csv"`);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="activity_logs_export_${
+      new Date().toISOString().split('T')[0]
+    }.csv"`
+  );
 
   const headers = [
     'id',
@@ -389,7 +441,10 @@ const exportActivityLogsJSON = catchAsync(async (req, res) => {
   ]);
 
   const data = await exportReportService.exportActivityLogsJSON(filters);
-  const stats = await exportReportService.getExportStats({ ...filters, data_type: 'activity_logs' });
+  const stats = await exportReportService.getExportStats({
+    ...filters,
+    data_type: 'activity_logs',
+  });
 
   res.status(httpStatus.OK).send({
     success: true,
@@ -420,43 +475,50 @@ const exportCombinedCSV = catchAsync(async (req, res) => {
   ]);
 
   // Export all data types
-  const [submissions, compliance, validations, notifications, activityLogs] = await Promise.all([
-    exportReportService.exportSubmissionsCSV(filters),
-    exportReportService.exportComplianceCSV(filters),
-    exportReportService.exportValidationsCSV(filters),
-    exportReportService.exportNotificationsCSV(filters),
-    exportReportService.exportActivityLogsCSV(filters),
-  ]);
+  const [submissions, compliance, validations, notifications, activityLogs] =
+    await Promise.all([
+      exportReportService.exportSubmissionsCSV(filters),
+      exportReportService.exportComplianceCSV(filters),
+      exportReportService.exportValidationsCSV(filters),
+      exportReportService.exportNotificationsCSV(filters),
+      exportReportService.exportActivityLogsCSV(filters),
+    ]);
 
   // Set CSV headers
   res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', `attachment; filename="combined_export_${new Date().toISOString().split('T')[0]}.csv"`);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="combined_export_${
+      new Date().toISOString().split('T')[0]
+    }.csv"`
+  );
 
   // Create combined CSV with sections
-  let csvContent = 'DATA_TYPE,ID,SUBMISSION_ID,TENANT_ID,PROJECT_ID,NODE_ID,USER_ID,STATUS,CREATED_AT\n';
-  
+  let csvContent =
+    'DATA_TYPE,ID,SUBMISSION_ID,TENANT_ID,PROJECT_ID,NODE_ID,USER_ID,STATUS,CREATED_AT\n';
+
   // Add submissions
-  submissions.forEach(row => {
+  submissions.forEach((row) => {
     csvContent += `SUBMISSION,${row.id},${row.id},${row.tenant_id},${row.project_id},${row.node_id},${row.user_id},${row.status},${row.created_at}\n`;
   });
 
   // Add compliance
-  compliance.forEach(row => {
+  compliance.forEach((row) => {
     csvContent += `COMPLIANCE,${row.id},,${row.tenant_id},${row.project_id},${row.node_id},,${row.compliance_status},${row.created_at}\n`;
   });
 
   // Add validations
-  validations.forEach(row => {
+  validations.forEach((row) => {
     csvContent += `VALIDATION,${row.id},${row.submission_id},${row.tenant_id},${row.project_id},,,${row.validation_status},${row.created_at}\n`;
   });
 
   // Add notifications
-  notifications.forEach(row => {
+  notifications.forEach((row) => {
     csvContent += `NOTIFICATION,${row.id},,${row.tenant_id},${row.project_id},,,${row.status},${row.created_at}\n`;
   });
 
   // Add activity logs
-  activityLogs.forEach(row => {
+  activityLogs.forEach((row) => {
     csvContent += `ACTIVITY_LOG,${row.id},,${row.tenant_id},${row.project_id},${row.node_id},${row.user_id},${row.status},${row.created_at}\n`;
   });
 
@@ -476,13 +538,14 @@ const exportCombinedJSON = catchAsync(async (req, res) => {
   ]);
 
   // Export all data types
-  const [submissions, compliance, validations, notifications, activityLogs] = await Promise.all([
-    exportReportService.exportSubmissionsJSON(filters),
-    exportReportService.exportComplianceJSON(filters),
-    exportReportService.exportValidationsJSON(filters),
-    exportReportService.exportNotificationsJSON(filters),
-    exportReportService.exportActivityLogsJSON(filters),
-  ]);
+  const [submissions, compliance, validations, notifications, activityLogs] =
+    await Promise.all([
+      exportReportService.exportSubmissionsJSON(filters),
+      exportReportService.exportComplianceJSON(filters),
+      exportReportService.exportValidationsJSON(filters),
+      exportReportService.exportNotificationsJSON(filters),
+      exportReportService.exportActivityLogsJSON(filters),
+    ]);
 
   res.status(httpStatus.OK).send({
     success: true,
@@ -495,7 +558,12 @@ const exportCombinedJSON = catchAsync(async (req, res) => {
       activity_logs: activityLogs,
       export_info: {
         format: 'JSON',
-        total_records: submissions.length + compliance.length + validations.length + notifications.length + activityLogs.length,
+        total_records:
+          submissions.length +
+          compliance.length +
+          validations.length +
+          notifications.length +
+          activityLogs.length,
         exported_at: new Date().toISOString(),
         filters_applied: filters,
         breakdown: {
@@ -515,17 +583,32 @@ const exportCombinedJSON = catchAsync(async (req, res) => {
  * Get export statistics for all data types
  */
 const getExportStats = catchAsync(async (req, res) => {
-  const filters = pick(req.query, [
-    'tenant_id',
-    'project_id',
-  ]);
+  const filters = pick(req.query, ['tenant_id', 'project_id']);
 
-  const [submissionsStats, complianceStats, validationsStats, notificationsStats, activityLogsStats] = await Promise.all([
-    exportReportService.getExportStats({ ...filters, data_type: 'submissions' }),
+  const [
+    submissionsStats,
+    complianceStats,
+    validationsStats,
+    notificationsStats,
+    activityLogsStats,
+  ] = await Promise.all([
+    exportReportService.getExportStats({
+      ...filters,
+      data_type: 'submissions',
+    }),
     exportReportService.getExportStats({ ...filters, data_type: 'compliance' }),
-    exportReportService.getExportStats({ ...filters, data_type: 'validations' }),
-    exportReportService.getExportStats({ ...filters, data_type: 'notifications' }),
-    exportReportService.getExportStats({ ...filters, data_type: 'activity_logs' }),
+    exportReportService.getExportStats({
+      ...filters,
+      data_type: 'validations',
+    }),
+    exportReportService.getExportStats({
+      ...filters,
+      data_type: 'notifications',
+    }),
+    exportReportService.getExportStats({
+      ...filters,
+      data_type: 'activity_logs',
+    }),
   ]);
 
   res.status(httpStatus.OK).send({
@@ -537,7 +620,12 @@ const getExportStats = catchAsync(async (req, res) => {
       validations: validationsStats,
       notifications: notificationsStats,
       activity_logs: activityLogsStats,
-      total_records: submissionsStats.total_records + complianceStats.total_records + validationsStats.total_records + notificationsStats.total_records + activityLogsStats.total_records,
+      total_records:
+        submissionsStats.total_records +
+        complianceStats.total_records +
+        validationsStats.total_records +
+        notificationsStats.total_records +
+        activityLogsStats.total_records,
       generated_at: new Date().toISOString(),
     },
   });

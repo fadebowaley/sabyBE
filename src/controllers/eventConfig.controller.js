@@ -12,7 +12,9 @@ const createEventConfig = catchAsync(async (req, res) => {
 
 // Get event configuration by ID
 const getEventConfigById = catchAsync(async (req, res) => {
-  const eventConfig = await eventConfigService.getEventConfigById(req.params.eventConfigId);
+  const eventConfig = await eventConfigService.getEventConfigById(
+    req.params.eventConfigId
+  );
   if (!eventConfig) {
     throw new ApiError(httpStatus.NOT_FOUND, 'EventConfig not found');
   }
@@ -21,9 +23,14 @@ const getEventConfigById = catchAsync(async (req, res) => {
 
 // Get configuration by event ID
 const getConfigByEvent = catchAsync(async (req, res) => {
-  const eventConfig = await eventConfigService.getConfigByEvent(req.params.eventId);
+  const eventConfig = await eventConfigService.getConfigByEvent(
+    req.params.eventId
+  );
   if (!eventConfig) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Configuration for this event not found');
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'Configuration for this event not found'
+    );
   }
   res.send(eventConfig);
 });
@@ -38,7 +45,10 @@ const queryEventConfigs = catchAsync(async (req, res) => {
 
 // Update event configuration by ID
 const updateEventConfigById = catchAsync(async (req, res) => {
-  const updatedEventConfig = await eventConfigService.updateEventConfigById(req.params.eventConfigId, req.body);
+  const updatedEventConfig = await eventConfigService.updateEventConfigById(
+    req.params.eventConfigId,
+    req.body
+  );
   res.send(updatedEventConfig);
 });
 

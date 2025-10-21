@@ -569,7 +569,7 @@ const exportActivityLogsJSON = async (filters = {}) => {
  */
 const generateCSV = (data, headers) => {
   if (!data || data.length === 0) {
-    return headers.join(',') + '\n';
+    return `${headers.join(',')}\n`;
   }
 
   const csvRows = [headers.join(',')];

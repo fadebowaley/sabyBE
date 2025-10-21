@@ -2,8 +2,15 @@ const mongoose = require('mongoose');
 const app = require('./app');
 const config = require('./config/config');
 const logger = require('./config/logger');
-const { testConnection: testPostgresConnection, closePool: closePostgresPool } = require('./config/postgres');
-const { connectRedis, testRedisConnection, closeRedis } = require('./config/redis');
+const {
+  testConnection: testPostgresConnection,
+  closePool: closePostgresPool,
+} = require('./config/postgres');
+const {
+  connectRedis,
+  testRedisConnection,
+  closeRedis,
+} = require('./config/redis');
 const { initializeSocket } = require('./config/socket');
 
 let server;
@@ -36,7 +43,9 @@ const connectToDatabases = async () => {
       // Initialize Socket.IO
       initializeSocket(server);
     } else {
-      logger.error('❌ Failed to connect to PostgreSQLor Redis. Server not started.');
+      logger.error(
+        '❌ Failed to connect to PostgreSQLor Redis. Server not started.'
+      );
       process.exit(1);
     }
   } catch (error) {

@@ -12,7 +12,7 @@ const mongoose = require('mongoose');
 const hierarchyPlugin = (schema, options = {}) => {
   const parentField = options.parentField || 'parent';
   const pathField = options.pathField || 'path';
-  const modelName = options.modelName;
+  const { modelName } = options;
   const levelField = options.levelField || 'level';
 
   // Add required fields if they don't exist
@@ -61,11 +61,13 @@ const hierarchyPlugin = (schema, options = {}) => {
         const identity = [];
         const hierarchy = new Map();
         let current = this[parentField];
-        let pathParts = [];
+        const pathParts = [];
 
         // Build identity and hierarchy by traversing up
         while (current) {
-          const parent = await this.constructor.findById(current).populate(levelField);
+          const parent = await this.constructor
+            .findById(current)
+            .populate(levelField);
           if (!parent) {
             throw new Error(`Parent ${current} not found`);
           }
@@ -130,7 +132,9 @@ const hierarchyPlugin = (schema, options = {}) => {
 
   // Static method to get nodes by level in hierarchy
   schema.statics.getNodesByLevel = async function (levelName) {
-    return this.find({ fingerprint: new RegExp(`^${levelName.toLowerCase()}:`) });
+    return this.find({
+      fingerprint: new RegExp(`^${levelName.toLowerCase()}:`),
+    });
   };
 
   // Static method to get complete hierarchy path
@@ -149,7 +153,9 @@ const hierarchyPlugin = (schema, options = {}) => {
         level: level ? level.name : 'unknown',
         fingerprint: current.fingerprint,
       });
-      current = current[parentField] ? await this.findById(current[parentField]) : null;
+      current = current[parentField]
+        ? await this.findById(current[parentField])
+        : null;
     }
 
     return path;

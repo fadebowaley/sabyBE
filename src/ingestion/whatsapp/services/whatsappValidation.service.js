@@ -22,33 +22,61 @@ class WhatsAppValidationService {
    */
   async validateUserByPhone(phoneNumber, tenantId) {
     try {
-      logger.info(`🔍 Validating WhatsApp user by phone: ${phoneNumber} for tenant: ${tenantId}`);
+      logger.info(
+        `🔍 Validating WhatsApp user by phone: ${phoneNumber} for tenant: ${tenantId}`
+      );
 
       // Find user by phone number
       const user = await userService.getUserByPhone(phoneNumber);
-      console.log(`[whatsappValidationService] getUserByPhone(${phoneNumber}) result:`, user);
+      console.log(
+        `[whatsappValidationService] getUserByPhone(${phoneNumber}) result:`,
+        user
+      );
       if (!user) {
         logger.warn(`❌ WhatsApp user not found: ${phoneNumber}`);
-        return { valid: false, error: 'User is not registered', code: 'USER_NOT_FOUND' };
+        return {
+          valid: false,
+          error: 'User is not registered',
+          code: 'USER_NOT_FOUND',
+        };
       }
 
       // Check if user belongs to the tenant
       if (user.tenantId !== tenantId) {
-        logger.warn(`❌ WhatsApp user ${phoneNumber} does not belong to tenant ${tenantId}`);
-        return { valid: false, error: 'User does not belong to this tenant', code: 'TENANT_MISMATCH' };
+        logger.warn(
+          `❌ WhatsApp user ${phoneNumber} does not belong to tenant ${tenantId}`
+        );
+        return {
+          valid: false,
+          error: 'User does not belong to this tenant',
+          code: 'TENANT_MISMATCH',
+        };
       }
 
       // Check if user is active (not soft deleted)
       if (user.deletedAt) {
         logger.warn(`❌ WhatsApp user ${phoneNumber} is deleted`);
-        return { valid: false, error: 'User account is inactive', code: 'USER_DELETED' };
+        return {
+          valid: false,
+          error: 'User account is inactive',
+          code: 'USER_DELETED',
+        };
       }
 
-      logger.info(`✅ WhatsApp user validated: ${phoneNumber} (User ID: ${user._id})`);
+      logger.info(
+        `✅ WhatsApp user validated: ${phoneNumber} (User ID: ${user._id})`
+      );
       return { valid: true, user };
     } catch (error) {
-      logger.error(`❌ Error validating WhatsApp user ${phoneNumber}:`, error.message);
-      return { valid: false, error: 'Error validating user', code: 'VALIDATION_ERROR' };
+      logger.error(
+        `❌ Error validating WhatsApp user ${phoneNumber}:`,
+        error.message
+      );
+      return {
+        valid: false,
+        error: 'Error validating user',
+        code: 'VALIDATION_ERROR',
+      };
     }
   }
 
@@ -60,39 +88,71 @@ class WhatsAppValidationService {
    */
   async validateProjectForm(projectId, user) {
     try {
-      logger.info(`🔍 Validating project form: ${projectId} for WhatsApp user: ${user.phone}`);
+      logger.info(
+        `🔍 Validating project form: ${projectId} for WhatsApp user: ${user.phone}`
+      );
 
       // Find project form by project ID
-      const projectForm = await projectFormService.getProjectFormByProjectId(projectId);
+      const projectForm = await projectFormService.getProjectFormByProjectId(
+        projectId
+      );
 
       if (!projectForm) {
         logger.warn(`❌ Project form not found: ${projectId}`);
-        return { valid: false, error: 'Project form not found', code: 'PROJECT_NOT_FOUND' };
+        return {
+          valid: false,
+          error: 'Project form not found',
+          code: 'PROJECT_NOT_FOUND',
+        };
       }
 
       // Check if project belongs to the same tenant as user
       if (projectForm.tenantId !== user.tenantId) {
-        logger.warn(`❌ Project ${projectId} does not belong to user's tenant ${user.tenantId}`);
-        return { valid: false, error: 'Project does not belong to your tenant', code: 'PROJECT_TENANT_MISMATCH' };
+        logger.warn(
+          `❌ Project ${projectId} does not belong to user's tenant ${user.tenantId}`
+        );
+        return {
+          valid: false,
+          error: 'Project does not belong to your tenant',
+          code: 'PROJECT_TENANT_MISMATCH',
+        };
       }
 
       // Check if project is active and published
-      if (projectForm.status !== 'active' || projectForm.metadata.deploymentStatus !== 'published') {
+      if (
+        projectForm.status !== 'active' ||
+        projectForm.metadata.deploymentStatus !== 'published'
+      ) {
         logger.warn(`❌ Project ${projectId} is not active or published`);
-        return { valid: false, error: 'Project is not active or published', code: 'PROJECT_NOT_ACTIVE' };
+        return {
+          valid: false,
+          error: 'Project is not active or published',
+          code: 'PROJECT_NOT_ACTIVE',
+        };
       }
 
       // Check if project is not deleted
       if (projectForm.deletedAt) {
         logger.warn(`❌ Project ${projectId} is deleted`);
-        return { valid: false, error: 'Project has been deleted', code: 'PROJECT_DELETED' };
+        return {
+          valid: false,
+          error: 'Project has been deleted',
+          code: 'PROJECT_DELETED',
+        };
       }
 
       logger.info(`✅ Project form validated: ${projectId}`);
       return { valid: true, projectForm };
     } catch (error) {
-      logger.error(`❌ Error validating project form ${projectId}:`, error.message);
-      return { valid: false, error: 'Error validating project form', code: 'VALIDATION_ERROR' };
+      logger.error(
+        `❌ Error validating project form ${projectId}:`,
+        error.message
+      );
+      return {
+        valid: false,
+        error: 'Error validating project form',
+        code: 'VALIDATION_ERROR',
+      };
     }
   }
 
@@ -104,7 +164,9 @@ class WhatsAppValidationService {
    */
   async validateFormFields(answers, projectForm) {
     try {
-      logger.info(`🔍 Validating form fields for WhatsApp project: ${projectForm.projectId}`);
+      logger.info(
+        `🔍 Validating form fields for WhatsApp project: ${projectForm.projectId}`
+      );
 
       const validationResult = {
         valid: true,
@@ -124,9 +186,15 @@ class WhatsAppValidationService {
       // Validate each form element
       for (let i = 0; i < formElements.length; i++) {
         const element = formElements[i];
-        const fieldName = element.properties && element.properties.label ? element.properties.label : element.id;
+        const fieldName =
+          element.properties && element.properties.label
+            ? element.properties.label
+            : element.id;
         const fieldKey = this.normalizeFieldName(fieldName);
-        const isRequired = element.properties && element.properties.required ? element.properties.required : false;
+        const isRequired =
+          element.properties && element.properties.required
+            ? element.properties.required
+            : false;
         const fieldType = element.type;
 
         // Check if field is present in answers (by step index)
@@ -137,7 +205,10 @@ class WhatsAppValidationService {
           foundFormFields.add(fieldKey);
 
           // Validate field value based on type
-          const fieldValidation = this.validateFieldValue(submittedValue, element);
+          const fieldValidation = this.validateFieldValue(
+            submittedValue,
+            element
+          );
           if (!fieldValidation.valid) {
             validationResult.errors.push({
               field: fieldName,
@@ -163,13 +234,18 @@ class WhatsAppValidationService {
       }
 
       if (validationResult.valid) {
-        logger.info(`✅ Form fields validated successfully for WhatsApp project: ${projectForm.projectId}`);
+        logger.info(
+          `✅ Form fields validated successfully for WhatsApp project: ${projectForm.projectId}`
+        );
       } else {
-        logger.warn(`⚠️ Form validation failed for WhatsApp project: ${projectForm.projectId}`, {
-          errors: validationResult.errors.length,
-          missing: validationResult.missingFields.length,
-          extra: validationResult.extraFields.length,
-        });
+        logger.warn(
+          `⚠️ Form validation failed for WhatsApp project: ${projectForm.projectId}`,
+          {
+            errors: validationResult.errors.length,
+            missing: validationResult.missingFields.length,
+            extra: validationResult.extraFields.length,
+          }
+        );
       }
 
       return validationResult;
@@ -177,7 +253,9 @@ class WhatsAppValidationService {
       logger.error(`❌ Error validating form fields:`, error.message);
       return {
         valid: false,
-        errors: [{ field: 'validation', error: 'Error validating form fields' }],
+        errors: [
+          { field: 'validation', error: 'Error validating form fields' },
+        ],
         validatedData: {},
         missingFields: [],
         extraFields: [],
@@ -264,7 +342,10 @@ class WhatsAppValidationService {
     }
 
     if (properties.min !== undefined && num < properties.min) {
-      return { valid: false, error: `Value must be at least ${properties.min}` };
+      return {
+        valid: false,
+        error: `Value must be at least ${properties.min}`,
+      };
     }
 
     if (properties.max !== undefined && num > properties.max) {
@@ -291,7 +372,10 @@ class WhatsAppValidationService {
   validateSelect(value, properties) {
     const options = properties.options || [];
     if (options.length > 0 && !options.includes(value)) {
-      return { valid: false, error: `Value must be one of: ${options.join(', ')}` };
+      return {
+        valid: false,
+        error: `Value must be one of: ${options.join(', ')}`,
+      };
     }
     return { valid: true, value };
   }
@@ -310,10 +394,9 @@ class WhatsAppValidationService {
         }
       }
       return { valid: true, value: values };
-    } else {
-      // Single selection
-      return this.validateSelect(value, properties);
     }
+    // Single selection
+    return this.validateSelect(value, properties);
   }
 
   /**
@@ -336,11 +419,17 @@ class WhatsAppValidationService {
     }
 
     if (properties.minLength && value.length < properties.minLength) {
-      return { valid: false, error: `Text must be at least ${properties.minLength} characters` };
+      return {
+        valid: false,
+        error: `Text must be at least ${properties.minLength} characters`,
+      };
     }
 
     if (properties.maxLength && value.length > properties.maxLength) {
-      return { valid: false, error: `Text must be at most ${properties.maxLength} characters` };
+      return {
+        valid: false,
+        error: `Text must be at most ${properties.maxLength} characters`,
+      };
     }
 
     return { valid: true, value };
@@ -353,18 +442,26 @@ class WhatsAppValidationService {
    * @param {Object} projectForm - Project form object
    * @returns {Promise<void>}
    */
-  async sendValidationFailureNotification(validationResult, phoneNumber, projectForm) {
+  async sendValidationFailureNotification(
+    validationResult,
+    phoneNumber,
+    projectForm
+  ) {
     try {
       // Verify that we have a valid phone number from a registered user
       if (!phoneNumber) {
-        logger.info(`📧 Skipping validation failure notification - no verified phone provided`);
+        logger.info(
+          `📧 Skipping validation failure notification - no verified phone provided`
+        );
         return;
       }
 
       // Get user data from the verified phone number
       const user = await userService.getUserByPhone(phoneNumber);
       if (!user) {
-        logger.warn(`📧 Skipping validation failure notification - verified phone not found in database: ${phoneNumber}`);
+        logger.warn(
+          `📧 Skipping validation failure notification - verified phone not found in database: ${phoneNumber}`
+        );
         return;
       }
 
@@ -376,30 +473,45 @@ class WhatsAppValidationService {
       };
 
       const projectData = {
-        projectName: (projectForm && projectForm.configuration && projectForm.configuration.projectName) || 'Your Project',
+        projectName:
+          (projectForm &&
+            projectForm.configuration &&
+            projectForm.configuration.projectName) ||
+          'Your Project',
       };
 
       // Get the first error step for notification
-      const firstError = validationResult.errors && validationResult.errors.length > 0 ? validationResult.errors[0] : null;
+      const firstError =
+        validationResult.errors && validationResult.errors.length > 0
+          ? validationResult.errors[0]
+          : null;
       const validationData = {
         errors: validationResult.errors || [],
         warnings: validationResult.warnings || [],
         step: firstError ? firstError.step : 'unknown',
       };
 
-      const notificationResult = await notificationQueueService.queueValidationFailureNotification(
-        validationData,
-        userData,
-        projectData
-      );
+      const notificationResult =
+        await notificationQueueService.queueValidationFailureNotification(
+          validationData,
+          userData,
+          projectData
+        );
 
       if (notificationResult.success) {
-        logger.info(`📧 Validation failure notification queued for ${phoneNumber} - Job ID: ${notificationResult.jobId}`);
+        logger.info(
+          `📧 Validation failure notification queued for ${phoneNumber} - Job ID: ${notificationResult.jobId}`
+        );
       } else {
-        logger.warn(`⚠️ Failed to queue validation failure notification for ${phoneNumber}: ${notificationResult.error}`);
+        logger.warn(
+          `⚠️ Failed to queue validation failure notification for ${phoneNumber}: ${notificationResult.error}`
+        );
       }
     } catch (error) {
-      logger.error(`❌ Error sending validation failure notification to ${phoneNumber}:`, error.message);
+      logger.error(
+        `❌ Error sending validation failure notification to ${phoneNumber}:`,
+        error.message
+      );
     }
   }
 
@@ -411,10 +523,12 @@ class WhatsAppValidationService {
    * @returns {Promise<Object>} Complete validation result
    */
   async validateWhatsAppSubmission(sessionData, answers, projectId) {
-    const phoneNumber = sessionData.phoneNumber;
-    const tenantId = sessionData.tenantId;
+    const { phoneNumber } = sessionData;
+    const { tenantId } = sessionData;
 
-    logger.info(`🔍 Starting comprehensive validation for WhatsApp submission from ${phoneNumber} to project ${projectId}`);
+    logger.info(
+      `🔍 Starting comprehensive validation for WhatsApp submission from ${phoneNumber} to project ${projectId}`
+    );
 
     const validationResult = {
       valid: false,
@@ -429,7 +543,10 @@ class WhatsAppValidationService {
     try {
       // Step 1: Validate user by phone number
       logger.info(`🔍 Validating user by phone: ${phoneNumber}`);
-      const userValidation = await this.validateUserByPhone(phoneNumber, tenantId);
+      const userValidation = await this.validateUserByPhone(
+        phoneNumber,
+        tenantId
+      );
 
       if (!userValidation.valid) {
         logger.warn(`❌ User validation failed: ${userValidation.error}`);
@@ -448,7 +565,10 @@ class WhatsAppValidationService {
 
       // Step 2: Validate project form
       logger.info(`🔍 Validating project form: ${projectId}`);
-      const projectValidation = await this.validateProjectForm(projectId, userValidation.user);
+      const projectValidation = await this.validateProjectForm(
+        projectId,
+        userValidation.user
+      );
 
       if (!projectValidation.valid) {
         logger.warn(`❌ Project validation failed: ${projectValidation.error}`);
@@ -458,14 +578,21 @@ class WhatsAppValidationService {
           code: projectValidation.code,
         });
         // Send notification for project validation failures
-        await this.sendValidationFailureNotification(validationResult, validationResult.verifiedPhone, null);
+        await this.sendValidationFailureNotification(
+          validationResult,
+          validationResult.verifiedPhone,
+          null
+        );
         return validationResult;
       }
 
       validationResult.projectForm = projectValidation.projectForm;
 
       // Step 3: Validate form fields
-      const formValidation = await this.validateFormFields(answers, projectValidation.projectForm);
+      const formValidation = await this.validateFormFields(
+        answers,
+        projectValidation.projectForm
+      );
       validationResult.formValidation = formValidation;
 
       if (!formValidation.valid) {
@@ -495,7 +622,10 @@ class WhatsAppValidationService {
       );
       return validationResult;
     } catch (error) {
-      logger.error(`❌ Error during WhatsApp submission validation:`, error.message);
+      logger.error(
+        `❌ Error during WhatsApp submission validation:`,
+        error.message
+      );
       validationResult.errors.push({
         step: 'validation_error',
         error: 'Unexpected error during validation',

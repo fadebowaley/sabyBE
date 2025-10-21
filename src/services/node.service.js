@@ -131,9 +131,7 @@ const queryNodes = async (filter, options) => {
  * @param {string} type - Node type
  * @returns {Promise<Array<Node>>}
  */
-const getNodesByType = async (type) => {
-  return Nodes.find({ type });
-};
+const getNodesByType = async (type) => Nodes.find({ type });
 
 /**
  * Get parent node
@@ -153,9 +151,7 @@ const getParentNode = async (nodeId) => {
  * @param {ObjectId} nodeId
  * @returns {Promise<Array<Node>>}
  */
-const getChildNodes = async (nodeId) => {
-  return Nodes.find({ parent: nodeId });
-};
+const getChildNodes = async (nodeId) => Nodes.find({ parent: nodeId });
 
 /**
  * Move node to new parent
@@ -251,7 +247,9 @@ const bulkImportNodes = async (nodesData) => {
   // Update parent references and hierarchy
   for (const node of nodes) {
     if (node.parent) {
-      const parentNode = nodes.find((n) => n._id.toString() === node.parent.toString());
+      const parentNode = nodes.find(
+        (n) => n._id.toString() === node.parent.toString()
+      );
       if (parentNode) {
         node.path = `${parentNode.path}/${node._id}`;
         await node.save();

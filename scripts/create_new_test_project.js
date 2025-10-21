@@ -84,14 +84,23 @@ async function createNewTestProject() {
     console.log(`   - Tenant ID: ${savedProject.tenantId}`);
     console.log(`   - Project Name: ${savedProject.configuration.projectName}`);
     console.log(`   - Status: ${savedProject.status}`);
-    console.log(`   - Deployment Status: ${savedProject.metadata.deploymentStatus}`);
-    console.log(`   - Form Fields: ${savedProject.configuration.elements.length}`);
+    console.log(
+      `   - Deployment Status: ${savedProject.metadata.deploymentStatus}`
+    );
+    console.log(
+      `   - Form Fields: ${savedProject.configuration.elements.length}`
+    );
 
     console.log('\n🔍 Form Fields:');
-    if (savedProject.configuration.elements && savedProject.configuration.elements.length > 0) {
+    if (
+      savedProject.configuration.elements &&
+      savedProject.configuration.elements.length > 0
+    ) {
       savedProject.configuration.elements.forEach((element, index) => {
         console.log(
-          `   ${index + 1}. ${element.properties.label} (${element.type}) - Required: ${element.properties.required}`
+          `   ${index + 1}. ${element.properties.label} (${
+            element.type
+          }) - Required: ${element.properties.required}`
         );
       });
     } else {
@@ -119,7 +128,9 @@ async function createNewTestProject() {
     console.log('- Form Type: Email Submission');
     console.log('- Validation Required: Yes');
     console.log('');
-    console.log('This email should be processed by the email ingestion system and validated successfully.');
+    console.log(
+      'This email should be processed by the email ingestion system and validated successfully.'
+    );
     console.log('');
     console.log('Best regards,');
     console.log('Test User');

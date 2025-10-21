@@ -10,12 +10,14 @@ const ApiError = require('../utils/ApiError');
 const getUserProfileByUserId = async (userId) =>
   UserProfile.findOne({ user: userId }).populate('user');
 
+
 /**
  * Upsert user profile (create or update)
  * @param {string} userId - User ID
  * @param {Object} profileData - Profile data
  * @returns {Promise<UserProfile>}
  */
+
 const upsertUserProfile = async (userId, profileData) => {
   const profile = await UserProfile.findOneAndUpdate(
     { user: userId },
@@ -24,6 +26,7 @@ const upsertUserProfile = async (userId, profileData) => {
   );
   return profile;
 };
+
 
 /**
  * Delete user profile
@@ -37,6 +40,7 @@ const deleteUserProfile = async (userId) => {
   }
   return profile;
 };
+
 
 module.exports = {
   getUserProfileByUserId,

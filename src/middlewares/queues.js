@@ -1,9 +1,9 @@
 // middleware/queues.js
 
 const { Queue } = require('bullmq');
-const { getRedisConnectionOptions } = require('../config/redis');
 const fs = require('fs');
 const path = require('path');
+const { getRedisConnectionOptions } = require('../config/redis');
 
 const LOG_FILE = path.join(__dirname, 'queue_stats.log');
 
@@ -37,7 +37,9 @@ function logJobStats() {
 // Only run logging if this file is executed directly
 if (require.main === module) {
   const { Worker } = require('bullmq');
-  const worker = new Worker('submissionQueue', async () => {}, { connection: getRedisConnectionOptions() });
+  const worker = new Worker('submissionQueue', async () => {}, {
+    connection: getRedisConnectionOptions(),
+  });
 
   worker.on('completed', () => {
     jobStats.success++;

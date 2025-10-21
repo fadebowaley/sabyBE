@@ -12,11 +12,17 @@ class NotificationService {
    */
   async sendSubmissionConfirmation(submission, user, projectForm) {
     try {
-      const emailTemplate = this.createConfirmationTemplate(submission, user, projectForm);
+      const emailTemplate = this.createConfirmationTemplate(
+        submission,
+        user,
+        projectForm
+      );
 
       await sendEmail(user.email, emailTemplate.subject, emailTemplate.text);
 
-      logger.info(`✅ Confirmation email sent to ${user.email} for submission ${submission._id}`);
+      logger.info(
+        `✅ Confirmation email sent to ${user.email} for submission ${submission._id}`
+      );
 
       return {
         success: true,
@@ -24,7 +30,10 @@ class NotificationService {
         submissionId: submission._id,
       };
     } catch (error) {
-      logger.error(`❌ Failed to send confirmation email to ${user.email}:`, error.message);
+      logger.error(
+        `❌ Failed to send confirmation email to ${user.email}:`,
+        error.message
+      );
       return {
         success: false,
         error: error.message,
@@ -42,13 +51,25 @@ class NotificationService {
    * @param {string} status - Processing status
    * @returns {Promise<Object>} Email sending result
    */
-  async sendProcessingNotification(submission, user, projectForm, status = 'processing') {
+  async sendProcessingNotification(
+    submission,
+    user,
+    projectForm,
+    status = 'processing'
+  ) {
     try {
-      const emailTemplate = this.createProcessingTemplate(submission, user, projectForm, status);
+      const emailTemplate = this.createProcessingTemplate(
+        submission,
+        user,
+        projectForm,
+        status
+      );
 
       await sendEmail(user.email, emailTemplate.subject, emailTemplate.text);
 
-      logger.info(`✅ Processing notification sent to ${user.email} for submission ${submission._id}`);
+      logger.info(
+        `✅ Processing notification sent to ${user.email} for submission ${submission._id}`
+      );
 
       return {
         success: true,
@@ -57,7 +78,10 @@ class NotificationService {
         status,
       };
     } catch (error) {
-      logger.error(`❌ Failed to send processing notification to ${user.email}:`, error.message);
+      logger.error(
+        `❌ Failed to send processing notification to ${user.email}:`,
+        error.message
+      );
       return {
         success: false,
         error: error.message,
@@ -73,7 +97,9 @@ class NotificationService {
    */
   createConfirmationTemplate(submission, user, projectForm) {
     const submissionDate = new Date(submission.createdAt).toLocaleString();
-    const projectName = (projectForm.configuration && projectForm.configuration.projectName) || 'Project';
+    const projectName =
+      (projectForm.configuration && projectForm.configuration.projectName) ||
+      'Project';
 
     return {
       subject: `✅ Submission Received - ${projectName}`,
@@ -101,7 +127,9 @@ The ${projectName} Team`,
    */
   createProcessingTemplate(submission, user, projectForm, status) {
     const submissionDate = new Date(submission.createdAt).toLocaleString();
-    const projectName = (projectForm.configuration && projectForm.configuration.projectName) || 'Project';
+    const projectName =
+      (projectForm.configuration && projectForm.configuration.projectName) ||
+      'Project';
 
     let statusText = 'Processing';
 
@@ -113,11 +141,14 @@ The ${projectName} Team`,
 
     let statusMessage = '';
     if (status === 'completed') {
-      statusMessage = 'Your submission has been processed successfully and is now available in our system.';
+      statusMessage =
+        'Your submission has been processed successfully and is now available in our system.';
     } else if (status === 'failed') {
-      statusMessage = 'There was an issue processing your submission. Please contact support for assistance.';
+      statusMessage =
+        'There was an issue processing your submission. Please contact support for assistance.';
     } else {
-      statusMessage = 'Your submission is currently being processed. You will receive another notification once complete.';
+      statusMessage =
+        'Your submission is currently being processed. You will receive another notification once complete.';
     }
 
     return {

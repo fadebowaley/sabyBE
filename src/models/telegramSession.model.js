@@ -30,7 +30,14 @@ const telegramSessionSchema = mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['authenticating', 'selecting_project', 'filling_form', 'ready_to_submit', 'submitted', 'completed'],
+      enum: [
+        'authenticating',
+        'selecting_project',
+        'filling_form',
+        'ready_to_submit',
+        'submitted',
+        'completed',
+      ],
       default: 'authenticating',
     },
     currentStep: {
@@ -103,7 +110,10 @@ telegramSessionSchema.statics.findByChatId = function (chatId) {
   return this.findOne({ chatId });
 };
 
-telegramSessionSchema.statics.findActiveByUserId = function (userId, projectId) {
+telegramSessionSchema.statics.findActiveByUserId = function (
+  userId,
+  projectId
+) {
   return this.findOne({
     userId,
     projectId,
@@ -111,7 +121,9 @@ telegramSessionSchema.statics.findActiveByUserId = function (userId, projectId) 
   });
 };
 
-telegramSessionSchema.statics.cleanupExpiredSessions = function (ttlHours = 24) {
+telegramSessionSchema.statics.cleanupExpiredSessions = function (
+  ttlHours = 24
+) {
   const cutoffTime = new Date(Date.now() - ttlHours * 60 * 60 * 1000);
   return this.deleteMany({
     lastActivity: { $lt: cutoffTime },
@@ -119,6 +131,9 @@ telegramSessionSchema.statics.cleanupExpiredSessions = function (ttlHours = 24) 
   });
 };
 
-const TelegramSession = mongoose.model('TelegramSession', telegramSessionSchema);
+const TelegramSession = mongoose.model(
+  'TelegramSession',
+  telegramSessionSchema
+);
 
 module.exports = TelegramSession;

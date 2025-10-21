@@ -11,7 +11,11 @@ const { postgresPool } = require('../config/postgres');
  * @returns {Promise<{ jobId: string, status: string }>}
  */
 const queueSubmission = async (submissionBody) => {
-  if (!submissionBody || typeof submissionBody !== 'object' || !submissionBody.tenantId) {
+  if (
+    !submissionBody ||
+    typeof submissionBody !== 'object' ||
+    !submissionBody.tenantId
+  ) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid submission payload');
   }
 
@@ -28,28 +32,32 @@ const queueSubmission = async (submissionBody) => {
       },
     });
 
-    logger.info(`📥 Submission enqueued - Job ID: ${job.id} | Tenant: ${submissionBody.tenantId}`);
+    logger.info(
+      `📥 Submission enqueued - Job ID: ${job.id} | Tenant: ${submissionBody.tenantId}`
+    );
     return { jobId: job.id, status: 'queued' };
   } catch (error) {
     logger.error('❌ Submission queue failed:', error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Submission queue failed');
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Submission queue failed'
+    );
   }
 };
 
 /**
  * List/query submissions by tenant ID (and optional filters)
  */
-const listSubmissions = async (filters = {}) => {
+const listSubmissions = async (filters = {}) =>
   // Accept form_id, node_id, user_id in filters
-  return SubmissionModel.getFilteredSubmissions(filters);
-};
-
+  SubmissionModel.getFilteredSubmissions(filters);
 /**
  * Get a specific submission by ID
  */
 const getSubmissionById = async (id) => {
   const submission = await SubmissionModel.getSubmissionById(id);
-  if (!submission) throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
+  if (!submission)
+    throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
   return submission;
 };
 
@@ -59,7 +67,11 @@ const getSubmissionById = async (id) => {
 const deleteSubmission = async (form_id) => {
   // Delete all submissions for a given form_id
   const deleted = await SubmissionModel.deleteSubmission(form_id);
-  if (!deleted || deleted.length === 0) throw new ApiError(httpStatus.NOT_FOUND, 'No submissions found for this form_id');
+  if (!deleted || deleted.length === 0)
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'No submissions found for this form_id'
+    );
   return deleted;
 };
 
@@ -68,8 +80,10 @@ const deleteSubmission = async (form_id) => {
  */
 const retrySubmission = async (id) => {
   const submission = await SubmissionModel.getSubmissionById(id);
-  if (!submission) throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
-  if (submission.status !== 'failed') throw new ApiError(httpStatus.BAD_REQUEST, 'Submission is not failed');
+  if (!submission)
+    throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
+  if (submission.status !== 'failed')
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Submission is not failed');
   // Re-queue the submission for processing, including form_id, node_id, user_id
   const submissionBody = {
     tenantId: submission.tenant_id,
@@ -92,7 +106,18 @@ const retrySubmission = async (id) => {
  * @returns {Promise<{results: Array, total: number}>}
  */
 const getActivityLogs = async (filters = {}) => {
-  const { tenantId, projectId, formId, userId, status, startDate, endDate, search, limit = 50, offset = 0 } = filters;
+  const {
+    tenantId,
+    projectId,
+    formId,
+    userId,
+    status,
+    startDate,
+    endDate,
+    search,
+    limit = 50,
+    offset = 0,
+  } = filters;
   const where = [];
   const values = [];
   let idx = 1;
@@ -137,7 +162,10 @@ const getActivityLogs = async (filters = {}) => {
 
   // Total count query (no limit/offset)
   const countSql = `SELECT COUNT(*) FROM submission_activity_log ${whereClause}`;
-  const { rows: countRows } = await postgresPool.query(countSql, values.slice(0, idx - 2));
+  const { rows: countRows } = await postgresPool.query(
+    countSql,
+    values.slice(0, idx - 2)
+  );
   const total = parseInt(countRows[0].count, 10);
 
   return { results: rows, total };
@@ -159,7 +187,14 @@ const getActivityLogSummary = async () => {
     WHERE rn = 1
   `;
   const { rows } = await postgresPool.query(sql);
-  const summary = { total_jobs: 0, success: 0, failed: 0, queued: 0, in_progress: 0, rejected: 0 };
+  const summary = {
+    total_jobs: 0,
+    success: 0,
+    failed: 0,
+    queued: 0,
+    in_progress: 0,
+    rejected: 0,
+  };
   summary.total_jobs = rows.length;
   for (const row of rows) {
     if (row.status === 'success') summary.success++;

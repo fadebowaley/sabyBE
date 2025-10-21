@@ -30,7 +30,13 @@ class NotificationQueueService {
    * @param {Object} projectData - Project data (projectName)
    * @returns {Promise<Object>} Job queuing result
    */
-  async queueSubmissionConfirmation(submission, userId, projectId, userData, projectData) {
+  async queueSubmissionConfirmation(
+    submission,
+    userId,
+    projectId,
+    userData,
+    projectData
+  ) {
     try {
       const job = await this.queue.add('submission_confirmation', {
         type: 'submission_confirmation',
@@ -42,7 +48,9 @@ class NotificationQueueService {
         timestamp: new Date().toISOString(),
       });
 
-      logger.info(`📧 Queued submission confirmation notification - Job ID: ${job.id}`);
+      logger.info(
+        `📧 Queued submission confirmation notification - Job ID: ${job.id}`
+      );
 
       return {
         success: true,
@@ -50,7 +58,10 @@ class NotificationQueueService {
         message: 'Notification queued successfully',
       };
     } catch (error) {
-      logger.error(`❌ Failed to queue submission confirmation:`, error.message);
+      logger.error(
+        `❌ Failed to queue submission confirmation:`,
+        error.message
+      );
       return {
         success: false,
         error: error.message,
@@ -66,7 +77,12 @@ class NotificationQueueService {
    * @param {string} status - Processing status (completed, failed, processing)
    * @returns {Promise<Object>} Job queuing result
    */
-  async queueProcessingNotification(submission, userId, projectId, status = 'completed') {
+  async queueProcessingNotification(
+    submission,
+    userId,
+    projectId,
+    status = 'completed'
+  ) {
     try {
       const job = await this.queue.add('processing_notification', {
         type: 'processing_notification',
@@ -77,7 +93,9 @@ class NotificationQueueService {
         timestamp: new Date().toISOString(),
       });
 
-      logger.info(`📧 Queued processing notification (${status}) - Job ID: ${job.id}`);
+      logger.info(
+        `📧 Queued processing notification (${status}) - Job ID: ${job.id}`
+      );
 
       return {
         success: true,
@@ -85,7 +103,10 @@ class NotificationQueueService {
         message: 'Processing notification queued successfully',
       };
     } catch (error) {
-      logger.error(`❌ Failed to queue processing notification:`, error.message);
+      logger.error(
+        `❌ Failed to queue processing notification:`,
+        error.message
+      );
       return {
         success: false,
         error: error.message,
@@ -100,7 +121,11 @@ class NotificationQueueService {
    * @param {Object} projectData - Project data (projectName)
    * @returns {Promise<Object>} Job queuing result
    */
-  async queueValidationFailureNotification(validationData, userData, projectData) {
+  async queueValidationFailureNotification(
+    validationData,
+    userData,
+    projectData
+  ) {
     try {
       const job = await this.queue.add('validation_failure', {
         type: 'validation_failure',
@@ -110,7 +135,9 @@ class NotificationQueueService {
         timestamp: new Date().toISOString(),
       });
 
-      logger.info(`📧 Queued validation failure notification - Job ID: ${job.id}`);
+      logger.info(
+        `📧 Queued validation failure notification - Job ID: ${job.id}`
+      );
 
       return {
         success: true,
@@ -118,7 +145,10 @@ class NotificationQueueService {
         message: 'Validation failure notification queued successfully',
       };
     } catch (error) {
-      logger.error(`❌ Failed to queue validation failure notification:`, error.message);
+      logger.error(
+        `❌ Failed to queue validation failure notification:`,
+        error.message
+      );
       return {
         success: false,
         error: error.message,
@@ -171,7 +201,8 @@ class NotificationQueueService {
         active: active.length,
         completed: completed.length,
         failed: failed.length,
-        total: waiting.length + active.length + completed.length + failed.length,
+        total:
+          waiting.length + active.length + completed.length + failed.length,
       };
     } catch (error) {
       logger.error(`❌ Failed to get queue stats:`, error.message);
@@ -185,38 +216,62 @@ class NotificationQueueService {
    * @returns {Promise<Object>} Processing result
    */
   async processNotificationJob(job) {
-    const { type, submission, userId, projectId, status, userData, projectData, validationData } = job.data;
+    const {
+      type,
+      submission,
+      userId,
+      projectId,
+      status,
+      userData,
+      projectData,
+      validationData,
+    } = job.data;
 
     try {
-      logger.info(`📧 Processing notification job: ${type} for user ${userData ? userData.email : userId}`);
+      logger.info(
+        `📧 Processing notification job: ${type} for user ${
+          userData ? userData.email : userId
+        }`
+      );
 
       let notificationResult;
 
       switch (type) {
         case 'submission_confirmation':
-          notificationResult = await simpleNotificationService.sendSubmissionConfirmation(submission, userData, projectData);
+          notificationResult =
+            await simpleNotificationService.sendSubmissionConfirmation(
+              submission,
+              userData,
+              projectData
+            );
           break;
 
         case 'validation_failure':
-          notificationResult = await simpleNotificationService.sendValidationFailureNotification(
-            validationData,
-            userData,
-            projectData
-          );
+          notificationResult =
+            await simpleNotificationService.sendValidationFailureNotification(
+              validationData,
+              userData,
+              projectData
+            );
           break;
 
         case 'processing_notification':
-          notificationResult = await simpleNotificationService.sendProcessingNotification(
-            submission,
-            userData,
-            projectData,
-            status
-          );
+          notificationResult =
+            await simpleNotificationService.sendProcessingNotification(
+              submission,
+              userData,
+              projectData,
+              status
+            );
           break;
 
         case 'custom_notification':
           // Handle custom notifications
-          notificationResult = await this.handleCustomNotification(job.data, userData, projectData);
+          notificationResult = await this.handleCustomNotification(
+            job.data,
+            userData,
+            projectData
+          );
           break;
 
         default:
@@ -224,10 +279,16 @@ class NotificationQueueService {
       }
 
       if (notificationResult.success) {
-        logger.info(`✅ Notification sent successfully: ${type} to ${userData ? userData.email : userId}`);
+        logger.info(
+          `✅ Notification sent successfully: ${type} to ${
+            userData ? userData.email : userId
+          }`
+        );
       } else {
         logger.warn(
-          `⚠️ Notification failed: ${type} to ${userData ? userData.email : userId} - ${notificationResult.error}`
+          `⚠️ Notification failed: ${type} to ${
+            userData ? userData.email : userId
+          } - ${notificationResult.error}`
         );
       }
 

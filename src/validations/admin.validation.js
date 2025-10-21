@@ -5,7 +5,9 @@ const createAdmin = {
   body: Joi.object().keys({
     tenantId: Joi.string().required(),
     userId: Joi.string().required(),
-    role: Joi.string().valid('SuperAdmin', 'TenantAdmin', 'OperationalAdmin').default('TenantAdmin'),
+    role: Joi.string()
+      .valid('SuperAdmin', 'TenantAdmin', 'OperationalAdmin')
+      .default('TenantAdmin'),
     permissions: Joi.array().items(Joi.string()).default([]),
     assignedModules: Joi.array().items(Joi.string()).default([]),
     isActive: Joi.boolean().default(true),
@@ -18,7 +20,9 @@ const assignRole = {
     adminId: Joi.string().custom(objectId).required(),
   }),
   body: Joi.object().keys({
-    role: Joi.string().valid('SuperAdmin', 'TenantAdmin', 'OperationalAdmin').required(),
+    role: Joi.string()
+      .valid('SuperAdmin', 'TenantAdmin', 'OperationalAdmin')
+      .required(),
   }),
 };
 
