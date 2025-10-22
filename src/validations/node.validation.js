@@ -46,8 +46,10 @@ const updateNodeById = {
   }),
   body: Joi.object()
     .keys({
+      // Node table fields
       level: Joi.string().custom(objectId),
       parent: Joi.string().custom(objectId),
+      structure: Joi.string().custom(objectId),
       isMain: Joi.boolean(),
       isOwner: Joi.boolean(),
       name: Joi.string().trim(),
@@ -56,8 +58,14 @@ const updateNodeById = {
       state: Joi.string().trim(),
       country: Joi.string().trim(),
       postalCode: Joi.string(),
-      dateOfEstablishment: Joi.date(),
       users: Joi.array().items(Joi.string().custom(objectId)),
+      isActive: Joi.boolean(),
+      // NodeProfile table fields (auto-routed to profile)
+      dateOfEstablishment: Joi.date(),
+      propertyStatus: Joi.string().valid('Owned', 'Rented', 'Leased', 'Other'),
+      estimatedValue: Joi.number(),
+      buildingType: Joi.string(),
+      status: Joi.string().valid('Active', 'Inactive', 'Under Construction'),
     })
     .min(1),
 };

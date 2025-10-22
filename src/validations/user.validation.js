@@ -88,6 +88,7 @@ const updateUser = {
   }),
   body: Joi.object()
     .keys({
+      // User table fields
       email: Joi.string().email(),
       password: Joi.string().custom(password),
       firstname: Joi.string(),
@@ -96,6 +97,20 @@ const updateUser = {
       isSuper: Joi.boolean(),
       isOwner: Joi.boolean(),
       isSaby: Joi.boolean(),
+      isActive: Joi.boolean(),
+      isEmailVerified: Joi.boolean(),
+      roles: Joi.array(),
+      // UserProfile table fields (auto-routed to profile)
+      dateOfBirth: Joi.date(),
+      gender: Joi.string().valid('Male', 'Female', 'Other'),
+      address: Joi.string(),
+      bio: Joi.string(),
+      avatar: Joi.string(),
+      alternateEmail: Joi.string().email(),
+      emergencyContact: Joi.string(),
+      nationality: Joi.string(),
+      maritalStatus: Joi.string().valid('Single', 'Married', 'Divorced', 'Widowed'),
+      occupation: Joi.string(),
     })
     .min(1),
 };
