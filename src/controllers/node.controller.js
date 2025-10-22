@@ -20,7 +20,7 @@ const createNode = catchAsync(async (req, res) => {
   res.status(httpStatus.CREATED).send(node);
 });
 
-// Get node by ID
+// Get node by ID (with profile)
 const getNodeById = catchAsync(async (req, res) => {
   const node = await nodeService.getNodeById(req.params.nodeId);
   if (!node) {
@@ -33,7 +33,18 @@ const getNodeById = catchAsync(async (req, res) => {
       'Access denied - node belongs to different tenant'
     );
   }
-  res.send(node);
+
+  // Fetch node profile
+  const ChurchProfile = require('../models/nodeprofile');
+  const profile = await ChurchProfile.findOne({ church: req.params.nodeId });
+
+  // Combine data
+  const response = {
+    ...node.toObject(),
+    profile: profile ? profile.toObject() : null,
+  };
+
+  res.send(response);
 });
 
 // Get node by name

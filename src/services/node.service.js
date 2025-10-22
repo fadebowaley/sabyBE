@@ -64,8 +64,8 @@ const getNodeByName = async (name) => {
 const updateNodeById = async (nodeId, updateBody) => {
   const node = await getNodeById(nodeId);
 
-  // Define allowed fields for update
-  const allowedFields = [
+  // Separate node fields from profile fields
+  const nodeFields = [
     'level',
     'parent',
     'name',
@@ -74,20 +74,71 @@ const updateNodeById = async (nodeId, updateBody) => {
     'state',
     'country',
     'postalCode',
-    'dateOfEstablishment',
     'isMain',
     'users',
     'isActive',
+    'structure',
   ];
 
-  // Only update allowed fields
+  const profileFields = [
+    'dateOfEstablishment',
+    'propertyStatus',
+    'estimatedValue',
+    'buildingType',
+    'status',
+  ];
+
+  // Extract node-specific fields and profile fields
+  const nodeUpdate = {};
+  const profileUpdate = {};
+
   Object.keys(updateBody).forEach((key) => {
-    if (allowedFields.includes(key)) {
-      node[key] = updateBody[key];
+    if (nodeFields.includes(key)) {
+      nodeUpdate[key] = updateBody[key];
+    } else if (profileFields.includes(key)) {
+      profileUpdate[key] = updateBody[key];
     }
   });
 
+  console.log(
+    `📝 [NodeService.updateNodeById] Node fields to update:`,
+    Object.keys(nodeUpdate)
+  );
+  console.log(
+    `📝 [NodeService.updateNodeById] Profile fields to update:`,
+    Object.keys(profileUpdate)
+  );
+
+  // Only update fields that are present in nodeUpdate
+  Object.keys(nodeUpdate).forEach((key) => {
+    node[key] = nodeUpdate[key];
+  });
+
   await node.save();
+  console.log(`✅ [NodeService.updateNodeById] Node updated successfully`);
+
+  // Update profile if profile fields exist
+  if (Object.keys(profileUpdate).length > 0) {
+    console.log(
+      `📝 [NodeService.updateNodeById] Updating node profile with ${Object.keys(profileUpdate).length} field(s)...`
+    );
+    const ChurchProfile = require('../models/nodeprofile');
+    try {
+      await ChurchProfile.findOneAndUpdate(
+        { church: nodeId },
+        profileUpdate,
+        { upsert: true, new: true, runValidators: true }
+      );
+      console.log(`✅ [NodeService.updateNodeById] Node profile updated successfully`);
+    } catch (profileError) {
+      console.error(
+        `⚠️ [NodeService.updateNodeById] Profile update failed (non-critical):`,
+        profileError.message
+      );
+      // Profile update failure should not fail the main update
+    }
+  }
+
   return node;
 };
 

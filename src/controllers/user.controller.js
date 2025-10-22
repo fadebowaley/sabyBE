@@ -173,13 +173,24 @@ const getUsers = catchAsync(async (req, res) => {
   res.send(result);
 });
 
-// Function to get a particular user
+// Function to get a particular user (with profile)
 const getUser = catchAsync(async (req, res) => {
   const user = await userService.getUserById(req.params.userId);
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
-  res.send(user);
+
+  // Fetch user profile
+  const UserProfile = require('../models/userProfile.model');
+  const profile = await UserProfile.findOne({ user: req.params.userId });
+
+  // Combine data
+  const response = {
+    ...user.toObject(),
+    profile: profile ? profile.toObject() : null,
+  };
+
+  res.send(response);
 });
 
 const updateUser = catchAsync(async (req, res) => {
@@ -228,13 +239,26 @@ const getUserRoles = catchAsync(async (req, res) => {
 });
 
 /**
- * Get user nodes
+ * Get user nodes (with profiles)
  * @param {Object} req
  * @param {Object} res
  */
 const getUserNodes = catchAsync(async (req, res) => {
   const nodes = await userService.getUserNodes(req.params.userId);
-  res.send(nodes);
+
+  // Fetch profiles for each node
+  const ChurchProfile = require('../models/nodeprofile');
+  const nodesWithProfiles = await Promise.all(
+    nodes.map(async (node) => {
+      const profile = await ChurchProfile.findOne({ church: node._id });
+      return {
+        ...node.toObject(),
+        profile: profile ? profile.toObject() : null,
+      };
+    })
+  );
+
+  res.send(nodesWithProfiles);
 });
 
 const softDeleteUser = catchAsync(async (req, res) => {

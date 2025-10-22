@@ -506,10 +506,66 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     }
   }
 
+  // Separate user fields from profile fields
+  const userFields = [
+    'firstname',
+    'lastname',
+    'email',
+    'phone',
+    'password',
+    'userId',
+    'isSaby',
+    'isSuper',
+    'isOwner',
+    'isActive',
+    'isEmailVerified',
+    'roles',
+    'tenantId',
+  ];
+
+  const profileFields = [
+    'dateOfBirth',
+    'gender',
+    'address',
+    'bio',
+    'avatar',
+    'phoneNumber',
+    'alternateEmail',
+    'emergencyContact',
+    'nationality',
+    'maritalStatus',
+    'occupation',
+  ];
+
+  // Extract user-specific fields and profile fields
+  const userUpdate = {};
+  const profileUpdate = {};
+
+  Object.keys(updateBody).forEach((key) => {
+    if (userFields.includes(key)) {
+      userUpdate[key] = updateBody[key];
+    } else if (profileFields.includes(key)) {
+      profileUpdate[key] = updateBody[key];
+    }
+  });
+
+  console.log(
+    `📝 [UserService.updateUserById] User fields to update:`,
+    Object.keys(userUpdate)
+  );
+  console.log(
+    `📝 [UserService.updateUserById] Profile fields to update:`,
+    Object.keys(profileUpdate)
+  );
+
   // Perform the update
   console.log(`💾 [UserService.updateUserById] Applying updates to user...`);
   try {
-    Object.assign(user, updateBody);
+    // Only update fields that are present in userUpdate
+    Object.keys(userUpdate).forEach((key) => {
+      user[key] = userUpdate[key];
+    });
+
     await user.save();
     console.log(
       `✅ [UserService.updateUserById] User updated successfully: ${user.firstname} ${user.lastname}`
@@ -517,6 +573,29 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     console.log(
       `🎖️ [UserService.updateUserById] New privileges: isSaby=${user.isSaby}, isSuper=${user.isSuper}, isOwner=${user.isOwner}`
     );
+
+    // Update profile if profile fields exist
+    if (Object.keys(profileUpdate).length > 0) {
+      console.log(
+        `📝 [UserService.updateUserById] Updating user profile with ${Object.keys(profileUpdate).length} field(s)...`
+      );
+      const UserProfile = require('../models/userProfile.model');
+      try {
+        await UserProfile.findOneAndUpdate(
+          { user: userId },
+          profileUpdate,
+          { upsert: true, new: true, runValidators: true }
+        );
+        console.log(`✅ [UserService.updateUserById] User profile updated successfully`);
+      } catch (profileError) {
+        console.error(
+          `⚠️ [UserService.updateUserById] Profile update failed (non-critical):`,
+          profileError.message
+        );
+        // Profile update failure should not fail the main update
+      }
+    }
+
     return user;
   } catch (error) {
     console.error(`❌ [UserService.updateUserById] Save failed:`, error);
