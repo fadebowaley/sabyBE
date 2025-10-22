@@ -176,6 +176,15 @@ structureSchema.pre('save', async function (next) {
   }
 });
 
+// Multi-tenant unique indexes
+// Each tenant can have structures with the same name
+structureSchema.index(
+  { tenantId: 1, name: 1 },
+  { unique: true }
+);
+
+// haloId remains globally unique (already defined in schema)
+
 // Add plugins
 structureSchema.plugin(toJSON);
 structureSchema.plugin(paginate);

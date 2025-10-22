@@ -30,6 +30,7 @@
     "permissions:clean": "node src/scripts/permissions/generate.js --seed --remove-obsolete",
     "create-super-user": "node src/scripts/create-super-user.js",
     "create-saby-user": "node scripts/create-saby-super-user.js",
+    "migrate-multitenant": "node scripts/migrate-multitenant-indexes.js",
     "list-users": "node src/scripts/list-users.js",
     "create-table": "node scripts/create-tables.js",
     "verify-tables": "node scripts/verify-tables.js"

@@ -7,7 +7,7 @@ const levelSchema = mongoose.Schema(
       type: String,
       index: true,
     },
-    name: { type: String, required: true, unique: true, trim: true },
+    name: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
     rank: { type: Number, required: true },
     deletedAt: { type: Date, default: null },
@@ -24,9 +24,16 @@ levelSchema.plugin(tenantPlugin);
  * @typedef NodeLevel
  */
 
+// Multi-tenant unique indexes
+// Each tenant can have their own "Level 0", "Level 1", etc.
 levelSchema.index(
-  { rank: 1 },
-  { unique: true, partialFilterExpression: { isSpecial: { $ne: true } } }
+  { tenantId: 1, name: 1 },
+  { unique: true, partialFilterExpression: { deletedAt: null } }
+);
+
+levelSchema.index(
+  { tenantId: 1, rank: 1 },
+  { unique: true, partialFilterExpression: { deletedAt: null } }
 );
 
 /**
