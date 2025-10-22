@@ -8,6 +8,20 @@ const {
   ownerResourceBundle,
 } = require('../scripts/permissions/ownerResource.json');
 
+// Debug: Log the owner resource bundle on startup
+// eslint-disable-next-line no-console
+console.log(
+  '🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded:',
+  ownerResourceBundle
+);
+// eslint-disable-next-line no-console
+console.log('🔍 [REQUIRE ACCESS] Bundle type:', typeof ownerResourceBundle);
+// eslint-disable-next-line no-console
+console.log(
+  '🔍 [REQUIRE ACCESS] Is Array?:',
+  Array.isArray(ownerResourceBundle)
+);
+
 /**
  * Normalize access object: supports both req.user and req.apiKey
  */
@@ -140,12 +154,43 @@ const resolveAccessIdentity = async (req, requiredPermissions = []) => {
  * Check if owner matches the required resource rights
  */
 const checkOwnerAccess = (permissions) => {
+  // eslint-disable-next-line no-console
+  console.log('🔍 [checkOwnerAccess] Checking permissions:', permissions);
+  // eslint-disable-next-line no-console
+  console.log('🔍 [checkOwnerAccess] Owner bundle:', ownerResourceBundle);
+
   const regex = /^[a-zA-Z]+:([a-zA-Z]+)/;
   return permissions.every((perm) => {
     const match = perm.match(regex);
     const resource = match?.[1];
-    if (!resource) return false;
-    return ownerResourceBundle.includes(resource);
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `🔍 [checkOwnerAccess] Permission: "${perm}" → Resource: "${resource}"`
+    );
+
+    if (!resource) {
+      // eslint-disable-next-line no-console
+      console.log(`❌ [checkOwnerAccess] No resource extracted from "${perm}"`);
+      return false;
+    }
+
+    const hasAccess = ownerResourceBundle.includes(resource);
+    // eslint-disable-next-line no-console
+    console.log(`🔍 [checkOwnerAccess] "${resource}" in bundle? ${hasAccess}`);
+
+    if (!hasAccess) {
+      // eslint-disable-next-line no-console
+      console.log('🔍 [checkOwnerAccess] Checking each bundle item:');
+      ownerResourceBundle.forEach((item, idx) => {
+        // eslint-disable-next-line no-console
+        console.log(
+          `  [${idx}] "${item}" === "${resource}"? ${item === resource}`
+        );
+      });
+    }
+
+    return hasAccess;
   });
 };
 

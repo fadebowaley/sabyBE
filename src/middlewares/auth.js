@@ -6,12 +6,30 @@ const {
   ownerResourceBundle,
 } = require('../scripts/permissions/ownerResource.json');
 
+// Debug: Log the owner resource bundle on startup
+// eslint-disable-next-line no-console
+console.log(
+  '🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded:',
+  ownerResourceBundle
+);
+// eslint-disable-next-line no-console
+console.log('🔍 [AUTH MIDDLEWARE] Bundle type:', typeof ownerResourceBundle);
+// eslint-disable-next-line no-console
+console.log(
+  '🔍 [AUTH MIDDLEWARE] Is Array?:',
+  Array.isArray(ownerResourceBundle)
+);
+
 const verifyCallback =
   (req, resolve, reject, requiredRights) => async (err, user, info) => {
     // Debug: Log the permissions required and the route being checked
+    // eslint-disable-next-line no-console
     console.log('--- AUTH DEBUG ---');
+    // eslint-disable-next-line no-console
     console.log('Route:', req.originalUrl);
+    // eslint-disable-next-line no-console
     console.log('HTTP Method:', req.method);
+    // eslint-disable-next-line no-console
     console.log('Required Permissions:', requiredRights);
 
     if (err || info || !user) {
@@ -28,9 +46,14 @@ const verifyCallback =
 
     // Handle Owner role check
     if (user.isOwner) {
+      // eslint-disable-next-line no-console
       console.log(
         'User is an Owner. Checking resource-based permissions with regex matching...'
       );
+      // eslint-disable-next-line no-console
+      console.log('🔍 Owner Resource Bundle:', ownerResourceBundle);
+      // eslint-disable-next-line no-console
+      console.log('🔍 Required Rights:', requiredRights);
 
       // Precompile regex patterns for resource matching
       const resourceRegexMap = new Map();
@@ -44,7 +67,12 @@ const verifyCallback =
         if (match) {
           const resource = match[1]; // The part after the colon (e.g., 'user', 'payment')
 
-          console.log(`Action: Resource = ${resource}`);
+          // eslint-disable-next-line no-console
+          console.log(`🔍 Extracted Resource from "${right}": "${resource}"`);
+          // eslint-disable-next-line no-console
+          console.log(`🔍 Resource type: ${typeof resource}`);
+          // eslint-disable-next-line no-console
+          console.log(`🔍 Resource length: ${resource.length}`);
 
           // If the resource is valid and hasn't been added to the map, create the regex for it
           if (resource && !resourceRegexMap.has(resource)) {
@@ -59,6 +87,7 @@ const verifyCallback =
         let matchedResource = null;
 
         // Match each right to the precompiled regex for the resource
+        // eslint-disable-next-line no-restricted-syntax
         for (const [resource, regex] of resourceRegexMap) {
           if (regex.test(right)) {
             matchedResource = resource;
@@ -67,17 +96,42 @@ const verifyCallback =
         }
 
         if (!matchedResource) {
-          console.log(`Owner missing permission for action: ${right}`);
+          // eslint-disable-next-line no-console
+          console.log(`❌ Owner missing permission for action: ${right}`);
           return false;
         }
+
+        // eslint-disable-next-line no-console
+        console.log(`🔍 Checking if "${matchedResource}" is in bundle...`);
+        // eslint-disable-next-line no-console
+        console.log(`🔍 Bundle contents:`, JSON.stringify(ownerResourceBundle));
 
         // Check if the matched resource is in the owner's allowed resource bundle
         const hasResourceAccess = ownerResourceBundle.includes(matchedResource);
 
+        // eslint-disable-next-line no-console
+        console.log(`🔍 includes() result: ${hasResourceAccess}`);
+
         if (!hasResourceAccess) {
+          // eslint-disable-next-line no-console
           console.log(
-            `Resource ${matchedResource} is not in Owner's allowed bundle.`
+            `❌ Resource ${matchedResource} is not in Owner's allowed bundle.`
           );
+          // Additional debug: Check each item in the bundle
+          // eslint-disable-next-line no-console
+          console.log('🔍 Checking each bundle item:');
+          ownerResourceBundle.forEach((item, idx) => {
+            // eslint-disable-next-line no-console
+            console.log(
+              `  [${idx}] "${item}" === "${matchedResource}"? ${
+                item === matchedResource
+              }`
+            );
+            // eslint-disable-next-line no-console
+            console.log(
+              `  [${idx}] Type: ${typeof item}, Length: ${item.length}`
+            );
+          });
         }
 
         return hasResourceAccess;
@@ -96,6 +150,7 @@ const verifyCallback =
     }
 
     // Handle regular user role check (if needed)
+    // eslint-disable-next-line no-console
     console.log('User is a regular user. Checking name-based permissions...');
 
     // Fast lookup for regular users
@@ -121,7 +176,7 @@ const verifyCallback =
     }
 
     resolve();
-  };
+  };;
 
 const auth =
   (...requiredRights) =>
