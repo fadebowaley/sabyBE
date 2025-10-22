@@ -524,17 +524,29 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
   ];
 
   const profileFields = [
-    'dateOfBirth',
-    'gender',
-    'address',
-    'bio',
-    'avatar',
+    'title',
+    'otherName',
     'phoneNumber',
-    'alternateEmail',
-    'emergencyContact',
-    'nationality',
+    'gender',
+    'dateOfBirth',
+    'highestQualification',
+    'professional',
     'maritalStatus',
+    'stateOfOrigin',
+    'lgaOfOrigin',
+    'homeTown',
+    'spouseName',
+    'spousePhoneNumber',
+    'spouseDateOfBirth',
+    'nextOfKinName',
+    'nextOfKinPhoneNumber',
+    'nextOfKinRelationship',
+    'residentialAddress',
+    'stateOfResidence',
+    'lgaOfResidence',
+    'employmentCategory',
     'occupation',
+    'employeeId',
   ];
 
   // Extract user-specific fields and profile fields
