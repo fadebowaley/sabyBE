@@ -28,6 +28,20 @@ const submitData = {
     status: Joi.string().optional().description('Submission status'),
     project_name: Joi.string().max(128),
     project_category: Joi.string().max(64),
+    // PERM-specific fields
+    month: Joi.string()
+      .optional()
+      .pattern(/^\d{4}-\d{2}(-\d{2})?$/)
+      .description('Month for PERM submissions (YYYY-MM or YYYY-MM-DD)'),
+    year: Joi.number()
+      .integer()
+      .min(2000)
+      .max(2100)
+      .optional()
+      .description('Year for PERM submissions'),
+    perm_enabled: Joi.boolean()
+      .optional()
+      .description('Flag to indicate PERM submission'),
   }),
 };
 

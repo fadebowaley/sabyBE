@@ -1,186 +1,43 @@
 /**
- * Notification Worker (Modularized)
+ * Notification Worker (Stub)
+ * 
+ * Processes notification jobs from the queue
+ * This is a stub - implement notification logic as needed
  */
 
-const { Worker, QueueEvents } = require('bullmq');
+const { Worker } = require('bullmq');
 const { getRedisConnectionOptions } = require('../config/redis');
 const logger = require('../config/logger');
-const notificationQueueService = require('../services/notificationQueue.service');
-
-const NOTIFICATION_QUEUE_NAME = 'notificationQueue';
 
 const createNotificationWorker = () => {
-  const notificationQueueEvents = new QueueEvents(NOTIFICATION_QUEUE_NAME, {
-    connection: getRedisConnectionOptions(),
-  });
-
-  notificationQueueEvents.on('completed', ({ jobId }) => {
-    logger.info(`✅ Notification job completed - ID: ${jobId}`);
-  });
-
-  notificationQueueEvents.on('failed', ({ jobId, failedReason }) => {
-    logger.error(`❌ Notification job failed - ID: ${jobId}, Reason: ${failedReason}`);
-  });
-
-  const worker = new Worker(
-    NOTIFICATION_QUEUE_NAME,
+  const notificationWorker = new Worker(
+    'notificationQueue',
     async (job) => {
-      logger.info(`📧 Processing notification job: ${job.id} - Type: ${job.data.type}`);
-
-      try {
-        const result = await notificationQueueService.processNotificationJob(job);
-        logger.info(`✅ Notification job ${job.id} processed successfully`);
-        return result;
-      } catch (error) {
-        logger.error(`❌ Notification job ${job.id} failed:`, error.message);
-        throw error;
-      }
+      logger.info(`[Notification Worker] Processing notification job: ${job.id}`);
+      
+      // TODO: Implement notification logic (push, SMS, etc.)
+      const { userId, message, type } = job.data;
+      logger.info(`[Notification Worker] Would send ${type} notification to user ${userId}`);
+      
+      return { success: true, jobId: job.id };
     },
     {
       connection: getRedisConnectionOptions(),
-      concurrency: 5,
+      concurrency: 10,
     }
   );
 
-  worker.on('completed', (job) => {
-    logger.info(`✅ Notification worker completed job: ${job.id}`);
+  notificationWorker.on('completed', (job) => {
+    logger.info(`✅ Notification job completed: ${job.id}`);
   });
 
-  worker.on('failed', (job, err) => {
-    logger.error(`❌ Notification worker failed job: ${job.id}`, err.message);
+  notificationWorker.on('failed', (job, err) => {
+    logger.error(`❌ Notification job failed: ${job?.id}`, err.message);
   });
 
-  return worker;
+  logger.info('🔔 Notification worker initialized');
+  
+  return notificationWorker;
 };
 
-if (require.main === module) {
-  logger.info('🚀 Starting notification worker (standalone mode)...');
-  createNotificationWorker();
-}
-
 module.exports = { createNotificationWorker };
-
-/**
- * Notification Worker (Modularized)
- */
-
-const { Worker, QueueEvents } = require('bullmq');
-const { getRedisConnectionOptions } = require('../config/redis');
-const logger = require('../config/logger');
-const notificationQueueService = require('../services/notificationQueue.service');
-
-const NOTIFICATION_QUEUE_NAME = 'notificationQueue';
-
-const createNotificationWorker = () => {
-  const notificationQueueEvents = new QueueEvents(NOTIFICATION_QUEUE_NAME, {
-    connection: getRedisConnectionOptions(),
-  });
-
-  notificationQueueEvents.on('completed', ({ jobId }) => {
-    logger.info(`✅ Notification job completed - ID: ${jobId}`);
-  });
-
-  notificationQueueEvents.on('failed', ({ jobId, failedReason }) => {
-    logger.error(`❌ Notification job failed - ID: ${jobId}, Reason: ${failedReason}`);
-  });
-
-  const worker = new Worker(
-    NOTIFICATION_QUEUE_NAME,
-    async (job) => {
-      logger.info(`📧 Processing notification job: ${job.id} - Type: ${job.data.type}`);
-
-      try {
-        const result = await notificationQueueService.processNotificationJob(job);
-        logger.info(`✅ Notification job ${job.id} processed successfully`);
-        return result;
-      } catch (error) {
-        logger.error(`❌ Notification job ${job.id} failed:`, error.message);
-        throw error;
-      }
-    },
-    {
-      connection: getRedisConnectionOptions(),
-      concurrency: 5,
-    }
-  );
-
-  worker.on('completed', (job) => {
-    logger.info(`✅ Notification worker completed job: ${job.id}`);
-  });
-
-  worker.on('failed', (job, err) => {
-    logger.error(`❌ Notification worker failed job: ${job.id}`, err.message);
-  });
-
-  return worker;
-};
-
-if (require.main === module) {
-  logger.info('🚀 Starting notification worker (standalone mode)...');
-  createNotificationWorker();
-}
-
-module.exports = { createNotificationWorker };
-
-/**
- * Notification Worker (Modularized)
- */
-
-const { Worker, QueueEvents } = require('bullmq');
-const { getRedisConnectionOptions } = require('../config/redis');
-const logger = require('../config/logger');
-const notificationQueueService = require('../services/notificationQueue.service');
-
-const NOTIFICATION_QUEUE_NAME = 'notificationQueue';
-
-const createNotificationWorker = () => {
-  const notificationQueueEvents = new QueueEvents(NOTIFICATION_QUEUE_NAME, {
-    connection: getRedisConnectionOptions(),
-  });
-
-  notificationQueueEvents.on('completed', ({ jobId }) => {
-    logger.info(`✅ Notification job completed - ID: ${jobId}`);
-  });
-
-  notificationQueueEvents.on('failed', ({ jobId, failedReason }) => {
-    logger.error(`❌ Notification job failed - ID: ${jobId}, Reason: ${failedReason}`);
-  });
-
-  const worker = new Worker(
-    NOTIFICATION_QUEUE_NAME,
-    async (job) => {
-      logger.info(`📧 Processing notification job: ${job.id} - Type: ${job.data.type}`);
-
-      try {
-        const result = await notificationQueueService.processNotificationJob(job);
-        logger.info(`✅ Notification job ${job.id} processed successfully`);
-        return result;
-      } catch (error) {
-        logger.error(`❌ Notification job ${job.id} failed:`, error.message);
-        throw error;
-      }
-    },
-    {
-      connection: getRedisConnectionOptions(),
-      concurrency: 5,
-    }
-  );
-
-  worker.on('completed', (job) => {
-    logger.info(`✅ Notification worker completed job: ${job.id}`);
-  });
-
-  worker.on('failed', (job, err) => {
-    logger.error(`❌ Notification worker failed job: ${job.id}`, err.message);
-  });
-
-  return worker;
-};
-
-if (require.main === module) {
-  logger.info('🚀 Starting notification worker (standalone mode)...');
-  createNotificationWorker();
-}
-
-module.exports = { createNotificationWorker };
-

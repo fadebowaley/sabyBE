@@ -117,35 +117,6 @@ const shutdownWorkers = async () => {
   logger.info('🛑 All workers shut down');
 };
 
-// Graceful shutdown on SIGTERM/SIGINT
-process.on('SIGTERM', async () => {
-  await shutdownWorkers();
-  process.exit(0);
-});
-
-process.on('SIGINT', async () => {
-  await shutdownWorkers();
-  process.exit(0);
-});
-
-module.exports = {
-  initializeWorkers,
-  shutdownWorkers,
-};
-
-  await shutdownWorkers();
-  process.exit(0);
-});
-
-module.exports = {
-  initializeWorkers,
-  shutdownWorkers,
-};
-
-  await shutdownWorkers();
-  process.exit(0);
-});
-
 module.exports = {
   initializeWorkers,
   shutdownWorkers,

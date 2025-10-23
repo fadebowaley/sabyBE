@@ -84,10 +84,15 @@ const getRedisConnectionOptions = () => ({
     return delay;
   },
   maxRetriesPerRequest: null,
-  enableReadyCheck: true,
+  enableReadyCheck: false, // Disable ready check for BullMQ
   lazyConnect: false,
-  connectTimeout: 10000,
-  commandTimeout: 5000,
+  connectTimeout: 30000, // Increased from 10s to 30s
+  // Remove commandTimeout to prevent timeout errors in workers
+  // commandTimeout: 5000,
+  // Add keepAlive to prevent connection drops
+  keepAlive: 30000,
+  // Disable offline queue to prevent memory buildup
+  enableOfflineQueue: false,
 });
 
 module.exports = {

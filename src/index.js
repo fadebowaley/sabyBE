@@ -12,6 +12,7 @@ const {
   closeRedis,
 } = require('./config/redis');
 const { initializeSocket } = require('./config/socket');
+const { initializeWorkers, shutdownWorkers } = require('./workers/index');
 
 let server;
 
@@ -42,6 +43,9 @@ const connectToDatabases = async () => {
 
       // Initialize Socket.IO
       initializeSocket(server);
+
+      // Start all background workers automatically
+      await initializeWorkers();
     } else {
       logger.error(
         '❌ Failed to connect to PostgreSQLor Redis. Server not started.'
@@ -57,7 +61,14 @@ const connectToDatabases = async () => {
 // Initialize database connections
 connectToDatabases();
 
-const exitHandler = () => {
+const exitHandler = async () => {
+  // Stop workers first
+  try {
+    await shutdownWorkers();
+  } catch (error) {
+    logger.error('Error shutting down workers:', error);
+  }
+
   if (server) {
     server.close(() => {
       logger.info('Server closed');

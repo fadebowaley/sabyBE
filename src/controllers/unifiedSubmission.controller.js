@@ -2,6 +2,7 @@ const httpStatus = require('http-status');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
+const logger = require('../config/logger');
 const {
   queueSubmission,
   getActivityLogs: getActivityLogsService,
@@ -11,6 +12,8 @@ const {
 const { logActivity } = require('../utils/activityLogger');
 const SubmissionModel = require('../models/submission.model');
 const ActivityLogModel = require('../models/activityLog.model');
+const dynamicFormSchemaService = require('../ingestion/whatsapp/services/dynamicFormSchema.service');
+const dynamicValidationService = require('../ingestion/whatsapp/services/dynamicValidation.service');
 
 /**
  * Universal submission endpoint - handles ALL submission types
@@ -59,6 +62,19 @@ const submitData = catchAsync(async (req, res) => {
       'Missing required fields: tenantId, projectId, formId, payload'
     );
   }
+
+  // ✅ PRODUCTION: Form validation (currently disabled - will be enabled once forms are properly configured)
+  // TODO: Enable strict form validation after ensuring all forms are properly set up in MongoDB
+  // See PRODUCTION_GRADE_IMPLEMENTATION.md for full validation implementation
+  
+  logger.info(`📝 Accepting submission for project ${submissionBody.projectId} (form validation: disabled)`);
+  
+  // Add metadata flag
+  submissionBody.meta = {
+    ...submissionBody.meta,
+    formValidationEnabled: false,
+    note: 'Form validation will be enabled after Phase 1 implementation',
+  };
 
   // Auto-detect PERM submission
   const isPERM =
