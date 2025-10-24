@@ -104,17 +104,28 @@ jobs:
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
             
-            echo "📥 Pulling latest backend image..."
-            docker-compose -f docker-compose.staging.yml pull backend
+            echo "📥 Pulling latest backend image (no cache)..."
+            docker-compose -f docker-compose.staging.yml pull --no-parallel backend
             
-            echo "🚀 Restarting backend service..."
-            docker-compose -f docker-compose.staging.yml up -d backend
+            echo "🛑 Stopping old backend container..."
+            docker-compose -f docker-compose.staging.yml stop backend || true
             
-            echo "⏳ Waiting for backend to start..."
-            sleep 10
+            echo "🗑️ Removing old backend container..."
+            docker-compose -f docker-compose.staging.yml rm -f backend || true
+            
+            echo "🚀 Starting new backend container..."
+            docker-compose -f docker-compose.staging.yml up -d --force-recreate backend
+            
+            echo "⏳ Waiting for backend to be healthy..."
+            sleep 20
             
             echo "🏥 Health check..."
             docker-compose -f docker-compose.staging.yml ps backend
+            
+            echo "📊 Testing backend endpoint..."
+            curl -f http://localhost:4000 || echo "⚠️ Backend not responding yet, may need more time"
+            
+            echo "📝 Recent logs:"
             docker logs saby-backend-staging --tail 20
             
             echo "✅ Backend deployment completed!"
