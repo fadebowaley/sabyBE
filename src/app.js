@@ -81,7 +81,7 @@ app.get('/', (req, res) => {
   res.status(200).json({
     status: 'OK',
     message:
-      '🛠️ “I will restore you to health and heal your wounds.” – Jeremiah 30:17 | Saby Staging v1.0.2 - FRESH TEST 2025-01-05 🔧',
+      '🛠️ "I will restore you to health and heal your wounds." – Jeremiah 30:17 | Saby Staging v1.0.3 - CI/CD Test Oct 24, 2025 🔧',
     timestamp: new Date().toISOString(),
     environment: 'staging',
     version: '1.0.0',
