@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>URGENT: Low Compliance Alert</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          'Helvetica Neue', Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+      }
+      .email-container {
+        max-width: 600px;
+        margin: 20px auto;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+      }
+      .header .icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+      }
+      .alert-banner {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin: 20px 30px;
+        border-radius: 4px;
+      }
+      .content {
+        padding: 30px;
+      }
+      .greeting {
+        font-size: 16px;
+        margin-bottom: 20px;
+      }
+      .progress-container {
+        margin: 25px 0;
+      }
+      .progress-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+      .progress-bar-bg {
+        background: #e9ecef;
+        border-radius: 10px;
+        height: 30px;
+        overflow: hidden;
+        position: relative;
+      }
+      .progress-bar-fill {
+        background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+        transition: width 0.3s ease;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin: 25px 0;
+      }
+      .stat-card {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 6px;
+        text-align: center;
+      }
+      .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #dc3545;
+      }
+      .stat-label {
+        font-size: 12px;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .button {
+        display: inline-block;
+        padding: 14px 35px;
+        background: #dc3545;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        margin: 20px 0;
+        font-weight: 600;
+        font-size: 16px;
+      }
+      .button:hover {
+        background: #c82333;
+      }
+      .footer {
+        background: #f8f9fa;
+        padding: 20px 30px;
+        text-align: center;
+        font-size: 12px;
+        color: #6c757d;
+        border-top: 1px solid #e9ecef;
+      }
+      .urgency-note {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+        padding: 15px;
+        border-radius: 6px;
+        margin: 20px 0;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="header">
+        <div class="icon">⚠️</div>
+        <h1>URGENT: Low Compliance Alert</h1>
+      </div>
+
+      <div class="alert-banner">
+        <strong>⚠️ Action Required:</strong> Your compliance level is critically
+        low. Immediate action needed to avoid penalties.
+      </div>
+
+      <div class="content">
+        <p class="greeting">Dear {{nodeName}} Administrator,</p>
+
+        <p>
+          This is an <strong>urgent alert</strong> regarding your PERM
+          submission compliance for <strong>{{month}}</strong>.
+        </p>
+
+        <div class="progress-container">
+          <div class="progress-label">
+            <span>Compliance Level</span>
+            <span>{{compliance}}%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: {{compliance}}%;">
+              {{compliance}}%
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">{{eventsSubmitted}}/{{eventsRequired}}</div>
+            <div class="stat-label">Events Submitted</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{{daysRemaining}}</div>
+            <div class="stat-label">Days Remaining</div>
+          </div>
+        </div>
+
+        <div class="urgency-note">
+          🔴 Critical: Compliance below 40% threshold
+        </div>
+
+        <p><strong>Required Action:</strong></p>
+        <ul>
+          <li>Submit remaining {{eventsRemaining}} events immediately</li>
+          <li>Review monthly requirements</li>
+          <li>Contact support if you need assistance</li>
+        </ul>
+
+        <center>
+          <a href="{{submissionUrl}}" class="button">Complete Submission Now</a>
+        </center>
+
+        <p style="margin-top: 25px; font-size: 14px; color: #6c757d">
+          <strong>Questions?</strong> Reply to this email or contact your
+          project administrator.
+        </p>
+      </div>
+
+      <div class="footer">
+        <p>This is an automated compliance alert from the PERM System.</p>
+        <p>© 2025 Saby. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>
+

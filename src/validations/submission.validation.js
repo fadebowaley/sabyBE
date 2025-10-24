@@ -77,10 +77,36 @@ const listSubmissions = {
   }),
 };
 
+const updateSubmission = {
+  params: Joi.object().keys({
+    id: Joi.string().required(),
+  }),
+  body: Joi.object()
+    .keys({
+      data: Joi.object()
+        .optional()
+        .description('Updated submission data/payload'),
+      payload: Joi.object()
+        .optional()
+        .description('Updated submission data/payload'),
+      status: Joi.string().optional().description('Updated status'),
+      meta: Joi.object().optional().description('Updated metadata'),
+    })
+    .min(1), // At least one field must be provided
+};
+
+const deleteSubmissionById = {
+  params: Joi.object().keys({
+    id: Joi.string().required(),
+  }),
+};
+
 module.exports = {
   submitData,
   getSubmissionById,
   deleteSubmission,
   retrySubmission,
   listSubmissions,
+  updateSubmission,
+  deleteSubmissionById,
 };

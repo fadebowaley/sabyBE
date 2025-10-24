@@ -1,4 +1,18 @@
 
 {
-  "ownerResourceBundle": ["user", "app", "structures", "node", "payment", "level", "storage", "project", "apikeys", "project-form", "roles", "permissions"]
+  "ownerResourceBundle": [
+    "user",
+    "app",
+    "structures",
+    "node",
+    "payment",
+    "level",
+    "storage",
+    "project",
+    "apikeys",
+    "project-form",
+    "roles",
+    "permissions",
+    "submission"
+  ]
 }

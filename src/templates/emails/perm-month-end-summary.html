@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monthly Compliance Summary</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          'Helvetica Neue', Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+      }
+      .email-container {
+        max-width: 700px;
+        margin: 20px auto;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background: linear-gradient(135deg, #6610f2 0%, #520dc2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 600;
+      }
+      .header .icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+      }
+      .content {
+        padding: 30px;
+      }
+      .summary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 8px;
+        margin: 20px 0;
+        text-align: center;
+      }
+      .summary-card h2 {
+        margin: 0;
+        font-size: 48px;
+        font-weight: 700;
+      }
+      .summary-card p {
+        margin: 10px 0 0 0;
+        font-size: 16px;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        margin: 25px 0;
+      }
+      .stat-card {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 6px;
+        text-align: center;
+        border: 1px solid #e9ecef;
+      }
+      .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #667eea;
+      }
+      .stat-label {
+        font-size: 11px;
+        color: #6c757d;
+        text-transform: uppercase;
+        margin-top: 5px;
+      }
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 25px 0;
+      }
+      .table th {
+        background: #f8f9fa;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+      }
+      .table td {
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+      }
+      .button {
+        display: inline-block;
+        padding: 14px 35px;
+        background: #667eea;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        margin: 20px 0;
+        font-weight: 600;
+      }
+      .footer {
+        background: #f8f9fa;
+        padding: 20px 30px;
+        text-align: center;
+        font-size: 12px;
+        color: #6c757d;
+        border-top: 1px solid #e9ecef;
+      }
+      .badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .badge-success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .badge-warning {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .badge-danger {
+        background: #f8d7da;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="header">
+        <div class="icon">📊</div>
+        <h1>Monthly Compliance Summary</h1>
+        <p style="margin: 10px 0 0 0; opacity: 0.9">{{month}}</p>
+      </div>
+
+      <div class="content">
+        <p class="greeting">Dear {{organizationName}} Leadership,</p>
+
+        <p>
+          Here's your comprehensive compliance summary for
+          <strong>{{month}}</strong> across all nodes in your organization.
+        </p>
+
+        <div class="summary-card">
+          <h2>{{overallCompliance}}%</h2>
+          <p>Overall Organization Compliance</p>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">{{totalNodes}}</div>
+            <div class="stat-label">Total Nodes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{{compliantNodes}}</div>
+            <div class="stat-label">100% Compliant</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{{nonCompliantNodes}}</div>
+            <div class="stat-label">Need Attention</div>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 30px">Node Performance</h3>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Node Name</th>
+              <th>Compliance</th>
+              <th>Events</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each nodes}}
+            <tr>
+              <td>{{this.name}}</td>
+              <td>{{this.compliance}}%</td>
+              <td>{{this.eventsSubmitted}}/{{this.eventsRequired}}</td>
+              <td>
+                <span
+                  class="badge {{#if (eq this.status 'complete')}}badge-success{{else if (eq this.status 'partial')}}badge-warning{{else}}badge-danger{{/if}}"
+                >
+                  {{this.status}}
+                </span>
+              </td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+
+        <center>
+          <a href="{{dashboardUrl}}" class="button">View Full Dashboard</a>
+        </center>
+
+        <p style="margin-top: 30px; font-size: 14px; color: #6c757d">
+          <strong>Next Month:</strong> Stay on track by submitting events
+          weekly. Aim for 100% compliance across all nodes!
+        </p>
+      </div>
+
+      <div class="footer">
+        <p>This is an automated monthly summary from the PERM System.</p>
+        <p>© 2025 Saby. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>
+

@@ -59,6 +59,10 @@ const envVarsSchema = Joi.object()
     SMTP_PASSWORD: Joi.string()
       .allow('')
       .description('password for email server'),
+    SMTP_SECURE: Joi.string()
+      .valid('true', 'false', '')
+      .default('false')
+      .description('use SSL/TLS for email server'),
     EMAIL_FROM: Joi.string()
       .allow('')
       .description('the from field in the emails sent by the app'),
@@ -213,6 +217,7 @@ module.exports = {
     smtp: {
       host: envVars.SMTP_HOST,
       port: envVars.SMTP_PORT,
+      secure: envVars.SMTP_SECURE || false,
       auth: {
         user: envVars.SMTP_USERNAME,
         pass: envVars.SMTP_PASSWORD,

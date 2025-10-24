@@ -1,0 +1,122 @@
+
+> halo@1.0.0 dev
+> cross-env NODE_ENV=development nodemon src/index.js
+
+[33m[nodemon] 2.0.9[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,json[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+node:internal/modules/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find module '../services/dynamicFormSchema.service'
+Require stack:
+- /Users/fadebowaley/saby/sabyBackend/src/controllers/unifiedSubmission.controller.js
+- /Users/fadebowaley/saby/sabyBackend/src/routes/v1/unifiedSubmission.route.js
+- /Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js
+- /Users/fadebowaley/saby/sabyBackend/src/app.js
+- /Users/fadebowaley/saby/sabyBackend/src/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+    at Module._load (node:internal/modules/cjs/loader:981:27)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/controllers/unifiedSubmission.controller.js:14:34)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/unifiedSubmission.route.js:5:37)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/fadebowaley/saby/sabyBackend/src/controllers/unifiedSubmission.controller.js',
+    '/Users/fadebowaley/saby/sabyBackend/src/routes/v1/unifiedSubmission.route.js',
+    '/Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js',
+    '/Users/fadebowaley/saby/sabyBackend/src/app.js',
+    '/Users/fadebowaley/saby/sabyBackend/src/index.js'
+  ]
+}
+
+Node.js v18.20.2
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:97944) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: 20.169.129.160:5432
+[32minfo[39m: 👤 User: sabyagentic_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 (Debian 15.14-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[32minfo[39m: 🚀 Server is running on port 4000
+[32minfo[39m: 🌍 Environment: development
+[32minfo[39m: 📊 Database Status:
+[32minfo[39m:    - MongoDB: ✅ Connected
+[32minfo[39m:    - PostgreSQL: ✅ Connected
+[32minfo[39m:    - Redis: ✅ Connected
+[32minfo[39m: Connected to email server
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m

@@ -1,0 +1,187 @@
+
+[1m[36m╔════════════════════════════════════════════════════════════╗[0m
+[1m[36m║     PERM UNIFIED SUBMISSION - COMPREHENSIVE TEST          ║[0m
+[1m[36m╚════════════════════════════════════════════════════════════╝[0m
+
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 1: Login User
+[32m✅[0m Logged in as: saby@saby.ai
+[34mℹ[0m User ID: 68e4cb96d180b0285d9a701d
+[34mℹ[0m Tenant ID: hWiWJ_X0m6
+[34mℹ[0m Token: eyJhbGciOiJIUzI1NiIs...
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 2: Setup PERM Form in MongoDB
+(node:76161) DeprecationWarning: current URL string parser is deprecated, and will be removed in a future version. To use the new parser, pass option { useNewUrlParser: true } to MongoClient.connect.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:76161) [MONGODB DRIVER] Warning: Current Server Discovery and Monitoring engine is deprecated, and will be removed in a future version. To use the new Server Discover and Monitoring engine, pass option { useUnifiedTopology: true } to the MongoClient constructor.
+[32m✅[0m Connected to MongoDB
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+(node:76161) DeprecationWarning: collection.ensureIndex is deprecated. Use createIndexes instead.
+[34mℹ[0m Found existing PERM form
+[32m✅[0m Project ID: proj_Mrs538IYtOfd
+[32m✅[0m Form ID: proj_Mrs538IYtOfd
+[34mℹ[0m Form Name: PERM Event Tracking Test
+[34mℹ[0m Elements: 5 event checkboxes
+[34mℹ[0m Status: active
+[34mℹ[0m Deployment: published
+[34mℹ[0m MongoDB connection closed
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 3: Setup Test Node
+[33m⚠️[0m No existing nodes found, using test node: node_test_1761214956795
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 4: Submit Initial PERM Data (CREATE)
+[34mℹ[0m Submitting PERM data for month: 2025-10-01
+[34mℹ[0m Node ID: node_test_1761214956795
+[34mℹ[0m Events submitted: 2/5 (40% compliance)
+[32m✅[0m PERM submission queued!
+[34mℹ[0m Job ID: hWiWJ_X0m6-1761214956810
+[34mℹ[0m Type: perm
+[34mℹ[0m Month: 2025-10-01
+[34mℹ[0m Node ID: node_test_1761214956795
+[34mℹ[0m Waiting 3s for worker to process...
+[34mℹ[0m Activity logs retrieved: 365 total
+[34mℹ[0m   [32mcompleted[0m: PERM submission completed (40.00% compliance)
+[34mℹ[0m   [33mprocessing[0m: Processing PERM submission for 2025-10-01
+[34mℹ[0m   [33mqueued[0m: PERM submission queued for 2025-10-01
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 5: Verify Initial Submission Saved
+[34mℹ[0m Submissions found: 1
+[32m✅[0m Initial PERM submission saved!
+[34mℹ[0m Submission ID: 5673d041-90a6-45f8-a412-be304ee1d559
+[34mℹ[0m Compliance: 40.00%
+[34mℹ[0m Status: partial
+[34mℹ[0m Events Submitted: 2/5
+[34mℹ[0m Data keys: events, bibleStudy, youthService, prayerMeeting, sundayService, required_events, womenFellowship
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 6: Submit Additional PERM Data (UPDATE/MERGE)
+[34mℹ[0m Submitting additional data for month: 2025-10-01
+[34mℹ[0m Events now submitted: 4/5 (80% compliance expected)
+[34mℹ[0m Expected action: UPDATE (merge with existing)
+[32m✅[0m Additional PERM data queued!
+[34mℹ[0m Job ID: hWiWJ_X0m6-1761214961296
+[34mℹ[0m Type: perm
+[34mℹ[0m Waiting 3s for worker to process...
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 7: Verify Data Was Merged
+[34mℹ[0m Submissions found: 1
+[32m✅[0m Merged PERM submission verified!
+[34mℹ[0m Submission ID: 5673d041-90a6-45f8-a412-be304ee1d559
+[34mℹ[0m Updated Compliance: 80.00%
+[34mℹ[0m Updated Status: partial
+[34mℹ[0m Updated Events: 4/5
+[34mℹ[0m 
+Event Status:
+[34mℹ[0m   Sunday Service: [32m✓[0m
+[34mℹ[0m   Bible Study: [32m✓[0m
+[34mℹ[0m   Prayer Meeting: [32m✓[0m
+[34mℹ[0m   Youth Service: [32m✓[0m
+[34mℹ[0m   Women Fellowship: [31m✗[0m
+[32m✅[0m ✅ Data was MERGED! Compliance increased to 80.00%
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 8: Submit Complete Data (100% Compliance)
+[34mℹ[0m Submitting complete data for month: 2025-10-01
+[34mℹ[0m Events: ALL 5 events (100% compliance expected)
+[32m✅[0m Complete PERM data queued!
+[34mℹ[0m Job ID: hWiWJ_X0m6-1761214964689
+[34mℹ[0m Waiting 3s for worker to process...
+[33m⚠️[0m Compliance: 100.00% (expected 100%)
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 9: Test Different Node (New Submission)
+[34mℹ[0m Submitting for different node: node_test_different_1761214968075
+[34mℹ[0m Same month: 2025-10-01
+[34mℹ[0m Expected: NEW submission (not merge)
+[32m✅[0m Different node submission queued!
+[34mℹ[0m Waiting 3s for worker to process...
+[34mℹ[0m Total submissions for 2025-10-01: 13
+[32m✅[0m ✅ Multiple nodes tracked separately!
+[34mℹ[0m   Node 1: node_test_1761214956795 - 100.00% compliance
+[34mℹ[0m   Node 2: node_test_1761214888217 - 40.00% compliance
+[34mℹ[0m   Node 3: node_test_1761214871422 - 40.00% compliance
+[34mℹ[0m   Node 4: node_test_1761214789456 - 60.00% compliance
+[34mℹ[0m   Node 5: node_test_different_1761214800734 - 20.00% compliance
+[34mℹ[0m   Node 6: node_test_1761214789456 - 100.00% compliance
+[34mℹ[0m   Node 7: node_test_1761214589587 - 40.00% compliance
+[34mℹ[0m   Node 8: node_test_1761214516060 - 60.00% compliance
+[34mℹ[0m   Node 9: node_test_different_1761214528185 - 20.00% compliance
+[34mℹ[0m   Node 10: node_test_1761214516060 - 100.00% compliance
+[34mℹ[0m   Node 11: node_test_1761213015907 - 40.00% compliance
+[34mℹ[0m   Node 12: node_test_1761212699721 - 100.00% compliance
+[34mℹ[0m   Node 13: node_test_1761212568140 - 40.00% compliance
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 10: Test Different Month (New Submission)
+[34mℹ[0m Submitting for different month: 2025-11-01
+[34mℹ[0m Same node: node_test_1761214956795
+[34mℹ[0m Expected: NEW submission (not merge)
+[34mℹ[0m Events: 3/5 (60% compliance)
+[32m✅[0m Different month submission queued!
+[34mℹ[0m Waiting 3s for worker to process...
+[32m✅[0m ✅ New month submission created!
+[34mℹ[0m Submission ID: 61d399f0-5467-4120-8d96-c9eb14b62237
+[34mℹ[0m Month: 2025-10-31T23:00:00.000Z
+[34mℹ[0m Compliance: 60.00%
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 11: Get All PERM Submissions Summary
+[32m✅[0m Total PERM submissions: 15
+[34mℹ[0m 
+Submissions by Month:
+[34mℹ[0m   2025-09-30T23:00:00.000Z: 12 submissions
+[34mℹ[0m     - Node: node_test_different_1761214968075 | [31m20.00%[0m | incomplete
+[34mℹ[0m     - Node: node_test_1761214956795 | [32m100.00%[0m | complete
+[34mℹ[0m     - Node: node_test_1761214888217 | [33m40.00%[0m | partial
+[34mℹ[0m     - Node: node_test_1761214871422 | [33m40.00%[0m | partial
+[34mℹ[0m     - Node: node_test_different_1761214800734 | [31m20.00%[0m | incomplete
+[34mℹ[0m     - Node: node_test_1761214789456 | [32m100.00%[0m | complete
+[34mℹ[0m     - Node: node_test_1761214589587 | [33m40.00%[0m | partial
+[34mℹ[0m     - Node: node_test_different_1761214528185 | [31m20.00%[0m | incomplete
+[34mℹ[0m     - Node: node_test_1761214516060 | [32m100.00%[0m | complete
+[34mℹ[0m     - Node: node_test_1761213015907 | [33m40.00%[0m | partial
+[34mℹ[0m     - Node: node_test_1761212699721 | [32m100.00%[0m | complete
+[34mℹ[0m     - Node: node_test_1761212568140 | [33m40.00%[0m | partial
+[34mℹ[0m   2025-10-31T23:00:00.000Z: 3 submissions
+[34mℹ[0m     - Node: node_test_1761214956795 | [33m60.00%[0m | partial
+[34mℹ[0m     - Node: node_test_1761214789456 | [33m60.00%[0m | partial
+[34mℹ[0m     - Node: node_test_1761214516060 | [33m60.00%[0m | partial
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 12: Test Activity Logs
+[32m✅[0m Recent activity logs: 10
+[34mℹ[0m 
+Activity Log Breakdown:
+[34mℹ[0m   completed: 4
+[34mℹ[0m   processing: 3
+[34mℹ[0m   queued: 3
+[34mℹ[0m 
+Overall Activity Summary:
+[34mℹ[0m   Total Jobs: 304
+[34mℹ[0m   [32mSuccess: 23[0m
+[34mℹ[0m   [31mFailed: 5[0m
+[34mℹ[0m   [33mQueued: 3[0m
+[34mℹ[0m   In Progress: 0
+
+[1m[36m============================================================[0m
+
+[1m[32m╔════════════════════════════════════════════════════════════╗[0m
+[1m[32m║              🎉 ALL TESTS PASSED! 🎉                      ║[0m
+[1m[32m╚════════════════════════════════════════════════════════════╝[0m
+
+[32m✅[0m PERM submission system is working correctly!
+[32m✅[0m ✅ Form validation working
+[32m✅[0m ✅ Queue system working
+[32m✅[0m ✅ Worker processing working
+[32m✅[0m ✅ PERM upsert/merge working
+[32m✅[0m ✅ Compliance calculation working
+[32m✅[0m ✅ Activity logging working
+[32m✅[0m ✅ Multi-node tracking working
+[32m✅[0m ✅ Multi-month tracking working

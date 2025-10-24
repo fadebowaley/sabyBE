@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weekly Submission Reminder</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          'Helvetica Neue', Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+      }
+      .email-container {
+        max-width: 600px;
+        margin: 20px auto;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+      }
+      .header .icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+      }
+      .content {
+        padding: 30px;
+      }
+      .progress-container {
+        margin: 25px 0;
+      }
+      .progress-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+      .progress-bar-bg {
+        background: #e9ecef;
+        border-radius: 10px;
+        height: 30px;
+        overflow: hidden;
+      }
+      .progress-bar-fill {
+        background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin: 25px 0;
+      }
+      .stat-card {
+        background: #e7f3ff;
+        padding: 15px;
+        border-radius: 6px;
+        text-align: center;
+        border: 1px solid #b3d7ff;
+      }
+      .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #004085;
+      }
+      .stat-label {
+        font-size: 12px;
+        color: #004085;
+        text-transform: uppercase;
+      }
+      .button {
+        display: inline-block;
+        padding: 14px 35px;
+        background: #007bff;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        margin: 20px 0;
+        font-weight: 600;
+      }
+      .footer {
+        background: #f8f9fa;
+        padding: 20px 30px;
+        text-align: center;
+        font-size: 12px;
+        color: #6c757d;
+        border-top: 1px solid #e9ecef;
+      }
+      .checklist {
+        list-style: none;
+        padding: 0;
+      }
+      .checklist li {
+        padding: 10px;
+        margin: 8px 0;
+        background: #f8f9fa;
+        border-radius: 4px;
+        padding-left: 35px;
+        position: relative;
+      }
+      .checklist li.completed:before {
+        content: '✓';
+        position: absolute;
+        left: 10px;
+        color: #28a745;
+        font-weight: 700;
+      }
+      .checklist li.pending:before {
+        content: '○';
+        position: absolute;
+        left: 10px;
+        color: #6c757d;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="header">
+        <div class="icon">📅</div>
+        <h1>Weekly Submission Reminder</h1>
+      </div>
+
+      <div class="content">
+        <p class="greeting">Hello {{nodeName}} Team,</p>
+
+        <p>
+          This is your weekly reminder to submit your PERM events for
+          <strong>{{month}}</strong>.
+        </p>
+
+        <div class="progress-container">
+          <div class="progress-label">
+            <span>Month Progress</span>
+            <span>{{compliance}}%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: {{compliance}}%;">
+              {{compliance}}%
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">{{eventsSubmitted}}/{{eventsRequired}}</div>
+            <div class="stat-label">Events Submitted</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{{daysRemaining}}</div>
+            <div class="stat-label">Days Until Month End</div>
+          </div>
+        </div>
+
+        <p><strong>Event Checklist:</strong></p>
+        <ul class="checklist">
+          {{#each events}}
+          <li class="{{#if this.submitted}}completed{{else}}pending{{/if}}">
+            {{this.name}} - {{this.date}}
+          </li>
+          {{/each}}
+        </ul>
+
+        <center>
+          <a href="{{submissionUrl}}" class="button">Continue Submission</a>
+        </center>
+
+        <p
+          style="
+            margin-top: 25px;
+            font-size: 14px;
+            padding: 15px;
+            background: #e7f3ff;
+            border-left: 4px solid #004085;
+            border-radius: 4px;
+          "
+        >
+          <strong>💡 Pro Tip:</strong> Submit events weekly to avoid last-minute
+          rush and ensure compliance.
+        </p>
+      </div>
+
+      <div class="footer">
+        <p>This is an automated weekly reminder from the PERM System.</p>
+        <p>
+          To unsubscribe from reminders, update your notification preferences.
+        </p>
+        <p>© 2025 Saby. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>
+

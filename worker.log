@@ -1,0 +1,210 @@
+[32minfo[39m: 🚀 Starting submission worker (standalone mode)...
+(node:17256) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: Connected to email server
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:
+[31merror[39m: ❌ Submission worker error:
+Error: Command timed out
+    at Timeout._onTimeout (/Users/fadebowaley/saby/sabyBackend/node_modules/ioredis/built/Command.js:192:33)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+[31merror[39m: ❌ Submission worker error:

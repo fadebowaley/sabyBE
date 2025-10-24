@@ -87,11 +87,22 @@ router.post(
   unifiedSubmissionController.retrySubmission
 );
 
-// Get specific submission
-router.get(
-  '/:id',
-  requireAccess('view:submission'),
-  unifiedSubmissionController.getSubmission
-);
+// Get, Update, Delete specific submission
+router
+  .route('/:id')
+  .get(
+    requireAccess('view:submission'),
+    unifiedSubmissionController.getSubmission
+  )
+  .patch(
+    requireAccess('update:submission'),
+    validate(submissionValidation.updateSubmission),
+    unifiedSubmissionController.updateSubmission
+  )
+  .delete(
+    requireAccess('delete:submission'),
+    validate(submissionValidation.deleteSubmissionById),
+    unifiedSubmissionController.deleteSubmission
+  );
 
 module.exports = router;

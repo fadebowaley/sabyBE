@@ -17,6 +17,9 @@ const notificationQueueService = require('../services/notificationQueue.service'
 const { eventCalendarService, eventComplianceService } = require('../services');
 const permSubmissionService = require('../services/permSubmission.service');
 const dlqService = require('../services/dlq.service');
+const emailService = require('../services/email.service');
+const User = require('../models/user.model');
+const Node = require('../models/node.model');
 
 const SUBMISSION_QUEUE_NAME = 'submissionQueue';
 
@@ -154,6 +157,67 @@ const createSubmissionWorker = () => {
             : 'Submission completed successfully',
         });
 
+        // ✅ PRODUCTION: Send email notifications
+        try {
+          // Get user email
+          const user = userId ? await User.findById(userId).lean() : null;
+          const userEmail = user?.email;
+
+          if (userEmail && emailService.sendSubmissionConfirmation) {
+            // Send confirmation email
+            await emailService.sendSubmissionConfirmation(userEmail, {
+              userName: user.firstname || 'User',
+              submissionId: result.id,
+              projectName: project_name || projectId,
+              submittedAt: result.created_at || new Date(),
+            });
+            logger.info(`✅ Confirmation email queued for ${userEmail}`);
+          }
+
+          // For PERM submissions, send compliance alerts based on percentage
+          if (
+            isPERMSubmission &&
+            result.event_compliance_percentage !== undefined
+          ) {
+            const compliance = parseFloat(result.event_compliance_percentage);
+
+            if (userEmail) {
+              const emailData = {
+                nodeName: nodeId || 'Your Node',
+                month: month,
+                compliance,
+                eventsSubmitted: result.total_events_submitted || 0,
+                eventsRequired: result.total_events_required || 5,
+                submissionId: result.id,
+                daysRemaining: 15, // Default
+              };
+
+              if (compliance < 40) {
+                // Critical alert
+                await emailService.sendPERMCriticalAlert(userEmail, emailData);
+                logger.info(
+                  `✅ Critical alert queued for ${userEmail} (${compliance}%)`
+                );
+              } else if (compliance >= 40 && compliance < 80) {
+                // Warning alert
+                await emailService.sendPERMWarning(userEmail, emailData);
+                logger.info(
+                  `✅ Warning queued for ${userEmail} (${compliance}%)`
+                );
+              } else if (compliance === 100) {
+                // Completion celebration
+                await emailService.sendPERMCompletion(userEmail, emailData);
+                logger.info(
+                  `✅ Completion email queued for ${userEmail} (100%)`
+                );
+              }
+            }
+          }
+        } catch (emailError) {
+          // Don't fail the job if email fails
+          logger.warn(`⚠️ Email notification failed: ${emailError.message}`);
+        }
+
         return result;
       } catch (error) {
         logger.error(`[Worker] Submission failed:`, error.message);
@@ -210,18 +274,18 @@ const createSubmissionWorker = () => {
   submissionWorker.on('failed', async (job, err) => {
     const attempts = job.attemptsMade;
     const maxAttempts = job.opts.attempts || 3;
-    
+
     logger.error(
       `❌ Submission worker failed job: ${job.id} (Attempt ${attempts}/${maxAttempts})`,
       err.message
     );
-    
+
     // ✅ PRODUCTION: Move to DLQ after all retries exhausted
     if (attempts >= maxAttempts) {
       logger.error(
         `🔴 Job ${job.id} permanently failed after ${attempts} attempts - Moving to DLQ`
       );
-      
+
       try {
         await dlqService.saveToDLQ({
           jobId: job.id,
@@ -235,7 +299,7 @@ const createSubmissionWorker = () => {
           projectId: job.data.projectId,
           userId: job.data.userId,
         });
-        
+
         // Send alert to admin
         await dlqService.sendAdminAlert({
           level: 'CRITICAL',
@@ -245,13 +309,38 @@ const createSubmissionWorker = () => {
           tenantId: job.data.tenantId,
           projectId: job.data.projectId,
         });
-        
+
+        // ✅ PRODUCTION: Send failure notification to user
+        try {
+          const user = job.data.userId
+            ? await User.findById(job.data.userId).lean()
+            : null;
+          if (user?.email && emailService.sendSubmissionFailed) {
+            await emailService.sendSubmissionFailed(user.email, {
+              userName: user.firstname || 'User',
+              submissionId: job.id,
+              errorMessage: err.message,
+              attempts,
+            });
+            logger.info(`✅ Failure notification sent to ${user.email}`);
+          }
+        } catch (emailError) {
+          logger.warn(`⚠️ Could not send failure email: ${emailError.message}`);
+        }
+
         logger.info(`✅ Job ${job.id} saved to DLQ and admin alerted`);
       } catch (dlqError) {
-        logger.error(`❌ Failed to process DLQ for job ${job.id}:`, dlqError.message);
+        logger.error(
+          `❌ Failed to process DLQ for job ${job.id}:`,
+          dlqError.message
+        );
       }
     } else {
-      logger.warn(`⚠️ Job ${job.id} will retry (${maxAttempts - attempts} attempts remaining)`);
+      logger.warn(
+        `⚠️ Job ${job.id} will retry (${
+          maxAttempts - attempts
+        } attempts remaining)`
+      );
     }
   });
 
