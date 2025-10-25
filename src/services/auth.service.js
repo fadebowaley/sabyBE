@@ -154,20 +154,23 @@ const sendUserOtp = async (user) => {
 
   await User.updateOne({ _id: user._id }, update); // No validation issues
 
-  // Skip email sending in development/staging mode or if SMTP is not configured
+  // Skip email sending in development mode or if SMTP is not configured
   const isProduction = process.env.NODE_ENV === 'production';
-  const smtpConfigured =
-    process.env.SMTP_HOST && process.env.SMTP_USERNAME;
+  const smtpConfigured = process.env.SMTP_HOST && process.env.SMTP_USERNAME;
 
-  if (!isProduction || !smtpConfigured) {
+  if (!isProduction) {
     console.log(
-      `📧 Email sending skipped (env: ${process.env.NODE_ENV}, smtp configured: ${!!smtpConfigured}). OTP logged above.`
+      `📧 Development/Test mode: Skipping email sending. OTP logged above.`
+    );
+  } else if (!smtpConfigured) {
+    console.log(
+      `📧 SMTP not configured. Skipping email sending. OTP logged above.`
     );
   } else {
     // Production mode with SMTP configured
     try {
       await sendOtpEmail(user.email, otp);
-      console.log(`📧 OTP email sent successfully to ${user.email}`);
+      console.log(`✅ OTP email sent successfully to ${user.email}`);
     } catch (error) {
       console.error('⚠️ Failed to send OTP email:', error.message);
       console.log('📧 OTP email failed, but OTP is still valid:', otp);
