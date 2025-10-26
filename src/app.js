@@ -104,7 +104,10 @@ app.get('/api/health', async (req, res) => {
 
   let redisStatus = 'disconnected';
   try {
-    redisStatus = redisClient && redisClient.status === 'ready' ? 'connected' : 'disconnected';
+    if (redisClient && typeof redisClient.ping === 'function') {
+      await redisClient.ping();
+      redisStatus = 'connected';
+    }
   } catch (error) {
     redisStatus = 'error';
   }
