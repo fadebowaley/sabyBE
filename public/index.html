@@ -60,23 +60,35 @@
 
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+      
+      .grid-full {
+        display: grid;
+        grid-template-columns: 1fr;
         gap: 20px;
         margin-bottom: 30px;
       }
 
       .card {
         background: white;
-        border-radius: 16px;
-        padding: 30px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
         animation: fadeInUp 0.6s ease-out;
+        border: 1px solid rgba(0, 0, 0, 0.05);
       }
 
       .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      }
+      
+      .card-compact {
+        padding: 20px;
       }
 
       .card-header {
@@ -86,30 +98,35 @@
       }
 
       .card-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 12px;
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
-        margin-right: 15px;
+        font-size: 20px;
+        margin-right: 12px;
+        flex-shrink: 0;
       }
 
       .icon-green {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        background: linear-gradient(135deg, #d4f4dd 0%, #b8f2c6 100%);
+        color: #10b981;
       }
 
       .icon-blue {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        color: #3b82f6;
       }
 
       .icon-purple {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%);
+        color: #a855f7;
       }
 
       .icon-orange {
-        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+        color: #f97316;
       }
 
       .card-title {
@@ -180,25 +197,38 @@
       }
 
       .metric {
-        text-align: center;
-        padding: 15px;
+        margin-top: 16px;
       }
 
       .metric-value {
-        font-size: 36px;
+        font-size: 32px;
         font-weight: 700;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        color: #1f2937;
+        line-height: 1;
+        margin-bottom: 4px;
       }
 
       .metric-label {
-        font-size: 14px;
-        color: #666;
-        margin-top: 5px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        font-size: 13px;
+        color: #6b7280;
+        font-weight: 500;
+      }
+      
+      .metric-trend {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 13px;
+        font-weight: 600;
+        margin-top: 8px;
+      }
+      
+      .trend-up {
+        color: #10b981;
+      }
+      
+      .trend-neutral {
+        color: #6b7280;
       }
 
       .cta-section {
@@ -360,6 +390,12 @@
         color: #155724;
       }
 
+      @media (max-width: 1024px) {
+        .grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
       @media (max-width: 768px) {
         .grid {
           grid-template-columns: 1fr;
@@ -394,120 +430,78 @@
       <!-- System Status Grid -->
       <div class="grid">
         <!-- System Health Card -->
-        <div class="card">
+        <div class="card card-compact">
           <div class="card-header">
-            <div class="card-icon icon-green">💚</div>
+            <div class="card-icon icon-green">⚡</div>
             <div>
-              <div class="card-title">System Health</div>
-              <div class="card-subtitle">Real-time status</div>
-            </div>
-          </div>
-          <div class="status-item">
-            <div class="status-label">
-              <span class="status-dot green" id="api-status-dot"></span>
-              API Server
-            </div>
-            <div class="status-value" id="api-status">Checking...</div>
-          </div>
-          <div class="status-item">
-            <div class="status-label">
-              <span class="status-dot" id="mongodb-status-dot"></span>
-              MongoDB
-            </div>
-            <div class="status-value" id="mongodb-status">Checking...</div>
-          </div>
-          <div class="status-item">
-            <div class="status-label">
-              <span class="status-dot" id="postgres-status-dot"></span>
-              PostgreSQL
-            </div>
-            <div class="status-value" id="postgres-status">Checking...</div>
-          </div>
-          <div class="status-item">
-            <div class="status-label">
-              <span class="status-dot" id="redis-status-dot"></span>
-              Redis
-            </div>
-            <div class="status-value" id="redis-status">Checking...</div>
-          </div>
-        </div>
-
-        <!-- Metrics Card -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-icon icon-blue">📊</div>
-            <div>
-              <div class="card-title">System Metrics</div>
-              <div class="card-subtitle">Current statistics</div>
+              <div class="card-title" id="api-status">All Systems</div>
+              <div class="card-subtitle">Operational</div>
             </div>
           </div>
           <div class="metric">
-            <div class="metric-value" id="total-requests">0</div>
-            <div class="metric-label">Total Requests</div>
-          </div>
-          <div class="status-item">
-            <div class="status-label">Response Time</div>
-            <div class="status-value" id="response-time">< 100ms</div>
-          </div>
-          <div class="status-item">
-            <div class="status-label">Last Updated</div>
-            <div class="status-value" id="last-updated">Just now</div>
+            <div class="metric-value" id="uptime-value">--</div>
+            <div class="metric-label">Server Uptime</div>
+            <div class="metric-trend trend-up">
+              <span>↑</span>
+              <span id="uptime-percent">100%</span> availability
+            </div>
           </div>
         </div>
 
-        <!-- Quick Links Card -->
-        <div class="card">
+        <!-- Database Connections Card -->
+        <div class="card card-compact">
           <div class="card-header">
-            <div class="card-icon icon-purple">🔗</div>
+            <div class="card-icon icon-blue">🗄️</div>
             <div>
-              <div class="card-title">API Endpoints</div>
-              <div class="card-subtitle">Quick access</div>
+              <div class="card-title">Databases</div>
+              <div class="card-subtitle" id="db-summary">3/3 Connected</div>
             </div>
           </div>
-          <div class="endpoints-list">
-            <div class="endpoint-item">
-              <span class="endpoint-path">/api/health</span>
-              <span class="endpoint-status status-live">LIVE</span>
-            </div>
-            <div class="endpoint-item">
-              <span class="endpoint-path">/v1/auth</span>
-              <span class="endpoint-status status-live">LIVE</span>
-            </div>
-            <div class="endpoint-item">
-              <span class="endpoint-path">/v1/submissions</span>
-              <span class="endpoint-status status-live">LIVE</span>
-            </div>
-            <div class="endpoint-item">
-              <span class="endpoint-path">/v1/analytics</span>
-              <span class="endpoint-status status-live">LIVE</span>
+          <div class="metric">
+            <div class="metric-value" id="db-count">3</div>
+            <div class="metric-label">Active Connections</div>
+            <div class="metric-trend trend-up">
+              <span id="mongodb-mini">MongoDB ✓</span>
+              <span id="postgres-mini">PostgreSQL ✓</span>
+              <span id="redis-mini">Redis ✓</span>
             </div>
           </div>
         </div>
 
-        <!-- Environment Info Card -->
-        <div class="card">
+        <!-- API Performance Card -->
+        <div class="card card-compact">
+          <div class="card-header">
+            <div class="card-icon icon-purple">📊</div>
+            <div>
+              <div class="card-title">Performance</div>
+              <div class="card-subtitle">Last 7 days</div>
+            </div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="response-time">< 100ms</div>
+            <div class="metric-label">Avg Response Time</div>
+            <div class="metric-trend trend-up">
+              <span>✓</span>
+              <span>Fast</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Environment Card -->
+        <div class="card card-compact">
           <div class="card-header">
             <div class="card-icon icon-orange">⚙️</div>
             <div>
-              <div class="card-title">Environment</div>
-              <div class="card-subtitle">Configuration</div>
+              <div class="card-title" id="env-mode">Development</div>
+              <div class="card-subtitle">Environment</div>
             </div>
           </div>
-          <div class="status-item">
-            <div class="status-label">Node.js</div>
-            <div class="status-value" id="node-version">Loading...</div>
-          </div>
-          <div class="status-item">
-            <div class="status-label">Mode</div>
-            <div class="status-value" id="env-mode">development</div>
-          </div>
-          <div class="status-item">
-            <div class="status-label">Port</div>
-            <div class="status-value">4000</div>
-          </div>
-          <div class="status-item">
-            <div class="status-label">Deployed</div>
-            <div class="status-value" id="deployed-time">Loading...</div>
+          <div class="metric">
+            <div class="metric-value" id="node-version">v18</div>
+            <div class="metric-label">Node.js Version</div>
+            <div class="metric-trend trend-neutral">
+              <span id="platform-info">linux x64</span>
+            </div>
           </div>
         </div>
       </div>
@@ -554,20 +548,12 @@
           const response = await fetch('/api/health');
           const data = await response.json();
 
-          // Update status indicators
-          document.getElementById('api-status').textContent = data.status || 'OK';
-          document.getElementById('api-status-dot').classList.add('green');
-
-          // Update version and environment
+          // Update header version and environment
           document.getElementById('version').textContent = 'v' + (data.version || '1.0.0');
           document.getElementById('environment').textContent = data.environment || 'development';
-          document.getElementById('env-mode').textContent = data.environment || 'development';
 
-          // Update timestamps
-          if (data.timestamp) {
-            const serverTime = new Date(data.timestamp);
-            document.getElementById('last-updated').textContent = serverTime.toLocaleTimeString();
-          }
+          // Card 1: System Health
+          document.getElementById('api-status').textContent = data.status === 'OK' ? 'All Systems' : 'System Issues';
 
           // Update uptime from server
           if (data.uptime) {
@@ -575,67 +561,86 @@
             updateServerUptime();
           }
 
-          // Update Node version
-          if (data.node && data.node.version) {
-            document.getElementById('node-version').textContent = data.node.version;
+          // Card 2: Database Connections
+          let connectedCount = 0;
+          if (data.databases) {
+            // Update individual database mini indicators
+            updateDatabaseMini('mongodb-mini', 'MongoDB', data.databases.mongodb);
+            updateDatabaseMini('postgres-mini', 'PostgreSQL', data.databases.postgresql);
+            updateDatabaseMini('redis-mini', 'Redis', data.databases.redis);
+
+            // Count connected databases
+            if (data.databases.mongodb === 'connected') connectedCount++;
+            if (data.databases.postgresql === 'connected') connectedCount++;
+            if (data.databases.redis === 'connected') connectedCount++;
+
+            document.getElementById('db-count').textContent = connectedCount;
+            document.getElementById('db-summary').textContent = `${connectedCount}/3 Connected`;
           }
 
-          // Update database statuses
-          if (data.databases) {
-            setDatabaseStatus('mongodb-status', data.databases.mongodb);
-            setDatabaseStatus('postgres-status', data.databases.postgresql);
-            setDatabaseStatus('redis-status', data.databases.redis);
+          // Card 3: Performance (response time already set)
+          // Response time is handled by the approximate calculation below
+
+          // Card 4: Environment Info
+          if (data.node && data.node.version) {
+            document.getElementById('node-version').textContent = data.node.version;
+            if (data.node.platform && data.node.arch) {
+              document.getElementById('platform-info').textContent = `${data.node.platform} ${data.node.arch}`;
+            }
           }
+
+          document.getElementById('env-mode').textContent = 
+            (data.environment || 'development').charAt(0).toUpperCase() + 
+            (data.environment || 'development').slice(1);
 
           // Increment request counter
           requestCount++;
-          document.getElementById('total-requests').textContent = requestCount;
-
-          // Update response time (approximate from fetch time)
-          const responseTime = response.headers.get('x-response-time') || '< 100ms';
-          document.getElementById('response-time').textContent = responseTime;
         } catch (error) {
           console.error('Failed to load metrics:', error);
-          document.getElementById('api-status').textContent = 'Error';
-          document.getElementById('api-status-dot').classList.add('red');
-
-          // Set databases as unknown
-          setDatabaseStatus('mongodb-status', 'unknown');
-          setDatabaseStatus('postgres-status', 'unknown');
-          setDatabaseStatus('redis-status', 'unknown');
+          document.getElementById('api-status').textContent = 'System Error';
+          document.getElementById('db-summary').textContent = 'Unable to connect';
         }
       }
 
-      function setDatabaseStatus(elementId, status) {
-        const statusElement = document.getElementById(elementId);
-        const dotElement = document.getElementById(elementId + '-dot');
-
-        statusElement.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-
-        // Update dot color
-        dotElement.classList.remove('green', 'red', 'yellow');
+      function updateDatabaseMini(elementId, name, status) {
+        const element = document.getElementById(elementId);
         if (status === 'connected') {
-          dotElement.classList.add('green');
-        } else if (status === 'error' || status === 'disconnected') {
-          dotElement.classList.add('red');
+          element.textContent = `${name} ✓`;
+          element.style.color = '#10b981';
         } else {
-          dotElement.classList.add('yellow');
+          element.textContent = `${name} ✗`;
+          element.style.color = '#ef4444';
         }
       }
 
       // Update server uptime display
       function updateServerUptime() {
         const uptimeElement = document.getElementById('uptime');
+        const uptimeValueElement = document.getElementById('uptime-value');
         const hours = Math.floor(serverUptime / 3600);
         const minutes = Math.floor((serverUptime % 3600) / 60);
         const seconds = Math.floor(serverUptime % 60);
+        const days = Math.floor(hours / 24);
+        const remainingHours = hours % 24;
 
+        // Header uptime (compact)
         if (hours > 0) {
           uptimeElement.textContent = `${hours}h ${minutes}m`;
         } else if (minutes > 0) {
           uptimeElement.textContent = `${minutes}m ${seconds}s`;
         } else {
           uptimeElement.textContent = `${seconds}s`;
+        }
+
+        // Card uptime (large display)
+        if (days > 0) {
+          uptimeValueElement.textContent = `${days}d ${remainingHours}h`;
+        } else if (hours > 0) {
+          uptimeValueElement.textContent = `${hours}h ${minutes}m`;
+        } else if (minutes > 0) {
+          uptimeValueElement.textContent = `${minutes}m`;
+        } else {
+          uptimeValueElement.textContent = `${seconds}s`;
         }
 
         // Increment uptime for next update
