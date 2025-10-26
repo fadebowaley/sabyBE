@@ -77,27 +77,55 @@ if (config.env === 'production') {
   app.use('/v1/auth', authLimiter);
 }
 
-// Health check endpoint
+// Serve static files for landing page
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Landing page (root route)
 app.get('/', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    message:
-      '🛠️ "I will restore you to health and heal your wounds." – Jeremiah 30:17 | Saby Staging v1.0.3 - CI/CD Test Oct 24, 2025 🔧',
-    timestamp: new Date().toISOString(),
-    environment: 'staging',
-    version: '1.0.0',
-  });
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Health check endpoint (alternative)
-app.get('/api/health', (req, res) => {
+// Health check endpoint with detailed status
+app.get('/api/health', async (req, res) => {
+  const mongoose = require('mongoose');
+  const { testConnection: testPostgresConnection } = require('./config/postgres');
+  const { redisClient } = require('./config/redis');
+
+  // Check database connections
+  const mongoStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  
+  let postgresStatus = 'disconnected';
+  try {
+    const isConnected = await testPostgresConnection();
+    postgresStatus = isConnected ? 'connected' : 'disconnected';
+  } catch (error) {
+    postgresStatus = 'error';
+  }
+
+  let redisStatus = 'disconnected';
+  try {
+    redisStatus = redisClient && redisClient.status === 'ready' ? 'connected' : 'disconnected';
+  } catch (error) {
+    redisStatus = 'error';
+  }
+
   res.status(200).json({
     status: 'OK',
-    message:
-      '🛠️ “I will restore you to health and heal your wounds.” – Jeremiah 30:17 | Saby Staging v1.0.2 Mo Version 🔧',
+    message: '🛠️ "I will restore you to health and heal your wounds." – Jeremiah 30:17',
     timestamp: new Date().toISOString(),
-    environment: 'staging',
-    version: '1.0.0',
+    environment: config.env || 'development',
+    version: '1.0.4',
+    uptime: process.uptime(),
+    databases: {
+      mongodb: mongoStatus,
+      postgresql: postgresStatus,
+      redis: redisStatus,
+    },
+    node: {
+      version: process.version,
+      platform: process.platform,
+      arch: process.arch,
+    },
   });
 });
 
