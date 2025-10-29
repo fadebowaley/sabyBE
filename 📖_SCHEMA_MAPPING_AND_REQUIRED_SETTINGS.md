@@ -43,18 +43,18 @@ FormElementSchema {
   // REQUIRED FIELDS
   id: String,                          // Unique identifier for this element
   type: String,                        // Field type (see supported types below)
-  
+
   // PROPERTIES OBJECT
   properties: {
     // Display
     label: String,                     // Field label shown to user
     placeholder: String,               // Placeholder text
     helpText: String,                  // Help text below field
-    
+
     // Validation
     required: Boolean,                 // Is field required?
     validation: Object,                // Validation rules (see below)
-    
+
     // Type-specific
     options: [String],                 // For select, radio, checkbox
     multiple: Boolean,                 // Allow multiple selections
@@ -62,19 +62,19 @@ FormElementSchema {
     acceptedTypes: String,             // File extensions
     defaultValue: Mixed,               // Default value
     defaultCountry: String,            // For phone fields
-    
+
     // Number-specific
     numberType: String,                // 'integer' or 'decimal'
     min: Number,                       // Minimum value
     max: Number,                       // Maximum value
     step: Number,                      // Number step
-    
+
     // Text formatting
     paragraphAlignment: String,        // 'left', 'center', 'right'
     textAlign: String,                 // Text alignment
     headerLevel: String,               // For header elements
     headerAlignment: String,           // Header alignment
-    
+
     // Advanced
     formula: String,                   // For calculated fields
     conditional: Boolean,              // Conditional visibility
@@ -89,26 +89,26 @@ FormElementSchema {
 
 ### 1.2 Supported Field Types
 
-| Type | Description | Example Value | Validation |
-|------|-------------|---------------|------------|
-| `text` | Single-line text | `"John Doe"` | minLength, maxLength, pattern |
-| `textarea` | Multi-line text | `"Long description..."` | maxLength |
-| `email` | Email address | `"user@example.com"` | Email format regex |
-| `phone` | Phone number | `"+1234567890"` | Phone format |
-| `number` | Numeric input | `42` or `3.14` | min, max, step |
-| `select` | Dropdown | `"option1"` | Must be in options array |
-| `radio` | Radio buttons | `"choice_a"` | Must be in options array |
-| `checkbox` | Checkboxes | `true` or `["a", "b"]` | Boolean or array based on `multiple` |
-| `date` | Date picker | `"2025-10-29"` | ISO date format |
-| `datetime` | Date and time | `"2025-10-29T14:30:00Z"` | ISO datetime format |
-| `file` | File upload | `"https://cdn.../file.pdf"` | File type, size |
-| `url` | URL input | `"https://example.com"` | URL format |
-| `currency` | Money input | `1000.50` | Numeric with currency code |
-| `location` | Address/location | `{ lat, lng, address }` | Object with coordinates |
-| `signature` | Signature pad | `"data:image/png;base64,..."` | Base64 image |
-| `rating` | Star/rating | `4` | Number between 1-max |
-| `paragraph` | Static text | N/A | Display only |
-| `header` | Section header | N/A | Display only |
+| Type        | Description      | Example Value                 | Validation                           |
+| ----------- | ---------------- | ----------------------------- | ------------------------------------ |
+| `text`      | Single-line text | `"John Doe"`                  | minLength, maxLength, pattern        |
+| `textarea`  | Multi-line text  | `"Long description..."`       | maxLength                            |
+| `email`     | Email address    | `"user@example.com"`          | Email format regex                   |
+| `phone`     | Phone number     | `"+1234567890"`               | Phone format                         |
+| `number`    | Numeric input    | `42` or `3.14`                | min, max, step                       |
+| `select`    | Dropdown         | `"option1"`                   | Must be in options array             |
+| `radio`     | Radio buttons    | `"choice_a"`                  | Must be in options array             |
+| `checkbox`  | Checkboxes       | `true` or `["a", "b"]`        | Boolean or array based on `multiple` |
+| `date`      | Date picker      | `"2025-10-29"`                | ISO date format                      |
+| `datetime`  | Date and time    | `"2025-10-29T14:30:00Z"`      | ISO datetime format                  |
+| `file`      | File upload      | `"https://cdn.../file.pdf"`   | File type, size                      |
+| `url`       | URL input        | `"https://example.com"`       | URL format                           |
+| `currency`  | Money input      | `1000.50`                     | Numeric with currency code           |
+| `location`  | Address/location | `{ lat, lng, address }`       | Object with coordinates              |
+| `signature` | Signature pad    | `"data:image/png;base64,..."` | Base64 image                         |
+| `rating`    | Star/rating      | `4`                           | Number between 1-max                 |
+| `paragraph` | Static text      | N/A                           | Display only                         |
+| `header`    | Section header   | N/A                           | Display only                         |
 
 **Total Supported Types:** 18+
 
@@ -122,15 +122,15 @@ validation: {
   minLength: Number,                   // Minimum string length
   maxLength: Number,                   // Maximum string length
   pattern: String,                     // Regex pattern
-  
+
   // Number validations
   min: Number,                         // Minimum value
   max: Number,                         // Maximum value
   step: Number,                        // Increment step
-  
+
   // Format validations
   format: String,                      // 'email', 'url', 'phone'
-  
+
   // Custom validations
   custom: Function,                    // Custom validator
 }
@@ -148,32 +148,32 @@ validation: {
 CREATE TABLE form_submissions (
     -- Primary identifier
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    
+
     -- Multi-tenant identifiers (REQUIRED)
     tenant_id VARCHAR(64) NOT NULL,
     project_id VARCHAR(64) NOT NULL,
     form_id VARCHAR(64) NOT NULL,
-    
+
     -- Optional identifiers
     node_id VARCHAR(64),              -- For PERM or multi-node forms
     user_id VARCHAR(64),              -- Submitter
-    
+
     -- Submission metadata
     source VARCHAR(32) DEFAULT 'unknown',  -- 'web', 'api', 'whatsapp', etc.
     status VARCHAR(32) DEFAULT 'submitted',
-    
+
     -- FORM DATA STORAGE (JSONB) ← This is where form element data goes!
     data JSONB NOT NULL,
     meta JSONB DEFAULT '{}'::jsonb,
-    
+
     -- Project information
     project_name VARCHAR(128),
     project_category VARCHAR(64),
-    
+
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
+
     -- PERM-specific columns
     month DATE,
     year INTEGER,
@@ -190,6 +190,7 @@ CREATE TABLE form_submissions (
 ```
 
 **Key Points:**
+
 - ✅ `data` column is JSONB - stores ANY JSON structure
 - ✅ Flexible schema - can accommodate any form structure
 - ✅ Indexed for fast queries
@@ -235,6 +236,7 @@ data: {
 ### 3.1 Text Field
 
 **Element Definition:**
+
 ```javascript
 {
   id: 'company_name',
@@ -251,21 +253,24 @@ data: {
 ```
 
 **Submitted Value:**
+
 ```javascript
 payload: {
-  company_name: "Acme Corporation"
+  company_name: 'Acme Corporation';
 }
 ```
 
 **PostgreSQL Storage:**
+
 ```sql
 data: '{"company_name": "Acme Corporation"}'::jsonb
 ```
 
 **Query Example:**
+
 ```sql
-SELECT data->>'company_name' as company_name 
-FROM form_submissions 
+SELECT data->>'company_name' as company_name
+FROM form_submissions
 WHERE id = 'submission-id';
 ```
 
@@ -274,6 +279,7 @@ WHERE id = 'submission-id';
 ### 3.2 Number Field
 
 **Element Definition:**
+
 ```javascript
 {
   id: 'annual_revenue',
@@ -291,13 +297,15 @@ WHERE id = 'submission-id';
 ```
 
 **Submitted Value:**
+
 ```javascript
 payload: {
-  annual_revenue: 2500000.50
+  annual_revenue: 2500000.5;
 }
 ```
 
 **PostgreSQL Storage:**
+
 ```sql
 data: '{"annual_revenue": 2500000.5}'::jsonb
 ```
@@ -309,6 +317,7 @@ data: '{"annual_revenue": 2500000.5}'::jsonb
 ### 3.3 Select/Dropdown Field
 
 **Element Definition:**
+
 ```javascript
 {
   id: 'industry',
@@ -323,13 +332,15 @@ data: '{"annual_revenue": 2500000.5}'::jsonb
 ```
 
 **Submitted Value:**
+
 ```javascript
 payload: {
-  industry: "Technology"
+  industry: 'Technology';
 }
 ```
 
 **PostgreSQL Storage:**
+
 ```sql
 data: '{"industry": "Technology"}'::jsonb
 ```
@@ -341,6 +352,7 @@ data: '{"industry": "Technology"}'::jsonb
 ### 3.4 Checkbox Field (Multiple)
 
 **Element Definition:**
+
 ```javascript
 {
   id: 'services_interested',
@@ -355,13 +367,15 @@ data: '{"industry": "Technology"}'::jsonb
 ```
 
 **Submitted Value:**
+
 ```javascript
 payload: {
-  services_interested: ["Consulting", "Development"]
+  services_interested: ['Consulting', 'Development'];
 }
 ```
 
 **PostgreSQL Storage:**
+
 ```sql
 data: '{"services_interested": ["Consulting", "Development"]}'::jsonb
 ```
@@ -369,6 +383,7 @@ data: '{"services_interested": ["Consulting", "Development"]}'::jsonb
 **Type:** Array of strings
 
 **Query Example:**
+
 ```sql
 SELECT data->'services_interested' as services
 FROM form_submissions
@@ -380,6 +395,7 @@ WHERE data @> '{"services_interested": ["Consulting"]}'::jsonb;
 ### 3.5 Date Field
 
 **Element Definition:**
+
 ```javascript
 {
   id: 'start_date',
@@ -392,13 +408,15 @@ WHERE data @> '{"services_interested": ["Consulting"]}'::jsonb;
 ```
 
 **Submitted Value:**
+
 ```javascript
 payload: {
-  start_date: "2025-11-01"
+  start_date: '2025-11-01';
 }
 ```
 
 **PostgreSQL Storage:**
+
 ```sql
 data: '{"start_date": "2025-11-01"}'::jsonb
 ```
@@ -410,6 +428,7 @@ data: '{"start_date": "2025-11-01"}'::jsonb
 ### 3.6 Complex Nested Object
 
 **Element Definition:**
+
 ```javascript
 {
   id: 'address',
@@ -422,6 +441,7 @@ data: '{"start_date": "2025-11-01"}'::jsonb
 ```
 
 **Submitted Value:**
+
 ```javascript
 payload: {
   address: {
@@ -439,6 +459,7 @@ payload: {
 ```
 
 **PostgreSQL Storage:**
+
 ```sql
 data: '{
   "address": {
@@ -453,8 +474,9 @@ data: '{
 ```
 
 **Query Example:**
+
 ```sql
-SELECT 
+SELECT
   data->'address'->>'city' as city,
   data->'address'->'coordinates'->>'lat' as latitude
 FROM form_submissions
@@ -469,18 +491,18 @@ WHERE data->'address'->>'city' = 'Lagos';
 
 **When creating a ProjectForm, ensure:**
 
-| Setting | Path | Type | Required | Default | Notes |
-|---------|------|------|----------|---------|-------|
-| `projectName` | `configuration.projectName` | String | ✅ YES | - | User-facing form name |
-| `status` | `status` | String | ✅ YES | `'active'` | Must be 'active' for submissions |
-| `deploymentStatus` | `metadata.deploymentStatus` | String | ✅ YES | `'draft'` | Must be 'published' |
-| `elements` | `elements` | Array | ✅ YES | `[]` | At least 1 element required |
-| `tenantId` | `tenantId` | String | ✅ YES | - | From authenticated user |
-| `createdBy` | `createdBy` | ObjectId | ✅ YES | - | User ID creating form |
-| `projectId` | `projectId` | String | ✅ YES | Auto-generated | `proj_xxxxxxxxxxxx` |
-| `security` | `configuration.security` | String | ⚠️ Affects auth | `'private'` | `'public'` or `'private'` |
-| `accessibility` | `configuration.accessibility` | Array | ⚠️ Optional | `[]` | `['api', 'embedded', etc.]` |
-| `tags` | `configuration.tags` | Array | ⚪ Optional | `[]` | Categorization |
+| Setting            | Path                          | Type     | Required        | Default        | Notes                            |
+| ------------------ | ----------------------------- | -------- | --------------- | -------------- | -------------------------------- |
+| `projectName`      | `configuration.projectName`   | String   | ✅ YES          | -              | User-facing form name            |
+| `status`           | `status`                      | String   | ✅ YES          | `'active'`     | Must be 'active' for submissions |
+| `deploymentStatus` | `metadata.deploymentStatus`   | String   | ✅ YES          | `'draft'`      | Must be 'published'              |
+| `elements`         | `elements`                    | Array    | ✅ YES          | `[]`           | At least 1 element required      |
+| `tenantId`         | `tenantId`                    | String   | ✅ YES          | -              | From authenticated user          |
+| `createdBy`        | `createdBy`                   | ObjectId | ✅ YES          | -              | User ID creating form            |
+| `projectId`        | `projectId`                   | String   | ✅ YES          | Auto-generated | `proj_xxxxxxxxxxxx`              |
+| `security`         | `configuration.security`      | String   | ⚠️ Affects auth | `'private'`    | `'public'` or `'private'`        |
+| `accessibility`    | `configuration.accessibility` | Array    | ⚠️ Optional     | `[]`           | `['api', 'embedded', etc.]`      |
+| `tags`             | `configuration.tags`          | Array    | ⚪ Optional     | `[]`           | Categorization                   |
 
 ---
 
@@ -501,6 +523,7 @@ WHERE data->'address'->>'city' = 'Lagos';
 ```
 
 **Minimum Valid Element:**
+
 ```javascript
 {
   id: "my_field",
@@ -568,14 +591,14 @@ WHERE data->'address'->>'city' = 'Lagos';
 
 ### 5.2 Mapping Rules
 
-| Rule | Description | Example |
-|------|-------------|---------|
-| **Direct Mapping** | Element `id` becomes JSON key | `id: "name"` → `data.name` |
-| **Type Preservation** | JavaScript types preserved | `42` stays number, not string |
-| **Array Support** | Arrays stored as JSON arrays | `["a", "b"]` → `["a", "b"]` |
-| **Object Support** | Objects stored as nested JSON | `{lat: 1, lng: 2}` → `{lat: 1, lng: 2}` |
-| **Null Handling** | Null values preserved | `null` → `null` |
-| **Undefined Handling** | Undefined omitted | `undefined` → not stored |
+| Rule                   | Description                   | Example                                 |
+| ---------------------- | ----------------------------- | --------------------------------------- |
+| **Direct Mapping**     | Element `id` becomes JSON key | `id: "name"` → `data.name`              |
+| **Type Preservation**  | JavaScript types preserved    | `42` stays number, not string           |
+| **Array Support**      | Arrays stored as JSON arrays  | `["a", "b"]` → `["a", "b"]`             |
+| **Object Support**     | Objects stored as nested JSON | `{lat: 1, lng: 2}` → `{lat: 1, lng: 2}` |
+| **Null Handling**      | Null values preserved         | `null` → `null`                         |
+| **Undefined Handling** | Undefined omitted             | `undefined` → not stored                |
 
 ---
 
@@ -584,6 +607,7 @@ WHERE data->'address'->>'city' = 'Lagos';
 ### 6.1 Required Field Validation
 
 **Element Definition:**
+
 ```javascript
 {
   id: 'email_address',
@@ -596,13 +620,15 @@ WHERE data->'address'->>'city' = 'Lagos';
 ```
 
 **Valid Submission:**
+
 ```javascript
 payload: {
-  email_address: "user@example.com"  // ✅ Present
+  email_address: 'user@example.com'; // ✅ Present
 }
 ```
 
 **Invalid Submission:**
+
 ```javascript
 payload: {
   // email_address missing  // ❌ Should be rejected
@@ -617,6 +643,7 @@ payload: {
 ### 6.2 Optional Field Handling
 
 **Element Definition:**
+
 ```javascript
 {
   id: 'middle_name',
@@ -629,10 +656,11 @@ payload: {
 ```
 
 **Valid Submissions:**
+
 ```javascript
 // With value
 payload: {
-  middle_name: "Michael"         // ✅ OK
+  middle_name: 'Michael'; // ✅ OK
 }
 
 // Without value
@@ -642,7 +670,7 @@ payload: {
 
 // With null
 payload: {
-  middle_name: null              // ✅ Also OK
+  middle_name: null; // ✅ Also OK
 }
 ```
 
@@ -653,6 +681,7 @@ payload: {
 ### 7.1 Calculated Fields (Formula)
 
 **Element Definition:**
+
 ```javascript
 {
   id: 'total_price',
@@ -666,6 +695,7 @@ payload: {
 ```
 
 **Submission:**
+
 ```javascript
 payload: {
   quantity: 10,
@@ -681,6 +711,7 @@ payload: {
 ### 7.2 Conditional Fields
 
 **Element Definition:**
+
 ```javascript
 {
   id: 'other_department',
@@ -694,6 +725,7 @@ payload: {
 ```
 
 **Submission When Shown:**
+
 ```javascript
 payload: {
   department: "Other",
@@ -702,9 +734,10 @@ payload: {
 ```
 
 **Submission When Hidden:**
+
 ```javascript
 payload: {
-  department: "Sales"
+  department: 'Sales';
   // other_department not included (OK)
 }
 ```
@@ -714,6 +747,7 @@ payload: {
 ### 7.3 File Uploads
 
 **Element Definition:**
+
 ```javascript
 {
   id: 'resume',
@@ -727,9 +761,10 @@ payload: {
 ```
 
 **Submission:**
+
 ```javascript
 payload: {
-  resume: "https://cdn.example.com/uploads/resume_abc123.pdf"
+  resume: 'https://cdn.example.com/uploads/resume_abc123.pdf';
 }
 ```
 
@@ -779,7 +814,7 @@ properties: {
 ```javascript
 properties: {
   validation: {
-    format: 'email'
+    format: 'email';
   }
 }
 ```
@@ -795,7 +830,7 @@ properties: {
 
 ```javascript
 properties: {
-  options: ['Option A', 'Option B', 'Option C']
+  options: ['Option A', 'Option B', 'Option C'];
 }
 ```
 
@@ -807,20 +842,24 @@ properties: {
 ### 8.5 Checkbox Validation (Multiple)
 
 **Single Checkbox:**
+
 ```javascript
 properties: {
-  multiple: false
+  multiple: false;
 }
 ```
+
 **Value:** `true` or `false`
 
 **Multiple Checkboxes:**
+
 ```javascript
 properties: {
   options: ['A', 'B', 'C'],
   multiple: true
 }
 ```
+
 **Value:** `["A", "C"]` (array of selected options)
 
 ---
@@ -842,7 +881,7 @@ POST /v1/submissions
     "field_2": "value2",
     ...
   },
-  
+
   // OPTIONAL FIELDS
   "userId": "user-123",              // Auto-extracted from JWT
   "source": "web",                   // Default: 'api'
@@ -866,11 +905,11 @@ POST /v1/submissions
   "projectId": "proj_perm_001",
   "formId": "form_perm_events",
   "payload": { ... },
-  
+
   // PERM-SPECIFIC REQUIRED FIELDS
   "nodeId": "node_church_001",       // ✅ REQUIRED for PERM
   "month": "2025-10-01",             // ✅ REQUIRED for PERM
-  
+
   // PERM-SPECIFIC OPTIONAL FIELDS
   "year": 2025,                      // Default: current year
   "perm_enabled": true,              // Auto-detected if month present
@@ -888,6 +927,7 @@ POST /v1/submissions
 #### Error 1: Missing Required Field
 
 **Payload:**
+
 ```javascript
 {
   tenantId: "tenant-001",
@@ -898,6 +938,7 @@ POST /v1/submissions
 ```
 
 **Response:**
+
 ```json
 {
   "success": false,
@@ -911,6 +952,7 @@ POST /v1/submissions
 #### Error 2: Form Not Found
 
 **Payload:**
+
 ```javascript
 {
   tenantId: "tenant-001",
@@ -922,6 +964,7 @@ POST /v1/submissions
 
 **Current Behavior:** ⚠️ Submission accepted (no check)  
 **Recommended Behavior:**
+
 ```json
 {
   "success": false,
@@ -938,6 +981,7 @@ POST /v1/submissions
 
 **Current Behavior:** ⚠️ Submission accepted  
 **Recommended Behavior:**
+
 ```json
 {
   "success": false,
@@ -954,6 +998,7 @@ POST /v1/submissions
 
 **Current Behavior:** ⚠️ Submission accepted  
 **Recommended Behavior:**
+
 ```json
 {
   "success": false,
@@ -971,6 +1016,7 @@ POST /v1/submissions
 
 **Current Behavior:** ⚠️ Submission accepted  
 **Recommended Behavior:**
+
 ```json
 {
   "success": false,
@@ -995,17 +1041,19 @@ POST /v1/submissions
 ### 11.1 Element ID Naming
 
 **Good:**
+
 ```javascript
-id: "field_fullname"         // Descriptive, prefixed
-id: "field_email_address"    // Clear purpose
-id: "field_company_name"     // Easy to query
+id: 'field_fullname'; // Descriptive, prefixed
+id: 'field_email_address'; // Clear purpose
+id: 'field_company_name'; // Easy to query
 ```
 
 **Avoid:**
+
 ```javascript
-id: "f1"                     // Not descriptive
-id: "input_1"                // Generic
-id: "name"                   // Might conflict
+id: 'f1'; // Not descriptive
+id: 'input_1'; // Generic
+id: 'name'; // Might conflict
 ```
 
 **Reason:** IDs become JSON keys in PostgreSQL - make them meaningful!
@@ -1015,6 +1063,7 @@ id: "name"                   // Might conflict
 ### 11.2 Required Field Strategy
 
 **Recommended:**
+
 ```javascript
 // Mark truly required fields as required
 {
@@ -1042,6 +1091,7 @@ id: "name"                   // Might conflict
 ### 11.3 Default Values
 
 **Use default values for better UX:**
+
 ```javascript
 {
   id: "country",
@@ -1061,6 +1111,7 @@ id: "name"                   // Might conflict
 ### 11.4 Validation Messages
 
 **Clear validation rules:**
+
 ```javascript
 properties: {
   validation: {
@@ -1081,6 +1132,7 @@ properties: {
 ### 12.1 Basic Queries
 
 **Get all submissions for a form:**
+
 ```sql
 SELECT * FROM form_submissions
 WHERE project_id = 'proj_abc123'
@@ -1089,8 +1141,9 @@ ORDER BY created_at DESC;
 ```
 
 **Get specific field from all submissions:**
+
 ```sql
-SELECT 
+SELECT
   id,
   data->>'field_email' as email,
   data->>'field_fullname' as name,
@@ -1105,6 +1158,7 @@ WHERE project_id = 'proj_abc123'
 ### 12.2 Advanced JSONB Queries
 
 **Filter by field value:**
+
 ```sql
 SELECT * FROM form_submissions
 WHERE data->>'field_department' = 'Engineering'
@@ -1112,6 +1166,7 @@ WHERE data->>'field_department' = 'Engineering'
 ```
 
 **Filter by array contains:**
+
 ```sql
 SELECT * FROM form_submissions
 WHERE data->'field_interests' ?| ARRAY['Newsletter', 'Events']
@@ -1119,6 +1174,7 @@ WHERE data->'field_interests' ?| ARRAY['Newsletter', 'Events']
 ```
 
 **Filter by numeric field:**
+
 ```sql
 SELECT * FROM form_submissions
 WHERE (data->>'field_age')::int >= 18
@@ -1126,6 +1182,7 @@ WHERE (data->>'field_age')::int >= 18
 ```
 
 **Full-text search:**
+
 ```sql
 SELECT * FROM form_submissions
 WHERE data::text ILIKE '%engineer%'
@@ -1137,8 +1194,9 @@ WHERE data::text ILIKE '%engineer%'
 ### 12.3 Aggregations
 
 **Count by department:**
+
 ```sql
-SELECT 
+SELECT
   data->>'field_department' as department,
   COUNT(*) as count
 FROM form_submissions
@@ -1148,8 +1206,9 @@ ORDER BY count DESC;
 ```
 
 **Average age:**
+
 ```sql
-SELECT 
+SELECT
   AVG((data->>'field_age')::numeric) as average_age
 FROM form_submissions
 WHERE project_id = 'proj_abc123'
@@ -1163,6 +1222,7 @@ WHERE project_id = 'proj_abc123'
 ### 13.1 Submission Fails with 400
 
 **Possible Causes:**
+
 1. Missing required fields (tenantId, projectId, formId, payload)
 2. Invalid JSON format
 3. Empty payload object
@@ -1174,22 +1234,24 @@ WHERE project_id = 'proj_abc123'
 ### 13.2 Submission Accepted but Not in PostgreSQL
 
 **Possible Causes:**
+
 1. Worker not running
 2. Worker error during processing
 3. Redis connection issue
 4. PostgreSQL connection issue
 
 **Debug Steps:**
+
 ```bash
 # Check activity logs
-SELECT * FROM submission_activity_log 
-WHERE job_id = 'your-job-id' 
+SELECT * FROM submission_activity_log
+WHERE job_id = 'your-job-id'
 ORDER BY created_at;
 
 # Check for 'failed' status
-SELECT * FROM submission_activity_log 
-WHERE status = 'failed' 
-ORDER BY created_at DESC 
+SELECT * FROM submission_activity_log
+WHERE status = 'failed'
+ORDER BY created_at DESC
 LIMIT 10;
 
 # Check worker logs
@@ -1205,6 +1267,7 @@ docker logs halo-worker --tail 100
 **Cause:** Payload sent as string: `"age": "30"` instead of `"age": 30`
 
 **Solution:** Ensure correct types in payload:
+
 ```javascript
 // ❌ Wrong
 payload: {
@@ -1280,18 +1343,21 @@ payload: {
 ### Required Settings Summary:
 
 **Form must have:**
+
 - ✅ `status = 'active'`
 - ✅ `metadata.deploymentStatus = 'published'`
 - ✅ `configuration.projectName` (not empty)
 - ✅ `elements` array (at least 1 element)
 
 **Submission must have:**
+
 - ✅ `tenantId`
 - ✅ `projectId`
 - ✅ `formId`
 - ✅ `payload` (object)
 
 **For PERM, also need:**
+
 - ✅ `nodeId`
 - ✅ `month`
 
@@ -1308,5 +1374,3 @@ payload: {
 **END OF GUIDE**
 
 **Next Steps:** Run `test-form-submission-pipeline-complete.js` to verify everything!
-
-
