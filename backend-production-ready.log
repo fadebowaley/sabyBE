@@ -16250,3 +16250,763 @@ For more information, check the blog post at https://a.co/cUPnyil
 [32minfo[39m: 🛑 All workers shut down
 [32minfo[39m: Server closed
 [31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:91596) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[33mwarn[39m: Unable to connect to email server. Make sure you have configured the SMTP options in .env
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: 20.169.129.160:5432
+[32minfo[39m: 👤 User: sabyagentic_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 (Debian 15.14-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:64146) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: 20.169.129.160:5432
+[32minfo[39m: 👤 User: sabyagentic_user
+[32minfo[39m: 🗄️  Database: halograph
+[33mwarn[39m: Unable to connect to email server. Make sure you have configured the SMTP options in .env
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 (Debian 15.14-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:10722) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: 20.169.129.160:5432
+[32minfo[39m: 👤 User: sabyagentic_user
+[32minfo[39m: 🗄️  Database: halograph
+[33mwarn[39m: Unable to connect to email server. Make sure you have configured the SMTP options in .env
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 (Debian 15.14-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:15334) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: 20.169.129.160:5432
+[32minfo[39m: 👤 User: sabyagentic_user
+[32minfo[39m: 🗄️  Database: halograph
+[33mwarn[39m: Unable to connect to email server. Make sure you have configured the SMTP options in .env
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 (Debian 15.14-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:17881) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: 20.169.129.160:5432
+[32minfo[39m: 👤 User: sabyagentic_user
+[32minfo[39m: 🗄️  Database: halograph
+[33mwarn[39m: Unable to connect to email server. Make sure you have configured the SMTP options in .env
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 (Debian 15.14-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:27040) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[33mwarn[39m: Unable to connect to email server. Make sure you have configured the SMTP options in .env
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: 20.169.129.160:5432
+[32minfo[39m: 👤 User: sabyagentic_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 (Debian 15.14-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/route.js:202
+        throw new Error(msg);
+        ^
+
+Error: Route.patch() requires a callback function but got a [object Undefined]
+    at Route.<computed> [as patch] (/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/route.js:202:15)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/unifiedSubmission.route.js:97:4)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js:46:32)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/app.js:15:16)
+
+Node.js v18.20.2
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/route.js:202
+        throw new Error(msg);
+        ^
+
+Error: Route.patch() requires a callback function but got a [object Undefined]
+    at Route.<computed> [as patch] (/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/route.js:202:15)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/unifiedSubmission.route.js:97:4)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js:46:32)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/app.js:15:16)
+
+Node.js v18.20.2
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m

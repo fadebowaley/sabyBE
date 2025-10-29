@@ -2,7 +2,6 @@ const httpStatus = require('http-status');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
-const logger = require('../config/logger');
 const {
   queueSubmission,
   getActivityLogs: getActivityLogsService,
@@ -12,7 +11,6 @@ const {
 const { logActivity } = require('../utils/activityLogger');
 const SubmissionModel = require('../models/submission.model');
 const ActivityLogModel = require('../models/activityLog.model');
-const { postgresPool } = require('../config/postgres');
 const dynamicFormSchemaService = require('../ingestion/whatsapp/services/dynamicFormSchema.service');
 const dynamicValidationService = require('../ingestion/whatsapp/services/dynamicValidation.service');
 
@@ -63,21 +61,6 @@ const submitData = catchAsync(async (req, res) => {
       'Missing required fields: tenantId, projectId, formId, payload'
     );
   }
-
-  // ✅ PRODUCTION: Form validation (currently disabled - will be enabled once forms are properly configured)
-  // TODO: Enable strict form validation after ensuring all forms are properly set up in MongoDB
-  // See PRODUCTION_GRADE_IMPLEMENTATION.md for full validation implementation
-
-  logger.info(
-    `📝 Accepting submission for project ${submissionBody.projectId} (form validation: disabled)`
-  );
-
-  // Add metadata flag
-  submissionBody.meta = {
-    ...submissionBody.meta,
-    formValidationEnabled: false,
-    note: 'Form validation will be enabled after Phase 1 implementation',
-  };
 
   // Auto-detect PERM submission
   const isPERM =
@@ -483,155 +466,6 @@ const bulkDeleteActivityLogs = catchAsync(async (req, res) => {
   });
 });
 
-/**
- * Update submission data
- * @route PATCH /v1/submissions/:id
- */
-const updateSubmission = catchAsync(async (req, res) => {
-  const { id } = req.params;
-  const updates = pick(req.body, ['data', 'payload', 'status', 'meta']);
-
-  logger.info(`[UPDATE SUBMISSION] Updating submission ${id}`);
-
-  // Get existing submission
-  const submission = await SubmissionModel.getSubmissionById(id);
-
-  if (!submission) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
-  }
-
-  // Build update query
-  const updateFields = [];
-  const values = [];
-  let paramCount = 1;
-
-  if (updates.data || updates.payload) {
-    updateFields.push(`data = $${paramCount}`);
-    values.push(updates.data || updates.payload);
-    paramCount++;
-  }
-
-  if (updates.status) {
-    updateFields.push(`status = $${paramCount}`);
-    values.push(updates.status);
-    paramCount++;
-  }
-
-  if (updates.meta) {
-    updateFields.push(`meta = $${paramCount}`);
-    values.push(updates.meta);
-    paramCount++;
-  }
-
-  updateFields.push(`updated_at = NOW()`);
-
-  // Add ID as last parameter
-  values.push(id);
-
-  const query = `
-    UPDATE form_submissions 
-    SET ${updateFields.join(', ')}
-    WHERE id = $${paramCount}
-    RETURNING *
-  `;
-
-  try {
-    logger.info(`[UPDATE SUBMISSION] Query: ${query}`);
-    logger.info(`[UPDATE SUBMISSION] Values:`, values);
-
-    const result = await postgresPool.query(query, values);
-    const updatedSubmission = result.rows[0];
-
-    logger.info(`[UPDATE SUBMISSION] Database update successful`);
-
-    // Log activity
-    await logActivity({
-      tenant_id: submission.tenant_id,
-      project_id: submission.project_id,
-      project_name: submission.project_name,
-      project_category: submission.project_category,
-      form_id: submission.form_id,
-      node_id: submission.node_id,
-      user_id: submission.user_id,
-      action: 'updated',
-      status: 'completed',
-      job_id: `update-${id}`,
-      message: 'Submission data updated',
-    });
-
-    logger.info(`[UPDATE SUBMISSION] Successfully updated ${id}`);
-
-    res.send({
-      success: true,
-      message: 'Submission updated successfully',
-      submission: updatedSubmission,
-    });
-  } catch (error) {
-    logger.error(`[UPDATE SUBMISSION] Error updating ${id}:`, error.message);
-    logger.error(`[UPDATE SUBMISSION] Stack:`, error.stack);
-    logger.error(`[UPDATE SUBMISSION] Query was:`, query);
-    logger.error(`[UPDATE SUBMISSION] Values were:`, values);
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      `Failed to update submission: ${error.message}`
-    );
-  }
-});
-
-/**
- * Delete submission by ID
- * @route DELETE /v1/submissions/:id
- */
-const deleteSubmission = catchAsync(async (req, res) => {
-  const { id } = req.params;
-
-  logger.info(`[DELETE SUBMISSION] Deleting submission ${id}`);
-
-  // Get existing submission
-  const submission = await SubmissionModel.getSubmissionById(id);
-
-  if (!submission) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
-  }
-
-  try {
-    // Delete from database
-    logger.info(`[DELETE SUBMISSION] Executing DELETE query for ${id}`);
-    const deleteResult = await postgresPool.query(
-      'DELETE FROM form_submissions WHERE id = $1',
-      [id]
-    );
-
-    logger.info(`[DELETE SUBMISSION] Rows deleted: ${deleteResult.rowCount}`);
-
-    // Log activity
-    await logActivity({
-      tenant_id: submission.tenant_id,
-      project_id: submission.project_id,
-      project_name: submission.project_name,
-      project_category: submission.project_category,
-      form_id: submission.form_id,
-      node_id: submission.node_id,
-      user_id: submission.user_id,
-      action: 'deleted',
-      status: 'completed',
-      job_id: `delete-${id}`,
-      message: 'Submission deleted',
-    });
-
-    logger.info(`[DELETE SUBMISSION] Successfully deleted ${id}`);
-
-    res.status(httpStatus.NO_CONTENT).send();
-  } catch (error) {
-    logger.error(`[DELETE SUBMISSION] Error deleting ${id}:`, error.message);
-    logger.error(`[DELETE SUBMISSION] Stack:`, error.stack);
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      `Failed to delete submission: ${error.message}`
-    );
-  }
-});
-
 module.exports = {
   submitData,
   retrySubmission,
@@ -639,8 +473,6 @@ module.exports = {
   getActivityLogSummary,
   listSubmissions,
   getSubmission,
-  updateSubmission,
-  deleteSubmission,
   // Enhanced activity log endpoints
   getActivityLogsByUser,
   getActivityLogsByAction,

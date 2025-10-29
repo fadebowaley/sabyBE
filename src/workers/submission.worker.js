@@ -201,13 +201,13 @@ const createSubmissionWorker = () => {
               } else if (compliance >= 40 && compliance < 80) {
                 // Warning alert
                 await emailService.sendPERMWarning(userEmail, emailData);
-                logger.info(
+      logger.info(
                   `✅ Warning queued for ${userEmail} (${compliance}%)`
                 );
               } else if (compliance === 100) {
                 // Completion celebration
                 await emailService.sendPERMCompletion(userEmail, emailData);
-                logger.info(
+          logger.info(
                   `✅ Completion email queued for ${userEmail} (100%)`
                 );
               }

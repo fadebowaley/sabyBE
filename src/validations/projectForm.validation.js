@@ -15,6 +15,8 @@ const formElementSchema = Joi.object({
     options: Joi.array().items(Joi.string()),
     multiple: Joi.boolean().default(false),
     accept: Joi.string(),
+    ratingType: Joi.string(),
+    maxRating: Joi.number().allow(null, 0),
     placeholder: Joi.string().allow(''),
     helpText: Joi.string().allow(''),
     min: Joi.number().allow(null),
