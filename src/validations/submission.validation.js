@@ -42,6 +42,13 @@ const submitData = {
     perm_enabled: Joi.boolean()
       .optional()
       .description('Flag to indicate PERM submission'),
+    // Audit fields
+    submitted_by: Joi.string()
+      .optional()
+      .description('User ID who submitted the form'),
+    submitted_at: Joi.date()
+      .optional()
+      .description('Timestamp when form was submitted'),
   }),
 };
 
