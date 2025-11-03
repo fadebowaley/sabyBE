@@ -180,17 +180,8 @@ const getUser = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  // Fetch user profile
-  const UserProfile = require('../models/userProfile.model');
-  const profile = await UserProfile.findOne({ user: req.params.userId });
-
-  // Combine data
-  const response = {
-    ...user.toObject(),
-    profile: profile ? profile.toObject() : null,
-  };
-
-  res.send(response);
+  // Return user directly (profile model doesn't exist yet)
+  res.send(user);
 });
 
 const updateUser = catchAsync(async (req, res) => {
