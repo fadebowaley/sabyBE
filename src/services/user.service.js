@@ -589,23 +589,15 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     // Update profile if profile fields exist
     if (Object.keys(profileUpdate).length > 0) {
       console.log(
-        `📝 [UserService.updateUserById] Updating user profile with ${Object.keys(profileUpdate).length} field(s)...`
+        `⚠️ [UserService.updateUserById] Profile fields detected but userProfile model doesn't exist - skipping profile update`
       );
-      const UserProfile = require('../models/userProfile.model');
-      try {
-        await UserProfile.findOneAndUpdate(
-          { user: userId },
-          profileUpdate,
-          { upsert: true, new: true, runValidators: true }
-        );
-        console.log(`✅ [UserService.updateUserById] User profile updated successfully`);
-      } catch (profileError) {
-        console.error(
-          `⚠️ [UserService.updateUserById] Profile update failed (non-critical):`,
-          profileError.message
-        );
-        // Profile update failure should not fail the main update
-      }
+      console.log(
+        `📋 [UserService.updateUserById] Profile fields that were skipped:`,
+        Object.keys(profileUpdate)
+      );
+      // TODO: Implement userProfile.model if profile functionality is needed
+      // const UserProfile = require('../models/userProfile.model');
+      // await UserProfile.findOneAndUpdate(...)
     }
 
     return user;

@@ -120,23 +120,15 @@ const updateNodeById = async (nodeId, updateBody) => {
   // Update profile if profile fields exist
   if (Object.keys(profileUpdate).length > 0) {
     console.log(
-      `📝 [NodeService.updateNodeById] Updating node profile with ${Object.keys(profileUpdate).length} field(s)...`
+      `⚠️ [NodeService.updateNodeById] Profile fields detected but nodeprofile model doesn't exist - skipping profile update`
     );
-    const ChurchProfile = require('../models/nodeprofile');
-    try {
-      await ChurchProfile.findOneAndUpdate(
-        { church: nodeId },
-        profileUpdate,
-        { upsert: true, new: true, runValidators: true }
-      );
-      console.log(`✅ [NodeService.updateNodeById] Node profile updated successfully`);
-    } catch (profileError) {
-      console.error(
-        `⚠️ [NodeService.updateNodeById] Profile update failed (non-critical):`,
-        profileError.message
-      );
-      // Profile update failure should not fail the main update
-    }
+    console.log(
+      `📋 [NodeService.updateNodeById] Profile fields that were skipped:`,
+      Object.keys(profileUpdate)
+    );
+    // TODO: Implement nodeprofile.model if profile functionality is needed
+    // const ChurchProfile = require('../models/nodeprofile');
+    // await ChurchProfile.findOneAndUpdate(...)
   }
 
   return node;
