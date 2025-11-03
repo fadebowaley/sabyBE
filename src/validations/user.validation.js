@@ -107,7 +107,12 @@ const updateUser = {
       dateOfBirth: Joi.date(),
       highestQualification: Joi.string(),
       professional: Joi.string(),
-      maritalStatus: Joi.string().valid('Single', 'Married', 'Divorced', 'Widowed'),
+      maritalStatus: Joi.string().valid(
+        'Single',
+        'Married',
+        'Divorced',
+        'Widowed'
+      ),
       stateOfOrigin: Joi.string(),
       lgaOfOrigin: Joi.string(),
       homeTown: Joi.string(),
@@ -123,6 +128,41 @@ const updateUser = {
       employmentCategory: Joi.string(),
       occupation: Joi.string(),
       employeeId: Joi.string(),
+
+      // ✨ NEW: Support nested profile object structure
+      profile: Joi.object().keys({
+        title: Joi.string(),
+        otherName: Joi.string().allow(''),
+        gender: Joi.string().valid('Male', 'Female', 'Other'),
+        dateOfBirth: Joi.date(),
+        highestQualification: Joi.string(),
+        professional: Joi.string(),
+        employmentCategory: Joi.string(),
+        occupation: Joi.string(),
+        employeeId: Joi.string().allow(''),
+        maritalStatus: Joi.string().valid(
+          'Single',
+          'Married',
+          'Divorced',
+          'Widowed'
+        ),
+        spouse: Joi.object().keys({
+          name: Joi.string().allow(''),
+          phoneNumber: Joi.string().allow(''),
+          dateOfBirth: Joi.date().allow(null),
+        }),
+        nextOfKin: Joi.object().keys({
+          name: Joi.string(),
+          phoneNumber: Joi.string(),
+          relationship: Joi.string(),
+        }),
+        stateOfOrigin: Joi.string(),
+        lgaOfOrigin: Joi.string(),
+        homeTown: Joi.string(),
+        residentialAddress: Joi.string(),
+        stateOfResidence: Joi.string(),
+        lgaOfResidence: Joi.string(),
+      }),
     })
     .min(1),
 };

@@ -34,12 +34,89 @@ const getUserFormSettingsById = catchAsync(async (req, res) => {
 });
 
 const getUserFormSettingsByUserId = catchAsync(async (req, res) => {
-  const settings = await userFormSettingsService.getUserFormSettingsByUserId(
+  let settings = await userFormSettingsService.getUserFormSettingsByUserId(
     req.params.userId
   );
+  
+  // Auto-create default settings if they don't exist
   if (!settings) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'User form settings not found');
+    const defaultSettings = {
+      user: req.params.userId,
+      tenantId: req.user.tenantId,
+      defaultFormSettings: {
+        access: {
+          type: 'public',
+          requiresLogin: false,
+          allowedRoles: [],
+          submissionLimit: 0,
+          allowMultipleSubmissions: true,
+          allowAnonymous: true,
+        },
+        behavior: {
+          autosave: true,
+          saveDraft: true,
+          allowResubmission: false,
+          showProgressBar: true,
+          timeoutInMinutes: 30,
+          redirectAfterSubmit: '',
+          customSuccessMessage: '',
+        },
+        distribution: {
+          enablePublicUrl: true,
+          enablePrivateUrl: false,
+          enableHtmlEmbed: true,
+          enableApiSubmission: true,
+          enableJsEmbed: true,
+          customDomain: '',
+        },
+        notifications: {
+          onSubmit: {
+            sendToUser: false,
+            sendToOwner: true,
+            emailTemplateId: '',
+            customEmails: [],
+          },
+          onFailure: {
+            sendToOwner: true,
+            emailTemplateId: '',
+          },
+        },
+        ui: {
+          theme: 'light',
+          layout: 'single-page',
+          branding: {
+            logoUrl: '',
+            primaryColor: '#4285F4',
+            backgroundColor: '#FFFFFF',
+            fontFamily: 'Inter, sans-serif',
+            customCss: '',
+          },
+          language: 'en',
+          showFormTitle: true,
+          showFormDescription: true,
+        },
+        builder: {
+          selectedStyle: 'default',
+          wizardMode: false,
+          columnSpans: {},
+          elements: [],
+          formLayout: {
+            spacing: 'normal',
+            labelPosition: 'top',
+            buttonAlignment: 'right',
+          },
+          validation: {
+            showRequiredAsterisk: true,
+            validateOnSubmit: true,
+            validateOnBlur: false,
+          },
+        },
+      },
+    };
+    
+    settings = await userFormSettingsService.createUserFormSettings(defaultSettings);
   }
+  
   res.send(settings);
 });
 

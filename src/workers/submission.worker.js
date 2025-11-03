@@ -3,7 +3,7 @@
  * 
  * Exports a function to create the submission worker instance.
  * Can be used standalone or imported by worker manager.
- * 
+ *
  * FIXED: Now correctly calls permSubmissionService.submitPERMData() for PERM submissions
  */
 
@@ -129,9 +129,10 @@ const createSubmissionWorker = () => {
 
           logger.info(
             `[Worker] PERM submission ${permResult.action} - ${result.id} ` +
-              `(${permResult.compliance.event_compliance_percentage}% compliance, ` +
+              `[Mode: ${permResult.tracking_mode || 'legacy'}] ` +
+              `(${permResult.compliance.completeness_percentage}% compliance, ` +
               `${permResult.compliance.total_events_submitted}/${permResult.compliance.total_events_required} events, ` +
-              `status: ${permResult.compliance.completeness_status})`
+              `status: ${permResult.compliance.compliance_status})`
           );
         } else {
           result = await SubmissionModel.createSubmission(submissionPayload);
@@ -184,7 +185,7 @@ const createSubmissionWorker = () => {
             if (userEmail) {
               const emailData = {
                 nodeName: nodeId || 'Your Node',
-                month: month,
+                month,
                 compliance,
                 eventsSubmitted: result.total_events_submitted || 0,
                 eventsRequired: result.total_events_required || 5,

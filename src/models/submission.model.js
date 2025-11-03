@@ -85,10 +85,25 @@ const SubmissionModel = {
    * Optional dynamic filtering
    */
   async getFilteredSubmissions(filters = {}) {
-    const { tenant_id, project_id, form_id, node_id, user_id, status, source } =
-      filters;
+    const {
+      tenant_id,
+      project_id,
+      form_id,
+      node_id,
+      user_id,
+      status,
+      source,
+      perm_enabled,
+      month,
+    } = filters;
     const clauses = [];
     const values = [];
+
+    console.log('[submission.model] getFilteredSubmissions called with:', {
+      filters,
+      perm_enabled_value: perm_enabled,
+      perm_enabled_type: typeof perm_enabled,
+    });
 
     if (tenant_id)
       clauses.push(`tenant_id = $${values.length + 1}`) &&
@@ -106,12 +121,28 @@ const SubmissionModel = {
       clauses.push(`status = $${values.length + 1}`) && values.push(status);
     if (source)
       clauses.push(`source = $${values.length + 1}`) && values.push(source);
+    // 🔧 FIX: Add perm_enabled filter for PERM dashboard
+    if (perm_enabled !== undefined)
+      clauses.push(`perm_enabled = $${values.length + 1}`) &&
+        values.push(perm_enabled);
+    if (month)
+      clauses.push(`month = $${values.length + 1}`) && values.push(month);
 
     const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
     const query = `SELECT * FROM form_submissions ${whereClause} ORDER BY created_at DESC`;
 
+    console.log('[submission.model] Executing query:', {
+      query,
+      values,
+      whereClause,
+      clausesCount: clauses.length,
+    });
+
     try {
       const result = await postgresPool.query(query, values);
+      console.log(
+        `[submission.model] Query returned ${result.rows.length} rows`
+      );
       return result.rows;
     } catch (err) {
       console.error('❌ Error fetching filtered submissions:', err.message);

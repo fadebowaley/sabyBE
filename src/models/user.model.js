@@ -100,6 +100,53 @@ const userSchema = mongoose.Schema(
     },
     deletedAt: { type: Date, default: null },
     createdAt: { type: Date, default: Date.now },
+
+    // ========== MERGED PROFILE FIELDS FROM USERPROFILE ==========
+    profile: {
+      // Personal details
+      title: { type: String }, // Mr., Mrs., Dr., etc.
+      otherName: { type: String },
+      gender: {
+        type: String,
+        enum: ['Male', 'Female', 'Other'],
+      },
+      dateOfBirth: { type: Date },
+
+      // Professional information
+      highestQualification: { type: String },
+      professional: { type: String },
+      employmentCategory: { type: String },
+      occupation: { type: String },
+      employeeId: { type: String },
+
+      // Marital information
+      maritalStatus: {
+        type: String,
+        enum: ['Single', 'Married', 'Divorced', 'Widowed'],
+      },
+      spouse: {
+        name: { type: String },
+        phoneNumber: { type: String },
+        dateOfBirth: { type: Date },
+      },
+
+      // Next of kin
+      nextOfKin: {
+        name: { type: String },
+        phoneNumber: { type: String },
+        relationship: { type: String },
+      },
+
+      // Location - Origin
+      stateOfOrigin: { type: String },
+      lgaOfOrigin: { type: String },
+      homeTown: { type: String },
+
+      // Location - Residence
+      residentialAddress: { type: String },
+      stateOfResidence: { type: String },
+      lgaOfResidence: { type: String },
+    },
   },
   {
     timestamps: true,

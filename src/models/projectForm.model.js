@@ -99,6 +99,12 @@ const ProjectFormSchema = new mongoose.Schema(
       unique: true,
       index: true,
     },
+    formId: {
+      type: String,
+      unique: true,
+      sparse: true, // Optional, for linking to event_calendar
+      index: true,
+    },
     tenantId: {
       type: String,
       required: true,
@@ -124,6 +130,50 @@ const ProjectFormSchema = new mongoose.Schema(
 
     // User settings
     userSettings: UserSettingsSchema,
+
+    // ✨ NEW: PERM Settings (Flexible Calendar & Compliance Tracking)
+    permSettings: {
+      enabled: { type: Boolean, default: false },
+      // Tracking mode: 'none' (month-only), 'daily', or 'weekly'
+      trackingMode: {
+        type: String,
+        enum: ['none', 'daily', 'weekly'],
+        default: 'none',
+      },
+      // Configuration for daily tracking mode
+      dailyConfig: {
+        activeDays: [{ type: Number }], // [0-6] where 0=Sunday, 1=Monday, etc.
+        frequencyPerDay: { type: Number, default: 1 }, // 1x, 2x, 3x, 4x per day
+        skipWeekends: { type: Boolean, default: false },
+        skipHolidays: { type: Boolean, default: false },
+      },
+      // Configuration for weekly tracking mode
+      weeklyConfig: {
+        days: [
+          {
+            day: { type: Number }, // 0-6 (Sunday-Saturday)
+            name: { type: String }, // "Sunday", "Monday", etc.
+            frequency: {
+              type: String,
+              enum: ['weekly', 'biweekly', 'monthly'],
+            },
+            occurrences: { type: Number }, // For biweekly/monthly: how many times in month
+            enabled: { type: Boolean, default: true },
+          },
+        ],
+      },
+      // Common settings
+      requireNodeId: { type: Boolean, default: true },
+      requireMonth: { type: Boolean, default: true },
+      trackCompliance: { type: Boolean, default: true },
+      autoGenerateCalendar: { type: Boolean, default: true },
+      autoLockMonthEnd: { type: Boolean, default: true },
+      // Legacy field (kept for backward compatibility)
+      eventTypes: [{ type: String }],
+      // Optional: Require calendar template before submissions
+      calendarRequired: { type: Boolean, default: false },
+    },
+
     // New access and API-related fields
     slug: {
       type: String,
@@ -187,6 +237,14 @@ ProjectFormSchema.plugin(tenantPlugin);
  */
 ProjectFormSchema.statics.generateProjectId = function () {
   return `proj_${nanoid(12)}`;
+};
+
+/**
+ * Generate a unique formId
+ * @returns {string}
+ */
+ProjectFormSchema.statics.generateFormId = function () {
+  return `form_${nanoid(12)}`;
 };
 
 /**
@@ -325,6 +383,41 @@ ProjectFormSchema.methods.publish = async function () {
   this.metadata.deploymentStatus = 'published';
   this.publishedAt = new Date();
   this.status = 'active';
+
+  // Auto-generate formId if not set
+  if (!this.formId) {
+    this.formId = this.constructor.generateFormId();
+  }
+
+  // Auto-generate calendar if PERM is enabled
+  if (this.permSettings?.enabled && this.permSettings?.autoGenerateCalendar) {
+    try {
+      const { eventCalendarService } = require('../services');
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+
+      // Generate calendar for current month and next 3 months
+      for (let i = 0; i < 4; i++) {
+        const monthDate = new Date(currentYear, currentMonth + i, 1);
+        const year = monthDate.getFullYear();
+        const month = `${year}-${String(monthDate.getMonth() + 1).padStart(
+          2,
+          '0'
+        )}-01`;
+
+        await eventCalendarService.generateCalendarFromForm(this, month, year);
+      }
+
+      // eslint-disable-next-line no-console
+      console.log(`✅ Auto-generated calendars for form ${this.projectId}`);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('⚠️ Failed to auto-generate calendar:', error.message);
+      // Don't fail publish if calendar generation fails
+    }
+  }
+
   await this.save();
   return this;
 };

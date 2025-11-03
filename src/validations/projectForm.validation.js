@@ -37,6 +37,8 @@ const formElementSchema = Joi.object({
     acceptedTypes: Joi.string().default('.jpg,.png,.pdf'),
     defaultValue: Joi.any(),
     defaultCountry: Joi.string().allow(''),
+    buttonText: Joi.string().allow(''), // NEW: Submit button text
+    buttonType: Joi.string().allow(''), // NEW: Submit button type
   }),
 });
 
@@ -98,6 +100,48 @@ const metadataSchema = Joi.object({
     .default('draft'),
 });
 
+// PERM Settings Schema
+const permSettingsSchema = Joi.object({
+  enabled: Joi.boolean().default(false),
+  trackingMode: Joi.string().valid('none', 'daily', 'weekly').default('none'),
+  dailyConfig: Joi.object({
+    activeDays: Joi.array().items(Joi.number().min(0).max(6)).default([]),
+    frequencyPerDay: Joi.number().integer().min(1).max(10).default(1),
+    skipWeekends: Joi.boolean().default(false),
+    skipHolidays: Joi.boolean().default(false),
+  }).default({}),
+  weeklyConfig: Joi.object({
+    days: Joi.array()
+      .items(
+        Joi.object({
+          day: Joi.number().min(0).max(6).required(),
+          name: Joi.string().required(),
+          frequency: Joi.string()
+            .valid('weekly', 'biweekly', 'monthly')
+            .required(),
+          occurrences: Joi.number().integer().min(1).max(10),
+          enabled: Joi.boolean().default(true),
+        })
+      )
+      .default([]),
+  }).default({}),
+  requireNodeId: Joi.boolean().default(true),
+  requireMonth: Joi.boolean().default(true),
+  trackCompliance: Joi.boolean().default(true),
+  autoGenerateCalendar: Joi.boolean().default(true),
+  autoLockMonthEnd: Joi.boolean().default(false),
+  calendarRequired: Joi.boolean().default(false),
+  eventTypes: Joi.array().items(Joi.string()).default([]),
+}).default({
+  enabled: false,
+  trackingMode: 'none',
+  requireNodeId: true,
+  requireMonth: true,
+  trackCompliance: true,
+  autoGenerateCalendar: true,
+  autoLockMonthEnd: false,
+});
+
 // Validation schemas
 const createProjectForm = {
   body: Joi.object().keys({
@@ -107,6 +151,7 @@ const createProjectForm = {
     wizardMode: Joi.boolean().default(false),
     columnSpans: Joi.object().default({}),
     userSettings: userSettingsSchema,
+    permSettings: permSettingsSchema, // ✨ NEW: PERM settings support
     metadata: metadataSchema,
   }),
 };
@@ -201,6 +246,7 @@ const updateProjectForm = {
       wizardMode: Joi.boolean(),
       columnSpans: Joi.object(),
       userSettings: userSettingsSchema,
+      permSettings: permSettingsSchema, // ✨ NEW: PERM settings support
       metadata: metadataSchema,
       status: Joi.string().valid('active', 'inactive', 'archived'),
     })

@@ -43,6 +43,23 @@ const nodeSchema = mongoose.Schema(
     path: { type: String },
     deletedAt: { type: Date, default: null },
     isActive: { type: Boolean, default: true },
+
+    // ========== MERGED PROFILE FIELDS FROM CHURCHPROFILE/NODEPROFILE ==========
+    profile: {
+      // Property/Facility information
+      propertyStatus: {
+        type: String,
+        enum: ['Owned', 'Rented', 'Leased', 'Other'],
+        default: 'Owned',
+      },
+      estimatedValue: { type: mongoose.Schema.Types.Decimal128 },
+      buildingType: { type: String }, // Auditorium, Hall, Tent, Office, etc.
+      facilityStatus: {
+        type: String,
+        enum: ['Active', 'Inactive', 'Under Construction'],
+        default: 'Active',
+      },
+    },
   },
   { timestamps: true }
 );

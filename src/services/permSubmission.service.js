@@ -18,6 +18,7 @@ const { v4: uuidv4 } = require('uuid');
 const { postgresPool } = require('../config/postgres');
 const logger = require('../config/logger');
 const ApiError = require('../utils/ApiError');
+const { eventCalendarService, eventComplianceService } = require('.');
 
 /**
  * Calculate compliance metrics based on event data
@@ -109,7 +110,24 @@ const validatePERMSubmission = async (submissionData) => {
  * @returns {Promise<Object>} Submission result with action (created/updated)
  */
 const submitPERMData = async (payload) => {
-  const {
+  // 🔧 FIX: Normalize month format BEFORE destructuring
+  // PostgreSQL date columns require full date format
+  logger.info(`[PERM DEBUG] Raw payload.month: "${payload.month}"`);
+
+  if (
+    payload.month &&
+    typeof payload.month === 'string' &&
+    payload.month.length === 7 &&
+    /^\d{4}-\d{2}$/.test(payload.month)
+  ) {
+    const originalMonth = payload.month;
+    payload.month = `${payload.month}-01`;
+    logger.info(
+      `[PERM] ✅ Normalized month: ${originalMonth} → ${payload.month}`
+    );
+  }
+
+  let {
     tenant_id,
     project_id,
     node_id,
@@ -124,9 +142,69 @@ const submitPERMData = async (payload) => {
     source = 'api',
   } = payload;
 
+  logger.info(`[PERM DEBUG] After destructure, month = "${month}"`);
+
   try {
-    // Calculate compliance metrics
-    const complianceMetrics = calculateComplianceMetrics(data);
+    // ✨ NEW: Fetch calendar to determine tracking mode and calculate compliance
+    let calendar = null;
+    let complianceMetrics = null;
+
+    try {
+      // Fetch calendar for this month
+      const calendars = await eventCalendarService.getCalendar(
+        tenant_id,
+        project_id,
+        month
+      );
+
+      if (calendars && calendars.length > 0) {
+        calendar = calendars[0]; // Take first matching calendar
+
+        // Get all submissions for this node/month for compliance calculation
+        const existingSubmissionsQuery = `
+          SELECT created_at, data, month FROM form_submissions
+          WHERE tenant_id = $1
+            AND project_id = $2
+            AND node_id = $3
+            AND month = $4
+            AND perm_enabled = true
+          ORDER BY created_at
+        `;
+
+        const existingSubmissions = await postgresPool.query(
+          existingSubmissionsQuery,
+          [tenant_id, project_id, node_id, month]
+        );
+
+        // Add current submission to the list for calculation
+        const allSubmissions = [
+          ...existingSubmissions.rows,
+          { created_at: new Date(), data, month },
+        ];
+
+        // ✨ NEW: Use flexible compliance calculator based on tracking_mode
+        complianceMetrics = await eventComplianceService.calculateCompliance(
+          allSubmissions,
+          calendar
+        );
+
+        logger.info(
+          `[PERM] Calculated ${calendar.tracking_mode} compliance: ${complianceMetrics.completeness_percentage}%`
+        );
+      } else {
+        // No calendar found - fall back to old method
+        logger.warn(
+          `[PERM] No calendar found for ${tenant_id}/${project_id}/${month} - using legacy calculation`
+        );
+        complianceMetrics = calculateComplianceMetrics(data);
+      }
+    } catch (calError) {
+      // Calendar fetch failed - fall back to legacy calculation
+      logger.warn(
+        `[PERM] Calendar fetch failed: ${calError.message} - using legacy calculation`
+      );
+      complianceMetrics = calculateComplianceMetrics(data);
+    }
 
     // Validate submission
     const validation = await validatePERMSubmission({
@@ -260,6 +338,8 @@ const submitPERMData = async (payload) => {
       existed,
       compliance: complianceMetrics,
       validation,
+      tracking_mode: calendar?.tracking_mode || 'legacy',
+      calendar_id: calendar?.id || null,
     };
   } catch (error) {
     logger.error('❌ Error submitting PERM data:', error.message);

@@ -7,7 +7,7 @@ const dataRoute = require('./data.route');
 const docsRoute = require('./docs.route');
 const levelRoute = require('./level.route');
 const nodeRoute = require('./node.route');
-const nodeProfileRoute = require('./nodeprofile.route');
+// const nodeProfileRoute = require('./nodeprofile.route'); // ✅ DELETED: Merged into node.route
 const paymentRoute = require('./payment.route');
 const permissionRoute = require('./permission.route');
 const projectFormRoute = require('./projectForm.route');
@@ -16,7 +16,7 @@ const roleRoute = require('./role.route');
 const structureRoute = require('./structure.route');
 const userRoute = require('./user.route');
 const userFormSettingsRoute = require('./userFormSettings.route');
-const userProfileRoute = require('./userProfile.route');
+// const userProfileRoute = require('./userProfile.route'); // ✅ DELETED: Merged into user.route
 const adminRoute = require('./admin.route');
 const captureRoute = require('./capture.route');
 const departmentRoute = require('./department.route');
@@ -79,10 +79,11 @@ const defaultRoutes = [
     path: '/user-form-settings', // Example: /user-form-settings/user/123
     route: userFormSettingsRoute,
   },
-  {
-    path: '/user-profiles', // Example: /user-profiles/123
-    route: userProfileRoute,
-  },
+  // ✅ DELETED: UserProfile merged into User model
+  // {
+  //   path: '/user-profiles',
+  //   route: userProfileRoute,
+  // },
   {
     path: '/project-forms', // Example: /project-forms/123, /project-forms/project/abc123
     route: projectFormRoute,
@@ -123,10 +124,11 @@ const defaultRoutes = [
     path: '/node', // Example: /node/123, /node/info
     route: nodeRoute,
   },
-  {
-    path: '/nodeprofile', // Example: /nodeprofile/node/123
-    route: nodeProfileRoute,
-  },
+  // ✅ DELETED: NodeProfile merged into Node model
+  // {
+  //   path: '/nodeprofile',
+  //   route: nodeProfileRoute,
+  // },
   {
     path: '/admin', // Example: /admin/123, /admin/info
     route: adminRoute,

@@ -66,6 +66,23 @@ const updateNodeById = {
       estimatedValue: Joi.number(),
       buildingType: Joi.string(),
       status: Joi.string().valid('Active', 'Inactive', 'Under Construction'),
+
+      // ✨ NEW: Support nested profile object structure
+      profile: Joi.object().keys({
+        propertyStatus: Joi.string().valid(
+          'Owned',
+          'Rented',
+          'Leased',
+          'Other'
+        ),
+        estimatedValue: Joi.number(),
+        buildingType: Joi.string(),
+        facilityStatus: Joi.string().valid(
+          'Active',
+          'Inactive',
+          'Under Construction'
+        ),
+      }),
     })
     .min(1),
 };

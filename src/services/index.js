@@ -2,13 +2,13 @@ module.exports.authService = require('./auth.service');
 module.exports.emailService = require('./email.service');
 module.exports.tokenService = require('./token.service');
 module.exports.userService = require('./user.service');
-module.exports.userProfileService = require('./userProfile.service');
+// module.exports.userProfileService = require('./userProfile.service'); // ✅ DELETED: Merged into user.service
 module.exports.roleService = require('./role.service');
 module.exports.permissionService = require('./permission.service');
 module.exports.levelService = require('./level.service');
 module.exports.structureService = require('./structure.service');
 module.exports.nodeService = require('./node.service');
-module.exports.nodeProfileService = require('./nodeprofile.service');
+// module.exports.nodeProfileService = require('./nodeprofile.service'); // ✅ DELETED: Merged into node.service
 module.exports.dataService = require('./data.service');
 module.exports.paymentService = require('./payment.service');
 module.exports.reportService = require('./report.service');
@@ -23,8 +23,10 @@ module.exports.storageService = require('./storage.service');
 module.exports.storageFolderService = require('./storageFolder.service');
 module.exports.awsService = require('./aws.service');
 module.exports.waitlistService = require('./waitlist.service');
+module.exports.userFormSettingsService = require('./userFormSettings.service');
 // PERM Services
 module.exports.eventCalendarService = require('./eventCalendar.service');
+module.exports.eventComplianceService = require('./eventCompliance.service');
 module.exports.permNotificationService = require('./permNotification.service');
 module.exports.permSubmissionService = require('./permSubmission.service');
 // Reporting Services

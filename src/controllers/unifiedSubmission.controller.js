@@ -2,6 +2,7 @@ const httpStatus = require('http-status');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
+const logger = require('../config/logger');
 const {
   queueSubmission,
   getActivityLogs: getActivityLogsService,
@@ -13,6 +14,8 @@ const SubmissionModel = require('../models/submission.model');
 const ActivityLogModel = require('../models/activityLog.model');
 const dynamicFormSchemaService = require('../ingestion/whatsapp/services/dynamicFormSchema.service');
 const dynamicValidationService = require('../ingestion/whatsapp/services/dynamicValidation.service');
+const ProjectForm = require('../models/projectForm.model');
+const { eventCalendarService } = require('../services');
 
 /**
  * Universal submission endpoint - handles ALL submission types
@@ -62,8 +65,18 @@ const submitData = catchAsync(async (req, res) => {
     );
   }
 
-  // Auto-detect PERM submission
+  // ✨ NEW: Fetch form to check PERM settings
+  const form = await ProjectForm.findOne({
+    projectId: submissionBody.projectId,
+  }).select('permSettings formId projectId');
+
+  if (!form) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Form not found');
+  }
+
+  // Auto-detect PERM submission (now also checks form settings)
   const isPERM =
+    form.permSettings?.enabled ||
     submissionBody.perm_enabled ||
     submissionBody.month ||
     (submissionBody.payload && submissionBody.payload.month);
@@ -71,7 +84,49 @@ const submitData = catchAsync(async (req, res) => {
   if (isPERM) {
     submissionBody.perm_enabled = true; // Ensure flag is set
 
-    // Validate PERM requirements
+    // ✨ NEW: Validate based on form's PERM settings
+    if (form.permSettings?.requireNodeId && !submissionBody.nodeId) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'nodeId is required for this PERM-enabled form'
+      );
+    }
+
+    if (form.permSettings?.requireMonth && !submissionBody.month) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'month is required for this PERM-enabled form'
+      );
+    }
+
+    // ✨ NEW: Check if calendar is required
+    if (form.permSettings?.calendarRequired && submissionBody.month) {
+      try {
+        const calendar = await eventCalendarService.getCalendar(
+          submissionBody.tenantId,
+          submissionBody.projectId,
+          submissionBody.month
+        );
+
+        if (!calendar || calendar.length === 0) {
+          throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            'Calendar template must be created before submissions. Please contact your administrator.'
+          );
+        }
+      } catch (error) {
+        // If calendar check fails, log warning but don't fail submission
+        // (calendar might be optional for some tracking modes)
+        if (error.statusCode === httpStatus.BAD_REQUEST) {
+          throw error;
+        }
+        // Log other errors but continue
+        // eslint-disable-next-line no-console
+        console.warn('Calendar check warning:', error.message);
+      }
+    }
+
+    // Legacy validation (keep for backward compatibility)
     if (!submissionBody.nodeId) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
@@ -241,7 +296,23 @@ const listSubmissions = catchAsync(async (req, res) => {
     'month',
   ]);
 
+  // 🔧 FIX: Auto-add tenant_id from authenticated user if not provided
+  if (!filters.tenant_id && req.user?.tenantId) {
+    filters.tenant_id = req.user.tenantId;
+    logger.info(
+      `[listSubmissions] Auto-added tenant_id from user: ${req.user.tenantId}`
+    );
+  }
+
+  logger.info(`[listSubmissions] Fetching submissions with filters:`, {
+    filters,
+    user_tenantId: req.user?.tenantId,
+    has_user: !!req.user,
+  });
+
   const submissions = await listSubmissionsService(filters);
+
+  logger.info(`[listSubmissions] Returning ${submissions.length} submissions`);
 
   res.send({
     success: true,
@@ -286,8 +357,8 @@ const getActivityLogsByUser = catchAsync(async (req, res) => {
   const logs = await ActivityLogModel.getActivityLogsByUser(
     user_id,
     tenant_id,
-    parseInt(limit) || 100,
-    parseInt(offset) || 0
+    parseInt(limit, 10) || 100,
+    parseInt(offset, 10) || 0
   );
 
   const count = await ActivityLogModel.getActivityLogsCount({
@@ -321,8 +392,8 @@ const getActivityLogsByAction = catchAsync(async (req, res) => {
   const logs = await ActivityLogModel.getActivityLogsByAction(
     action,
     tenant_id,
-    parseInt(limit) || 100,
-    parseInt(offset) || 0
+    parseInt(limit, 10) || 100,
+    parseInt(offset, 10) || 0
   );
 
   const count = await ActivityLogModel.getActivityLogsCount({
@@ -370,7 +441,7 @@ const getRecentActivityLogs = catchAsync(async (req, res) => {
 
   const logs = await ActivityLogModel.getRecentActivityLogs(
     tenant_id,
-    parseInt(limit) || 50
+    parseInt(limit, 10) || 50
   );
 
   res.send({
@@ -466,6 +537,28 @@ const bulkDeleteActivityLogs = catchAsync(async (req, res) => {
   });
 });
 
+/**
+ * Update submission
+ */
+const updateSubmission = catchAsync(async (req, res) => {
+  const submission = await SubmissionModel.updateSubmissionById(
+    req.params.id,
+    req.body
+  );
+  if (!submission) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
+  }
+  res.send(submission);
+});
+
+/**
+ * Delete submission
+ */
+const deleteSubmission = catchAsync(async (req, res) => {
+  await SubmissionModel.deleteSubmissionById(req.params.id);
+  res.status(httpStatus.NO_CONTENT).send();
+});
+
 module.exports = {
   submitData,
   retrySubmission,
@@ -473,6 +566,8 @@ module.exports = {
   getActivityLogSummary,
   listSubmissions,
   getSubmission,
+  updateSubmission,
+  deleteSubmission,
   // Enhanced activity log endpoints
   getActivityLogsByUser,
   getActivityLogsByAction,

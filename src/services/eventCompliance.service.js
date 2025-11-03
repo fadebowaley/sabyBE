@@ -386,6 +386,188 @@ const deleteComplianceTracking = async (id, tenant_id) => {
   }
 };
 
+/**
+ * ✨ NEW: Calculate compliance based on tracking mode
+ * Master function that routes to appropriate calculator
+ */
+const calculateCompliance = async (submissionData, calendar) => {
+  const trackingMode = calendar.tracking_mode;
+
+  switch (trackingMode) {
+    case 'none':
+      return calculateMonthOnlyCompliance(submissionData, calendar);
+
+    case 'daily':
+      return calculateDailyCompliance(submissionData, calendar);
+
+    case 'weekly':
+      return calculateWeeklyCompliance(submissionData, calendar);
+
+    default:
+      throw new Error(`Unknown tracking mode: ${trackingMode}`);
+  }
+};
+
+/**
+ * Mode 1: Month Only Compliance
+ * Simple binary: Did they submit for the month? (0% or 100%)
+ */
+const calculateMonthOnlyCompliance = (submissionData, calendar) => {
+  const submitted = submissionData ? 1 : 0;
+  const required = 1;
+  const percentage = (submitted / required) * 100;
+
+  return {
+    total_events_required: required,
+    total_events_submitted: submitted,
+    completeness_percentage: percentage,
+    compliance_status: percentage === 100 ? 'complete' : 'incomplete',
+    events_breakdown: {
+      month_submission: {
+        required: 1,
+        submitted: submitted,
+        percentage: percentage,
+      },
+    },
+  };
+};
+
+/**
+ * Mode 2: Daily Compliance
+ * Calculate based on daily_config (days × frequency)
+ */
+const calculateDailyCompliance = (submissionData, calendar) => {
+  const config = calendar.daily_config;
+  const totalExpected = config.total_expected;
+
+  // Count submissions from submissionData
+  const submittedCount = countDailySubmissions(submissionData, config);
+  const percentage = (submittedCount / totalExpected) * 100;
+
+  return {
+    total_events_required: totalExpected,
+    total_events_submitted: submittedCount,
+    completeness_percentage: percentage,
+    compliance_status: getComplianceStatus(percentage),
+    events_breakdown: {
+      daily_tracking: {
+        total_days: config.total_days,
+        frequency_per_day: config.frequency_per_day,
+        required: totalExpected,
+        submitted: submittedCount,
+        percentage: percentage,
+      },
+    },
+  };
+};
+
+/**
+ * Mode 3: Weekly Compliance
+ * Calculate per-day breakdown based on weekly_config
+ */
+const calculateWeeklyCompliance = (submissionData, calendar) => {
+  const config = calendar.weekly_config;
+  const breakdown = {};
+  let totalSubmitted = 0;
+
+  // Count submissions for each configured day
+  for (const dayConfig of config.days) {
+    const submitted = countWeeklySubmissions(submissionData, dayConfig);
+    const required = dayConfig.count;
+    const percentage = (submitted / required) * 100;
+
+    breakdown[dayConfig.name] = {
+      required: required,
+      submitted: submitted,
+      missing: required - submitted,
+      percentage: percentage,
+    };
+
+    totalSubmitted += submitted;
+  }
+
+  const percentage = (totalSubmitted / config.total_events) * 100;
+
+  return {
+    total_events_required: config.total_events,
+    total_events_submitted: totalSubmitted,
+    completeness_percentage: percentage,
+    compliance_status: getComplianceStatus(percentage),
+    events_breakdown: breakdown,
+  };
+};
+
+/**
+ * Helper: Count daily submissions
+ * Matches submission dates against config.dates
+ */
+const countDailySubmissions = (submissionData, config) => {
+  if (!submissionData || !Array.isArray(submissionData)) {
+    return 0;
+  }
+
+  const configDates = config.dates || [];
+  let count = 0;
+
+  // Count submissions that match the configured dates
+  for (const submission of submissionData) {
+    const submissionDate = submission.date || submission.created_at;
+    if (submissionDate) {
+      // 🔧 FIX: Convert Date object to string if needed
+      const dateString =
+        submissionDate instanceof Date
+          ? submissionDate.toISOString()
+          : submissionDate;
+      const dateStr = dateString.split('T')[0]; // Get YYYY-MM-DD part
+      if (configDates.includes(dateStr)) {
+        count++;
+      }
+    }
+  }
+
+  return count;
+};
+
+/**
+ * Helper: Count weekly submissions for a specific day
+ * Matches submission dates against dayConfig.dates
+ */
+const countWeeklySubmissions = (submissionData, dayConfig) => {
+  if (!submissionData || !Array.isArray(submissionData)) {
+    return 0;
+  }
+
+  const expectedDates = dayConfig.dates || [];
+  let count = 0;
+
+  // Count submissions that match this day's expected dates
+  for (const submission of submissionData) {
+    const submissionDate = submission.date || submission.created_at;
+    if (submissionDate) {
+      // 🔧 FIX: Convert Date object to string if needed
+      const dateString =
+        submissionDate instanceof Date
+          ? submissionDate.toISOString()
+          : submissionDate;
+      const dateStr = dateString.split('T')[0];
+      if (expectedDates.includes(dateStr)) {
+        count++;
+      }
+    }
+  }
+
+  return count;
+};
+
+/**
+ * Helper: Get compliance status based on percentage
+ */
+const getComplianceStatus = (percentage) => {
+  if (percentage === 100) return 'complete';
+  if (percentage > 0) return 'partial';
+  return 'incomplete';
+};
+
 module.exports = {
   getComplianceTracking,
   getComplianceById,
@@ -398,4 +580,9 @@ module.exports = {
   markEventSubmitted,
   resetCompliance,
   deleteComplianceTracking,
+  // ✨ NEW: Flexible tracking mode compliance calculators
+  calculateCompliance,
+  calculateMonthOnlyCompliance,
+  calculateDailyCompliance,
+  calculateWeeklyCompliance,
 };
