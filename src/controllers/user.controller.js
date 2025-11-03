@@ -245,20 +245,9 @@ const getUserRoles = catchAsync(async (req, res) => {
  */
 const getUserNodes = catchAsync(async (req, res) => {
   const nodes = await userService.getUserNodes(req.params.userId);
-
-  // Fetch profiles for each node
-  const ChurchProfile = require('../models/nodeprofile');
-  const nodesWithProfiles = await Promise.all(
-    nodes.map(async (node) => {
-      const profile = await ChurchProfile.findOne({ church: node._id });
-      return {
-        ...node.toObject(),
-        profile: profile ? profile.toObject() : null,
-      };
-    })
-  );
-
-  res.send(nodesWithProfiles);
+  
+  // Return nodes directly (profile model doesn't exist yet)
+  res.send(nodes);
 });
 
 const softDeleteUser = catchAsync(async (req, res) => {

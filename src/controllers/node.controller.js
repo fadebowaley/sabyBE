@@ -34,17 +34,8 @@ const getNodeById = catchAsync(async (req, res) => {
     );
   }
 
-  // Fetch node profile
-  const ChurchProfile = require('../models/nodeprofile');
-  const profile = await ChurchProfile.findOne({ church: req.params.nodeId });
-
-  // Combine data
-  const response = {
-    ...node.toObject(),
-    profile: profile ? profile.toObject() : null,
-  };
-
-  res.send(response);
+  // Return node directly (profile model doesn't exist yet)
+  res.send(node);
 });
 
 // Get node by name
