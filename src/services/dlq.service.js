@@ -118,7 +118,7 @@ class DLQService {
 
     try {
       const result = await postgresPool.query(query, values);
-      return result.rows;
+      return result; // Return full result object with rows property
     } catch (err) {
       logger.error(`❌ Failed to get DLQ jobs:`, err.message);
       throw err;
