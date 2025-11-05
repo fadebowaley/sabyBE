@@ -317,6 +317,13 @@ router.get(
   projectFormController.getProjectAnalytics
 );
 
+// Update payment configuration
+router.patch(
+  '/project/:projectId/payment-config',
+  auth('update:project-form'),
+  projectFormController.updatePaymentConfig
+);
+
 // Increment project submissions (for when form is submitted)
 router.post(
   '/project/:projectId/submit',

@@ -174,6 +174,23 @@ const ProjectFormSchema = new mongoose.Schema(
       calendarRequired: { type: Boolean, default: false },
     },
 
+    // Payment configuration (for forms with financial tag)
+    paymentConfig: {
+      enabled: { type: Boolean, default: false },
+      enabledChannels: [{ type: String }], // ['sabypipe', 'paystack', etc.]
+      defaultChannel: { type: String, default: 'sabypipe' },
+      channelConfigs: {
+        sabypipe: { type: mongoose.Schema.Types.Mixed },
+        paystack: { type: mongoose.Schema.Types.Mixed },
+        psb9mobile: { type: mongoose.Schema.Types.Mixed },
+        flutterwave: { type: mongoose.Schema.Types.Mixed },
+        premiumtrust: { type: mongoose.Schema.Types.Mixed },
+        monnify: { type: mongoose.Schema.Types.Mixed },
+        remita: { type: mongoose.Schema.Types.Mixed },
+        seerbit: { type: mongoose.Schema.Types.Mixed },
+      },
+    },
+
     // New access and API-related fields
     slug: {
       type: String,

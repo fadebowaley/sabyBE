@@ -328,6 +328,46 @@ const getDeletedProjectForms = catchAsync(async (req, res) => {
 });
 
 /**
+ * Update payment configuration for a project form
+ */
+const updatePaymentConfig = catchAsync(async (req, res) => {
+  const { projectId } = req.params;
+  const { enabledChannels, channelConfigs } = req.body;
+
+  const projectForm = await projectFormService.getProjectFormByProjectId(projectId);
+
+  if (!projectForm) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Form not found');
+  }
+
+  // Check if form has financial tag
+  const hasFinancial =
+    projectForm.configuration?.tags?.includes('financial') ||
+    projectForm.configuration?.tags?.includes('payment');
+
+  if (!hasFinancial) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Payment channels only available for forms with financial tag'
+    );
+  }
+
+  projectForm.paymentConfig = {
+    enabled: true,
+    enabledChannels,
+    channelConfigs,
+    defaultChannel: enabledChannels[0] || 'sabypipe',
+  };
+
+  await projectForm.save();
+
+  res.send({
+    message: 'Payment configuration updated',
+    paymentConfig: projectForm.paymentConfig,
+  });
+});
+
+/**
  * Get project form analytics
  */
 const getProjectAnalytics = catchAsync(async (req, res) => {
@@ -441,6 +481,7 @@ module.exports = {
   getDeletedProjectForms,
   publishProjectForm,
   archiveProjectForm,
+  updatePaymentConfig,
   getProjectAnalytics,
   incrementSubmissions,
   bulkOperations,
