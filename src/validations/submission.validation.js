@@ -108,6 +108,24 @@ const deleteSubmissionById = {
   }),
 };
 
+const cleanupTestData = {
+  body: Joi.object().keys({
+    tenantId: Joi.string().required().description('Tenant ID to filter cleanup'),
+    source: Joi.string()
+      .required()
+      .pattern(/^(test-|saby-simulator)/)
+      .messages({
+        'string.pattern.base':
+          'Source must start with test- or saby-simulator for safety',
+      })
+      .description('Source identifier for test data'),
+    projectId: Joi.string().optional().description('Optional project filter'),
+    deleteFormData: Joi.boolean().default(true),
+    deleteCalendar: Joi.boolean().default(false),
+    deleteForm: Joi.boolean().default(false),
+  }),
+};
+
 module.exports = {
   submitData,
   getSubmissionById,
@@ -116,4 +134,5 @@ module.exports = {
   listSubmissions,
   updateSubmission,
   deleteSubmissionById,
+  cleanupTestData,
 };

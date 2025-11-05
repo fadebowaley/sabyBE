@@ -18,4 +18,9 @@ router.route('/:form_id').get(submissionController.getSubmissionById).delete(sub
 
 router.route('/:id/retry').post(submissionController.retrySubmission);
 
+// Cleanup test data endpoint
+router
+  .route('/cleanup-test-data')
+  .delete(auth(), validate(submissionValidation.cleanupTestData), submissionController.cleanupTestData);
+
 module.exports = router;
