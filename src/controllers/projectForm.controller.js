@@ -186,16 +186,7 @@ const updateProjectFormByProjectId = catchAsync(async (req, res) => {
   });
 });
 
-/**
- * Delete a project form (hard delete)
- */
-const deleteProjectForm = catchAsync(async (req, res) => {
-  const { projectFormId } = req.params;
 
-  await projectFormService.deleteProjectFormById(projectFormId);
-
-  res.status(httpStatus.NO_CONTENT).send();
-});
 
 /**
  * Soft delete a project form
@@ -209,22 +200,6 @@ const softDeleteProjectForm = catchAsync(async (req, res) => {
 
   res.send({
     message: 'Project form deleted successfully',
-    projectForm,
-  });
-});
-
-/**
- * Restore a soft deleted project form
- */
-const restoreProjectForm = catchAsync(async (req, res) => {
-  const { projectFormId } = req.params;
-
-  const projectForm = await projectFormService.restoreProjectFormById(
-    projectFormId
-  );
-
-  res.send({
-    message: 'Project form restored successfully',
     projectForm,
   });
 });
@@ -295,7 +270,6 @@ const deleteProjectForm = catchAsync(async (req, res) => {
     userId,
     permanent
   );
-
   res.send(result);
 });
 
