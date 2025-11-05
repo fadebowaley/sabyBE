@@ -357,11 +357,37 @@ ProjectFormSchema.methods.incrementSubmissions = async function () {
  * Soft delete project
  * @returns {Promise<ProjectForm>}
  */
-ProjectFormSchema.methods.softDelete = async function () {
+ProjectFormSchema.methods.softDelete = async function (userId = null) {
   this.deletedAt = new Date();
+  this.deletedBy = userId;
   this.status = 'archived';
+  this.metadata.deploymentStatus = 'archived';
   await this.save();
   return this;
+};
+
+/**
+ * Permanently delete project form and all related data
+ * @returns {Promise<Object>}
+ */
+ProjectFormSchema.methods.permanentlyDelete = async function () {
+  const { postgresPool } = require('../config/postgres');
+  const projectId = this.projectId;
+
+  // Delete from PostgreSQL
+  await postgresPool.query('DELETE FROM form_submissions WHERE project_id = $1', [projectId]);
+  await postgresPool.query('DELETE FROM event_calendar WHERE project_id = $1', [projectId]);
+  await postgresPool.query('DELETE FROM submission_activity_log WHERE project_id = $1', [projectId]);
+  await postgresPool.query('DELETE FROM dead_letter_queue WHERE project_id = $1', [projectId]);
+
+  // Delete from MongoDB
+  await this.deleteOne();
+
+  return {
+    deleted: true,
+    permanent: true,
+    projectId,
+  };
 };
 
 /**
@@ -369,8 +395,20 @@ ProjectFormSchema.methods.softDelete = async function () {
  * @returns {Promise<ProjectForm>}
  */
 ProjectFormSchema.methods.restore = async function () {
+  // Check if past 14-day grace period
+  if (this.deletedAt) {
+    const daysSinceDeletion = (Date.now() - this.deletedAt.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceDeletion > 14) {
+      const ApiError = require('../utils/ApiError');
+      const httpStatus = require('http-status');
+      throw new ApiError(httpStatus.GONE, 'Form deletion period expired (>14 days). Cannot restore.');
+    }
+  }
+
   this.deletedAt = null;
-  this.status = 'active';
+  this.deletedBy = null;
+  this.status = 'inactive'; // Don't auto-activate, let user republish
+  this.metadata.deploymentStatus = 'draft';
   await this.save();
   return this;
 };

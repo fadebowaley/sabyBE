@@ -200,11 +200,43 @@ const deleteProjectFormById = async (projectFormId) => {
 /**
  * Soft delete project form by id
  * @param {ObjectId} projectFormId - The project form ID
+ * @param {ObjectId} userId - User who deleted it
  * @returns {Promise<ProjectForm>}
  */
-const softDeleteProjectFormById = async (projectFormId) => {
+const softDeleteProjectFormById = async (projectFormId, userId = null) => {
   const projectForm = await getProjectFormById(projectFormId);
-  return projectForm.softDelete();
+  return projectForm.softDelete(userId);
+};
+
+/**
+ * Delete project form (soft-delete for regular users, permanent for sabyUser)
+ * @param {string} projectId - The project ID
+ * @param {ObjectId} userId - User who is deleting
+ * @param {boolean} permanent - True for permanent deletion (sabyUser only)
+ * @returns {Promise<Object>}
+ */
+const deleteProjectForm = async (projectId, userId, permanent = false) => {
+  const projectForm = await ProjectForm.findOne({ projectId, deletedAt: null });
+
+  if (!projectForm) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Form not found or already deleted');
+  }
+
+  if (permanent) {
+    // PERMANENT DELETE (sabyUser only - checked in controller)
+    return projectForm.permanentlyDelete();
+  } else {
+    // SOFT DELETE (14-day grace period)
+    await projectForm.softDelete(userId);
+    
+    return {
+      deleted: true,
+      permanent: false,
+      deletedAt: projectForm.deletedAt,
+      permanentDeletionDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      message: 'Form soft-deleted. Will be permanently removed in 14 days.',
+    };
+  }
 };
 
 /**
@@ -222,6 +254,21 @@ const restoreProjectFormById = async (projectFormId) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Project form is not deleted');
   }
   return projectForm.restore();
+};
+
+/**
+ * Get all soft-deleted project forms (within 14-day grace period)
+ * @param {string} tenantId - Tenant ID
+ * @returns {Promise<ProjectForm[]>}
+ */
+const getDeletedProjectForms = async (tenantId) => {
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+  return ProjectForm.find({
+    tenantId,
+    deletedAt: { $gte: fourteenDaysAgo },
+  }).sort({ deletedAt: -1 });
 };
 
 /**
@@ -365,6 +412,8 @@ module.exports = {
   deleteProjectFormById,
   softDeleteProjectFormById,
   restoreProjectFormById,
+  deleteProjectForm,
+  getDeletedProjectForms,
   publishProjectForm,
   archiveProjectForm,
   incrementProjectViews,

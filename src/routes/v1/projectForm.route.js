@@ -267,6 +267,9 @@ router.get(
 // Get project form statistics
 router.get('/stats', auth('view:project-form'), projectFormController.getProjectFormStats);
 
+// Get deleted project forms (within 14-day grace period)
+router.get('/deleted', auth('view:project-form'), projectFormController.getDeletedProjectForms);
+
 // Get project form by project ID (public route for form access)
 router.get(
   '/project/:projectId',

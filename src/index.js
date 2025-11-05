@@ -44,6 +44,13 @@ const connectToDatabases = async () => {
       // Initialize Socket.IO
       initializeSocket(server);
 
+      // Initialize scheduled jobs (only in production/staging)
+      if (config.env === 'production' || config.env === 'staging') {
+        const { scheduleCleanup } = require('./jobs/cleanupDeletedForms');
+        scheduleCleanup();
+        logger.info('✅ Scheduled jobs initialized');
+      }
+
       // Start all background workers automatically
       await initializeWorkers();
     } else {

@@ -274,6 +274,60 @@ const archiveProjectForm = catchAsync(async (req, res) => {
 });
 
 /**
+ * Delete a project form (soft-delete or permanent based on role)
+ */
+const deleteProjectForm = catchAsync(async (req, res) => {
+  const { projectId } = req.params;
+  const { permanent } = req.body;
+  const userId = req.user._id;
+  const userRole = req.user.role;
+
+  // Only sabyUser can do permanent deletion
+  if (permanent && userRole !== 'sabyUser') {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Permanent deletion requires sabyUser role'
+    );
+  }
+
+  const result = await projectFormService.deleteProjectForm(
+    projectId,
+    userId,
+    permanent
+  );
+
+  res.send(result);
+});
+
+/**
+ * Restore a soft-deleted project form
+ */
+const restoreProjectForm = catchAsync(async (req, res) => {
+  const { projectFormId } = req.params;
+
+  const projectForm = await projectFormService.restoreProjectFormById(projectFormId);
+
+  res.send({
+    message: 'Form restored successfully',
+    projectForm,
+  });
+});
+
+/**
+ * Get all soft-deleted project forms (within 14-day grace period)
+ */
+const getDeletedProjectForms = catchAsync(async (req, res) => {
+  const tenantId = req.user.tenantId;
+
+  const deletedForms = await projectFormService.getDeletedProjectForms(tenantId);
+
+  res.send({
+    results: deletedForms,
+    count: deletedForms.length,
+  });
+});
+
+/**
  * Get project form analytics
  */
 const getProjectAnalytics = catchAsync(async (req, res) => {
@@ -384,6 +438,7 @@ module.exports = {
   deleteProjectForm,
   softDeleteProjectForm,
   restoreProjectForm,
+  getDeletedProjectForms,
   publishProjectForm,
   archiveProjectForm,
   getProjectAnalytics,
