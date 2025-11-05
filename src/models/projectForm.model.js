@@ -379,7 +379,14 @@ ProjectFormSchema.methods.restore = async function () {
  * Publish project
  * @returns {Promise<ProjectForm>}
  */
-ProjectFormSchema.methods.publish = async function () {
+ProjectFormSchema.methods.publish = async function (options = {}) {
+  const {
+    startDate = null,
+    endDate = null,
+    monthsToGenerate = 4,
+    allowBackdating = false,
+  } = options;
+
   this.metadata.deploymentStatus = 'published';
   this.publishedAt = new Date();
   this.status = 'active';
@@ -393,19 +400,32 @@ ProjectFormSchema.methods.publish = async function () {
   if (this.permSettings?.enabled && this.permSettings?.autoGenerateCalendar) {
     try {
       const { eventCalendarService } = require('../services');
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
+      
+      // Use custom date range if provided, otherwise default to current month + 3
+      const baseDate = startDate ? new Date(startDate) : new Date();
+      const finalDate = endDate ? new Date(endDate) : new Date(baseDate);
+      
+      if (!endDate) {
+        // If no end date, generate for specified number of months
+        finalDate.setMonth(finalDate.getMonth() + (monthsToGenerate - 1));
+      }
 
-      // Generate calendar for current month and next 3 months
-      for (let i = 0; i < 4; i++) {
-        const monthDate = new Date(currentYear, currentMonth + i, 1);
-        const year = monthDate.getFullYear();
-        const month = `${year}-${String(monthDate.getMonth() + 1).padStart(
+      // Calculate months to generate
+      const months = [];
+      let currentDate = new Date(baseDate);
+
+      while (currentDate <= finalDate) {
+        const year = currentDate.getFullYear();
+        const month = `${year}-${String(currentDate.getMonth() + 1).padStart(
           2,
           '0'
         )}-01`;
+        months.push({ month, year });
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      }
 
+      // Generate calendars for all months
+      for (const { month, year } of months) {
         await eventCalendarService.generateCalendarFromForm(this, month, year);
       }
 

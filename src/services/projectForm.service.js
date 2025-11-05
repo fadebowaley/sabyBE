@@ -229,9 +229,9 @@ const restoreProjectFormById = async (projectFormId) => {
  * @param {ObjectId} projectFormId - The project form ID
  * @returns {Promise<ProjectForm>}
  */
-const publishProjectForm = async (projectFormId) => {
+const publishProjectForm = async (projectFormId, options = {}) => {
   const projectForm = await getProjectFormById(projectFormId);
-  return projectForm.publish();
+  return projectForm.publish(options);
 };
 
 /**

@@ -234,14 +234,26 @@ const restoreProjectForm = catchAsync(async (req, res) => {
  */
 const publishProjectForm = catchAsync(async (req, res) => {
   const { projectFormId } = req.params;
+  const { calendarGeneration } = req.body;
+
+  // Extract calendar options if provided
+  const publishOptions = {};
+  if (calendarGeneration) {
+    publishOptions.startDate = calendarGeneration.startDate;
+    publishOptions.endDate = calendarGeneration.endDate;
+    publishOptions.monthsToGenerate = calendarGeneration.monthsToGenerate;
+    publishOptions.allowBackdating = calendarGeneration.allowBackdating;
+  }
 
   const projectForm = await projectFormService.publishProjectForm(
-    projectFormId
+    projectFormId,
+    publishOptions
   );
 
   res.send({
     message: 'Project form published successfully',
     projectForm,
+    calendarGenerated: calendarGeneration ? true : false,
   });
 });
 
