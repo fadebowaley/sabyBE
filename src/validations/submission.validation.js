@@ -17,6 +17,7 @@ const submitData = {
         'whatsapp',
         'iot',
         'web',
+        'saby-simulator',
         'unknown'
       )
       .default('unknown')
