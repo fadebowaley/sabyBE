@@ -117,7 +117,7 @@ services:
   # Staging WhatsApp Service
   whatsapp:
     image: ghcr.io/fadebowaley/sabybe/halobe:develop
-    container_name: halo-staging-whatsapp
+    container_name: saby-staging-whatsapp
     ports:
       - "4001:4001"
     environment:
@@ -136,6 +136,12 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-staging-redis-password}
       - JWT_SECRET=${JWT_SECRET:-staging-jwt-secret-change-this}
       - HALOFE_URL=${HALOFE_URL:-http://localhost:3000}
+      # Email/SMTP configuration (required for OTP delivery)
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAIL_FROM=${EMAIL_FROM}
       # WhatsApp configuration
       - PHONE_NUMBER_ID=${PHONE_NUMBER_ID}
       - VERIFY_TOKEN=${VERIFY_TOKEN}

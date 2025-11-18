@@ -1803,7 +1803,9 @@ exports.handleLoginChallenge = async (phoneNumber, session, input = '') => {
               return;
             }
 
-            const otpDelivery = await authService.sendUserOtp(user);
+            const otpDelivery = await authService.sendUserOtp(user, {
+              allowFallback: true,
+            });
             session.metadata.pendingUserId = user._id;
             session.metadata.pendingEmail = email;
             session.metadata.pendingTokens = null;
@@ -1858,7 +1860,9 @@ exports.handleLoginChallenge = async (phoneNumber, session, input = '') => {
         return;
       }
       try {
-        const otpDelivery = await authService.sendUserOtp(user);
+        const otpDelivery = await authService.sendUserOtp(user, {
+          allowFallback: true,
+        });
         session.metadata.pendingOtp = true;
         session.metadata.lastOtpSentAt = new Date();
         ensureLoginStage(session, 'otp');
@@ -1907,7 +1911,9 @@ exports.handleLoginChallenge = async (phoneNumber, session, input = '') => {
         return;
       }
       try {
-        const otpDelivery = await authService.sendUserOtp(user);
+        const otpDelivery = await authService.sendUserOtp(user, {
+          allowFallback: true,
+        });
         session.metadata.pendingOtp = true;
         session.metadata.lastOtpSentAt = new Date();
         session.markModified('metadata');
@@ -2004,7 +2010,9 @@ exports.handleLoginChallenge = async (phoneNumber, session, input = '') => {
         return;
       }
       try {
-        const otpDelivery = await authService.sendUserOtp(user);
+        const otpDelivery = await authService.sendUserOtp(user, {
+          allowFallback: true,
+        });
         session.metadata.pendingOtp = true;
         session.metadata.lastOtpSentAt = new Date();
         ensureLoginStage(session, 'otp');
@@ -2902,7 +2910,9 @@ async function startPasswordReset(phoneNumber, session) {
   }
 
   try {
-    const otpDelivery = await authService.sendUserOtp(user);
+    const otpDelivery = await authService.sendUserOtp(user, {
+      allowFallback: true,
+    });
     const destinationSummary = describeOtpDestinations(session, otpDelivery);
 
     session.metadata.passwordReset = {
@@ -3147,7 +3157,9 @@ async function handlePasswordReset(phoneNumber, input, session) {
           return;
         }
         try {
-          const otpDelivery = await authService.sendUserOtp(user);
+          const otpDelivery = await authService.sendUserOtp(user, {
+            allowFallback: true,
+          });
           state.email = otpDelivery.email || state.email;
           state.channels = otpDelivery.channels || state.channels || [];
           state.lastOtpSentAt = new Date();

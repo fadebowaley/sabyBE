@@ -144,7 +144,8 @@ const generateOtp = () =>
  * @returns {Promise<void>}
  */
 
-const sendUserOtp = async (user) => {
+const sendUserOtp = async (user, options = {}) => {
+  const { allowFallback = false } = options;
   const otp = generateOtp();
   console.log('🔐 OTP for user', user.email, ':', otp);
   const update = {
@@ -185,7 +186,11 @@ const sendUserOtp = async (user) => {
   }
 
   if (deliveryChannels.length === 0) {
-    throw new Error('OTP delivery failed via all configured channels');
+    const message = 'OTP delivery failed via all configured channels';
+    if (!allowFallback) {
+      throw new Error(message);
+    }
+    logger.warn(`⚠️ ${message} for ${user.email}, continuing with fallback flow`);
   }
 
   return { email: user.email, otp, channels: deliveryChannels };
