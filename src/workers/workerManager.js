@@ -8,34 +8,54 @@
 const logger = require('../config/logger');
 
 // Import workers - handle gracefully if they don't exist
-let createSubmissionWorker, createNotificationWorker, createPermNotificationWorker, createEmailIngestorWorker;
+let createSubmissionWorker,
+  createNotificationWorker,
+  createPermNotificationWorker,
+  createEmailIngestorWorker,
+  createAnalyticsRefreshWorker;
 
 try {
   const submissionWorkerModule = require('./submission.worker');
-  createSubmissionWorker = submissionWorkerModule.createSubmissionWorker || submissionWorkerModule;
+  createSubmissionWorker =
+    submissionWorkerModule.createSubmissionWorker || submissionWorkerModule;
 } catch (error) {
   logger.warn('⚠️  Submission worker module not found');
 }
 
 try {
   const notificationWorkerModule = require('./notification.worker');
-  createNotificationWorker = notificationWorkerModule.createNotificationWorker || notificationWorkerModule;
+  createNotificationWorker =
+    notificationWorkerModule.createNotificationWorker ||
+    notificationWorkerModule;
 } catch (error) {
   logger.warn('⚠️  Notification worker module not found');
 }
 
 try {
   const permNotificationWorkerModule = require('./permNotification.worker');
-  createPermNotificationWorker = permNotificationWorkerModule.createPermNotificationWorker || permNotificationWorkerModule;
+  createPermNotificationWorker =
+    permNotificationWorkerModule.createPermNotificationWorker ||
+    permNotificationWorkerModule;
 } catch (error) {
   logger.warn('⚠️  PERM notification worker module not found');
 }
 
 try {
   const emailIngestorWorkerModule = require('./emailIngestor.worker');
-  createEmailIngestorWorker = emailIngestorWorkerModule.createEmailIngestorWorker || emailIngestorWorkerModule;
+  createEmailIngestorWorker =
+    emailIngestorWorkerModule.createEmailIngestorWorker ||
+    emailIngestorWorkerModule;
 } catch (error) {
   logger.warn('⚠️  Email ingestor worker module not found');
+}
+
+try {
+  const analyticsRefreshWorkerModule = require('./analyticsRefresh.worker');
+  createAnalyticsRefreshWorker =
+    analyticsRefreshWorkerModule.createAnalyticsRefreshWorker ||
+    analyticsRefreshWorkerModule;
+} catch (error) {
+  logger.warn('⚠️  Analytics refresh worker module not found');
 }
 
 class WorkerManager {
@@ -72,7 +92,10 @@ class WorkerManager {
           this.workers.notification = createNotificationWorker();
           logger.info('✅ Notification worker started');
         } catch (error) {
-          logger.warn('⚠️  Failed to start notification worker:', error.message);
+          logger.warn(
+            '⚠️  Failed to start notification worker:',
+            error.message
+          );
         }
       }
 
@@ -82,7 +105,10 @@ class WorkerManager {
           this.workers.permNotification = createPermNotificationWorker();
           logger.info('✅ PERM notification worker started');
         } catch (error) {
-          logger.warn('⚠️  Failed to start PERM notification worker:', error.message);
+          logger.warn(
+            '⚠️  Failed to start PERM notification worker:',
+            error.message
+          );
         }
       }
 
@@ -92,16 +118,35 @@ class WorkerManager {
           this.workers.emailIngestor = createEmailIngestorWorker();
           logger.info('✅ Email ingestor worker started');
         } catch (error) {
-          logger.warn('⚠️  Failed to start email ingestor worker:', error.message);
+          logger.warn(
+            '⚠️  Failed to start email ingestor worker:',
+            error.message
+          );
+        }
+      }
+
+      // Start analytics refresh worker (if exists)
+      if (createAnalyticsRefreshWorker) {
+        try {
+          this.workers.analyticsRefresh = createAnalyticsRefreshWorker();
+          logger.info('✅ Analytics refresh worker started');
+        } catch (error) {
+          logger.warn(
+            '⚠️  Failed to start analytics refresh worker:',
+            error.message
+          );
         }
       }
 
       this.isRunning = true;
-      logger.info(`✅ Worker manager started successfully (${Object.keys(this.workers).length} workers running)`);
-      
+      logger.info(
+        `✅ Worker manager started successfully (${
+          Object.keys(this.workers).length
+        } workers running)`
+      );
+
       // Setup graceful shutdown
       this.setupGracefulShutdown();
-
     } catch (error) {
       logger.error('❌ Failed to start worker manager:', error);
       throw error;
@@ -119,7 +164,7 @@ class WorkerManager {
     logger.info('🛑 Stopping all workers...');
 
     const workerNames = Object.keys(this.workers);
-    
+
     for (const name of workerNames) {
       try {
         const worker = this.workers[name];
@@ -142,14 +187,16 @@ class WorkerManager {
    */
   setupGracefulShutdown() {
     const shutdown = async (signal) => {
-      logger.info(`\n📡 Received ${signal}, shutting down workers gracefully...`);
+      logger.info(
+        `\n📡 Received ${signal}, shutting down workers gracefully...`
+      );
       await this.stopAll();
       process.exit(0);
     };
 
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
-    
+
     // Handle uncaught errors
     process.on('uncaughtException', async (error) => {
       logger.error('💥 Uncaught Exception:', error);
@@ -170,10 +217,10 @@ class WorkerManager {
   getStatus() {
     return {
       isRunning: this.isRunning,
-      workers: Object.keys(this.workers).map(name => ({
+      workers: Object.keys(this.workers).map((name) => ({
         name,
-        status: this.workers[name] ? 'running' : 'stopped'
-      }))
+        status: this.workers[name] ? 'running' : 'stopped',
+      })),
     };
   }
 }

@@ -26,6 +26,12 @@ router.get(
 );
 
 router.get(
+  '/activity-log/enhanced',
+  requireAccess('view:submission'),
+  unifiedSubmissionController.getEnhancedActivityLogs
+);
+
+router.get(
   '/activity-log/recent',
   requireAccess('view:submission'),
   unifiedSubmissionController.getRecentActivityLogs
@@ -65,6 +71,20 @@ router.post(
   '/activity-log/bulk-delete',
   requireAccess('delete:submission'),
   unifiedSubmissionController.bulkDeleteActivityLogs
+);
+
+// Bulk delete by job IDs
+router.post(
+  '/bulk-delete-by-jobs',
+  requireAccess('delete:submission'),
+  unifiedSubmissionController.bulkDeleteByJobIds
+);
+
+// Cleanup test data
+router.delete(
+  '/cleanup-test-data',
+  requireAccess('delete:submission'),
+  unifiedSubmissionController.cleanupTestData
 );
 
 // Main submission endpoint

@@ -1,6 +1,7 @@
 const httpStatus = require('http-status');
 const { ProjectForm } = require('../models');
 const ApiError = require('../utils/ApiError');
+const fieldCatalogService = require('./fieldCatalog.service');
 
 /**
  * Create a project form
@@ -21,7 +22,14 @@ const createProjectForm = async (projectFormBody, tenantId, createdBy) => {
       'A project with this name already exists in your workspace'
     );
   }
-  return ProjectForm.createProjectForm(projectFormBody, tenantId, createdBy);
+  const projectForm = await ProjectForm.createProjectForm(
+    projectFormBody,
+    tenantId,
+    createdBy
+  );
+
+  await fieldCatalogService.syncCatalogFromForm(projectForm);
+  return projectForm;
 };
 
 /**
@@ -167,6 +175,7 @@ const updateProjectFormById = async (
     await projectForm.populate(options.populate);
   }
 
+  await fieldCatalogService.syncCatalogFromForm(projectForm);
   return projectForm;
 };
 
@@ -194,6 +203,7 @@ const updateProjectFormByProjectId = async (
 const deleteProjectFormById = async (projectFormId) => {
   const projectForm = await getProjectFormById(projectFormId);
   await projectForm.deleteOne();
+  await fieldCatalogService.removeCatalogForProject(projectForm.projectId);
   return projectForm;
 };
 
@@ -219,16 +229,21 @@ const deleteProjectForm = async (projectId, userId, permanent = false) => {
   const projectForm = await ProjectForm.findOne({ projectId, deletedAt: null });
 
   if (!projectForm) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Form not found or already deleted');
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'Form not found or already deleted'
+    );
   }
 
   if (permanent) {
     // PERMANENT DELETE (sabyUser only - checked in controller)
-    return projectForm.permanentlyDelete();
+    const result = await projectForm.permanentlyDelete();
+    await fieldCatalogService.removeCatalogForProject(projectForm.projectId);
+    return result;
   } else {
     // SOFT DELETE (14-day grace period)
     await projectForm.softDelete(userId);
-    
+
     return {
       deleted: true,
       permanent: false,

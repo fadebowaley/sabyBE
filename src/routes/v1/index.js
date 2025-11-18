@@ -42,6 +42,8 @@ const notificationReportRoute = require('./notificationReport.route');
 const analyticsReportRoute = require('./analyticsReport.route');
 const exportReportRoute = require('./exportReport.route');
 const trendAnalysisRoute = require('./trendAnalysis.route');
+const permReportRoute = require('./permReport.route');
+const rollupReportRoute = require('./rollupReport.route');
 // PERM Routes
 const unifiedSubmissionRoute = require('./unifiedSubmission.route');
 const eventCalendarRoute = require('./eventCalendar.route');
@@ -238,6 +240,14 @@ const defaultRoutes = [
   {
     path: '/trend-analysis',
     route: trendAnalysisRoute,
+  },
+  {
+    path: '/perm-report',
+    route: permReportRoute,
+  },
+  {
+    path: '/rollups',
+    route: rollupReportRoute,
   },
 ];
 

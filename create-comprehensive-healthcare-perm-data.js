@@ -31,7 +31,7 @@ const AUTH_PASSWORD = '@saby_Saby1';
 
 // PostgreSQL connection
 const pgPool = new Pool({
-  host: '20.169.129.160',
+  host: process.env.POSTGRES_HOST || 'postgres',
   port: 5432,
   user: 'sabyagentic_user',
   password: 'WcKoT/m9hFGMaiztjci/reLyMVln9qE0ReAaHc0Cb8E=',

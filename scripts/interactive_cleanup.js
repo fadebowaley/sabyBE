@@ -6,6 +6,7 @@ const Role = require('../src/models/role.model');
 const Level = require('../src/models/level.model');
 const Structures = require('../src/models/structure.model');
 const Nodes = require('../src/models/node.model');
+const nodeService = require('../src/services/node.service');
 
 /**
  * Interactive Database Cleanup Tool
@@ -428,7 +429,9 @@ class InteractiveDatabaseCleanup {
 
       for (const node of nodes) {
         try {
-          await Nodes.deleteNodeById(node._id, this.tenantId);
+          await nodeService.deleteNodeById(node._id, true, {
+            includeDeleted: true,
+          });
           this.cleanupResults.nodes.deleted++;
           this.cleanupResults.nodes.details.push({
             name: node.name,

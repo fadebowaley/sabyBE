@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const httpStatus = require('http-status');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
@@ -8,14 +9,15 @@ const {
   getActivityLogs: getActivityLogsService,
   getActivityLogSummary: getActivityLogSummaryService,
   listSubmissions: listSubmissionsService,
+  getEnhancedActivityLogs: getEnhancedActivityLogsService,
 } = require('../services/submission.service');
 const { logActivity } = require('../utils/activityLogger');
 const SubmissionModel = require('../models/submission.model');
 const ActivityLogModel = require('../models/activityLog.model');
-const dynamicFormSchemaService = require('../ingestion/whatsapp/services/dynamicFormSchema.service');
-const dynamicValidationService = require('../ingestion/whatsapp/services/dynamicValidation.service');
 const ProjectForm = require('../models/projectForm.model');
 const { eventCalendarService } = require('../services');
+const Nodes = require('../models/node.model');
+const { postgresPool } = require('../config/postgres');
 
 /**
  * Universal submission endpoint - handles ALL submission types
@@ -29,7 +31,7 @@ const submitData = catchAsync(async (req, res) => {
     source: req.body.source || 'api',
   };
 
-  // Extract all fields (regular + PERM)
+  // Extract all fields (regular + PERM + Submitter Blueprint)
   const submissionBody = pick(req.body, [
     'tenantId',
     'projectId',
@@ -45,6 +47,13 @@ const submitData = catchAsync(async (req, res) => {
     'month', // PERM field
     'year', // PERM field
     'perm_enabled', // PERM field
+    // Submitter Blueprint
+    'user_name',
+    'user_email',
+    'user_phone',
+    'node_name',
+    'node_reference',
+    'form_reference',
   ]);
 
   // Merge with user info
@@ -145,7 +154,7 @@ const submitData = catchAsync(async (req, res) => {
   // Queue submission (worker handles routing)
   const result = await queueSubmission(submissionBody);
 
-  // Log activity
+  // Log activity with submitter blueprint
   await logActivity({
     tenant_id: submissionBody.tenantId,
     project_id: submissionBody.projectId,
@@ -160,6 +169,14 @@ const submitData = catchAsync(async (req, res) => {
     message: isPERM
       ? `PERM submission queued for ${submissionBody.month}`
       : 'Submission queued for processing',
+    source: submissionBody.source,
+    // Submitter Blueprint (from submission payload)
+    user_name: submissionBody.user_name,
+    user_email: submissionBody.user_email,
+    user_phone: submissionBody.user_phone,
+    node_name: submissionBody.node_name,
+    node_reference: submissionBody.node_reference,
+    form_reference: submissionBody.form_reference,
   });
 
   // Return unified response
@@ -236,6 +253,260 @@ const retrySubmission = catchAsync(async (req, res) => {
   });
 });
 
+
+function formatFieldLabel(key = '') {
+  return key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function buildStructuredPayload(rawStructured) {
+  if (!rawStructured || typeof rawStructured !== 'object') {
+    return { fields: [], flat: {} };
+  }
+
+  const entries = Object.entries(rawStructured).map(([key, detail]) => {
+    const base = {
+      key,
+      label: formatFieldLabel(key),
+      type: Array.isArray(detail) ? 'array' : typeof detail,
+      value: detail,
+      elementId: null,
+      meta: {},
+    };
+
+    if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+      const {
+        value,
+        label,
+        type,
+        elementId,
+        step,
+        options,
+        description,
+        ...rest
+      } = detail;
+
+      base.label = label || base.label;
+      base.type = type || base.type;
+      base.value = value !== undefined ? value : detail;
+      base.elementId = elementId || null;
+      base.meta = {
+        step: typeof step === 'number' ? step : undefined,
+        options,
+        description,
+        raw: detail,
+        ...rest,
+      };
+    }
+
+    return base;
+  });
+
+  entries.sort((a, b) => {
+    const stepA = a.meta?.step ?? Number.MAX_SAFE_INTEGER;
+    const stepB = b.meta?.step ?? Number.MAX_SAFE_INTEGER;
+    if (stepA === stepB) {
+      return a.label.localeCompare(b.label);
+    }
+    return stepA - stepB;
+  });
+
+  const flat = entries.reduce((acc, entry) => {
+    acc[entry.key] = entry.value;
+    return acc;
+  }, {});
+
+  return { fields: entries, flat };
+}
+
+async function resolveNodeMetadata(submissions = []) {
+  const nodeIds = submissions
+    .map((submission) => submission.node_id)
+    .filter((id) => typeof id === 'string' && id.length > 0);
+
+  if (nodeIds.length === 0) {
+    return new Map();
+  }
+  const uniqueIds = [...new Set(nodeIds)];
+  const visited = new Set();
+  const nodeMap = new Map();
+  const queue = uniqueIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
+  const pendingSet = new Set(queue);
+
+  while (queue.length) {
+    const batchIds = queue.splice(0, 50);
+    const objectIds = batchIds.map((id) => new mongoose.Types.ObjectId(id));
+    // eslint-disable-next-line no-await-in-loop
+    const documents = await Nodes.find({ _id: { $in: objectIds } })
+      .populate('level', 'name')
+      .populate('structure', 'name')
+      .lean({ virtuals: false });
+
+    documents.forEach((doc) => {
+      const docId = doc._id.toString();
+      if (!nodeMap.has(docId)) {
+        nodeMap.set(docId, doc);
+      }
+    });
+
+    documents.forEach((doc) => {
+      const identity = Array.isArray(doc.identity) ? doc.identity : [];
+      identity.forEach((parent) => {
+        const parentId = parent.toString();
+        if (
+          mongoose.Types.ObjectId.isValid(parentId) &&
+          !visited.has(parentId) &&
+          !nodeMap.has(parentId) &&
+          !pendingSet.has(parentId)
+        ) {
+          queue.push(parentId);
+          pendingSet.add(parentId);
+        }
+      });
+    });
+
+    batchIds.forEach((id) => {
+      visited.add(id);
+      pendingSet.delete(id);
+    });
+  }
+
+  return nodeMap;
+}
+
+function buildNodeHierarchyPayload(nodeDoc, nodeMap) {
+  if (!nodeDoc) {
+    return null;
+  }
+
+  const hierarchyEntries = nodeDoc.hierarchy || {};
+  const chainIds = [
+    ...(Array.isArray(nodeDoc.identity)
+      ? nodeDoc.identity.map((id) => id.toString())
+      : []),
+    nodeDoc._id.toString(),
+  ];
+
+  const breadcrumbs = chainIds
+    .map((id) => {
+      const doc = nodeMap.get(id);
+      if (!doc) {
+        return null;
+      }
+      return {
+        id: doc._id.toString(),
+        nodeId: doc.nodeId,
+        name: doc.name,
+        level: doc.level && doc.level.name ? doc.level.name : null,
+      };
+    })
+    .filter(Boolean);
+
+  const hierarchyLabels = Object.entries(hierarchyEntries).reduce(
+    (acc, [levelKey, value]) => {
+      const key = value?.toString ? value.toString() : String(value);
+      const doc = nodeMap.get(key);
+      if (doc) {
+        acc[levelKey] = {
+          id: doc._id.toString(),
+          nodeId: doc.nodeId,
+          name: doc.name,
+          level: doc.level && doc.level.name ? doc.level.name : null,
+        };
+      }
+      return acc;
+    },
+    {}
+  );
+
+  return {
+    id: nodeDoc._id.toString(),
+    nodeId: nodeDoc.nodeId,
+    name: nodeDoc.name,
+    level: nodeDoc.level && nodeDoc.level.name ? nodeDoc.level.name : null,
+    structure:
+      nodeDoc.structure && nodeDoc.structure.name
+        ? nodeDoc.structure.name
+        : null,
+    isMain: !!nodeDoc.isMain,
+    path: nodeDoc.path,
+    hierarchy: hierarchyEntries,
+    hierarchyLabels,
+    breadcrumbs,
+  };
+}
+
+function decorateSubmissionWithStructuredData(submission, nodeMap) {
+  const structuredSource =
+    submission?.data?.structured || submission?.payload?.structured || null;
+  let { fields, flat } = buildStructuredPayload(structuredSource);
+
+  if (
+    fields.length === 0 &&
+    submission?.data &&
+    typeof submission.data === 'object'
+  ) {
+    const fallback = { ...submission.data };
+    delete fallback.structured;
+    const payload = buildStructuredPayload(fallback);
+    if (payload.fields.length) {
+      fields = payload.fields;
+      flat = payload.flat;
+    }
+  }
+
+  const nodeDoc = submission.node_id ? nodeMap.get(submission.node_id) : null;
+
+  return {
+    ...submission,
+    structured_fields: fields,
+    structured_flat: flat,
+    node_hierarchy: buildNodeHierarchyPayload(nodeDoc, nodeMap),
+  };
+}
+
+function buildSubmissionSummary(submissions = []) {
+  const numericTotals = {};
+  const booleanBreakdown = {};
+  let latestTimestamp = null;
+
+  submissions.forEach((submission) => {
+    const flat = submission.structured_flat || {};
+    Object.entries(flat).forEach(([key, value]) => {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        numericTotals[key] = (numericTotals[key] || 0) + value;
+      } else if (typeof value === 'boolean') {
+        if (!booleanBreakdown[key]) {
+          booleanBreakdown[key] = { true: 0, false: 0 };
+        }
+        booleanBreakdown[key][value ? 'true' : 'false'] += 1;
+      }
+    });
+
+    const createdAt = submission.created_at || submission.createdAt;
+    if (createdAt) {
+      const timestamp = new Date(createdAt);
+      if (!Number.isNaN(timestamp.getTime())) {
+        if (!latestTimestamp || timestamp > latestTimestamp) {
+          latestTimestamp = timestamp;
+        }
+      }
+    }
+  });
+
+  return {
+    total_submissions: submissions.length,
+    numeric_totals: numericTotals,
+    boolean_breakdown: booleanBreakdown,
+    latest_submission_at: latestTimestamp
+      ? latestTimestamp.toISOString()
+      : null,
+  };
+}
 /**
  * Get activity logs with filtering
  * @route GET /v1/submissions/activity-log
@@ -256,6 +527,21 @@ const getActivityLogs = catchAsync(async (req, res) => {
   if (filters.offset) filters.offset = parseInt(filters.offset, 10);
 
   const { results, total } = await getActivityLogsService(filters);
+
+  // Debug: Log first result to see what fields we're returning
+  if (results.length > 0) {
+    logger.debug('[ActivityLogs] Returning sample activity log payload', {
+      sample: results[0],
+      total,
+    });
+  }
+
+  // Set cache-control headers to prevent browser caching
+  res.set({
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+  });
 
   res.send({
     success: true,
@@ -280,6 +566,36 @@ const getActivityLogSummary = catchAsync(async (req, res) => {
 });
 
 /**
+ * Get enhanced activity logs with user names, node codes, and form references
+ * @route GET /v1/submissions/activity-log/enhanced
+ */
+const getEnhancedActivityLogs = catchAsync(async (req, res) => {
+  const filters = pick(req.query, [
+    'tenantId',
+    'projectId',
+    'formId',
+    'userId',
+    'status',
+    'search',
+    'limit',
+    'offset',
+  ]);
+
+  if (filters.limit) filters.limit = parseInt(filters.limit, 10);
+  if (filters.offset) filters.offset = parseInt(filters.offset, 10);
+
+  const { results, total } = await getEnhancedActivityLogsService(filters);
+
+  res.send({
+    success: true,
+    results,
+    total,
+    limit: filters.limit || 50,
+    offset: filters.offset || 0,
+  });
+});
+
+/**
  * List submissions with filtering
  * @route GET /v1/submissions
  */
@@ -294,30 +610,45 @@ const listSubmissions = catchAsync(async (req, res) => {
     'source',
     'perm_enabled',
     'month',
+    'start_date',
+    'end_date',
+    'search',
+    'limit',
+    'offset',
+    'include_payload',
   ]);
 
-  // 🔧 FIX: Auto-add tenant_id from authenticated user if not provided
   if (!filters.tenant_id && req.user?.tenantId) {
     filters.tenant_id = req.user.tenantId;
-    logger.info(
-      `[listSubmissions] Auto-added tenant_id from user: ${req.user.tenantId}`
-    );
   }
 
-  logger.info(`[listSubmissions] Fetching submissions with filters:`, {
+  if (filters.limit) {
+    filters.limit = parseInt(filters.limit, 10);
+  }
+  if (filters.offset) {
+    filters.offset = parseInt(filters.offset, 10);
+  }
+
+  logger.info('[listSubmissions] Fetching submissions', {
     filters,
-    user_tenantId: req.user?.tenantId,
-    has_user: !!req.user,
+    userTenant: req.user?.tenantId,
   });
 
   const submissions = await listSubmissionsService(filters);
 
-  logger.info(`[listSubmissions] Returning ${submissions.length} submissions`);
+  logger.info(`[listSubmissions] Retrieved ${submissions.length} submissions`);
+
+  const nodeMetadata = await resolveNodeMetadata(submissions);
+  const enrichedSubmissions = submissions.map((submission) =>
+    decorateSubmissionWithStructuredData(submission, nodeMetadata)
+  );
+  const summary = buildSubmissionSummary(enrichedSubmissions);
 
   res.send({
     success: true,
-    results: submissions,
-    count: submissions.length,
+    results: enrichedSubmissions,
+    count: enrichedSubmissions.length,
+    summary,
   });
 });
 
@@ -559,15 +890,136 @@ const deleteSubmission = catchAsync(async (req, res) => {
   res.status(httpStatus.NO_CONTENT).send();
 });
 
+/**
+ * Bulk delete submissions and activity logs by job IDs
+ * @route POST /v1/submissions/bulk-delete-by-jobs
+ */
+const bulkDeleteByJobIds = catchAsync(async (req, res) => {
+  const { jobIds } = req.body;
+
+  if (!jobIds || !Array.isArray(jobIds) || jobIds.length === 0) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Job IDs array is required');
+  }
+
+  // Delete from form_submissions
+  const submissionsResult = await postgresPool.query(
+    'DELETE FROM form_submissions WHERE job_id = ANY($1) RETURNING id',
+    [jobIds]
+  );
+
+  // Delete from activity logs
+  const logsResult = await postgresPool.query(
+    'DELETE FROM submission_activity_log WHERE job_id = ANY($1) RETURNING id',
+    [jobIds]
+  );
+
+  logger.info(
+    `🗑️ Bulk delete: ${submissionsResult.rowCount} submissions, ${logsResult.rowCount} activity logs`
+  );
+
+  res.send({
+    success: true,
+    deleted: {
+      submissions: submissionsResult.rowCount,
+      activityLogs: logsResult.rowCount,
+    },
+  });
+});
+
+/**
+ * Clean up test data (for test bed simulator)
+ * @route DELETE /v1/submissions/cleanup-test-data
+ */
+const cleanupTestData = catchAsync(async (req, res) => {
+  const {
+    tenantId,
+    source,
+    projectId,
+    deleteFormData = true,
+    deleteCalendar = false,
+  } = req.body;
+
+  if (!tenantId || !source) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId and source required');
+  }
+
+  if (!source.startsWith('test-') && !source.startsWith('saby-simulator')) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Can only cleanup test data (source must start with test- or saby-simulator)'
+    );
+  }
+
+  const deletedCounts = { submissions: 0, activityLogs: 0, calendars: 0 };
+
+  const conditions = [];
+  const values = [];
+  let idx = 1;
+
+  conditions.push(`tenant_id = $${idx}`);
+  values.push(tenantId);
+  idx += 1;
+
+  conditions.push(`source = $${idx}`);
+  values.push(source);
+  idx += 1;
+
+  if (projectId) {
+    conditions.push(`project_id = $${idx}`);
+    values.push(projectId);
+    idx += 1;
+  }
+
+  const whereClause = conditions.join(' AND ');
+
+  // Delete form submissions
+  if (deleteFormData) {
+    const submissionsResult = await postgresPool.query(
+      `DELETE FROM form_submissions WHERE ${whereClause} RETURNING id`,
+      values
+    );
+    deletedCounts.submissions = submissionsResult.rowCount;
+  }
+
+  // Delete activity logs
+  const logsResult = await postgresPool.query(
+    `DELETE FROM submission_activity_log WHERE ${whereClause} RETURNING id`,
+    values
+  );
+  deletedCounts.activityLogs = logsResult.rowCount;
+
+  // Delete calendars if requested
+  if (deleteCalendar && projectId) {
+    const calResult = await postgresPool.query(
+      'DELETE FROM event_calendar WHERE project_id = $1 RETURNING id',
+      [projectId]
+    );
+    deletedCounts.calendars = calResult.rowCount;
+  }
+
+  logger.info(`🗑️ Test data cleanup: ${JSON.stringify(deletedCounts)}`);
+
+  res.send({
+    success: true,
+    message: 'Test data cleaned successfully',
+    deleted: deletedCounts,
+  });
+});
+
+
+
 module.exports = {
   submitData,
   retrySubmission,
   getActivityLogs,
   getActivityLogSummary,
+  getEnhancedActivityLogs,
   listSubmissions,
   getSubmission,
   updateSubmission,
   deleteSubmission,
+  bulkDeleteByJobIds,
+  cleanupTestData,
   // Enhanced activity log endpoints
   getActivityLogsByUser,
   getActivityLogsByAction,

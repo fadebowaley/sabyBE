@@ -91,8 +91,8 @@ const getRedisConnectionOptions = () => ({
   // commandTimeout: 5000,
   // Add keepAlive to prevent connection drops
   keepAlive: 30000,
-  // Disable offline queue to prevent memory buildup
-  enableOfflineQueue: false,
+  // Allow BullMQ to retry commands during brief disconnects
+  enableOfflineQueue: true,
 });
 
 module.exports = {

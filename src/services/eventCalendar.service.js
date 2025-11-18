@@ -568,6 +568,157 @@ const isHoliday = (date) => {
   return false;
 };
 
+const normalizeIsoDate = (input) => {
+  if (!input) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Date value is required');
+  }
+  const normalized = new Date(input);
+  if (Number.isNaN(normalized.getTime())) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `Invalid date provided: ${input}`
+    );
+  }
+  return normalized.toISOString().split('T')[0];
+};
+
+const patchDailyCalendarDates = async (id, payload = {}) => {
+  const calendar = await getCalendarById(id);
+
+  if (!calendar) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Calendar entry not found');
+  }
+
+  if (calendar.tracking_mode !== 'daily') {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Manual date editing is currently supported for daily calendars only'
+    );
+  }
+
+  const currentMonthPrefix = (() => {
+    const rawMonth = calendar.month;
+    if (!rawMonth) {
+      return '';
+    }
+    if (typeof rawMonth === 'string') {
+      return rawMonth.slice(0, 7);
+    }
+    const monthDate = new Date(rawMonth);
+    if (Number.isNaN(monthDate.getTime())) {
+      return '';
+    }
+    return monthDate.toISOString().slice(0, 7);
+  })();
+  let config = calendar.daily_config || {};
+  if (typeof config === 'string') {
+    try {
+      config = JSON.parse(config);
+    } catch (error) {
+      config = {};
+    }
+  }
+
+  const dateSet = new Set(config.dates || []);
+  const overrides = {
+    ...(config.date_overrides || {}),
+  };
+
+  const ensureSameMonth = (isoDate) => {
+    if (currentMonthPrefix && !isoDate.startsWith(currentMonthPrefix)) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        `Date ${isoDate} is outside the calendar month (${currentMonthPrefix}). Switch to that month to edit its schedule.`
+      );
+    }
+  };
+
+  const addPayload = Array.isArray(payload.add) ? payload.add : [];
+  addPayload.forEach(({ date, frequency }) => {
+    const isoDate = normalizeIsoDate(date);
+    ensureSameMonth(isoDate);
+    dateSet.add(isoDate);
+    if (frequency && Number(frequency) > 0) {
+      overrides[isoDate] = { frequency: Number(frequency) };
+    }
+  });
+
+  const updatePayload = Array.isArray(payload.update) ? payload.update : [];
+  updatePayload.forEach(({ date, frequency }) => {
+    const isoDate = normalizeIsoDate(date);
+    ensureSameMonth(isoDate);
+    if (!dateSet.has(isoDate)) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        `Cannot update ${isoDate} because it is not part of this calendar`
+      );
+    }
+    if (frequency && Number(frequency) > 0) {
+      overrides[isoDate] = { frequency: Number(frequency) };
+    } else {
+      delete overrides[isoDate];
+    }
+  });
+
+  const removePayload = Array.isArray(payload.remove) ? payload.remove : [];
+  removePayload.forEach((date) => {
+    const isoDate = normalizeIsoDate(date);
+    ensureSameMonth(isoDate);
+    dateSet.delete(isoDate);
+    delete overrides[isoDate];
+  });
+
+  if (
+    payload.frequency_per_day !== undefined &&
+    Number(payload.frequency_per_day) > 0
+  ) {
+    config.frequency_per_day = Number(payload.frequency_per_day);
+  }
+
+  // Clean up overrides that no longer exist in the date set
+  Object.keys(overrides).forEach((key) => {
+    if (!dateSet.has(key)) {
+      delete overrides[key];
+    }
+  });
+
+  const defaultFrequency = config.frequency_per_day || 1;
+  const orderedDates = Array.from(dateSet).sort();
+
+  const totalExpected = orderedDates.reduce((total, date) => {
+    const overrideFrequency = overrides[date]?.frequency;
+    return total + (overrideFrequency || defaultFrequency);
+  }, 0);
+
+  config.dates = orderedDates;
+  config.total_days = orderedDates.length;
+  config.total_expected = totalExpected;
+  config.date_overrides = Object.keys(overrides).length ? overrides : undefined;
+
+  const result = await postgresPool.query(
+    `
+      UPDATE event_calendar
+      SET daily_config = $1,
+          total_events = $2,
+          updated_at = NOW()
+      WHERE id = $3
+      RETURNING *
+    `,
+    [JSON.stringify(config), totalExpected, id]
+  );
+
+  const updated = result.rows[0];
+  if (updated && typeof updated.daily_config === 'string') {
+    try {
+      updated.daily_config = JSON.parse(updated.daily_config);
+    } catch (error) {
+      // ignore parse errors; leave as string
+    }
+  }
+
+  return updated;
+};
+
 module.exports = {
   getCalendar,
   getCalendarById,
@@ -576,6 +727,7 @@ module.exports = {
   getAllCalendars,
   updateCalendar,
   deleteCalendar,
+  patchDailyCalendarDates,
   getEventsByMonth,
   // ✨ NEW: Flexible tracking mode functions
   generateCalendarFromForm,

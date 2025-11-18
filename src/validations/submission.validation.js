@@ -29,6 +29,26 @@ const submitData = {
     status: Joi.string().optional().description('Submission status'),
     project_name: Joi.string().max(128),
     project_category: Joi.string().max(64),
+    // Submitter Blueprint (Required for all submissions)
+    user_name: Joi.string().max(255).optional().description('User full name'),
+    user_email: Joi.string()
+      .email()
+      .max(255)
+      .optional()
+      .description('User email'),
+    user_phone: Joi.string()
+      .max(50)
+      .optional()
+      .description('User phone number'),
+    node_name: Joi.string().max(255).optional().description('Node name'),
+    node_reference: Joi.string()
+      .max(100)
+      .optional()
+      .description('Node reference code'),
+    form_reference: Joi.string()
+      .max(100)
+      .optional()
+      .description('Form reference code'),
     // PERM-specific fields
     month: Joi.string()
       .optional()

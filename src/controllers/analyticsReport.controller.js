@@ -9,6 +9,7 @@
 
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
+const logger = require('../config/logger');
 const analyticsReportService = require('../services/analyticsReport.service');
 const pick = require('../utils/pick');
 
@@ -26,6 +27,14 @@ const getSubmissionSummary = catchAsync(async (req, res) => {
   ]);
 
   const data = await analyticsReportService.getSubmissionSummary(filters);
+
+  logger.debug(
+    `[AnalyticsController] Submission summary response: ${JSON.stringify({
+      filters,
+      periodsReturned: data.length,
+      sample: data[0] || null,
+    })}`
+  );
 
   res.status(httpStatus.OK).send({
     success: true,
@@ -53,6 +62,14 @@ const getSubmissionsByStatus = catchAsync(async (req, res) => {
 
   const data = await analyticsReportService.getSubmissionsByStatus(filters);
 
+  logger.debug(
+    `[AnalyticsController] Status breakdown response: ${JSON.stringify({
+      filters,
+      statusesReturned: data.length,
+      sample: data[0] || null,
+    })}`
+  );
+
   res.status(httpStatus.OK).send({
     success: true,
     message: 'Submissions by status breakdown retrieved successfully',
@@ -73,6 +90,14 @@ const getSubmissionsByMonth = catchAsync(async (req, res) => {
   const filters = pick(req.query, ['tenant_id', 'project_id', 'year']);
 
   const data = await analyticsReportService.getSubmissionsByMonth(filters);
+
+  logger.debug(
+    `[AnalyticsController] Monthly breakdown response: ${JSON.stringify({
+      filters,
+      monthsReturned: data.length,
+      sample: data[0] || null,
+    })}`
+  );
 
   res.status(httpStatus.OK).send({
     success: true,

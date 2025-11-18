@@ -24,6 +24,22 @@ router
   .patch(auth('update:node'), validate(nodeValidation.updateNodeById), nodeController.updateNodeById)
   .delete(auth('delete:node'), validate(nodeValidation.deleteNodeById), nodeController.deleteNodeById);
 
+router
+  .route('/:nodeId/restore')
+  .patch(
+    auth('update:node'),
+    validate(nodeValidation.restoreNodeById),
+    nodeController.restoreNodeById
+  );
+
+router
+  .route('/:nodeId/hard')
+  .delete(
+    auth('delete:node'),
+    validate(nodeValidation.hardDeleteNodeById),
+    nodeController.deleteNodeHardById
+  );
+
 // Route for fetching nodes by type (e.g., main, owner)
 router.route('/type').get(auth('view:node'), validate(nodeValidation.getNodesByType), nodeController.getNodesByType);
 

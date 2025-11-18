@@ -18,6 +18,7 @@ const ownerCreate = {
       .items(Joi.string().regex(/^[0-9a-fA-F]{24}$/))
       .default([]),
     email: Joi.string().required().email(),
+    phoneNumber: Joi.string().required(),
     password: Joi.string().required().custom(password),
     isOwner: Joi.boolean().valid(false).default(false),
     isSuper: Joi.boolean().valid(false).default(false),

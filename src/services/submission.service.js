@@ -140,6 +140,13 @@ const getActivityLogs = async (filters = {}) => {
   if (status) {
     where.push(`status = $${idx++}`);
     values.push(status);
+  } else {
+    // By default, exclude rejected entries - only show actual data submissions
+    // Only exclude if status filter is not explicitly provided
+    where.push(`status != $${idx++}`);
+    values.push('rejected');
+    where.push(`action != $${idx++}`);
+    values.push('rejected');
   }
   if (startDate) {
     where.push(`created_at >= $${idx++}`);
@@ -155,16 +162,32 @@ const getActivityLogs = async (filters = {}) => {
     idx++;
   }
   const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  // Paginated query
-  const sql = `SELECT * FROM submission_activity_log ${whereClause} ORDER BY created_at DESC LIMIT $${idx++} OFFSET $${idx}`;
+  // Paginated query - all data is denormalized, no JOINs needed!
+  const sql = `
+    SELECT 
+      id, tenant_id, project_id, project_name, project_category,
+      form_id, node_id, user_id, action, status, job_id, message,
+      created_at, source,
+      user_name, user_email, user_phone,
+      node_reference, node_name,
+      form_reference
+    FROM submission_activity_log 
+    ${whereClause} 
+    ORDER BY created_at DESC 
+    LIMIT $${idx++} OFFSET $${idx}
+  `;
   values.push(limit, offset);
   const { rows } = await postgresPool.query(sql, values);
 
-  // Total count query (no limit/offset)
+  // Total count query (no limit/offset) - use same filters
   const countSql = `SELECT COUNT(*) FROM submission_activity_log ${whereClause}`;
+  // For count query, we need to exclude limit and offset from values
+  const countValues = status 
+    ? values.slice(0, idx - 2) // Exclude limit and offset
+    : values.slice(0, idx - 2); // Exclude limit and offset (status filters already included)
   const { rows: countRows } = await postgresPool.query(
     countSql,
-    values.slice(0, idx - 2)
+    countValues
   );
   const total = parseInt(countRows[0].count, 10);
 
@@ -206,6 +229,115 @@ const getActivityLogSummary = async () => {
   return summary;
 };
 
+/**
+ * Get enhanced activity logs with user names, node codes, and form references
+ * @param {Object} filters - Query filters
+ * @returns {Promise<{results: Array, total: number}>}
+ */
+const getEnhancedActivityLogs = async (filters = {}) => {
+  // 1. Get base activity logs
+  const { results: logs, total } = await getActivityLogs(filters);
+  
+  if (logs.length === 0) {
+    return { results: [], total: 0 };
+  }
+  
+  // 2. Extract unique IDs (clean quotes from user_id if present)
+  const userIds = [...new Set(logs.map(l => {
+    if (!l.user_id) return null;
+    // Remove quotes if present
+    return l.user_id.replace(/^"|"$/g, '');
+  }).filter(Boolean))];
+  const nodeIds = [...new Set(logs.map(l => l.node_id).filter(Boolean))];
+  const projectIds = [...new Set(logs.map(l => l.project_id).filter(Boolean))];
+  
+  console.log('🔍 [Enhanced Logs] User IDs to lookup:', userIds);
+  console.log('🔍 [Enhanced Logs] Project IDs to lookup:', projectIds);
+  console.log('🔍 [Enhanced Logs] Node IDs to lookup:', nodeIds);
+  
+  // 3. Fetch user data from MongoDB (using _id, not userId)
+  const User = require('../models/user.model');
+  const mongoose = require('mongoose');
+  const users = await User.find({ _id: { $in: userIds } })
+    .select('_id userId firstname lastname email phoneNumber')
+    .lean();
+  console.log('👥 [Enhanced Logs] Found', users.length, 'users');
+  const userMap = users.reduce((acc, u) => {
+    // Map by _id (which is what's stored in activity log as user_id)
+    const key = u._id.toString();
+    acc[key] = {
+      name: `${u.firstname} ${u.lastname}`.trim() || 'Unknown User',
+      firstname: u.firstname,
+      lastname: u.lastname,
+      email: u.email,
+      phone: u.phoneNumber,
+      userId: u.userId,
+    };
+    return acc;
+  }, {});
+  console.log('👥 [Enhanced Logs] User map keys:', Object.keys(userMap));
+  
+  // 4. Fetch node data from MongoDB  
+  let nodeMap = {};
+  if (nodeIds.length > 0) {
+    const Node = require('../models/node.model');
+    const nodes = await Node.find({ _id: { $in: nodeIds } })
+      .select('_id nodeId name city')
+      .lean();
+    console.log('🏢 [Enhanced Logs] Found', nodes.length, 'nodes');
+    nodeMap = nodes.reduce((acc, n) => {
+      // Map by _id (which is what's stored in activity log as node_id)
+      const key = n._id.toString();
+      acc[key] = {
+        reference: n.nodeId,
+        name: n.name,
+        city: n.city,
+      };
+      return acc;
+    }, {});
+    console.log('🏢 [Enhanced Logs] Node map keys:', Object.keys(nodeMap));
+  }
+  
+  // 5. Fetch form references from MongoDB
+  const ProjectForm = require('../models/projectForm.model');
+  const forms = await ProjectForm.find({ projectId: { $in: projectIds } })
+    .select('projectId formReference')
+    .lean();
+  console.log('📝 [Enhanced Logs] Found', forms.length, 'forms');
+  const formMap = forms.reduce((acc, f) => {
+    acc[f.projectId] = f.formReference;
+    return acc;
+  }, {});
+  console.log('📝 [Enhanced Logs] Form map:', formMap);
+  
+  // 6. Enhance logs with joined data
+  const enhancedLogs = logs.map(log => {
+    // Clean user_id for lookup (remove quotes if present)
+    const cleanUserId = log.user_id ? log.user_id.replace(/^"|"$/g, '') : null;
+    
+    return {
+      ...log,
+      // User data
+      user_name: userMap[cleanUserId]?.name || 'Unknown User',
+      user_firstname: userMap[cleanUserId]?.firstname,
+      user_lastname: userMap[cleanUserId]?.lastname,
+      user_email: userMap[cleanUserId]?.email,
+      user_phone: userMap[cleanUserId]?.phone,
+      // Node data
+      node_reference: nodeMap[log.node_id]?.reference,
+      node_name: nodeMap[log.node_id]?.name,
+      node_city: nodeMap[log.node_id]?.city,
+      // Form data
+      form_reference: formMap[log.project_id],
+    };
+  });
+  
+  console.log('✅ [Enhanced Logs] Returning', enhancedLogs.length, 'enhanced logs');
+  console.log('📊 [Enhanced Logs] Sample:', enhancedLogs[0]);
+  
+  return { results: enhancedLogs, total };
+};
+
 module.exports = {
   queueSubmission,
   listSubmissions,
@@ -214,4 +346,5 @@ module.exports = {
   retrySubmission,
   getActivityLogs,
   getActivityLogSummary,
+  getEnhancedActivityLogs,
 };

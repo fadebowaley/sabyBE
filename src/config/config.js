@@ -66,6 +66,33 @@ const envVarsSchema = Joi.object()
     EMAIL_FROM: Joi.string()
       .allow('')
       .description('the from field in the emails sent by the app'),
+    SMS_PROVIDER: Joi.string()
+      .allow('', 'sendar', 'nigeriabulksms')
+      .default('sendar')
+      .description('SMS provider to use'),
+    SMS_SENDER_ID: Joi.string()
+      .allow('')
+      .description('Default sender ID for SMS messages'),
+    SMS_WALLET_TYPE: Joi.string()
+      .allow('')
+      .description('Wallet type for supported SMS providers'),
+    NIGERIA_BULKSMS_USERNAME: Joi.string()
+      .allow('')
+      .description('NigeriaBulkSMS account username'),
+    NIGERIA_BULKSMS_PASSWORD: Joi.string()
+      .allow('')
+      .description('NigeriaBulkSMS account password'),
+    NIGERIA_BULKSMS_BASE_URL: Joi.string()
+      .allow('')
+      .description('NigeriaBulkSMS API base URL'),
+    NIGERIA_BULKSMS_TIMEOUT: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .allow('')
+      .description('NigeriaBulkSMS request timeout (ms)'),
+    NIGERIA_BULKSMS_RETRIES: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .allow('')
+      .description('NigeriaBulkSMS request retry count'),
 
     REDIS_HOST: Joi.string().default('127.0.0.1').description('Redis host'),
     REDIS_PORT: Joi.number().default(6379).description('Redis port'),
@@ -123,6 +150,18 @@ const envVarsSchema = Joi.object()
       .default(3600)
       .description('Telegram session TTL in seconds'),
 
+    // Node Sync Configuration
+    NODE_SYNC_ENABLED: Joi.boolean()
+      .truthy('true')
+      .truthy('1')
+      .falsy('false')
+      .falsy('0')
+      .default(false)
+      .description('Enable Mongo -> Postgres node dimension sync'),
+    NODE_SYNC_BATCH_SIZE: Joi.number()
+      .default(250)
+      .description('Batch size for node dimension backfill'),
+
     // WhatsApp Business API Configuration
     PHONE_NUMBER_ID: Joi.string()
       .allow('')
@@ -133,6 +172,9 @@ const envVarsSchema = Joi.object()
     WHATSAPP_TOKEN: Joi.string()
       .allow('')
       .description('WhatsApp Business API access token'),
+    WHATSAPP_PORT: Joi.number()
+      .default(4001)
+      .description('Port for the standalone WhatsApp ingestion service'),
 
     // API Configuration
     EMAIL_INGESTION_API_KEY: Joi.string()
@@ -231,8 +273,22 @@ module.exports = {
     from: envVars.EMAIL_FROM || envVars.SMTP_USERNAME,
   },
   sms: {
+    provider: (envVars.SMS_PROVIDER || 'sendar').toLowerCase(),
     sms_api_key: envVars.SMS_API_KEY,
     sendar_api_url: envVars.SENDAR_API_URL,
+    senderId: envVars.SMS_SENDER_ID,
+    walletType: envVars.SMS_WALLET_TYPE,
+    nigeriaBulkSms: {
+      username: envVars.NIGERIA_BULKSMS_USERNAME,
+      password: envVars.NIGERIA_BULKSMS_PASSWORD,
+      baseUrl: envVars.NIGERIA_BULKSMS_BASE_URL,
+      timeout: envVars.NIGERIA_BULKSMS_TIMEOUT
+        ? Number(envVars.NIGERIA_BULKSMS_TIMEOUT)
+        : undefined,
+      retries: envVars.NIGERIA_BULKSMS_RETRIES
+        ? Number(envVars.NIGERIA_BULKSMS_RETRIES)
+        : undefined,
+    },
   },
 
   socket: {
@@ -283,5 +339,9 @@ module.exports = {
     verifyToken: envVars.VERIFY_TOKEN,
     accessToken: envVars.WHATSAPP_TOKEN,
     port: Number(envVars.WHATSAPP_PORT) || 4001,
+  },
+  nodeSync: {
+    enabled: envVars.NODE_SYNC_ENABLED,
+    batchSize: Number(envVars.NODE_SYNC_BATCH_SIZE),
   },
 };

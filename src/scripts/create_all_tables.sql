@@ -36,10 +36,30 @@ CREATE TABLE IF NOT EXISTS form_submissions (
 
     -- Event tracking
     event_date DATE,
+    month DATE,
+    year INTEGER,
+    event_compliance_percentage NUMERIC(5,2) DEFAULT 0.00,
+    completeness_status VARCHAR(32) DEFAULT 'incomplete',
+    total_events_required INTEGER DEFAULT 0,
+    total_events_submitted INTEGER DEFAULT 0,
+    is_locked BOOLEAN DEFAULT FALSE,
+    locked_at TIMESTAMPTZ,
+    locked_by VARCHAR(64),
+    lock_reason VARCHAR(255),
+    perm_enabled BOOLEAN DEFAULT FALSE,
+    validation_status VARCHAR(32) DEFAULT 'pending',
+    validation_errors JSONB DEFAULT '[]'::jsonb,
+    validation_warnings JSONB DEFAULT '[]'::jsonb,
+    submitted_by VARCHAR(64),
+    submitted_at TIMESTAMPTZ DEFAULT NOW(),
+    node_name VARCHAR(128),
+    node_reference VARCHAR(128),
 
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    submission_date DATE GENERATED ALWAYS AS ((submitted_at AT TIME ZONE 'UTC')::date) STORED,
+    submission_week DATE GENERATED ALWAYS AS (date_trunc('week', submitted_at AT TIME ZONE 'UTC')::date) STORED
 );
 
 -- Indexes for form_submissions table
@@ -53,6 +73,8 @@ CREATE INDEX IF NOT EXISTS idx_form_submissions_created_at ON form_submissions(c
 CREATE INDEX IF NOT EXISTS idx_form_submissions_project_name ON form_submissions(project_name);
 CREATE INDEX IF NOT EXISTS idx_form_submissions_project_category ON form_submissions(project_category);
 CREATE INDEX IF NOT EXISTS idx_form_submissions_event_date ON form_submissions(event_date);
+CREATE INDEX IF NOT EXISTS idx_form_submissions_submission_date ON form_submissions(tenant_id, project_id, node_id, submission_date);
+CREATE INDEX IF NOT EXISTS idx_form_submissions_submission_week ON form_submissions(tenant_id, project_id, node_id, submission_week);
 
 -- GIN index for JSONB data field (optimizes JSON queries)
 CREATE INDEX IF NOT EXISTS idx_form_submissions_data 

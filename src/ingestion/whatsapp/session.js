@@ -1,10 +1,27 @@
 const WhatsAppSession = require('../../models/whatsappSession.model');
 const logger = require('../../config/logger');
 
-/**
- * Enhanced Session Management for WhatsApp Bot
- * Integrates with database models for persistent session storage
- */
+const SESSION_TTL_MINUTES = 15;
+
+const hasSessionExpired = (session, now = new Date()) => {
+  if (!session) {
+    return false;
+  }
+  const lastActivity =
+    session.lastActivity ||
+    session.metadata?.lastActivity ||
+    session.updatedAt ||
+    session.createdAt;
+  if (!lastActivity) {
+    return false;
+  }
+  const last = new Date(lastActivity).getTime();
+  if (Number.isNaN(last)) {
+    return false;
+  }
+  const diffMs = now.getTime() - last;
+  return diffMs > SESSION_TTL_MINUTES * 60 * 1000;
+};
 
 class SessionManager {
   /**
@@ -14,7 +31,16 @@ class SessionManager {
    */
   async getOrCreate(phoneNumber) {
     try {
+      const now = new Date();
       let session = await WhatsAppSession.findByPhoneNumber(phoneNumber);
+
+      if (session && hasSessionExpired(session, now)) {
+        logger.info(
+          `⏱️ WhatsApp session expired for ${phoneNumber} after ${SESSION_TTL_MINUTES} minutes of inactivity`
+        );
+        await session.deleteOne();
+        session = null;
+      }
 
       if (!session) {
         // Create new session for authentication phase
@@ -22,9 +48,10 @@ class SessionManager {
           phoneNumber,
           status: 'authenticating',
           metadata: {
-            sessionStartTime: new Date(),
-            lastActivity: new Date(),
+            sessionStartTime: now,
+            lastActivity: now,
           },
+          lastActivity: now,
           // These fields will be populated during authentication
           userId: null,
           tenantId: null,
@@ -37,7 +64,7 @@ class SessionManager {
         );
       } else {
         // Update activity
-        await session.updateActivity();
+        await session.updateActivity(now);
       }
 
       return session;
@@ -138,9 +165,21 @@ class SessionManager {
       session.status = 'authenticating';
       session.currentStep = 0;
       session.answers.clear();
+      session.batchAnswers.clear();
       session.validationResult = null;
       session.submittedAt = null;
       session.completedAt = null;
+      session.batchStatus = 'collecting';
+      session.batchMeta = {};
+      session.metadata.batchStartedAt = null;
+      session.metadata.batchConfirmedAt = null;
+      session.metadata.sessionLocked = false;
+      session.metadata.isLoggedIn = false;
+      session.metadata.passcodeAttempts = 0;
+      session.metadata.lastPasscodePromptAt = null;
+      session.markModified('batchAnswers');
+      session.markModified('batchMeta');
+      session.markModified('metadata');
 
       await session.save();
 
@@ -160,9 +199,9 @@ class SessionManager {
    * @param {number} ttlHours - Time to live in hours
    * @returns {Promise<number>} Number of sessions cleaned up
    */
-  async cleanupExpired(ttlHours = 24) {
+  async cleanupExpired(ttlMinutes = SESSION_TTL_MINUTES) {
     try {
-      const result = await WhatsAppSession.cleanupExpiredSessions(ttlHours);
+      const result = await WhatsAppSession.cleanupExpiredSessions(ttlMinutes);
       logger.info(`🧹 Cleaned up ${result.deletedCount} expired sessions`);
       return result.deletedCount;
     } catch (error) {

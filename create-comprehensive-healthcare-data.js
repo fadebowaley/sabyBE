@@ -34,7 +34,7 @@ const AUTH = {
 
 const MONGO_URL = 'mongodb://localhost:27017/halograph';
 const PG_CONFIG = {
-  host: '20.169.129.160',
+  host: process.env.POSTGRES_HOST || 'postgres',
   port: 5432,
   user: 'sabyagentic_user',
   password: 'WcKoT/m9hFGMaiztjci/reLyMVln9qE0ReAaHc0Cb8E=',

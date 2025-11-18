@@ -490,6 +490,13 @@ router.patch(
   projectFormController.archiveProjectForm
 );
 
+// Delete by projectId (soft-delete or permanent)
+router.delete(
+  '/project/:projectId',
+  auth('delete:project-form'),
+  projectFormController.deleteProjectForm
+);
+
 // Bulk operations
 router.post(
   '/bulk',

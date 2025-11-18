@@ -12,6 +12,11 @@ const { postgresPool } = require('../config/postgres');
 const { getRedisConnectionOptions } = require('../config/redis');
 const logger = require('../config/logger');
 const SubmissionModel = require('../models/submission.model');
+const SubmissionCatalogService = require('../services/submissionCatalog.service');
+const {
+  createFactsTableIfNeeded,
+  insertFacts,
+} = require('../models/factWriter');
 const { logActivity } = require('../utils/activityLogger');
 const notificationQueueService = require('../services/notificationQueue.service');
 const { eventCalendarService, eventComplianceService } = require('../services');
@@ -20,8 +25,18 @@ const dlqService = require('../services/dlq.service');
 const emailService = require('../services/email.service');
 const User = require('../models/user.model');
 const Node = require('../models/node.model');
+const submissionRollupService = require('../services/submissionRollup.service');
 
 const SUBMISSION_QUEUE_NAME = 'submissionQueue';
+let factsTableEnsured = false;
+
+async function ensureFactsTable() {
+  if (factsTableEnsured) {
+    return;
+  }
+  await createFactsTableIfNeeded();
+  factsTableEnsured = true;
+}
 
 /**
  * Create and return submission worker instance
@@ -62,10 +77,40 @@ const createSubmissionWorker = () => {
         month,
         year,
         perm_enabled,
+        // Submitter Blueprint
+        user_name,
+        user_email,
+        user_phone,
+        node_name,
+        node_reference,
+        form_reference,
       } = job.data;
 
       const isPERMSubmission =
         perm_enabled || month || (payload && payload.month);
+
+      let resolvedNodeName = node_name;
+      let resolvedNodeReference = node_reference;
+
+      if ((!resolvedNodeName || !resolvedNodeReference) && nodeId) {
+        try {
+          const nodeDoc = await Node.findById(nodeId).lean();
+          if (nodeDoc) {
+            resolvedNodeName =
+              resolvedNodeName || nodeDoc.name || nodeDoc.nodeName || null;
+            resolvedNodeReference =
+              resolvedNodeReference ||
+              nodeDoc.reference ||
+              nodeDoc.referenceId ||
+              nodeDoc.nodeReference ||
+              null;
+          }
+        } catch (nodeLookupError) {
+          logger.warn(
+            `[Worker] Unable to resolve node metadata for node_id=${nodeId}: ${nodeLookupError.message}`
+          );
+        }
+      }
 
       const submissionPayload = {
         tenant_id: tenantId,
@@ -74,6 +119,8 @@ const createSubmissionWorker = () => {
         project_category,
         form_id: formId,
         node_id: nodeId,
+        node_name: resolvedNodeName || null,
+        node_reference: resolvedNodeReference || null,
         user_id: userId,
         source: source || 'unknown',
         data: payload,
@@ -106,10 +153,20 @@ const createSubmissionWorker = () => {
         message: isPERMSubmission
           ? `Processing PERM submission for ${month}`
           : 'Processing submission',
+        source,
+        // Submitter Blueprint
+        user_name,
+        user_email,
+        user_phone,
+        node_name,
+        node_reference,
+        form_reference,
       });
 
       try {
         let result;
+
+        await ensureFactsTable();
 
         if (isPERMSubmission) {
           // ✅ FIXED: Call the correct PERM service method
@@ -139,6 +196,19 @@ const createSubmissionWorker = () => {
           logger.info(`[Worker] Regular submission created - ${result.id}`);
         }
 
+        if (result) {
+          const catalog = await SubmissionCatalogService.getCatalogByProject(
+            projectId
+          );
+          const facts =
+            (await SubmissionModel.buildFactsFromSubmission(result, catalog)) ||
+            [];
+          if (facts.length > 0) {
+            await insertFacts(facts);
+            submissionRollupService.scheduleRefresh();
+          }
+        }
+
         // Log success
         await logActivity({
           tenant_id: tenantId,
@@ -156,6 +226,14 @@ const createSubmissionWorker = () => {
                 result.event_compliance_percentage || 0
               }% compliance)`
             : 'Submission completed successfully',
+          source,
+          // Submitter Blueprint
+          user_name,
+          user_email,
+          user_phone,
+          node_name,
+          node_reference,
+          form_reference,
         });
 
         // ✅ PRODUCTION: Send email notifications
@@ -202,13 +280,13 @@ const createSubmissionWorker = () => {
               } else if (compliance >= 40 && compliance < 80) {
                 // Warning alert
                 await emailService.sendPERMWarning(userEmail, emailData);
-      logger.info(
+                logger.info(
                   `✅ Warning queued for ${userEmail} (${compliance}%)`
                 );
               } else if (compliance === 100) {
                 // Completion celebration
                 await emailService.sendPERMCompletion(userEmail, emailData);
-          logger.info(
+                logger.info(
                   `✅ Completion email queued for ${userEmail} (100%)`
                 );
               }
@@ -234,6 +312,14 @@ const createSubmissionWorker = () => {
           user_id: userId,
           action: 'failed',
           status: 'failed',
+          source,
+          // Submitter Blueprint
+          user_name,
+          user_email,
+          user_phone,
+          node_name,
+          node_reference,
+          form_reference,
           job_id: job.id,
           message: `Submission failed: ${error.message}`,
         });

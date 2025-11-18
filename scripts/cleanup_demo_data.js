@@ -5,6 +5,7 @@ const Role = require('../src/models/role.model');
 const Level = require('../src/models/level.model');
 const Structures = require('../src/models/structure.model');
 const Nodes = require('../src/models/node.model');
+const nodeService = require('../src/services/node.service');
 
 /**
  * Cleanup Demo Data Script
@@ -81,8 +82,10 @@ class DatabaseCleanup {
 
       for (const node of nodes) {
         try {
-          // Soft delete the node
-          await Nodes.deleteNodeById(node._id, this.tenantId);
+          // Hard delete the node via service to ensure references are cleaned
+          await nodeService.deleteNodeById(node._id, true, {
+            includeDeleted: true,
+          });
 
           this.cleanupResults.nodes.deleted++;
           this.cleanupResults.nodes.details.push({

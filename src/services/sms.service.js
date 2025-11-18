@@ -1,31 +1,162 @@
 const axios = require('axios');
+const { NigeriaBulkSMSClient } = require('nigeriabulksms-sdk');
 const config = require('../config/config');
 const logger = require('../config/logger');
 
-// Log configuration details for debugging
-logger.info(`Sendar URL: ${config.sms.sendar_api_url}`);
-logger.info(`Sendar API Key: ${config.sms.sms_api_key}`);
+const PROVIDERS = {
+  SENDAR: 'sendar',
+  NIGERIA_BULKSMS: 'nigeriabulksms',
+};
+
+const provider = (config.sms?.provider || PROVIDERS.SENDAR).toLowerCase();
+const DEFAULT_SENDER_ID =
+  config.sms?.senderId || process.env.SMS_SENDER_ID || 'Saby';
+const DEFAULT_WALLET_TYPE =
+  config.sms?.walletType || process.env.SMS_WALLET_TYPE || 'promotional';
+
+const sanitizePhoneNumber = (value = '', { keepPlus = false } = {}) => {
+  if (!value && value !== 0) {
+    return '';
+  }
+  const stringValue = value.toString().trim();
+  if (keepPlus) {
+    return stringValue.replace(/\s+/g, '');
+  }
+  return stringValue.replace(/[^\d,]/g, '');
+};
+
+const sanitizeSenderId = (value = DEFAULT_SENDER_ID) =>
+  (value || DEFAULT_SENDER_ID).toString().slice(0, 11);
+
+let nigeriaBulkSmsClient = null;
+if (provider === PROVIDERS.NIGERIA_BULKSMS) {
+  const credentials = config.sms?.nigeriaBulkSms || {};
+  if (credentials.username && credentials.password) {
+    const clientOptions = {
+      username: credentials.username,
+      password: credentials.password,
+    };
+    if (credentials.baseUrl) {
+      clientOptions.baseUrl = credentials.baseUrl;
+    }
+    if (Number.isFinite(credentials.timeout)) {
+      clientOptions.timeout = credentials.timeout;
+    }
+    if (Number.isFinite(credentials.retries)) {
+      clientOptions.retries = credentials.retries;
+    }
+    try {
+      nigeriaBulkSmsClient = new NigeriaBulkSMSClient(clientOptions);
+      logger.info('NigeriaBulkSMS client initialised');
+    } catch (error) {
+      logger.error(
+        'Failed to initialise NigeriaBulkSMS client:',
+        error.message
+      );
+    }
+  } else {
+    logger.warn(
+      'NigeriaBulkSMS credentials missing. SMS will be skipped until configured.'
+    );
+  }
+}
+
+const isSendarConfigured =
+  !!config.sms?.sendar_api_url && !!config.sms?.sms_api_key?.length;
+
+const hasSmsConfig =
+  (provider === PROVIDERS.SENDAR && isSendarConfigured) ||
+  (provider === PROVIDERS.NIGERIA_BULKSMS && !!nigeriaBulkSmsClient);
 
 /**
  * Sends SMS to multiple recipients
  * @param {string} senderId
- * @param {Array} messages - Array of message objects: { number, body, sms_type }
+ * @param {Array<{number: string, body: string, sms_type?: string, schedule_at?: string}>} messages
  * @param {string} walletType
  * @returns {Promise<object>}
  */
-async function sendSms(senderId, messages, walletType = '1') {
+async function sendSms(
+  senderId = DEFAULT_SENDER_ID,
+  messages = [],
+  walletType = DEFAULT_WALLET_TYPE
+) {
+  if (!messages.length) {
+    logger.warn('No SMS messages supplied. Nothing to send.');
+    return { skipped: true, reason: 'no_messages' };
+  }
+
+  if (!hasSmsConfig) {
+    logger.warn('SMS service not configured. Skipping send.');
+    return { skipped: true, reason: 'sms_not_configured' };
+  }
+
+  const normalisedSenderId = sanitizeSenderId(senderId);
+
+  if (provider === PROVIDERS.NIGERIA_BULKSMS) {
+    if (!nigeriaBulkSmsClient) {
+      throw new Error('NigeriaBulkSMS client not initialised');
+    }
+
+    const preparedMessages = messages
+      .map((message) => {
+        const rawNumber = message.number || message.numbers || message.mobiles;
+        if (!rawNumber) {
+          logger.warn('Missing recipient number for NigeriaBulkSMS payload.');
+          return null;
+        }
+        const mobiles = sanitizePhoneNumber(rawNumber);
+        if (!mobiles) {
+          logger.warn(
+            `Recipient ${rawNumber} is invalid for NigeriaBulkSMS; skipping.`
+          );
+          return null;
+        }
+        return {
+          mobiles,
+          body: message.body,
+        };
+      })
+      .filter(Boolean);
+
+    if (!preparedMessages.length) {
+      return { skipped: true, reason: 'invalid_recipients' };
+    }
+
+    try {
+      const responses = await Promise.all(
+        preparedMessages.map((message) =>
+          nigeriaBulkSmsClient.sms.send({
+            message: message.body,
+            sender: normalisedSenderId,
+            mobiles: message.mobiles,
+          })
+        )
+      );
+      logger.info('NigeriaBulkSMS dispatched successfully.');
+      return responses.length === 1 ? responses[0] : responses;
+    } catch (error) {
+      const errorPayload = error?.response?.data || error.message;
+      logger.error('NigeriaBulkSMS dispatch failed:', errorPayload);
+      throw error;
+    }
+  }
+
+  const payload = {
+    wallet_type: walletType,
+    sender_id: normalisedSenderId,
+    contact: messages.map((message) => ({
+      sms_type: 'plain',
+      ...message,
+      number: sanitizePhoneNumber(message.number, { keepPlus: true }),
+    })),
+  };
+
+  logger.debug(
+    `Sending SMS via Sendar (${config.sms.sendar_api_url})`,
+    JSON.stringify(payload, null, 2)
+  );
+
   try {
-    // Prepare the payload for sending SMS
-    const payload = {
-      wallet_type: walletType,
-      sender_id: senderId,
-      contact: messages,
-    };
-
-    // Log the payload being sent for debugging
-    logger.debug('Sending SMS with payload:', JSON.stringify(payload, null, 2));
-
-    // Make the API request to send SMS
     const response = await axios.post(
       `${config.sms.sendar_api_url}/sms/send`,
       payload,
@@ -37,22 +168,34 @@ async function sendSms(senderId, messages, walletType = '1') {
       }
     );
 
-    // Log success message after receiving a response
-    logger.info(
-      'SMS request sent successfully. Response:',
-      JSON.stringify(response.data, null, 2)
-    );
-
-    // Return the response from the API
+    logger.info('SMS dispatched successfully.');
     return response.data;
   } catch (error) {
-    // Log error message if sending SMS fails
-    logger.error(
-      'SMS sending failed. Error details:',
-      error.response?.data || error.message
-    );
-    throw error; // Rethrow error to be handled by caller
+    const errorPayload = error.response?.data || error.message;
+    logger.error('SMS dispatch failed:', errorPayload);
+    throw error;
   }
+}
+
+/**
+ * Send OTP SMS to a single recipient
+ * @param {Object} params
+ * @param {string} params.recipient - Phone number in international format
+ * @param {string} params.otp - OTP code
+ * @param {string} [params.senderId]
+ */
+async function sendOtpSms({ recipient, otp, senderId = DEFAULT_SENDER_ID }) {
+  if (!recipient || !otp) {
+    logger.warn('Missing recipient or OTP; skipping SMS send.');
+    return { skipped: true, reason: 'missing_data' };
+  }
+
+  const message = {
+    number: recipient,
+    body: `Your Saby OTP code is ${otp}. It expires in 10 minutes.`,
+  };
+
+  return sendSms(senderId, [message]);
 }
 
 /**
@@ -61,11 +204,17 @@ async function sendSms(senderId, messages, walletType = '1') {
  * @returns {Promise<object>}
  */
 async function getSmsStatus(uid) {
-  try {
-    // Log the UID for debugging
-    logger.debug(`Fetching SMS status for UID: ${uid}`);
+  if (provider !== PROVIDERS.SENDAR) {
+    logger.warn('SMS status retrieval not supported for this provider.');
+    return { skipped: true, reason: 'sms_not_configured' };
+  }
 
-    // Make the API request to get SMS status
+  if (!uid) {
+    logger.warn('Missing SMS UID; skipping status check.');
+    return { skipped: true, reason: 'missing_uid' };
+  }
+
+  try {
     const response = await axios.get(
       `${config.sms.sendar_api_url}/get/sms/${uid}`,
       {
@@ -75,44 +224,18 @@ async function getSmsStatus(uid) {
       }
     );
 
-    // Log the response for debugging
-    logger.info(
-      'SMS status retrieved successfully. Response:',
-      JSON.stringify(response.data, null, 2)
-    );
-
-    // Return the status response
+    logger.debug('SMS status retrieved successfully.', response.data);
     return response.data;
   } catch (error) {
-    // Log error message if fetching SMS status fails
-    logger.error(
-      'Failed to fetch SMS status. Error details:',
-      error.response?.data || error.message
-    );
-    throw error; // Rethrow error to be handled by caller
+    const errorPayload = error.response?.data || error.message;
+    logger.error('Failed to fetch SMS status:', errorPayload);
+    throw error;
   }
 }
 
-// Test sending reminder SMS
-const smsMessage = {
-  number: '2348145045108', // replace with actual phone number
-  body: 'Your account is not yet verified. Please check your email to complete OTP verification.',
-  sms_type: 'plain',
+module.exports = {
+  hasSmsConfig,
+  sendSms,
+  sendOtpSms,
+  getSmsStatus,
 };
-
-// Call sendSms function and log result
-(async () => {
-  try {
-    logger.info('Starting SMS sending process...');
-    const response = await sendSms('Halo', [smsMessage]); // Replace 'Halo' with your actual sender ID
-    logger.info(
-      'SMS sent successfully. Response:',
-      JSON.stringify(response, null, 2)
-    );
-  } catch (smsError) {
-    logger.error(
-      'Failed to send OTP reminder SMS:',
-      smsError.response?.data || smsError.message
-    );
-  }
-})();

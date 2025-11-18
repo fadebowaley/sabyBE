@@ -198,6 +198,20 @@ const deleteCalendar = catchAsync(async (req, res) => {
   });
 });
 
+const patchCalendarDates = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const updatedCalendar = await eventCalendarService.patchDailyCalendarDates(
+    id,
+    req.body || {}
+  );
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    message: 'Calendar dates updated successfully',
+    data: updatedCalendar,
+  });
+});
+
 /**
  * Validate event date against calendar
  * @route POST /v1/event-calendar/validate
@@ -421,6 +435,7 @@ module.exports = {
   createCalendar,
   updateCalendar,
   deleteCalendar,
+  patchCalendarDates,
   validateEventDate,
   // ✨ NEW: Flexible tracking mode endpoints
   previewCalendar,

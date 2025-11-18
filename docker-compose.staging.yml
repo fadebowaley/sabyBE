@@ -9,16 +9,16 @@ services:
       - NODE_ENV=staging
       - PORT=4000
       - MONGODB_URL=mongodb://admin:staging-password@mongodb:27017/halo-staging?authSource=admin
-      - POSTGRES_HOST=20.169.129.160
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=sabyagentic_user
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-WcKoT/m9hFGMaiztjci/reLyMVln9qE0ReAaHc0Cb8E=}
-      - POSTGRES_DB=halograph
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-halograph_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-local_test_password_2025}
+      - POSTGRES_DB=${POSTGRES_DB:-halograph}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-staging-redis-password}
       - JWT_SECRET=${JWT_SECRET:-staging-jwt-secret-change-this}
-      - HALOFE_URL=${HALOFE_URL:-http://40.71.204.212:3000}
+      - HALOFE_URL=${HALOFE_URL:-http://localhost:3000}
       # Staging storage configuration
       - STORAGE_PROVIDER=${STORAGE_PROVIDER:-aws-s3}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -42,6 +42,8 @@ services:
       mongodb:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -73,8 +75,24 @@ services:
       retries: 3
       start_period: 40s
 
-  # Staging PostgreSQL
-
+  postgres:
+    image: postgres:15-alpine
+    container_name: halo-staging-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-halograph}
+      POSTGRES_USER: ${POSTGRES_USER:-halograph_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_test_password_2025}
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+    networks:
+      - halo-staging-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-halograph_user} -d ${POSTGRES_DB:-halograph}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
   # Staging Redis
   redis:
     image: redis:7-alpine
@@ -92,6 +110,7 @@ services:
 
 volumes:
   mongodb_staging_data:
+  postgres_staging_data:
 
 networks:
   halo-staging-network:

@@ -14,7 +14,7 @@ require('dotenv').config();
 
 // PostgreSQL connection configuration
 const dbConfig = {
-  host: process.env.POSTGRES_HOST || '20.169.129.160',
+  host: process.env.POSTGRES_HOST || 'postgres',
   port: process.env.POSTGRES_PORT || 5432,
   user: process.env.POSTGRES_USER || 'sabyagentic_user',
   password:

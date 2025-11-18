@@ -18,7 +18,11 @@ const { v4: uuidv4 } = require('uuid');
 const { postgresPool } = require('../config/postgres');
 const logger = require('../config/logger');
 const ApiError = require('../utils/ApiError');
-const { eventCalendarService, eventComplianceService } = require('.');
+const {
+  eventCalendarService,
+  eventComplianceService,
+  calendarEnforcementService,
+} = require('.');
 
 /**
  * Calculate compliance metrics based on event data
@@ -140,6 +144,7 @@ const submitPERMData = async (payload) => {
     project_name,
     project_category,
     source = 'api',
+    submission_date: submission_date_raw,
   } = payload;
 
   logger.info(`[PERM DEBUG] After destructure, month = "${month}"`);
@@ -214,128 +219,114 @@ const submitPERMData = async (payload) => {
       data,
     });
 
-    // Check if submission already exists
-    const existingQuery = `
-      SELECT * FROM form_submissions
-      WHERE tenant_id = $1
-        AND project_id = $2
-        AND node_id = $3
-        AND month = $4
-        AND perm_enabled = true
-        AND is_locked = false
-      LIMIT 1
+    // Prevent new submissions if compliance tracking is locked for this node/month
+    const lockCheck = await postgresPool.query(
+      `
+        SELECT 1
+        FROM event_compliance_tracking
+        WHERE tenant_id = $1
+          AND project_id = $2
+          AND node_id IS NOT DISTINCT FROM $3
+          AND month = $4
+          AND is_locked = true
+        LIMIT 1
+      `,
+      [tenant_id, project_id, node_id || null, month]
+    );
+
+    if (lockCheck.rows.length > 0) {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        'Submissions for this node/month are locked'
+      );
+    }
+
+    const submission_date =
+      submission_date_raw ||
+      payload.date ||
+      payload.payload?.date ||
+      new Date().toISOString().split('T')[0];
+
+    await calendarEnforcementService.validateSubmissionDate({
+      tenantId,
+      projectId,
+      nodeId,
+      month,
+      submissionDate: submission_date,
+      allowBackdating: calendar?.permSettings?.allowBackdating || false,
+    });
+
+    const compliancePercentage =
+      complianceMetrics.event_compliance_percentage ??
+      complianceMetrics.completeness_percentage ??
+      0;
+    const complianceStatus =
+      complianceMetrics.completeness_status ??
+      complianceMetrics.compliance_status ??
+      'incomplete';
+    const totalRequired = complianceMetrics.total_events_required ?? 0;
+    const totalSubmitted = complianceMetrics.total_events_submitted ?? 0;
+
+    if (!year && month) {
+      const monthDate = new Date(month);
+      if (!Number.isNaN(monthDate.valueOf())) {
+        year = monthDate.getUTCFullYear();
+      }
+    }
+
+    const insertQuery = `
+      INSERT INTO form_submissions (
+        id, tenant_id, project_id, node_id, form_id,
+        project_name, project_category, user_id,
+        data, source, status,
+        month, year, perm_enabled,
+        event_compliance_percentage, completeness_status,
+        total_events_required, total_events_submitted,
+        validation_status, validation_errors, validation_warnings,
+        submitted_by, submitted_at, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+        $12, $13, $14, $15, $16, $17, $18, $19, $20,
+        $21, $22, $23, NOW(), NOW()
+      )
+      RETURNING *
     `;
 
-    const existingResult = await postgresPool.query(existingQuery, [
+    const submissionId = uuidv4();
+
+    const insertResult = await postgresPool.query(insertQuery, [
+      submissionId,
       tenant_id,
       project_id,
       node_id,
+      form_id || project_id,
+      project_name || 'PERM Project',
+      project_category || 'perm',
+      user_id || submitted_by,
+      JSON.stringify(data),
+      source,
+      'completed',
       month,
+      year,
+      true,
+      compliancePercentage,
+      complianceStatus,
+      totalRequired,
+      totalSubmitted,
+      validation.isValid ? 'valid' : 'invalid',
+      JSON.stringify(validation.errors),
+      JSON.stringify(validation.warnings),
+      submitted_by,
+      new Date(submission_date),
     ]);
 
-    let submission;
-    let action;
-    let existed = false;
-
-    if (existingResult.rows.length > 0) {
-      // Update existing submission (merge data)
-      const existingSubmission = existingResult.rows[0];
-      const mergedData = {
-        ...existingSubmission.data,
-        ...data,
-      };
-
-      const updateQuery = `
-        UPDATE form_submissions
-        SET
-          data = $1,
-          event_compliance_percentage = $2,
-          completeness_status = $3,
-          total_events_required = $4,
-          total_events_submitted = $5,
-          validation_status = $6,
-          validation_errors = $7,
-          validation_warnings = $8,
-          updated_at = NOW()
-        WHERE id = $9
-        RETURNING *
-      `;
-
-      const updateResult = await postgresPool.query(updateQuery, [
-        JSON.stringify(mergedData),
-        complianceMetrics.event_compliance_percentage,
-        complianceMetrics.completeness_status,
-        complianceMetrics.total_events_required,
-        complianceMetrics.total_events_submitted,
-        validation.isValid ? 'valid' : 'invalid',
-        JSON.stringify(validation.errors),
-        JSON.stringify(validation.warnings),
-        existingSubmission.id,
-      ]);
-
-      submission = updateResult.rows[0];
-      action = 'updated';
-      existed = true;
-
-      logger.info(`✅ PERM submission updated: ${submission.id}`);
-    } else {
-      // Create new submission
-      const insertQuery = `
-        INSERT INTO form_submissions (
-          id, tenant_id, project_id, node_id, form_id,
-          project_name, project_category, user_id,
-          data, source, status,
-          month, year, perm_enabled,
-          event_compliance_percentage, completeness_status,
-          total_events_required, total_events_submitted,
-          validation_status, validation_errors, validation_warnings,
-          submitted_by, submitted_at, created_at, updated_at
-        ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-          $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW(), NOW()
-        )
-        RETURNING *
-      `;
-
-      const submissionId = uuidv4();
-
-      const insertResult = await postgresPool.query(insertQuery, [
-        submissionId,
-        tenant_id,
-        project_id,
-        node_id,
-        form_id || project_id,
-        project_name || 'PERM Project',
-        project_category || 'perm',
-        user_id || submitted_by,
-        JSON.stringify(data),
-        source,
-        'completed',
-        month,
-        year,
-        true, // perm_enabled
-        complianceMetrics.event_compliance_percentage,
-        complianceMetrics.completeness_status,
-        complianceMetrics.total_events_required,
-        complianceMetrics.total_events_submitted,
-        validation.isValid ? 'valid' : 'invalid',
-        JSON.stringify(validation.errors),
-        JSON.stringify(validation.warnings),
-        submitted_by,
-        new Date(),
-      ]);
-
-      submission = insertResult.rows[0];
-      action = 'created';
-      existed = false;
-
-      logger.info(`✅ PERM submission created: ${submission.id}`);
-    }
+    const submission = insertResult.rows[0];
+    logger.info(`✅ PERM submission created: ${submission.id}`);
 
     return {
       submission,
-      action,
-      existed,
+      action: 'created',
+      existed: false,
       compliance: complianceMetrics,
       validation,
       tracking_mode: calendar?.tracking_mode || 'legacy',

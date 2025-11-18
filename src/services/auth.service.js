@@ -6,6 +6,7 @@ const Token = require('../models/token.model');
 const ApiError = require('../utils/ApiError');
 const { tokenTypes } = require('../config/tokens');
 const { sendOtpEmail } = require('./email.service');
+const smsService = require('./sms.service');
 const { User } = require('../models');
 const logger = require('../config/logger');
 
@@ -154,31 +155,40 @@ const sendUserOtp = async (user) => {
 
   await User.updateOne({ _id: user._id }, update); // No validation issues
 
-  // Skip email sending in development mode or if SMTP is not configured
-  const isProduction = process.env.NODE_ENV === 'production';
-  const smtpConfigured = process.env.SMTP_HOST && process.env.SMTP_USERNAME;
+  const deliveryChannels = [];
 
-  if (!isProduction) {
-    console.log(
-      `📧 Development/Test mode: Skipping email sending. OTP logged above.`
+  try {
+    await sendOtpEmail(user.email, otp);
+    logger.info(`✅ OTP email queued for ${user.email}`);
+    deliveryChannels.push('email');
+  } catch (error) {
+    logger.warn(
+      `⚠️ Failed to send OTP email to ${user.email}: ${error.message}`
     );
-  } else if (!smtpConfigured) {
-    console.log(
-      `📧 SMTP not configured. Skipping email sending. OTP logged above.`
-    );
-  } else {
-    // Production mode with SMTP configured
+  }
+
+  if (smsService.hasSmsConfig && user.phoneNumber) {
     try {
-      await sendOtpEmail(user.email, otp);
-      console.log(`✅ OTP email sent successfully to ${user.email}`);
+      await smsService.sendOtpSms({
+        recipient: user.phoneNumber,
+        otp,
+      });
+      logger.info(`✅ OTP SMS dispatched to ${user.phoneNumber}`);
+      deliveryChannels.push('sms');
     } catch (error) {
-      console.error('⚠️ Failed to send OTP email:', error.message);
-      console.log('📧 OTP email failed, but OTP is still valid:', otp);
-      // Don't throw - user can still use the OTP from logs
+      logger.warn(
+        `⚠️ Failed to send OTP SMS to ${user.phoneNumber}: ${
+          error.response?.data || error.message
+        }`
+      );
     }
   }
 
-  return { email: user.email, otp };
+  if (deliveryChannels.length === 0) {
+    throw new Error('OTP delivery failed via all configured channels');
+  }
+
+  return { email: user.email, otp, channels: deliveryChannels };
 };
 
 /**
@@ -216,6 +226,17 @@ const verifyOtp = async (email, otp) => {
   return { success: true, user };
 };
 
+const updateUserPassword = async (userId, newPassword) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  user.password = newPassword;
+  await user.save({ validateBeforeSave: false });
+  return user;
+};
+
 module.exports = {
   loginUserWithEmailAndPassword,
   logout,
@@ -224,4 +245,5 @@ module.exports = {
   verifyEmail,
   verifyOtp,
   sendUserOtp,
+  updateUserPassword,
 };

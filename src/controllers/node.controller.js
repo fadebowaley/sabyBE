@@ -90,6 +90,33 @@ const deleteNodeById = catchAsync(async (req, res) => {
   res.status(httpStatus.NO_CONTENT).send();
 });
 
+const deleteNodeHardById = catchAsync(async (req, res) => {
+  console.log(
+    '[NODE CONTROLLER - HARD DELETE] Node ID:',
+    req.params.nodeId,
+    'Tenant:',
+    req.user.tenantId
+  );
+  await nodeService.deleteNodeById(req.params.nodeId, true, {
+    includeDeleted: true,
+  });
+  res.status(httpStatus.NO_CONTENT).send();
+});
+
+const restoreNodeById = catchAsync(async (req, res) => {
+  console.log(
+    '[NODE CONTROLLER - RESTORE] Node ID:',
+    req.params.nodeId,
+    'Tenant:',
+    req.user.tenantId
+  );
+  const restoredNode = await nodeService.restoreNodeById(
+    req.params.nodeId,
+    req.body || {}
+  );
+  res.send(restoredNode);
+});
+
 // Query nodes with filters and pagination
 const queryNodes = catchAsync(async (req, res) => {
   console.log(
@@ -101,6 +128,14 @@ const queryNodes = catchAsync(async (req, res) => {
   // SECURITY: Always filter by authenticated user's tenantId
   const filter = pick(req.query, ['type', 'parent']);
   filter.tenantId = req.user.tenantId;
+
+  const status = req.query.status || 'active';
+  if (status === 'active') {
+    filter.deletedAt = null;
+  } else if (status === 'archived') {
+    filter.deletedAt = { $ne: null };
+  }
+
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
   options.populate = 'level,structure,users.roles';
   console.log('[NODE CONTROLLER - QUERY] Filter with tenantId:', filter);
@@ -183,6 +218,8 @@ module.exports = {
   getNodeByName,
   updateNodeById,
   deleteNodeById,
+  deleteNodeHardById,
+  restoreNodeById,
   queryNodes,
   getNodesByType,
   getParentNode,

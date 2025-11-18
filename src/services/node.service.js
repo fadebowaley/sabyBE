@@ -1,6 +1,8 @@
 const httpStatus = require('http-status');
-const { Nodes } = require('../models');
+const { Nodes, Structures } = require('../models');
 const ApiError = require('../utils/ApiError');
+
+const isObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(value);
 
 /**
  * Create a new node
@@ -27,9 +29,13 @@ const getNodeById = async (id, options = {}) => {
   const { includeDeleted = false, populate = 'level structure users' } =
     options;
 
-  const query = includeDeleted
-    ? Nodes.findById(id)
-    : Nodes.findOne({ _id: id, deletedAt: null });
+  const identifierFilter = isObjectId(id) ? { _id: id } : { nodeId: id };
+
+  const baseFilter = includeDeleted
+    ? identifierFilter
+    : { ...identifierFilter, deletedAt: null };
+
+  const query = Nodes.findOne(baseFilter);
 
   if (populate) {
     query.populate(populate);
@@ -62,7 +68,7 @@ const getNodeByName = async (name) => {
  * @returns {Promise<Node>}
  */
 const updateNodeById = async (nodeId, updateBody) => {
-  const node = await getNodeById(nodeId);
+  let node = await getNodeById(nodeId);
 
   // Separate node fields from profile fields
   const nodeFields = [
@@ -92,7 +98,18 @@ const updateNodeById = async (nodeId, updateBody) => {
   const nodeUpdate = {};
   const profileUpdate = {};
 
+  let newParentId = null;
+  const parentProvided = Object.prototype.hasOwnProperty.call(
+    updateBody,
+    'parent'
+  );
+
   Object.keys(updateBody).forEach((key) => {
+    if (key === 'parent') {
+      newParentId = updateBody[key] || null;
+      return;
+    }
+
     if (nodeFields.includes(key)) {
       nodeUpdate[key] = updateBody[key];
     } else if (profileFields.includes(key)) {
@@ -109,13 +126,44 @@ const updateNodeById = async (nodeId, updateBody) => {
     Object.keys(profileUpdate)
   );
 
+  // If level is being updated, we need to find a structure that matches the new level
+  if (nodeUpdate.level && !nodeUpdate.structure) {
+    const newLevelId = nodeUpdate.level;
+    // Find a structure that belongs to this level
+    const matchingStructure = await Structures.findOne({
+      level: newLevelId,
+      tenantId: node.tenantId,
+      isActive: true,
+    });
+
+    if (matchingStructure) {
+      nodeUpdate.structure = matchingStructure._id;
+      console.log(
+        `🔄 [NodeService.updateNodeById] Auto-updated structure to match new level:`,
+        matchingStructure._id
+      );
+    } else {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        `No active structure found for the selected level. Please select a structure that matches the level.`
+      );
+    }
+  }
+
   // Only update fields that are present in nodeUpdate
   Object.keys(nodeUpdate).forEach((key) => {
     node[key] = nodeUpdate[key];
   });
 
-  await node.save();
-  console.log(`✅ [NodeService.updateNodeById] Node updated successfully`);
+  if (Object.keys(nodeUpdate).length > 0) {
+    await node.save();
+    console.log(`✅ [NodeService.updateNodeById] Node updated successfully`);
+  }
+
+  if (parentProvided) {
+    await Nodes.updateNodeParent(node._id, newParentId);
+    node = await getNodeById(node._id);
+  }
 
   // Update profile if profile fields exist
   if (Object.keys(profileUpdate).length > 0) {
@@ -140,8 +188,9 @@ const updateNodeById = async (nodeId, updateBody) => {
  * @param {boolean} hardDelete - If true, permanently delete the node
  * @returns {Promise<Node>}
  */
-const deleteNodeById = async (nodeId, hardDelete = false) => {
-  const node = await getNodeById(nodeId);
+const deleteNodeById = async (nodeId, hardDelete = false, options = {}) => {
+  const { includeDeleted = false } = options;
+  const node = await getNodeById(nodeId, { includeDeleted });
 
   if (hardDelete) {
     await node.remove();
@@ -153,6 +202,48 @@ const deleteNodeById = async (nodeId, hardDelete = false) => {
   }
 
   return node;
+};
+
+const restoreNodeById = async (nodeId, restoreBody = {}) => {
+  const node = await getNodeById(nodeId, { includeDeleted: true });
+  node.deletedAt = null;
+  node.isActive = true;
+
+  // If level is being updated, we need to find a structure that matches the new level
+  if (restoreBody.level) {
+    const newLevelId = restoreBody.level;
+    // Find a structure that belongs to this level
+    const matchingStructure = await Structures.findOne({
+      level: newLevelId,
+      tenantId: node.tenantId,
+      isActive: true,
+    });
+
+    if (matchingStructure) {
+      node.level = newLevelId;
+      node.structure = matchingStructure._id;
+      console.log(
+        `🔄 [NodeService.restoreNodeById] Auto-updated structure to match new level:`,
+        matchingStructure._id
+      );
+    } else {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        `No active structure found for the selected level. Please select a structure that matches the level.`
+      );
+    }
+  }
+
+  await node.save();
+
+  if (Object.prototype.hasOwnProperty.call(restoreBody, 'parent')) {
+    await Nodes.updateNodeParent(
+      node._id,
+      restoreBody.parent ? restoreBody.parent : null
+    );
+  }
+
+  return getNodeById(node._id);
 };
 
 /**
@@ -309,6 +400,7 @@ module.exports = {
   getNodeByName,
   updateNodeById,
   deleteNodeById,
+  restoreNodeById,
   queryNodes,
   getNodesByType,
   getParentNode,

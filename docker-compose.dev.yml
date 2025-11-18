@@ -12,11 +12,11 @@ services:
       - DEBUG=*
       - PORT=4000
       - MONGODB_URL=mongodb://mongodb:27017/halo-dev
-      # Remote PostgreSQL configuration
-      - POSTGRES_HOST=20.169.129.160
+      # Local PostgreSQL configuration (via docker-compose service)
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
       - POSTGRES_PORT=5432
-      - POSTGRES_USER=sabyagentic_user
-      - POSTGRES_PASSWORD=WcKoT/m9hFGMaiztjci/reLyMVln9qE0ReAaHc0Cb8E=
+      - POSTGRES_USER=${POSTGRES_USER:-halograph_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-local_test_password_2025}
       - POSTGRES_DB=halograph
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -42,6 +42,8 @@ services:
         condition: service_healthy
       mailhog:
         condition: service_started
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/"]
       interval: 30s
@@ -70,7 +72,23 @@ services:
       retries: 3
       start_period: 40s
 
-  # NOTE: PostgreSQL service removed - now using remote PostgreSQL on VM
+  postgres:
+    image: postgres:15-alpine
+    container_name: halo-dev-postgres
+    environment:
+      POSTGRES_DB: halograph
+      POSTGRES_USER: halograph_user
+      POSTGRES_PASSWORD: local_test_password_2025
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - halo-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U halograph_user -d halograph"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   # Development Redis
   redis:
@@ -99,7 +117,7 @@ services:
 
 volumes:
   mongodb_dev_data:
-  # Removed postgres_dev_data volume - using remote PostgreSQL
+  postgres_dev_data:
 
 networks:
   halo-dev-network:

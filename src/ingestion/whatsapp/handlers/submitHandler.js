@@ -1,475 +1,319 @@
-const { submissionService, projectFormService } = require('../../../services');
-const whatsappValidationService = require('../services/whatsappValidation.service');
 const whatsappNotificationService = require('../services/whatsappNotification.service');
 const logger = require('../../../config/logger');
+const formHandler = require('./formHandler');
+const authHandler = require('./authHandler');
+const {
+  queueBatchedSubmission,
+} = require('../services/batchedSubmission.service');
 
-/**
- * Handle form submission
- * @param {string} phoneNumber - WhatsApp phone number
- * @param {string} userAction - User's action text
- * @param {Object} session - User session object
- */
-exports.handleSubmit = async (phoneNumber, userAction, session) => {
-  try {
-    console.log(`🔍 [DEBUG] Submission action started for ${phoneNumber}`);
-    console.log(`🔍 [DEBUG] User action: "${userAction}"`);
-    console.log(`🔍 [DEBUG] Session data:`, {
-      projectId: session.projectId,
-      formId: session.formId,
-      tenantId: session.tenantId,
-      userId: session.userId,
-      status: session.status,
-      currentStep: session.currentStep,
-      answersCount: session.answers ? session.answers.size : 0,
-    });
+const CONFIRM_KEYWORDS = new Set([
+  'confirm',
+  '✅ confirm',
+  'submit',
+  '✅ submit',
+  'yes',
+  'approve',
+  'proceed',
+]);
 
-    logger.info(
-      `📤 Processing submission action for ${phoneNumber}: "${userAction}"`
-    );
+const REVIEW_KEYWORDS = new Set(['review', 'summary', '📋 review answers']);
 
-    // Handle different submission actions
-    switch (userAction) {
-      case '✅ Submit Form':
-        console.log(`🔍 [DEBUG] Processing form submission`);
-        await processFormSubmission(phoneNumber, session);
-        break;
+const CANCEL_KEYWORDS = new Set([
+  'cancel',
+  '❌ cancel',
+  'stop',
+  'abort',
+  'quit',
+]);
 
-      case '📋 Review Answers':
-        console.log(`🔍 [DEBUG] Reviewing answers`);
-        await reviewAnswers(phoneNumber, session);
-        break;
+const START_OVER_KEYWORDS = new Set(['start over', '🔄 start over', 'restart']);
 
-      case '📋 Submit Another':
-        console.log(`🔍 [DEBUG] Starting new submission`);
-        await startNewSubmission(phoneNumber, session);
-        break;
+const SUBMIT_ANOTHER_KEYWORDS = new Set([
+  '📋 submit another',
+  'submit another',
+  'new form',
+]);
 
-      case '🔄 Start Over':
-        console.log(`🔍 [DEBUG] Starting over`);
-        await startOver(phoneNumber, session);
-        break;
+const MAIN_MENU_KEYWORDS = new Set(['🏠 main menu', 'main menu', 'menu']);
 
-      case '❌ Cancel':
-        console.log(`🔍 [DEBUG] Cancelling submission`);
-        await cancelSubmission(phoneNumber, session);
-        break;
+const EDIT_BUTTON_TEXT = '✏️ Edit Answers';
+const CONFIRM_BUTTON_TEXT = '✅ Confirm';
+const STATUS_KEYWORDS = new Set(['status', 'check status', '📊 check status']);
 
-      default:
-        console.log(`🔍 [DEBUG] Invalid action: "${userAction}"`);
-        await whatsappNotificationService.sendErrorMessage(
-          phoneNumber,
-          'Invalid action. Please choose from the available options.'
-        );
-        break;
-    }
-  } catch (error) {
-    console.log(`🔍 [DEBUG] ERROR in handleSubmit:`, error);
-    console.log(`🔍 [DEBUG] Error stack:`, error.stack);
-    logger.error(
-      `❌ Error processing submission action for ${phoneNumber}:`,
-      error.message
-    );
-    await whatsappNotificationService.sendErrorMessage(
-      phoneNumber,
-      'Failed to process submission. Please try again.'
-    );
+const parseIndexCommand = (input, keyword) => {
+  const regex = new RegExp(`^${keyword}\\s+(\\d+)`, 'i');
+  const match = input.trim().match(regex);
+  if (!match) {
+    return null;
   }
+  const value = parseInt(match[1], 10);
+  return Number.isNaN(value) ? null : value;
 };
 
-/**
- * Process the actual form submission
- * @param {string} phoneNumber - WhatsApp phone number
- * @param {Object} session - User session object
- */
-async function processFormSubmission(phoneNumber, session) {
+const normalizeInput = (text) => text.trim().toLowerCase();
+
+const handleConfirmSubmission = async (phoneNumber, session) => {
   try {
-    console.log(`🔍 [DEBUG] processFormSubmission started for ${phoneNumber}`);
-    console.log(`🔍 [DEBUG] Session projectId: ${session.projectId}`);
+    const queueResult = await queueBatchedSubmission(phoneNumber, session);
 
-    logger.info(`📤 Processing form submission for ${phoneNumber}`);
-
-    // Get project form details
-    console.log(
-      `🔍 [DEBUG] Getting project form by projectId: ${session.projectId}`
-    );
-    const projectForm = await projectFormService.getProjectFormByProjectId(
-      session.projectId
-    );
-    console.log(
-      `🔍 [DEBUG] Project form found:`,
-      projectForm
-        ? {
-            projectId: projectForm.projectId,
-            projectName:
-              projectForm.configuration &&
-              projectForm.configuration.projectName,
-            elementsCount: projectForm.elements
-              ? projectForm.elements.length
-              : 0,
-          }
-        : 'NOT FOUND'
-    );
-
-    if (!projectForm) {
-      console.log(
-        `🔍 [DEBUG] Project form not found for projectId: ${session.projectId}`
-      );
-      await whatsappNotificationService.sendErrorMessage(
+    if (!queueResult?.jobId) {
+      await whatsappNotificationService.sendSubmissionFailure(
         phoneNumber,
-        'Project form not found.'
+        'Unable to queue submission. Please try again shortly.',
+        queueResult?.projectForm
       );
       return;
     }
 
-    // Prepare submission data
-    console.log(`🔍 [DEBUG] Preparing submission data`);
-    const submissionData = {
-      tenantId: session.tenantId,
-      projectId: session.projectId,
-      project_name: projectForm.configuration?.projectName || session.projectId,
-      project_category: projectForm.configuration?.projectCategory || 'General',
-      formId: session.formId,
-      nodeId: `whatsapp-node-${Date.now()}`,
-      userId: session.userId,
-      source: 'whatsapp',
-      status: 'submitted',
-      metadata: {
-        phoneNumber: session.metadata.phoneNumber,
-        sessionId: session._id,
-        submittedAt: new Date(),
-        validation: {
-          validated: true,
-          senderId: session.userId,
-          projectFormId: session.formId,
-          validationErrors: [],
-          validationWarnings: [],
-          verifiedPhone: session.metadata.phoneNumber,
-        },
-      },
-      payload: {
-        text: 'WhatsApp form submission',
-        html: 'WhatsApp form submission',
-        structured: convertAnswersToStructured(session.answers, projectForm),
-        attachments: [], // File attachments would be handled separately
-      },
-    };
+    session.lastSubmissionJobId = queueResult.jobId;
+    await session.markSubmitted();
 
-    console.log(`🔍 [DEBUG] Submission data prepared:`, {
-      tenantId: submissionData.tenantId,
-      projectId: submissionData.projectId,
-      project_name: submissionData.project_name,
-      userId: submissionData.userId,
-      source: submissionData.source,
-      answersCount: Object.keys(submissionData.payload.structured).length,
+    await whatsappNotificationService.sendSubmissionSuccess(
+      phoneNumber,
+      queueResult.jobId,
+      queueResult.projectForm
+    );
+
+    await authHandler.requirePasscode(phoneNumber, session, {
+      reason: 'post_submission',
     });
 
-    // Submit the form
-    console.log(`🔍 [DEBUG] Submitting form to submission service`);
-    const submissionResult = await submissionService.createSubmission(
-      submissionData
+    logger.info(
+      `✅ Batched submission queued for ${phoneNumber} (Job ID: ${queueResult.jobId})`
     );
-    console.log(`🔍 [DEBUG] Submission result:`, submissionResult);
-
-    if (submissionResult.success) {
-      // Mark session as submitted
-      session.status = 'submitted';
-      session.submittedAt = new Date();
-      await session.save();
-
-      // Send success notification
-      await whatsappNotificationService.sendSubmissionSuccess(
-        phoneNumber,
-        submissionResult.jobId,
-        projectForm
-      );
-
-      logger.info(
-        `✅ Form submitted successfully for ${phoneNumber} (Job ID: ${submissionResult.jobId})`
-      );
-    } else {
-      await whatsappNotificationService.sendSubmissionFailure(
-        phoneNumber,
-        submissionResult.error
-      );
-      logger.error(
-        `❌ Form submission failed for ${phoneNumber}: ${submissionResult.error}`
-      );
-    }
   } catch (error) {
-    console.log(`🔍 [DEBUG] ERROR in processFormSubmission:`, error);
-    console.log(`🔍 [DEBUG] Error stack:`, error.stack);
     logger.error(
-      `❌ Error processing form submission for ${phoneNumber}:`,
+      `❌ Failed to queue batched submission for ${phoneNumber}:`,
       error.message
     );
     await whatsappNotificationService.sendSubmissionFailure(
       phoneNumber,
-      'Failed to submit form. Please try again.'
+      'We could not submit your form right now. Please try again later.'
     );
   }
-}
+};
 
-/**
- * Convert answers from session format to structured format
- * @param {Map} answers - Session answers
- * @param {Object} projectForm - Project form object
- * @returns {Object} Structured answers
- */
-function convertAnswersToStructured(answers, projectForm) {
-  const structuredAnswers = {};
-  const formElements = projectForm.elements || [];
+const handleCancelSubmission = async (phoneNumber, session) => {
+  await formHandler.cancelSubmissionFlow(phoneNumber, session);
+};
 
-  for (let i = 0; i < formElements.length; i++) {
-    const element = formElements[i];
-    const answerKey = i.toString();
-    const answer = answers.get(answerKey);
+const handleReviewRequest = async (phoneNumber, session) => {
+  await formHandler.presentBatchSummaryForSession(phoneNumber, session);
+};
 
-    if (answer !== undefined) {
-      const fieldName =
-        element.properties && element.properties.label
-          ? element.properties.label
-          : element.id;
-      const normalizedFieldName = normalizeFieldName(fieldName);
-      structuredAnswers[normalizedFieldName] = {
-        value: answer,
-        type: element.type,
-        label: fieldName,
-        step: i,
-        elementId: element.id,
-      };
-    }
+const handleEditButton = async (phoneNumber) => {
+  await whatsappNotificationService.sendBatchEditInstructions(phoneNumber);
+};
+
+const handleEditCommand = async (phoneNumber, session, command) => {
+  const editIndex =
+    parseIndexCommand(command, 'edit') || parseIndexCommand(command, 'change');
+
+  if (!editIndex) {
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'Please specify the question number to edit. Example: "edit 2".'
+    );
+    return;
   }
 
-  return structuredAnswers;
-}
+  await formHandler.startEditStep(phoneNumber, session, editIndex);
+};
 
-/**
- * Normalize field name for consistency
- * @param {string} fieldName - Original field name
- * @returns {string} Normalized field name
- */
-function normalizeFieldName(fieldName) {
-  return fieldName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .trim();
-}
+const handleDeleteCommand = async (phoneNumber, session, command) => {
+  const deleteIndex =
+    parseIndexCommand(command, 'delete') ||
+    parseIndexCommand(command, 'remove') ||
+    parseIndexCommand(command, 'clear');
 
-/**
- * Review answers before submission
- * @param {string} phoneNumber - WhatsApp phone number
- * @param {Object} session - User session object
- */
-async function reviewAnswers(phoneNumber, session) {
-  try {
-    logger.info(`📋 Reviewing answers for ${phoneNumber}`);
-
-    const projectForm = await projectFormService.getProjectFormByProjectId(
-      session.projectId
+  if (!deleteIndex) {
+    await whatsappNotificationService.sendErrorMessage(
+      phoneNumber,
+      'Please specify the question number to delete. Example: "delete 2".'
     );
-    if (!projectForm) {
-      await whatsappNotificationService.sendErrorMessage(
-        phoneNumber,
-        'Project form not found.'
-      );
-      return;
-    }
+    return;
+  }
 
-    const elements = projectForm.elements || [];
-    let reviewMessage = `📋 *Form Review*\n\n*Project:* ${
-      projectForm.configuration?.projectName || session.projectId
-    }\n\n`;
+  await formHandler.deleteAnswer(phoneNumber, session, deleteIndex);
+};
 
-    for (let i = 0; i < elements.length; i++) {
-      const element = elements[i];
-      const answer = session.answers.get(i.toString());
-      const questionLabel = element.properties?.label || `Question ${i + 1}`;
+const handleStartOver = async (phoneNumber, session) => {
+  await formHandler.restartForm(phoneNumber, session);
+};
 
-      if (answer !== undefined) {
-        let answerText = '';
-        if (typeof answer === 'object' && answer.filename) {
-          answerText = `📎 File: ${answer.filename}`;
-        } else {
-          answerText = String(answer);
+const handleSubmitAnother = async (phoneNumber, session) => {
+  await formHandler.startNewSubmissionFlow(phoneNumber, session);
+};
+
+const handleMainMenu = async (phoneNumber, session) => {
+  session.metadata = session.metadata || {};
+  if (
+    session.metadata.menuContext !== 'main' ||
+    !session.metadata.awaitingMenuSelection
+  ) {
+    session.metadata.menuContext = 'main';
+    session.metadata.activeSubmenu = null;
+    session.metadata.awaitingMenuSelection = true;
+    session.markModified('metadata');
+    await session.save();
+  }
+  const userName = session.metadata?.userName || 'User';
+  await whatsappNotificationService.sendMainMenu(phoneNumber, userName);
+};
+
+exports.handleBatchCommand = async (phoneNumber, input, session) => {
+  const trimmed = input.trim();
+  const normalized = normalizeInput(trimmed);
+
+  if (!trimmed) {
+    await formHandler.presentBatchSummaryForSession(phoneNumber, session);
+    return;
+  }
+
+  const numericMatch = trimmed.match(/^(\d+)(?:\s*[\s.\-:,]\s*(\d+))?$/);
+  if (numericMatch) {
+    const code = numericMatch[1];
+    const target = numericMatch[2];
+    switch (code) {
+      case '1':
+        await handleConfirmSubmission(phoneNumber, session);
+        return;
+      case '2':
+        if (!target) {
+          await whatsappNotificationService.sendErrorMessage(
+            phoneNumber,
+            'Use "2 {number}" to edit a question. Example: "2 3".'
+          );
+          return;
         }
-        reviewMessage += `*${questionLabel}:*\n${answerText}\n\n`;
-      } else {
-        reviewMessage += `*${questionLabel}:*\n❌ Not answered\n\n`;
+        await handleEditCommand(phoneNumber, session, `edit ${target}`);
+        return;
+      case '3':
+        if (!target) {
+          await whatsappNotificationService.sendErrorMessage(
+            phoneNumber,
+            'Use "3 {number}" to delete a question. Example: "3 2".'
+          );
+          return;
+        }
+        await handleDeleteCommand(phoneNumber, session, `delete ${target}`);
+        return;
+      case '4':
+        await handleReviewRequest(phoneNumber, session);
+        return;
+      case '5':
+        await handleCancelSubmission(phoneNumber, session);
+        return;
+      default:
+        break;
+    }
+  }
+
+  if (trimmed === CONFIRM_BUTTON_TEXT || CONFIRM_KEYWORDS.has(normalized)) {
+    await handleConfirmSubmission(phoneNumber, session);
+    return;
+  }
+
+  if (trimmed === EDIT_BUTTON_TEXT) {
+    await handleEditButton(phoneNumber);
+    return;
+  }
+
+  if (REVIEW_KEYWORDS.has(normalized)) {
+    await handleReviewRequest(phoneNumber, session);
+    return;
+  }
+
+  if (CANCEL_KEYWORDS.has(normalized)) {
+    await handleCancelSubmission(phoneNumber, session);
+    return;
+  }
+
+  if (START_OVER_KEYWORDS.has(normalized)) {
+    await handleStartOver(phoneNumber, session);
+    return;
+  }
+
+  if (SUBMIT_ANOTHER_KEYWORDS.has(normalized)) {
+    await handleSubmitAnother(phoneNumber, session);
+    return;
+  }
+
+  if (MAIN_MENU_KEYWORDS.has(normalized)) {
+    await handleMainMenu(phoneNumber, session);
+    return;
+  }
+
+  if (/^(edit|change)\s+\d+/i.test(trimmed)) {
+    await handleEditCommand(phoneNumber, session, trimmed);
+    return;
+  }
+
+  if (/^(delete|remove|clear)\s+\d+/i.test(trimmed)) {
+    await handleDeleteCommand(phoneNumber, session, trimmed);
+    return;
+  }
+
+  await whatsappNotificationService.sendErrorMessage(
+    phoneNumber,
+    'Use 1 to confirm, 2 {#} to edit, 3 {#} to delete, 4 to review, or 5 to cancel.'
+  );
+};
+
+exports.handlePostSubmissionAction = async (phoneNumber, input, session) => {
+  const trimmed = input.trim();
+  const numericMatch = trimmed.match(/^(\d+)\s*$/);
+  if (numericMatch) {
+    switch (numericMatch[1]) {
+      case '1':
+        await handleSubmitAnother(phoneNumber, session);
+        return;
+      case '2':
+        await handleMainMenu(phoneNumber, session);
+        return;
+      case '3': {
+        const userName = session.metadata?.userName || 'User';
+        await whatsappNotificationService.sendStatusMessage(
+          phoneNumber,
+          userName
+        );
+        return;
       }
+      default:
+        break;
     }
-
-    reviewMessage += `*Total Questions:* ${elements.length}\n*Answered:* ${
-      session.answers.size
-    }\n*Missing:* ${elements.length - session.answers.size}`;
-
-    await whatsappNotificationService.sendMessageWithClearKeyboard(
-      phoneNumber,
-      reviewMessage
-    );
-
-    // Send submission options
-    await whatsappNotificationService.sendFormCompletion(
-      phoneNumber,
-      projectForm
-    );
-  } catch (error) {
-    logger.error(
-      `❌ Error reviewing answers for ${phoneNumber}:`,
-      error.message
-    );
-    await whatsappNotificationService.sendErrorMessage(
-      phoneNumber,
-      'Failed to review answers. Please try again.'
-    );
   }
-}
 
-/**
- * Start over with the same project
- * @param {string} phoneNumber - WhatsApp phone number
- * @param {Object} session - User session object
- */
-async function startOver(phoneNumber, session) {
-  try {
-    logger.info(`🔄 Starting over for ${phoneNumber}`);
+  const normalized = normalizeInput(input);
 
-    // Reset session but keep project selection
-    session.status = 'filling_form';
-    session.currentStep = 0;
-    session.answers.clear();
-    await session.save();
-
-    // Start form filling again
-    const projectForm = await projectFormService.getProjectFormByProjectId(
-      session.projectId
-    );
-    if (
-      projectForm &&
-      projectForm.elements &&
-      projectForm.elements.length > 0
-    ) {
-      const firstQuestion = projectForm.elements[0];
-      await whatsappNotificationService.sendFormQuestion(
-        phoneNumber,
-        firstQuestion,
-        0,
-        projectForm.elements.length
-      );
-    } else {
-      await whatsappNotificationService.sendErrorMessage(
-        phoneNumber,
-        'No form questions available for this project.'
-      );
-    }
-  } catch (error) {
-    logger.error(`❌ Error starting over for ${phoneNumber}:`, error.message);
-    await whatsappNotificationService.sendErrorMessage(
-      phoneNumber,
-      'Failed to start over. Please try again.'
-    );
+  if (SUBMIT_ANOTHER_KEYWORDS.has(normalized)) {
+    await handleSubmitAnother(phoneNumber, session);
+    return;
   }
-}
 
-/**
- * Start new submission with project selection
- * @param {string} phoneNumber - WhatsApp phone number
- * @param {Object} session - User session object
- */
-async function startNewSubmission(phoneNumber, session) {
-  try {
-    logger.info(`📋 Starting new submission for ${phoneNumber}`);
-
-    // Reset session completely
-    session.status = 'selecting_project';
-    session.currentStep = 0;
-    session.answers.clear();
-    session.projectId = null;
-    session.formId = null;
-    await session.save();
-
-    // Get available projects and show selection
-    const projectFormService = require('../../../services/projectForm.service');
-    const availableProjects = await projectFormService.getProjectFormsByTenant(
-      session.tenantId,
-      {
-        status: 'active',
-        'metadata.deploymentStatus': 'published',
-      }
-    );
-
-    if (
-      availableProjects &&
-      availableProjects.results &&
-      availableProjects.results.length > 0
-    ) {
-      await whatsappNotificationService.sendProjectSelection(
-        phoneNumber,
-        availableProjects.results
-      );
-    } else {
-      await whatsappNotificationService.sendErrorMessage(
-        phoneNumber,
-        'No projects available for your account.'
-      );
-    }
-  } catch (error) {
-    logger.error(
-      `❌ Error starting new submission for ${phoneNumber}:`,
-      error.message
-    );
-    await whatsappNotificationService.sendErrorMessage(
-      phoneNumber,
-      'Failed to start new submission. Please try again.'
-    );
+  if (MAIN_MENU_KEYWORDS.has(normalized)) {
+    await handleMainMenu(phoneNumber, session);
+    return;
   }
-}
 
-/**
- * Cancel submission and return to main menu
- * @param {string} phoneNumber - WhatsApp phone number
- * @param {Object} session - User session object
- */
-async function cancelSubmission(phoneNumber, session) {
-  try {
-    logger.info(`❌ Cancelling submission for ${phoneNumber}`);
-
-    // Reset session to authentication state
-    session.status = 'authenticating';
-    session.currentStep = 0;
-    session.answers.clear();
-    session.projectId = null;
-    session.formId = null;
-    await session.save();
-
-    await whatsappNotificationService.sendMessageWithClearKeyboard(
-      phoneNumber,
-      'Submission cancelled. You can start a new form submission anytime.'
-    );
-
-    // Send main menu
-    await whatsappNotificationService.sendMainMenu(phoneNumber);
-  } catch (error) {
-    logger.error(
-      `❌ Error cancelling submission for ${phoneNumber}:`,
-      error.message
-    );
-    await whatsappNotificationService.sendErrorMessage(
-      phoneNumber,
-      'Failed to cancel submission. Please try again.'
-    );
+  if (START_OVER_KEYWORDS.has(normalized)) {
+    await handleStartOver(phoneNumber, session);
+    return;
   }
-}
 
-/**
- * Format file size for display
- * @param {number} bytes - File size in bytes
- * @returns {string} Formatted file size
- */
-function formatFileSize(bytes) {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
-}
+  if (STATUS_KEYWORDS.has(normalized)) {
+    const userName = session.metadata?.userName || 'User';
+    await whatsappNotificationService.sendStatusMessage(phoneNumber, userName);
+    return;
+  }
+
+  if (CANCEL_KEYWORDS.has(normalized)) {
+    await handleCancelSubmission(phoneNumber, session);
+    return;
+  }
+
+  await whatsappNotificationService.sendErrorMessage(
+    phoneNumber,
+    'Reply with 1 for another form, 2 for the menu, or 3 to view your status.'
+  );
+};

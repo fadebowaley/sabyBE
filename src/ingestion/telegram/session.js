@@ -1,10 +1,26 @@
 const TelegramSession = require('../../models/telegramSession.model');
 const logger = require('../../config/logger');
 
-/**
- * Enhanced Session Management for Telegram Bot
- * Integrates with database models for persistent session storage
- */
+const SESSION_TTL_MINUTES = 15;
+
+const hasSessionExpired = (session, now = new Date()) => {
+  if (!session) {
+    return false;
+  }
+  const lastActivity =
+    session.lastActivity ||
+    session.metadata?.lastActivity ||
+    session.updatedAt ||
+    session.createdAt;
+  if (!lastActivity) {
+    return false;
+  }
+  const last = new Date(lastActivity).getTime();
+  if (Number.isNaN(last)) {
+    return false;
+  }
+  return now.getTime() - last > SESSION_TTL_MINUTES * 60 * 1000;
+};
 
 class SessionManager {
   /**
@@ -14,7 +30,16 @@ class SessionManager {
    */
   async getOrCreate(chatId) {
     try {
+      const now = new Date();
       let session = await TelegramSession.findByChatId(chatId);
+
+      if (session && hasSessionExpired(session, now)) {
+        logger.info(
+          `⏱️ Telegram session expired for ${chatId} after ${SESSION_TTL_MINUTES} minutes of inactivity`
+        );
+        await session.deleteOne();
+        session = null;
+      }
 
       if (!session) {
         // Create new session for authentication phase
@@ -22,9 +47,10 @@ class SessionManager {
           chatId,
           status: 'authenticating',
           metadata: {
-            sessionStartTime: new Date(),
-            lastActivity: new Date(),
+            sessionStartTime: now,
+            lastActivity: now,
           },
+          lastActivity: now,
           // These fields will be populated during authentication
           userId: null,
           tenantId: null,
@@ -35,7 +61,7 @@ class SessionManager {
         logger.info(`📝 Created new authentication session for chat ${chatId}`);
       } else {
         // Update activity
-        await session.updateActivity();
+        await session.updateActivity(now);
       }
 
       return session;
@@ -158,9 +184,9 @@ class SessionManager {
    * @param {number} ttlHours - Time to live in hours
    * @returns {Promise<number>} Number of sessions cleaned up
    */
-  async cleanupExpired(ttlHours = 24) {
+  async cleanupExpired(ttlMinutes = SESSION_TTL_MINUTES) {
     try {
-      const result = await TelegramSession.cleanupExpiredSessions(ttlHours);
+      const result = await TelegramSession.cleanupExpiredSessions(ttlMinutes);
       logger.info(`🧹 Cleaned up ${result.deletedCount} expired sessions`);
       return result.deletedCount;
     } catch (error) {
@@ -186,8 +212,8 @@ class SessionManager {
 
       const totalSessions = await TelegramSession.countDocuments();
       const activeSessions = await TelegramSession.countDocuments({
-        'metadata.lastActivity': {
-          $gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        lastActivity: {
+          $gte: new Date(Date.now() - SESSION_TTL_MINUTES * 60 * 1000),
         },
       });
 

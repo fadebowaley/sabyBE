@@ -58,6 +58,11 @@ const telegramSessionSchema = mongoose.Schema(
       lastActivity: Date,
       sessionStartTime: Date,
     },
+    lastActivity: {
+      type: Date,
+      default: Date.now,
+      index: true,
+    },
     validationResult: {
       valid: Boolean,
       errors: [String],
@@ -77,8 +82,11 @@ telegramSessionSchema.index({ userId: 1, projectId: 1 });
 telegramSessionSchema.index({ status: 1, lastActivity: 1 });
 
 // Methods
-telegramSessionSchema.methods.updateActivity = function () {
-  this.metadata.lastActivity = new Date();
+telegramSessionSchema.methods.updateActivity = function (
+  timestamp = new Date()
+) {
+  this.metadata.lastActivity = timestamp;
+  this.lastActivity = timestamp;
   return this.save();
 };
 
@@ -122,9 +130,9 @@ telegramSessionSchema.statics.findActiveByUserId = function (
 };
 
 telegramSessionSchema.statics.cleanupExpiredSessions = function (
-  ttlHours = 24
+  ttlMinutes = 15
 ) {
-  const cutoffTime = new Date(Date.now() - ttlHours * 60 * 60 * 1000);
+  const cutoffTime = new Date(Date.now() - ttlMinutes * 60 * 1000);
   return this.deleteMany({
     lastActivity: { $lt: cutoffTime },
     status: { $in: ['authenticating', 'filling_form'] },

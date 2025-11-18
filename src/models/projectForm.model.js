@@ -3,28 +3,36 @@ const { nanoid } = require('nanoid');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
 // Schema for form elements (from form builder)
-const FormElementSchema = new mongoose.Schema({
-  id: { type: String, required: true },
-  type: { type: String, required: true },
-  properties: {
-    label: String,
-    placeholder: String,
-    required: { type: Boolean, default: false },
-    validation: mongoose.Schema.Types.Mixed,
-    options: [String], // For select, radio, checkbox
-    multiple: { type: Boolean, default: false },
-    accept: String, // For file uploads
-    defaultValue: mongoose.Schema.Types.Mixed,
-    numberType: String,
-    formula: String,
-    paragraphAlignment: String,
-    headerLevel: String,
-    headerAlignment: String,
-    textAlign: String,
-    acceptedTypes: String,
-    defaultCountry: String,
+const FormElementSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true },
+    type: { type: String, required: true },
+    properties: {
+      label: String,
+      placeholder: String,
+      required: { type: Boolean, default: false },
+      validation: mongoose.Schema.Types.Mixed,
+      options: [String], // For select, radio, checkbox
+      multiple: { type: Boolean, default: false },
+      accept: String, // For file uploads
+      defaultValue: mongoose.Schema.Types.Mixed,
+      numberType: String,
+      formula: String,
+      paragraphAlignment: String,
+      headerLevel: String,
+      headerAlignment: String,
+      textAlign: String,
+      acceptedTypes: String,
+      defaultCountry: String,
+    },
+    aliases: [{ type: String }],
+    metadata: {
+      type: mongoose.Schema.Types.Mixed,
+      default: undefined,
+    },
   },
-});
+  { _id: false }
+);
 
 // Schema for configuration data from modal
 const ProjectConfigurationSchema = new mongoose.Schema({
@@ -105,6 +113,13 @@ const ProjectFormSchema = new mongoose.Schema(
       sparse: true, // Optional, for linking to event_calendar
       index: true,
     },
+    formReference: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+      // Format: #SB-000001 (human-readable sequential reference)
+    },
     tenantId: {
       type: String,
       required: true,
@@ -172,6 +187,13 @@ const ProjectFormSchema = new mongoose.Schema(
       eventTypes: [{ type: String }],
       // Optional: Require calendar template before submissions
       calendarRequired: { type: Boolean, default: false },
+      // Calendar generation options for backdating
+      calendarGeneration: {
+        startDate: { type: String },
+        endDate: { type: String },
+        allowBackdating: { type: Boolean, default: false },
+        monthsToGenerate: { type: Number },
+      },
     },
 
     // Payment configuration (for forms with financial tag)
@@ -218,6 +240,19 @@ const ProjectFormSchema = new mongoose.Schema(
         enum: ['draft', 'published', 'archived'],
         default: 'draft',
       },
+      integrations: {
+        type: mongoose.Schema.Types.Mixed,
+        default: ['web'],
+        set: (values) => {
+          if (Array.isArray(values)) {
+            return values.map((value) => String(value).toLowerCase());
+          }
+          if (typeof values === 'string') {
+            return [values.toLowerCase()];
+          }
+          return values;
+        },
+      },
     },
 
     // Analytics and usage
@@ -252,8 +287,30 @@ ProjectFormSchema.plugin(tenantPlugin);
  * Generate a unique projectId
  * @returns {string}
  */
-ProjectFormSchema.statics.generateProjectId = function () {
-  return `proj_${nanoid(12)}`;
+const createProjectSlug = (input = '') => {
+  if (!input || typeof input !== 'string') {
+    return 'project';
+  }
+
+  const normalized = input
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim()
+    .replace(/^-|-$/g, '');
+
+  if (!normalized) {
+    return 'project';
+  }
+
+  return normalized.slice(0, 32);
+};
+
+ProjectFormSchema.statics.generateProjectId = function (projectName = '') {
+  const slug = createProjectSlug(projectName);
+  const suffix = nanoid(6).toLowerCase();
+  return `proj_${slug}-${suffix}`;
 };
 
 /**
@@ -294,11 +351,21 @@ ProjectFormSchema.statics.createProjectForm = async function (
     });
   }
 
-  const projectId = this.generateProjectId();
+  const projectId = this.generateProjectId(
+    projectData?.configuration?.projectName || projectData?.name || ''
+  );
+
+  // Generate human-readable form reference
+  const Counter = require('./counter.model');
+  const formReference = await Counter.generateReference('formReference');
+
+  console.log(`🎯 [ProjectForm] Generated reference: ${formReference}`);
+
   // Prepare the project data
   const projectFormData = {
     ...projectData,
     projectId,
+    formReference,
     tenantId,
     createdBy,
     metadata: {

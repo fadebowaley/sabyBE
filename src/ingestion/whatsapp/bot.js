@@ -25,6 +25,35 @@ const ACCESS_TOKEN = config.whatsapp.accessToken;
 const VERIFY_TOKEN = config.whatsapp.verifyToken;
 
 /**
+ * Verify WhatsApp Business API connection
+ */
+async function verifyWhatsAppConnection() {
+  try {
+    const response = await axios.get(`${WHATSAPP_API_URL}/${PHONE_NUMBER_ID}`, {
+      headers: {
+        Authorization: `Bearer ${ACCESS_TOKEN}`,
+      },
+      params: {
+        fields: 'display_phone_number,verified_name',
+      },
+    });
+
+    if (response.status === 200) {
+      const { display_phone_number: displayPhoneNumber, verified_name } =
+        response.data || {};
+      const resolvedNumber = displayPhoneNumber || verified_name || 'unknown';
+      logger.info(
+        `✅ WhatsApp Business API connected for phone number: ${resolvedNumber}`
+      );
+      return true;
+    }
+  } catch (error) {
+    logger.error('❌ Failed to verify WhatsApp connection:', error.message);
+    throw error;
+  }
+}
+
+/**
  * Initialize the WhatsApp bot with proper error handling and logging
  */
 async function initializeWhatsAppBot() {
@@ -42,29 +71,6 @@ async function initializeWhatsAppBot() {
     logger.info('✅ WhatsApp bot initialized successfully');
   } catch (error) {
     logger.error('❌ Failed to initialize WhatsApp bot:', error.message);
-    throw error;
-  }
-}
-
-/**
- * Verify WhatsApp Business API connection
- */
-async function verifyWhatsAppConnection() {
-  try {
-    const response = await axios.get(`${WHATSAPP_API_URL}/${PHONE_NUMBER_ID}`, {
-      headers: {
-        Authorization: `Bearer ${ACCESS_TOKEN}`,
-      },
-    });
-
-    if (response.status === 200) {
-      logger.info(
-        `✅ WhatsApp Business API connected for phone number: ${response.data.phone_number}`
-      );
-      return true;
-    }
-  } catch (error) {
-    logger.error('❌ Failed to verify WhatsApp connection:', error.message);
     throw error;
   }
 }
@@ -93,9 +99,9 @@ async function getOrCreateSession(phoneNumber) {
 async function handleWebhook(webhookData) {
   try {
     // Log the raw webhook data first
-    console.log('🔍 RAW WEBHOOK DATA:', webhookData);
-    console.log('🔍 RAW WEBHOOK DATA TYPE:', typeof webhookData);
-    console.log(
+    logger.info('🔍 RAW WEBHOOK DATA:', webhookData);
+    logger.info('🔍 RAW WEBHOOK DATA TYPE:', typeof webhookData);
+    logger.info(
       '🔍 RAW WEBHOOK DATA STRINGIFIED:',
       JSON.stringify(webhookData)
     );
@@ -216,7 +222,7 @@ async function handleWebhook(webhookData) {
     }
   } catch (error) {
     logger.error('❌ Error handling WhatsApp webhook:', error.message);
-    console.error('❌ ERROR STACK:', error.stack);
+    logger.error('❌ ERROR STACK:', error.stack);
   }
 }
 
@@ -240,119 +246,53 @@ async function handleWhatsAppBusinessWebhook(webhookValue) {
       logger.info('📱 Available keys in webhook:', Object.keys(webhookValue));
       return;
     }
-
     // Process each message
-    for (const message of messages) {
-      // Check if message has errors
-      if (message.errors && message.errors.length > 0) {
-        logger.warn(
-          `⚠️ Message has errors:`,
-          JSON.stringify(message.errors, null, 2)
-        );
-
-        // Send error message to user
-        try {
-          await whatsappNotificationService.sendErrorMessage(
-            message.from,
-            'Sorry, I received your message but it contains an unsupported format. Please try sending a text message instead.'
+    // Avoid await-in-loop, use Promise.all for concurrent sending and processing
+    await Promise.all(
+      messages.map(async (message) => {
+        // Check if message has errors
+        if (message.errors && message.errors.length > 0) {
+          logger.warn(
+            `⚠️ Message has errors:`,
+            JSON.stringify(message.errors, null, 2)
           );
-        } catch (sendError) {
-          logger.error(`❌ Failed to send error message:`, sendError.message);
+
+          // Send error message to user
+          try {
+            await whatsappNotificationService.sendErrorMessage(
+              message.from,
+              'Sorry, I received your message but it contains an unsupported format. Please try sending a text message instead.'
+            );
+          } catch (sendError) {
+            logger.error(`❌ Failed to send error message:`, sendError.message);
+          }
+          // Do not process further
+          return;
         }
-        continue;
-      }
 
-      // Check if message type is unsupported
-      if (message.type === 'unsupported') {
-        logger.warn(`⚠️ Unsupported message type from ${message.from}`);
+        // Check if message type is unsupported
+        if (message.type === 'unsupported') {
+          logger.warn(`⚠️ Unsupported message type from ${message.from}`);
 
-        // Send error message to user
-        try {
-          await whatsappNotificationService.sendErrorMessage(
-            message.from,
-            'Sorry, I cannot process this type of message. Please send text, images, or documents only.'
-          );
-        } catch (sendError) {
-          logger.error(`❌ Failed to send error message:`, sendError.message);
+          // Send error message to user
+          try {
+            await whatsappNotificationService.sendErrorMessage(
+              message.from,
+              'Sorry, I cannot process this type of message. Please send text, images, or documents only.'
+            );
+          } catch (sendError) {
+            logger.error(`❌ Failed to send error message:`, sendError.message);
+          }
+          // Do not process further
+          return;
         }
-        continue;
-      }
 
-      // Process valid messages
-      await processMessage(message);
-    }
+        // Process valid messages
+        await processMessage(message);
+      })
+    );
   } catch (error) {
     logger.error('❌ Error handling WhatsApp Business webhook:', error.message);
-  }
-}
-
-/**
- * Process individual WhatsApp message
- * @param {Object} message - WhatsApp message object
- */
-async function processMessage(message) {
-  const phoneNumber = message.from;
-  const messageType = message.type;
-  const { timestamp } = message;
-
-  try {
-    logger.info(`💬 Processing ${messageType} message from ${phoneNumber}`);
-    logger.info(`📝 Message content:`, JSON.stringify(message, null, 2));
-
-    // Get or create session
-    const session = await getOrCreateSession(phoneNumber);
-
-    // Update session metadata
-    session.metadata.lastActivity = new Date(timestamp * 1000);
-    await session.save();
-
-    // Handle different message types
-    switch (messageType) {
-      case 'text':
-        await handleTextMessage(message, session);
-        break;
-      case 'image':
-        await handleImageMessage(message, session);
-        break;
-      case 'document':
-        await handleDocumentMessage(message, session);
-        break;
-      case 'button':
-        await handleButtonMessage(message, session);
-        break;
-      case 'interactive':
-        await handleInteractiveMessage(message, session);
-        break;
-      case 'unsupported':
-        logger.warn(`⚠️ Unsupported message type from ${phoneNumber}`);
-        await whatsappNotificationService.sendErrorMessage(
-          phoneNumber,
-          'Sorry, I cannot process this type of message. Please send text, images, or documents only.'
-        );
-        break;
-      default:
-        logger.warn(`⚠️ Unknown message type: ${messageType}`);
-        await whatsappNotificationService.sendErrorMessage(
-          phoneNumber,
-          'Sorry, I received an unknown message type. Please send text, images, or documents only.'
-        );
-    }
-  } catch (error) {
-    logger.error(
-      `❌ Error processing message from ${phoneNumber}:`,
-      error.message
-    );
-    logger.error(`❌ Error stack:`, error.stack);
-
-    // Send a more helpful error message
-    try {
-      await whatsappNotificationService.sendErrorMessage(
-        phoneNumber,
-        'Sorry, there was an issue processing your message. Please try again or contact support if the problem persists.'
-      );
-    } catch (sendError) {
-      logger.error(`❌ Failed to send error message:`, sendError.message);
-    }
   }
 }
 
@@ -364,14 +304,72 @@ async function processMessage(message) {
 async function handleTextMessage(message, session) {
   const phoneNumber = message.from;
   const text = message.text?.body || '';
+  const trimmedText = text.trim();
+  const lowerText = trimmedText.toLowerCase();
 
   try {
     logger.info(`📝 Text message from ${phoneNumber}: ${text}`);
 
-    // Check if it's a command (starts with /)
-    if (text.startsWith('/')) {
-      await CommandHandler.handleCommand(text, phoneNumber, session);
+    if (await authHandler.ensureNotExpired(phoneNumber, session)) {
       return;
+    }
+
+    if (lowerText === 'cancel') {
+      await CommandHandler.handleCancel(phoneNumber, session, []);
+      return;
+    }
+
+    if (session.status === 'awaiting_login') {
+      await authHandler.handleLoginChallenge(phoneNumber, session, text);
+      return;
+    }
+
+    if (
+      await authHandler.handleMidSessionPasscode(phoneNumber, session, text)
+    ) {
+      return;
+    }
+
+    if (trimmedText.startsWith('/')) {
+      await CommandHandler.handleCommand(trimmedText, phoneNumber, session);
+      return;
+    }
+
+    const metadata = session.metadata || {};
+    const awaitingMenuSelection = !!metadata.awaitingMenuSelection;
+    const menuContext = metadata.menuContext;
+    const activeSubmenu = metadata.activeSubmenu;
+
+    if (trimmedText === '21') {
+      await handleMenuOption('21', phoneNumber, session);
+      return;
+    }
+
+    if (trimmedText === '20') {
+      await handleBackToPreviousMenu(phoneNumber, session);
+      return;
+    }
+
+    if (['51', '52', '53'].includes(trimmedText)) {
+      await handleMenuOption(trimmedText, phoneNumber, session);
+      return;
+    }
+
+    if (awaitingMenuSelection) {
+      if (menuContext === 'main' && MAIN_MENU_OPTIONS.has(trimmedText)) {
+        await handleMenuOption(trimmedText, phoneNumber, session);
+        return;
+      }
+
+      if (
+        menuContext === 'submenu' &&
+        activeSubmenu &&
+        SUBMENU_SHORTCUTS[activeSubmenu] &&
+        SUBMENU_SHORTCUTS[activeSubmenu].has(trimmedText)
+      ) {
+        await handleMenuOption(trimmedText, phoneNumber, session);
+        return;
+      }
     }
 
     // Handle project selection (when user is authenticated)
@@ -433,15 +431,23 @@ async function handleTextMessage(message, session) {
     }
 
     // Check if it's a menu option (1, 2, 3, 4) - only if not authenticated
-    if (/^[1-4]$/.test(text.trim()) && (!session.userId || !session.tenantId)) {
-      await handleMenuOption(text.trim(), phoneNumber, session);
+    if (/^[1-4]$/.test(trimmedText) && (!session.userId || !session.tenantId)) {
+      await handleMenuOption(trimmedText, phoneNumber, session);
       return;
     }
 
     // Handle special menu options
-    if (text === '🏠 Main Menu' || text === '🏠 Back to Menu') {
-      const userName = session.metadata?.userName || 'User';
-      await whatsappNotificationService.sendMainMenu(phoneNumber, userName);
+    if (
+      text === '🏠 Main Menu' ||
+      text === '🏠 Back to Menu' ||
+      text === '🏠 Saby menu'
+    ) {
+      await handleMenuOption('21', phoneNumber, session);
+      return;
+    }
+
+    if (text === '📋 Forms') {
+      await CommandHandler.handleForms(phoneNumber, session, []);
       return;
     }
 
@@ -454,12 +460,26 @@ async function handleTextMessage(message, session) {
       return;
     }
 
+    if (text === '🧑 Profile') {
+      await CommandHandler.handleProfile(phoneNumber, session);
+      return;
+    }
+
     if (text === '❓ Help') {
       await whatsappNotificationService.sendHelpMessage(phoneNumber);
       return;
     }
 
-    if (text === '🔄 Reset Session') {
+    if (text === '🆘 Support') {
+      const userName = session.metadata?.userName || 'User';
+      await whatsappNotificationService.sendSupportMessage(
+        phoneNumber,
+        userName
+      );
+      return;
+    }
+
+    if (text === '🔄 Reset Session' || text === '🔄 Reset') {
       const userName = session.metadata?.userName || 'User';
       await whatsappNotificationService.sendResetConfirmation(
         phoneNumber,
@@ -468,7 +488,7 @@ async function handleTextMessage(message, session) {
       return;
     }
 
-    if (text === '✅ Yes, Reset') {
+    if (text === '✅ Yes, Reset' || text === '✅ Reset') {
       session.status = 'authenticating';
       session.currentStep = 0;
       session.answers.clear();
@@ -489,8 +509,7 @@ Use /start to begin a new form submission.`
     }
 
     if (text === '❌ Cancel') {
-      const userName = session.metadata?.userName || 'User';
-      await whatsappNotificationService.sendMainMenu(phoneNumber, userName);
+      await handleMenuOption('21', phoneNumber, session);
       return;
     }
 
@@ -500,14 +519,59 @@ Use /start to begin a new form submission.`
         // Auto-authenticate using WhatsApp phone number
         await authHandler.handlePhoneAuthentication(phoneNumber, session);
         break;
+      case 'awaiting_verification_confirmation':
+        if (isAffirmativeResponse(text)) {
+          await authHandler.confirmAccountDetails(phoneNumber, session);
+        } else if (isNegativeResponse(text)) {
+          await whatsappNotificationService.sendVerificationMismatch(
+            phoneNumber
+          );
+        } else {
+          await whatsappNotificationService.sendVerificationPrompt(
+            phoneNumber,
+            session.metadata?.profileSnapshot || {}
+          );
+        }
+        break;
+      case 'collecting_batch':
+        await formHandler.handleBatchCollection(phoneNumber, text, session);
+        break;
+      case 'updating_profile':
+        await authHandler.handleProfileUpdate(phoneNumber, text, session);
+        break;
+      case 'resetting_password':
+        await authHandler.handlePasswordReset(phoneNumber, text, session);
+        break;
       case 'selecting_project':
+        if (session.metadata?.passwordReset?.stage) {
+          session.status = 'resetting_password';
+          await authHandler.handlePasswordReset(phoneNumber, text, session);
+          break;
+        }
         await formHandler.handleProjectSelection(phoneNumber, text, session);
+        break;
+      case 'updating_node':
+        await authHandler.handleNodeUpdate(phoneNumber, text, session);
+        break;
+      case 'selecting_node':
+        await authHandler.handleNodeSelection(phoneNumber, text, session);
         break;
       case 'filling_form':
         await formHandler.handleFormStep(phoneNumber, text, session);
         break;
+      case 'ready_to_submit':
+        await submitHandler.handleBatchCommand(phoneNumber, text, session);
+        break;
       case 'submitting':
-        await submitHandler.handleSubmission(phoneNumber, text, session);
+        await submitHandler.handleBatchCommand(phoneNumber, text, session);
+        break;
+      case 'submitted':
+      case 'completed':
+        await submitHandler.handlePostSubmissionAction(
+          phoneNumber,
+          text,
+          session
+        );
         break;
       default:
         // Auto-authenticate using WhatsApp phone number
@@ -702,45 +766,78 @@ async function handleInteractiveMessage(message, session) {
 }
 
 /**
- * Handle menu options
- * @param {string} option - Menu option (1, 2, 3, 4)
- * @param {string} phoneNumber - User phone number
- * @param {Object} session - User session
+ * Process individual WhatsApp message
+ * @param {Object} message - WhatsApp message object
  */
-async function handleMenuOption(option, phoneNumber, session) {
+async function processMessage(message) {
+  const phoneNumber = message.from;
+  const messageType = message.type;
+  const { timestamp } = message;
   try {
-    logger.info(`📋 Menu option from ${phoneNumber}: ${option}`);
+    logger.info(`💬 Processing ${messageType} message from ${phoneNumber}`);
+    logger.info(`📝 Message content:`, JSON.stringify(message, null, 2));
 
-    switch (option) {
-      case '1':
-        // Start forms - auto-authenticate and start
-        await authHandler.handlePhoneAuthentication(phoneNumber, session);
+    // Get or create session
+    const session = await getOrCreateSession(phoneNumber);
+
+    // Update session metadata
+    session.metadata.lastActivity = new Date(timestamp * 1000);
+    await session.save();
+
+    if (await authHandler.ensureNotExpired(phoneNumber, session)) {
+      return;
+    }
+
+    if (
+      messageType !== 'text' &&
+      (await authHandler.handleMidSessionPasscode(phoneNumber, session))
+    ) {
+      return;
+    }
+
+    // Handle different message types
+    switch (messageType) {
+      case 'text':
+        await handleTextMessage(message, session);
         break;
-      case '2':
-        await whatsappNotificationService.sendHelpMessage(phoneNumber);
+      case 'image':
+        await handleImageMessage(message, session);
         break;
-      case '3':
-        await whatsappNotificationService.sendStatusMessage(phoneNumber);
+      case 'document':
+        await handleDocumentMessage(message, session);
         break;
-      case '4':
-        await whatsappNotificationService.sendSupportMessage(phoneNumber);
+      case 'button':
+        await handleButtonMessage(message, session);
+        break;
+      case 'interactive':
+        await handleInteractiveMessage(message, session);
+        break;
+      case 'unsupported':
+        logger.warn(`⚠️ Unsupported message type from ${phoneNumber}`);
+        await whatsappNotificationService.sendErrorMessage(
+          phoneNumber,
+          'Sorry, I cannot process this type of message. Please send text, images, or documents only.'
+        );
         break;
       default:
-        // Auto-authenticate for unknown options
-        await authHandler.handlePhoneAuthentication(phoneNumber, session);
+        logger.warn(`⚠️ Unknown message type: ${messageType}`);
+        await whatsappNotificationService.sendErrorMessage(
+          phoneNumber,
+          'Sorry, I received an unknown message type. Please send text, images, or documents only.'
+        );
     }
   } catch (error) {
     logger.error(
-      `❌ Error handling menu option from ${phoneNumber}:`,
+      `❌ Error processing message from ${phoneNumber}:`,
       error.message
     );
     logger.error(`❌ Error stack:`, error.stack);
-    logger.error(`❌ Option:`, option);
 
+    // Send a more helpful error message
     try {
       await whatsappNotificationService.sendErrorMessage(
         phoneNumber,
-        'Failed to process option. Please try again.'
+        'Sorry, there was an issue processing your message. Please try again or contact support if the problem persists.'
       );
     } catch (sendError) {
       logger.error(`❌ Failed to send error message:`, sendError.message);
@@ -767,6 +864,346 @@ function verifyWebhook(mode, token, challenge) {
 
   logger.warn('❌ WhatsApp webhook verification failed');
   return false;
+}
+
+const MAIN_MENU_OPTIONS = new Set(['1', '2', '3', '4', '5']);
+const SUBMENU_SHORTCUTS = {
+  authentication: new Set(['11', '12', '13', '14', '20', '21']),
+  profile: new Set(['22', '23', '24', '20', '21']),
+  unit: new Set(['31', '32', '20', '21']),
+  projects: new Set(['41', '42', '43', '20', '21']),
+  support: new Set(['51', '52', '53', '20', '21']),
+};
+
+function ensureMenuStack(session) {
+  if (!session) {
+    return [];
+  }
+  session.metadata = session.metadata || {};
+  session.metadata.menuStack = session.metadata.menuStack || [];
+  if (session.metadata.menuStack.length === 0) {
+    session.metadata.menuStack.push('main');
+  }
+  return session.metadata.menuStack;
+}
+
+function pushMenuStackEntry(session, key) {
+  if (!session) {
+    return;
+  }
+  session.metadata = session.metadata || {};
+  const stack = ensureMenuStack(session);
+  if (stack[stack.length - 1] !== key) {
+    stack.push(key);
+  }
+  session.metadata.menuStack = stack;
+}
+
+function pushActionContext(session, optionKey) {
+  if (!session) {
+    return;
+  }
+  session.metadata = session.metadata || {};
+  const submenu = session.metadata.activeSubmenu;
+  if (!submenu) {
+    return;
+  }
+  const key = `action:${submenu}:${optionKey}`;
+  pushMenuStackEntry(session, key);
+  session.metadata.lastMenuKey = key;
+}
+
+async function setMenuContext(session, context, submenu = null) {
+  if (!session) {
+    return;
+  }
+  session.metadata = session.metadata || {};
+  const stack = ensureMenuStack(session);
+  if (context === 'main') {
+    session.metadata.menuStack = ['main'];
+    session.metadata.lastMenuKey = 'main';
+    session.metadata.lastSubmenu = null;
+  } else if (context === 'submenu' && submenu) {
+    if (stack[stack.length - 1] === 'main' && stack.length === 1) {
+      // already ensured main present
+    }
+    pushMenuStackEntry(session, `submenu:${submenu}`);
+    session.metadata.lastMenuKey = `submenu:${submenu}`;
+    session.metadata.lastSubmenu = submenu;
+  }
+  session.metadata.menuContext = context;
+  session.metadata.activeSubmenu = submenu;
+  session.metadata.awaitingMenuSelection = true;
+  session.markModified('metadata');
+  await session.save();
+}
+
+async function clearMenuContext(session) {
+  if (!session) {
+    return;
+  }
+  session.metadata = session.metadata || {};
+  session.metadata.menuContext = null;
+  session.metadata.activeSubmenu = null;
+  session.metadata.awaitingMenuSelection = false;
+  session.markModified('metadata');
+  await session.save();
+}
+
+async function sendSubmenuByKey(phoneNumber, session, submenu) {
+  switch (submenu) {
+    case 'authentication':
+      await whatsappNotificationService.sendAuthenticationMenu(phoneNumber);
+      break;
+    case 'profile':
+      await whatsappNotificationService.sendProfileMenu(phoneNumber);
+      break;
+    case 'unit':
+      await whatsappNotificationService.sendUnitMenu(phoneNumber);
+      break;
+    case 'projects':
+      await whatsappNotificationService.sendProjectMenu(phoneNumber);
+      break;
+    case 'support':
+      await whatsappNotificationService.sendSupportMenu(phoneNumber);
+      break;
+    default:
+      await CommandHandler.handleMenu(phoneNumber, session, []);
+  }
+}
+
+async function handleBackToPreviousMenu(phoneNumber, session) {
+  if (!session) {
+    return;
+  }
+  session.metadata = session.metadata || {};
+  const stack = session.metadata.menuStack || [];
+  logger.info('🔙 Back command received', {
+    phoneNumber,
+    stackBefore: Array.from(stack),
+  });
+  if (stack.length === 0) {
+    const fallbackSubmenu = session.metadata.lastSubmenu;
+    if (fallbackSubmenu) {
+      logger.info('🔙 Stack empty, using last submenu fallback', {
+        phoneNumber,
+        fallbackSubmenu,
+      });
+      await setMenuContext(session, 'submenu', fallbackSubmenu);
+      await sendSubmenuByKey(phoneNumber, session, fallbackSubmenu);
+      return;
+    }
+    await setMenuContext(session, 'main');
+    await CommandHandler.handleMenu(phoneNumber, session, []);
+    return;
+  }
+
+  let targetKey = stack[stack.length - 1];
+  if (targetKey.startsWith('action:')) {
+    stack.pop();
+    if (stack.length === 0) {
+      stack.push('main');
+    }
+    targetKey = stack[stack.length - 1];
+  }
+
+  session.metadata.menuStack = stack;
+  session.metadata.lastMenuKey = targetKey;
+
+  if (targetKey.startsWith('submenu:')) {
+    const submenu = targetKey.split(':')[1];
+    logger.info('🔙 Returning to submenu', {
+      phoneNumber,
+      submenu,
+      stackAfter: Array.from(stack),
+    });
+    await setMenuContext(session, 'submenu', submenu);
+    await sendSubmenuByKey(phoneNumber, session, submenu);
+    return;
+  }
+
+  const fallbackSubmenu = session.metadata.lastSubmenu;
+  if (fallbackSubmenu) {
+    logger.info('🔙 Falling back to last submenu', {
+      phoneNumber,
+      fallbackSubmenu,
+      stackAfter: Array.from(stack),
+    });
+    await setMenuContext(session, 'submenu', fallbackSubmenu);
+    await sendSubmenuByKey(phoneNumber, session, fallbackSubmenu);
+    return;
+  }
+
+  logger.info('🔙 Returning to main menu', {
+    phoneNumber,
+    stackAfter: Array.from(stack),
+  });
+  await setMenuContext(session, 'main');
+  await CommandHandler.handleMenu(phoneNumber, session, []);
+}
+
+function isAffirmativeResponse(text = '') {
+  const normalized = text.trim().toLowerCase();
+  return [
+    'yes',
+    'y',
+    'confirm',
+    'confirmed',
+    'correct',
+    'ok',
+    'okay',
+    'sure',
+    '1',
+    '👍',
+    '✅',
+  ].includes(normalized);
+}
+
+function isNegativeResponse(text = '') {
+  const normalized = text.trim().toLowerCase();
+  return [
+    'no',
+    'n',
+    'incorrect',
+    'not correct',
+    'nope',
+    'cancel',
+    '2',
+    '❌',
+    '✖️',
+  ].includes(normalized);
+}
+
+/**
+ * Handle menu options
+ * @param {string} option - Menu option (1, 2, 3, 4)
+ * @param {string} phoneNumber - User phone number
+ * @param {Object} session - User session
+ */
+async function handleMenuOption(option, phoneNumber, session) {
+  try {
+    const normalizedOption = (option || '').trim();
+    logger.info(`📋 Menu option from ${phoneNumber}: ${normalizedOption}`);
+    const userName = session?.metadata?.userName || 'User';
+
+    switch (normalizedOption) {
+      case '21':
+        await setMenuContext(session, 'main');
+        await CommandHandler.handleMenu(phoneNumber, session, []);
+        break;
+      case '1':
+        await setMenuContext(session, 'submenu', 'authentication');
+        await whatsappNotificationService.sendAuthenticationMenu(phoneNumber);
+        break;
+      case '11':
+        pushActionContext(session, normalizedOption);
+        await clearMenuContext(session);
+        await authHandler.handleLogout(phoneNumber, session);
+        break;
+      case '12':
+        pushActionContext(session, normalizedOption);
+        await clearMenuContext(session);
+        await CommandHandler.handleResetPassword(phoneNumber, session);
+        break;
+      case '13':
+        pushActionContext(session, normalizedOption);
+        await clearMenuContext(session);
+        await CommandHandler.handleVerify(phoneNumber, session);
+        break;
+      case '2':
+        await setMenuContext(session, 'submenu', 'profile');
+        await whatsappNotificationService.sendProfileMenu(phoneNumber);
+        break;
+      case '22':
+        pushActionContext(session, normalizedOption);
+        await clearMenuContext(session);
+        await CommandHandler.handleProfile(phoneNumber, session);
+        break;
+      case '23':
+        pushActionContext(session, normalizedOption);
+        await clearMenuContext(session);
+        await CommandHandler.handleUpdateProfile(phoneNumber, session);
+        break;
+      case '24':
+        pushActionContext(session, normalizedOption);
+        await clearMenuContext(session);
+        await CommandHandler.handleReset(phoneNumber, session, []);
+        break;
+      case '3':
+        await setMenuContext(session, 'submenu', 'unit');
+        await whatsappNotificationService.sendUnitMenu(phoneNumber);
+        break;
+      case '31':
+        pushActionContext(session, normalizedOption);
+        await clearMenuContext(session);
+        await CommandHandler.handleNode(phoneNumber, session);
+        break;
+      case '32':
+        pushActionContext(session, normalizedOption);
+        await clearMenuContext(session);
+        await CommandHandler.handleUnitUpdate(phoneNumber, session);
+        break;
+      case '4':
+        await setMenuContext(session, 'submenu', 'projects');
+        await whatsappNotificationService.sendProjectMenu(phoneNumber);
+        break;
+      case '41':
+        pushActionContext(session, normalizedOption);
+        await clearMenuContext(session);
+        await CommandHandler.handleForms(phoneNumber, session, []);
+        break;
+      case '42':
+        pushActionContext(session, normalizedOption);
+        await clearMenuContext(session);
+        await CommandHandler.handleProjects(phoneNumber, session, []);
+        break;
+      case '43':
+        pushActionContext(session, normalizedOption);
+        await clearMenuContext(session);
+        await CommandHandler.handleSubmitCommand(phoneNumber, session);
+        break;
+      case '5':
+        await setMenuContext(session, 'submenu', 'support');
+        await whatsappNotificationService.sendSupportMenu(phoneNumber);
+        break;
+      case '51':
+        pushActionContext(session, normalizedOption);
+        await clearMenuContext(session);
+        await CommandHandler.handleSupport(phoneNumber, session, []);
+        break;
+      case '52':
+        pushActionContext(session, normalizedOption);
+        await clearMenuContext(session);
+        await CommandHandler.handleHelp(phoneNumber, session, []);
+        break;
+      case '53':
+        pushActionContext(session, normalizedOption);
+        await clearMenuContext(session);
+        await CommandHandler.handleStatus(phoneNumber, session, []);
+        break;
+      default:
+        await whatsappNotificationService.sendErrorMessage(
+          phoneNumber,
+          'Please choose a valid number from the menu (use 21 to show it again or 20 to go back).'
+        );
+    }
+  } catch (error) {
+    logger.error(
+      `❌ Error handling menu option from ${phoneNumber}:`,
+      error.message
+    );
+    logger.error(`❌ Error stack:`, error.stack);
+    logger.error(`❌ Option:`, option);
+
+    try {
+      await whatsappNotificationService.sendErrorMessage(
+        phoneNumber,
+        'Failed to process option. Please try again.'
+      );
+    } catch (sendError) {
+      logger.error(`❌ Failed to send error message:`, sendError.message);
+    }
+  }
 }
 
 module.exports = {

@@ -72,6 +72,12 @@ router.put(
   eventCalendarController.updateCalendar
 );
 
+router.patch(
+  '/:id/dates',
+  auth('manage:calendar'),
+  eventCalendarController.patchCalendarDates
+);
+
 // Delete calendar
 router.delete(
   '/:id',

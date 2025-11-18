@@ -14,6 +14,8 @@ const SubmissionModel = {
       project_category,
       form_id,
       node_id,
+      node_name,
+      node_reference,
       user_id,
       source,
       data,
@@ -30,6 +32,8 @@ const SubmissionModel = {
         project_category,
         form_id,
         node_id,
+        node_name,
+        node_reference,
         user_id,
         source,
         data,
@@ -38,7 +42,7 @@ const SubmissionModel = {
         created_at,
         updated_at
       ) VALUES (
-        gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW()
+        gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW()
       ) RETURNING *;
     `;
 
@@ -49,6 +53,8 @@ const SubmissionModel = {
       project_category,
       form_id,
       node_id,
+      node_name,
+      node_reference,
       user_id,
       source,
       data,
@@ -63,6 +69,205 @@ const SubmissionModel = {
       console.error('❌ Error saving submission:', err.message);
       throw err;
     }
+  },
+
+  async buildFactsFromSubmission(submission, catalog = {}) {
+    if (
+      !submission ||
+      !submission.data ||
+      typeof submission.data !== 'object'
+    ) {
+      return [];
+    }
+
+    const fields = submission.data.structured || submission.data;
+    const facts = [];
+    const createdAt = submission.created_at
+      ? new Date(submission.created_at)
+      : new Date();
+    const submissionDate = submission.submission_date
+      ? new Date(submission.submission_date)
+      : createdAt;
+    const monthBucket = new Date(createdAt);
+    monthBucket.setUTCDate(1);
+    monthBucket.setUTCHours(0, 0, 0, 0);
+
+    const dayBucket = new Date(
+      Date.UTC(
+        submissionDate.getUTCFullYear(),
+        submissionDate.getUTCMonth(),
+        submissionDate.getUTCDate()
+      )
+    );
+    const weekBucket = new Date(dayBucket);
+    const dayOfWeek = weekBucket.getUTCDay();
+    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Monday-based weeks
+    weekBucket.setUTCDate(weekBucket.getUTCDate() + diff);
+
+    const catalogEntries = catalog || {};
+    const catalogValues = Object.values(catalogEntries);
+
+    Object.keys(fields).forEach((fieldKey) => {
+      const rawValue = fields[fieldKey];
+      const lowercaseKey = fieldKey?.toLowerCase?.();
+
+      let catalogEntry = catalogEntries[fieldKey];
+      if (!catalogEntry && lowercaseKey) {
+        catalogEntry = catalogValues.find((entry) => {
+          if (!entry || !Array.isArray(entry.aliases)) {
+            return false;
+          }
+          return entry.aliases.some(
+            (alias) => alias && alias.toLowerCase() === lowercaseKey
+          );
+        });
+      }
+
+      const transformations = Array.isArray(catalogEntry?.transformations)
+        ? catalogEntry.transformations
+        : [];
+
+      const hasStructuredEnvelope =
+        rawValue &&
+        typeof rawValue === 'object' &&
+        rawValue !== null &&
+        Object.prototype.hasOwnProperty.call(rawValue, 'value');
+
+      const actualValue = hasStructuredEnvelope ? rawValue.value : rawValue;
+
+      const fact = {
+        submission_id: submission.id,
+        tenant_id: submission.tenant_id,
+        project_id: submission.project_id,
+        form_id: submission.form_id,
+        node_id: submission.node_id,
+        user_id: submission.user_id,
+        source: submission.source || 'unknown',
+        field_key: fieldKey,
+        field_label: catalogEntry?.field_label || fieldKey,
+        field_type: catalogEntry?.field_type || null,
+        value_text: actualValue != null ? String(actualValue) : null,
+        value_numeric: null,
+        value_boolean: null,
+        value_date: null,
+        value_json: hasStructuredEnvelope ? rawValue : null,
+        value_sum_candidate: null,
+        value_years: null,
+        value_months: null,
+        value_category: null,
+        value_bucket: null,
+        value_array_length: null,
+        value_normalised: null,
+        month_bucket: monthBucket,
+        day_bucket: dayBucket,
+        week_bucket: weekBucket,
+      };
+
+      if (actualValue === null || actualValue === undefined) {
+        facts.push(fact);
+        return;
+      }
+
+      const trimmedValue =
+        typeof actualValue === 'string' ? actualValue.trim() : actualValue;
+
+      if (Array.isArray(actualValue)) {
+        fact.value_json = hasStructuredEnvelope ? rawValue : actualValue;
+        fact.value_array_length = actualValue.length;
+        if (actualValue.every((item) => typeof item === 'number')) {
+          const sum = actualValue.reduce((acc, curr) => acc + curr, 0);
+          fact.value_numeric = sum;
+          fact.value_sum_candidate = sum;
+        }
+        fact.value_text = actualValue.join(', ');
+      } else if (
+        typeof actualValue === 'object' &&
+        actualValue !== null &&
+        !Array.isArray(actualValue)
+      ) {
+        fact.value_json = hasStructuredEnvelope ? rawValue : actualValue;
+        try {
+          fact.value_text = JSON.stringify(actualValue);
+        } catch (err) {
+          fact.value_text = '[object]';
+        }
+      }
+
+      const numericCandidate = (() => {
+        if (typeof actualValue === 'number') {
+          return actualValue;
+        }
+        if (typeof trimmedValue === 'string') {
+          const normalisedNumeric = trimmedValue
+            .replace(/,/g, '')
+            .replace(/[^0-9.+-]/g, '');
+          if (normalisedNumeric.length === 0) {
+            return null;
+          }
+          const parsed = Number(normalisedNumeric);
+          return Number.isNaN(parsed) ? null : parsed;
+        }
+        return null;
+      })();
+
+      if (numericCandidate !== null) {
+        fact.value_numeric = numericCandidate;
+        if (transformations.includes('sum')) {
+          fact.value_sum_candidate = numericCandidate;
+        }
+        const bucketSize = 10;
+        const bucketFloor =
+          Math.floor(numericCandidate / bucketSize) * bucketSize;
+        const bucketCeil = bucketFloor + bucketSize - 1;
+        fact.value_bucket = `${bucketFloor}-${bucketCeil}`;
+      }
+
+      if (typeof actualValue === 'boolean') {
+        fact.value_boolean = actualValue;
+      } else if (typeof trimmedValue === 'string') {
+        const normalised = trimmedValue.toLowerCase();
+        fact.value_normalised = normalised;
+        if (['true', 'yes', 'y', '1'].includes(normalised)) {
+          fact.value_boolean = true;
+        } else if (['false', 'no', 'n', '0'].includes(normalised)) {
+          fact.value_boolean = false;
+        }
+      }
+
+      const dateCandidate = (() => {
+        if (actualValue instanceof Date) {
+          return actualValue;
+        }
+        if (typeof trimmedValue === 'string') {
+          const parsed = new Date(trimmedValue);
+          return Number.isNaN(parsed.valueOf()) ? null : parsed;
+        }
+        return null;
+      })();
+
+      if (dateCandidate) {
+        fact.value_date = dateCandidate;
+        if (transformations.includes('age_years')) {
+          const diffMs = Date.now() - dateCandidate.getTime();
+          const years = diffMs / (1000 * 60 * 60 * 24 * 365.25);
+          if (Number.isFinite(years)) {
+            fact.value_years = Math.floor(years);
+            fact.value_months = Math.floor(years * 12);
+          }
+        }
+      }
+
+      if (
+        transformations.includes('categorical') ||
+        transformations.includes('enum')
+      ) {
+        fact.value_category = fact.value_text;
+      }
+
+      facts.push(fact);
+    });
+
+    return facts;
   },
 
   /**

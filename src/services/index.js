@@ -29,9 +29,11 @@ module.exports.eventCalendarService = require('./eventCalendar.service');
 module.exports.eventComplianceService = require('./eventCompliance.service');
 module.exports.permNotificationService = require('./permNotification.service');
 module.exports.permSubmissionService = require('./permSubmission.service');
+module.exports.calendarEnforcementService = require('./calendarEnforcement.service');
 // Reporting Services
 module.exports.submissionReportService = require('./submissionReport.service');
 module.exports.validationReportService = require('./validationReport.service');
 module.exports.analyticsReportService = require('./analyticsReport.service');
 module.exports.exportReportService = require('./exportReport.service');
 module.exports.trendAnalysisService = require('./trendAnalysis.service');
+module.exports.rollupReportService = require('./rollupReport.service');

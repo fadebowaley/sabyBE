@@ -325,18 +325,46 @@ class WhatsAppValidationService {
    * Validate phone field
    */
   validatePhone(value) {
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-    if (!phoneRegex.test(value.replace(/[\s\-\(\)]/g, ''))) {
+    if (value === null || value === undefined) {
+      return { valid: false, error: 'Phone number is required' };
+    }
+
+    const stringValue = String(value).trim();
+    if (!stringValue) {
+      return { valid: false, error: 'Phone number is required' };
+    }
+
+    const digitsOnly = stringValue.replace(/\D+/g, '');
+    const hasLeadingPlus = stringValue.trim().startsWith('+');
+    const normalized = hasLeadingPlus ? `+${digitsOnly}` : digitsOnly;
+
+    const phoneRegex = /^[+]?[\d]{7,16}$/;
+
+    if (!phoneRegex.test(normalized)) {
       return { valid: false, error: 'Invalid phone number format' };
     }
-    return { valid: true, value };
+
+    return { valid: true, value: normalized };
   }
 
   /**
    * Validate number field
    */
   validateNumber(value, properties) {
-    const num = parseFloat(value);
+    if (value === null || value === undefined || value === '') {
+      return { valid: false, error: 'Value must be a number' };
+    }
+
+    let normalizedValue;
+    if (typeof value === 'number') {
+      normalizedValue = value;
+    } else {
+      const cleaned = String(value).trim().replace(/,/g, '');
+      const match = cleaned.match(/-?\d+(?:\.\d+)?/);
+      normalizedValue = match ? parseFloat(match[0]) : NaN;
+    }
+
+    const num = Number(normalizedValue);
     if (isNaN(num)) {
       return { valid: false, error: 'Value must be a number' };
     }

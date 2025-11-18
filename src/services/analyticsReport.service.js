@@ -23,62 +23,71 @@ const getSubmissionSummary = async (filters = {}) => {
       group_by = 'month',
     } = filters;
 
-    let dateFilter = '';
-    const values = [];
-    let paramIndex = 1;
+    if (!tenant_id) {
+      throw new Error('tenant_id is required for submission summary');
+    }
+
+    let groupByClause;
+    switch (group_by) {
+      case 'day':
+        groupByClause = 'DATE(fsev.created_at)';
+        break;
+      case 'week':
+        groupByClause = "DATE_TRUNC('week', fsev.created_at)";
+        break;
+      case 'year':
+        groupByClause = "DATE_TRUNC('year', fsev.created_at)";
+        break;
+      case 'month':
+      default:
+        groupByClause = "DATE_TRUNC('month', fsev.created_at)";
+        break;
+    }
+
+    const conditions = ['fsev.tenant_id = $1'];
+    const values = [tenant_id];
+    let paramIndex = 2;
+
+    if (project_id) {
+      conditions.push(`fsev.project_id = $${paramIndex}`);
+      values.push(project_id);
+      paramIndex += 1;
+    }
 
     if (start_date) {
-      dateFilter += ` AND fs.created_at >= $${paramIndex++}`;
+      conditions.push(`fsev.created_at >= $${paramIndex}`);
       values.push(start_date);
+      paramIndex += 1;
     }
 
     if (end_date) {
-      dateFilter += ` AND fs.created_at <= $${paramIndex++}`;
+      conditions.push(`fsev.created_at <= $${paramIndex}`);
       values.push(end_date);
-    }
-
-    let groupByClause = '';
-    switch (group_by) {
-      case 'day':
-        groupByClause = 'DATE(fs.created_at)';
-        break;
-      case 'week':
-        groupByClause = "DATE_TRUNC('week', fs.created_at)";
-        break;
-      case 'month':
-        groupByClause = "DATE_TRUNC('month', fs.created_at)";
-        break;
-      case 'year':
-        groupByClause = "DATE_TRUNC('year', fs.created_at)";
-        break;
-      default:
-        groupByClause = "DATE_TRUNC('month', fs.created_at)";
+      paramIndex += 1;
     }
 
     const query = `
-      SELECT 
-        ${groupByClause} as period,
-        COUNT(*) as total_submissions,
-        COUNT(CASE WHEN fs.status = 'submitted' THEN 1 END) as submitted_count,
-        COUNT(CASE WHEN fs.status = 'approved' THEN 1 END) as approved_count,
-        COUNT(CASE WHEN fs.status = 'rejected' THEN 1 END) as rejected_count,
-        COUNT(CASE WHEN fs.status = 'pending' THEN 1 END) as pending_count,
-        COUNT(CASE WHEN fs.perm_enabled = true THEN 1 END) as perm_submissions,
-        AVG(fs.event_compliance_percentage) as avg_compliance,
-        COUNT(DISTINCT fs.node_id) as unique_nodes,
-        COUNT(DISTINCT fs.user_id) as unique_users
-      FROM form_submissions fs
-      WHERE fs.tenant_id = $${paramIndex++}
-        ${project_id ? `AND fs.project_id = $${paramIndex++}` : ''}
-        ${dateFilter}
+      SELECT
+        ${groupByClause} AS period,
+        COUNT(*) AS total_submissions,
+        COUNT(CASE WHEN fsev.status = 'submitted' THEN 1 END) AS submitted_count,
+        COUNT(CASE WHEN fsev.status = 'approved' THEN 1 END) AS approved_count,
+        COUNT(CASE WHEN fsev.status = 'rejected' THEN 1 END) AS rejected_count,
+        COUNT(CASE WHEN fsev.status = 'pending' THEN 1 END) AS pending_count,
+        COUNT(CASE WHEN fsev.perm_enabled = true THEN 1 END) AS perm_submissions,
+        AVG(fsev.event_compliance_percentage) AS avg_compliance,
+        COUNT(DISTINCT fsev.node_id) AS unique_nodes,
+        COUNT(DISTINCT fsev.user_id) AS unique_users,
+        SUM(fsev.numeric_total) AS numeric_total_sum,
+        AVG(fsev.numeric_total) AS numeric_total_avg,
+        SUM(fsev.boolean_true_count) AS boolean_true_total,
+        SUM(fsev.boolean_false_count) AS boolean_false_total,
+        SUM(fsev.fields_count) AS total_field_entries
+      FROM form_submission_enriched_view fsev
+      WHERE ${conditions.join(' AND ')}
       GROUP BY ${groupByClause}
       ORDER BY period DESC
     `;
-
-    if (project_id) {
-      values.push(project_id);
-    }
-    values.push(tenant_id);
 
     const result = await postgresPool.query(query, values);
     return result.rows;
@@ -95,40 +104,49 @@ const getSubmissionsByStatus = async (filters = {}) => {
   try {
     const { tenant_id, project_id, start_date, end_date } = filters;
 
-    let dateFilter = '';
-    const values = [];
-    let paramIndex = 1;
+    if (!tenant_id) {
+      throw new Error('tenant_id is required for status breakdown');
+    }
+
+    const conditions = ['fsev.tenant_id = $1'];
+    const values = [tenant_id];
+    let paramIndex = 2;
+
+    if (project_id) {
+      conditions.push(`fsev.project_id = $${paramIndex}`);
+      values.push(project_id);
+      paramIndex += 1;
+    }
 
     if (start_date) {
-      dateFilter += ` AND fs.created_at >= $${paramIndex++}`;
+      conditions.push(`fsev.created_at >= $${paramIndex}`);
       values.push(start_date);
+      paramIndex += 1;
     }
 
     if (end_date) {
-      dateFilter += ` AND fs.created_at <= $${paramIndex++}`;
+      conditions.push(`fsev.created_at <= $${paramIndex}`);
       values.push(end_date);
+      paramIndex += 1;
     }
 
     const query = `
       SELECT 
-        fs.status,
-        COUNT(*) as count,
-        ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as percentage,
-        AVG(fs.event_compliance_percentage) as avg_compliance,
-        MIN(fs.created_at) as first_submission,
-        MAX(fs.created_at) as last_submission
-      FROM form_submissions fs
-      WHERE fs.tenant_id = $${paramIndex++}
-        ${project_id ? `AND fs.project_id = $${paramIndex++}` : ''}
-        ${dateFilter}
-      GROUP BY fs.status
+        fsev.status,
+        COUNT(*) AS count,
+        ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) AS percentage,
+        AVG(fsev.event_compliance_percentage) AS avg_compliance,
+        MIN(fsev.created_at) AS first_submission,
+        MAX(fsev.created_at) AS last_submission,
+        SUM(fsev.numeric_total) AS numeric_total_sum,
+        AVG(fsev.numeric_total) AS numeric_total_avg,
+        SUM(fsev.boolean_true_count) AS boolean_true_total,
+        SUM(fsev.boolean_false_count) AS boolean_false_total
+      FROM form_submission_enriched_view fsev
+      WHERE ${conditions.join(' AND ')}
+      GROUP BY fsev.status
       ORDER BY count DESC
     `;
-
-    if (project_id) {
-      values.push(project_id);
-    }
-    values.push(tenant_id);
 
     const result = await postgresPool.query(query, values);
     return result.rows;
@@ -145,26 +163,38 @@ const getSubmissionsByMonth = async (filters = {}) => {
   try {
     const { tenant_id, project_id, year = new Date().getFullYear() } = filters;
 
+    if (!tenant_id) {
+      throw new Error('tenant_id is required for monthly breakdown');
+    }
+
+    const values = [tenant_id, year];
+    let projectClause = '';
+    if (project_id) {
+      projectClause = 'AND fsev.project_id = $3';
+      values.push(project_id);
+    }
+
     const query = `
       SELECT 
-        EXTRACT(MONTH FROM fs.created_at) as month,
-        TO_CHAR(fs.created_at, 'Month') as month_name,
-        COUNT(*) as total_submissions,
-        COUNT(CASE WHEN fs.status = 'submitted' THEN 1 END) as submitted_count,
-        COUNT(CASE WHEN fs.status = 'approved' THEN 1 END) as approved_count,
-        AVG(fs.event_compliance_percentage) as avg_compliance,
-        COUNT(DISTINCT fs.node_id) as unique_nodes
-      FROM form_submissions fs
-      WHERE fs.tenant_id = $1
-        ${project_id ? 'AND fs.project_id = $2' : ''}
-        AND EXTRACT(YEAR FROM fs.created_at) = $${project_id ? '3' : '2'}
-      GROUP BY EXTRACT(MONTH FROM fs.created_at), TO_CHAR(fs.created_at, 'Month')
+        EXTRACT(MONTH FROM fsev.created_at) AS month,
+        TO_CHAR(fsev.created_at, 'Month') AS month_name,
+        COUNT(*) AS total_submissions,
+        COUNT(CASE WHEN fsev.status = 'submitted' THEN 1 END) AS submitted_count,
+        COUNT(CASE WHEN fsev.status = 'approved' THEN 1 END) AS approved_count,
+        AVG(fsev.event_compliance_percentage) AS avg_compliance,
+        COUNT(DISTINCT fsev.node_id) AS unique_nodes,
+        SUM(fsev.numeric_total) AS numeric_total_sum,
+        AVG(fsev.numeric_total) AS numeric_total_avg,
+        SUM(fsev.boolean_true_count) AS boolean_true_total,
+        SUM(fsev.boolean_false_count) AS boolean_false_total
+      FROM form_submission_enriched_view fsev
+      WHERE fsev.tenant_id = $1
+        ${projectClause}
+        AND EXTRACT(YEAR FROM fsev.created_at) = $2
+      GROUP BY EXTRACT(MONTH FROM fsev.created_at), TO_CHAR(fsev.created_at, 'Month')
       ORDER BY month
     `;
 
-    const values = project_id
-      ? [tenant_id, project_id, year]
-      : [tenant_id, year];
     const result = await postgresPool.query(query, values);
     return result.rows;
   } catch (error) {
