@@ -8,7 +8,10 @@ services:
     environment:
       - NODE_ENV=staging
       - PORT=4000
-      - MONGODB_URL=mongodb://admin:staging-password@mongodb:27017/halo-staging?authSource=admin
+      # MongoDB URL - Note: replicaSet=rs0 is required for NodeSync change streams
+      # If staging MongoDB is not configured as a replica set, initialize it with:
+      # mongosh --eval "rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})"
+      - MONGODB_URL=mongodb://admin:staging-password@mongodb:27017/halo-staging?authSource=admin&replicaSet=rs0
       - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - POSTGRES_USER=${POSTGRES_USER:-halograph_user}
@@ -19,6 +22,9 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-staging-redis-password}
       - JWT_SECRET=${JWT_SECRET:-staging-jwt-secret-change-this}
       - HALOFE_URL=${HALOFE_URL:-http://localhost:3000}
+      # NodeSync configuration
+      - NODE_SYNC_ENABLED=${NODE_SYNC_ENABLED:-true}
+      - NODE_SYNC_BATCH_SIZE=${NODE_SYNC_BATCH_SIZE:-100}
       # Staging storage configuration
       - STORAGE_PROVIDER=${STORAGE_PROVIDER:-aws-s3}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
