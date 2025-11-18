@@ -74,6 +74,14 @@ const userSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    customFields: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    customFieldsVersion: {
+      type: Number,
+      default: 0,
+    },
 
     phoneNumber: {
       type: String,

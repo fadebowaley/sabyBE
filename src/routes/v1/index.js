@@ -31,6 +31,7 @@ const inmailRoute = require('./inmail.route');
 const postgresRoute = require('./postgres.route');
 const storageRoute = require('./storage.route');
 const storageFolderRoute = require('./storageFolder.route');
+const tenantConfigRoute = require('./tenantConfig.route');
 const submissionRoute = require('./submission.route');
 const telegramWebAppRoute = require('./telegramWebApp.route');
 const waitlistRoute = require('./waitlist.route');
@@ -186,6 +187,10 @@ const defaultRoutes = [
   {
     path: '/storage',
     route: storageRoute,
+  },
+  {
+    path: '/tenant-config',
+    route: tenantConfigRoute,
   },
   {
     path: '/telegram',

@@ -43,6 +43,14 @@ const nodeSchema = mongoose.Schema(
     path: { type: String },
     deletedAt: { type: Date, default: null },
     isActive: { type: Boolean, default: true },
+    customFields: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    customFieldsVersion: {
+      type: Number,
+      default: 0,
+    },
 
     // ========== MERGED PROFILE FIELDS FROM CHURCHPROFILE/NODEPROFILE ==========
     profile: {
