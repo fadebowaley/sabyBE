@@ -114,6 +114,50 @@ services:
       retries: 3
       start_period: 40s
 
+  # Staging WhatsApp Service
+  whatsapp:
+    image: ghcr.io/fadebowaley/sabybe/halobe:develop
+    container_name: halo-staging-whatsapp
+    ports:
+      - "4001:4001"
+    environment:
+      - NODE_ENV=staging
+      - PORT=4001
+      - WHATSAPP_PORT=4001
+      # MongoDB URL - Note: replicaSet=rs0 is required for NodeSync change streams
+      - MONGODB_URL=mongodb://admin:staging-password@mongodb:27017/halo-staging?authSource=admin&replicaSet=rs0
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-halograph_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-local_test_password_2025}
+      - POSTGRES_DB=${POSTGRES_DB:-halograph}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-staging-redis-password}
+      - JWT_SECRET=${JWT_SECRET:-staging-jwt-secret-change-this}
+      - HALOFE_URL=${HALOFE_URL:-http://localhost:3000}
+      # WhatsApp configuration
+      - PHONE_NUMBER_ID=${PHONE_NUMBER_ID}
+      - VERIFY_TOKEN=${VERIFY_TOKEN}
+      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:4001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    command: ["node", "src/ingestion/whatsapp/server.js"]
+    networks:
+      - halo-staging-network
+
 volumes:
   mongodb_staging_data:
   postgres_staging_data:
