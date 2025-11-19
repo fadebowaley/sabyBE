@@ -146,36 +146,6 @@ const BASE_NODE_UPDATE_FIELDS = [
 function normalizeFieldKey(value = '') {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
-
-/**
- * Fetch user nodes and store in session metadata
- */
-async function preloadUserNodes(session) {
-  try {
-    const nodes = await userService.getUserNodes(session.userId);
-    session.metadata = session.metadata || {};
-    session.metadata.nodesCache = nodes.map((node) => ({
-      id: node._id?.toString?.() || node.id,
-      nodeId: node.nodeId,
-      name: node.name,
-      city: node.city,
-      state: node.state,
-      country: node.country,
-      isMain: node.isMain,
-      levelName: node.level?.name,
-      structureName: node.structure?.name,
-      customFields: node.customFields || {},
-      customFieldsVersion: node.customFieldsVersion || 0,
-    }));
-    session.markModified('metadata');
-    await session.save();
-  } catch (error) {
-    logger.error(
-      `❌ Failed to preload nodes for user ${session.userId}:`,
-      error.message
-    );
-  }
-}
 function buildFieldLookup(fields) {
   const map = new Map();
   fields.forEach((field) => {
@@ -199,6 +169,162 @@ const SUPPORTED_CUSTOM_FIELD_TYPES = new Set([
   'select',
   'multi-select',
 ]);
+
+const ELEVATED_ROLE_KEYWORDS = [
+  'owner',
+  'admin',
+  'manager',
+  'lead',
+  'director',
+];
+
+function normalizeRoleName(role) {
+  if (!role) {
+    return '';
+  }
+  if (typeof role === 'string') {
+    return role.toLowerCase();
+  }
+  if (role.name) {
+    return String(role.name).toLowerCase();
+  }
+  if (role.roleName) {
+    return String(role.roleName).toLowerCase();
+  }
+  return String(role).toLowerCase();
+}
+
+function hasElevatedNodeAccess(profileSnapshot = {}) {
+  if (!profileSnapshot) {
+    return false;
+  }
+
+  if (
+    profileSnapshot.isOwner ||
+    profileSnapshot.isSuper ||
+    profileSnapshot.isSaby
+  ) {
+    return true;
+  }
+
+  const roles = Array.isArray(profileSnapshot.roles)
+    ? profileSnapshot.roles
+    : [];
+  return roles.some((role) => {
+    const normalized = normalizeRoleName(role);
+    return (
+      normalized &&
+      ELEVATED_ROLE_KEYWORDS.some((keyword) => normalized.includes(keyword))
+    );
+  });
+}
+
+async function ensureProfileSnapshot(session) {
+  session.metadata = session.metadata || {};
+  if (session.metadata.profileSnapshot) {
+    return session.metadata.profileSnapshot;
+  }
+
+  if (!session.userId) {
+    return {};
+  }
+
+  try {
+    const user = await userService.getUserById(session.userId);
+    if (user) {
+      const snapshot = buildProfileSnapshot(user);
+      session.metadata.profileSnapshot = snapshot;
+      session.markModified('metadata');
+      await session.save();
+      return snapshot;
+    }
+  } catch (error) {
+    logger.warn(
+      `⚠️ Unable to build profile snapshot for session ${session._id}:`,
+      error.message
+    );
+  }
+  return {};
+}
+
+async function fetchAccessibleNodes(
+  session,
+  { allowTenantFallback = false, tenantId = null } = {}
+) {
+  if (!session.userId) {
+    return [];
+  }
+
+  let nodes = await userService.getUserNodes(session.userId);
+  if (nodes.length || !allowTenantFallback) {
+    return nodes;
+  }
+
+  if (!tenantId) {
+    return nodes;
+  }
+
+  try {
+    const tenantNodes = await nodeService.queryNodes(
+      { tenantId, deletedAt: null },
+      {
+        limit: 25,
+        page: 1,
+        sortBy: 'name:asc',
+        populate: 'level structure',
+      }
+    );
+    if (tenantNodes?.results?.length) {
+      nodes = tenantNodes.results;
+    }
+  } catch (error) {
+    logger.warn(
+      `⚠️ Unable to fetch tenant-wide nodes for session ${session._id}:`,
+      error.message
+    );
+  }
+  return nodes;
+}
+
+/**
+ * Fetch user nodes and store in session metadata
+ */
+async function preloadUserNodes(session, options = {}) {
+  const { allowTenantFallback = true } = options;
+  try {
+    const profileSnapshot = await ensureProfileSnapshot(session);
+    const tenantId = session.tenantId || profileSnapshot.tenantId || null;
+    const canFallback =
+      allowTenantFallback && tenantId && hasElevatedNodeAccess(profileSnapshot);
+
+    const nodes = (await fetchAccessibleNodes(session, {
+      allowTenantFallback: Boolean(canFallback),
+      tenantId,
+    })) || [];
+
+    session.metadata = session.metadata || {};
+    session.metadata.nodesCache = nodes.map((node) => ({
+      id: node._id?.toString?.() || node.id,
+      nodeId: node.nodeId,
+      name: node.name,
+      city: node.city,
+      state: node.state,
+      country: node.country,
+      isMain: node.isMain,
+      levelName: node.level?.name || node.levelName || null,
+      structureName: node.structure?.name || node.structureName || null,
+      customFields: node.customFields || {},
+      customFieldsVersion: node.customFieldsVersion || 0,
+    }));
+    session.markModified('metadata');
+    await session.save();
+  } catch (error) {
+    logger.error(
+      `❌ Failed to preload nodes for user ${session.userId}:`,
+      error.message
+    );
+  }
+}
 
 function mapCustomFieldToPrompt(field) {
   if (!field || !field.id) {
@@ -2366,9 +2492,14 @@ exports.startNodeUpdate = async (phoneNumber, session) => {
     const nodes = session.metadata?.nodesCache || [];
 
     if (!nodes.length) {
+      const profileSnapshot = session.metadata?.profileSnapshot || {};
+      const elevatedAccess = hasElevatedNodeAccess(profileSnapshot);
+      const guidanceMessage = elevatedAccess
+        ? 'No units exist yet for your organization. Create a unit from the Saby dashboard (Nodes → Create) or assign yourself to an existing unit, then run 32 again.'
+        : 'No units are assigned to your account yet. Please ask your administrator to assign you to a unit before using this option.';
       await whatsappNotificationService.sendErrorMessage(
         phoneNumber,
-        'No units are assigned to your account yet.'
+        guidanceMessage
       );
       return;
     }
@@ -2809,6 +2940,10 @@ function buildProfileSnapshot(userDoc = {}) {
     phoneNumber: lean.phoneNumber,
     firstname: lean.firstname,
     lastname: lean.lastname,
+    isOwner: Boolean(lean.isOwner),
+    isSuper: Boolean(lean.isSuper),
+    isSaby: Boolean(lean.isSaby),
+    status: lean.status,
     customFields: lean.customFields || {},
     customFieldsVersion: lean.customFieldsVersion || 0,
     roles: (lean.roles || []).map((role) => {
@@ -2885,6 +3020,7 @@ async function promptNodeSelection(
   { continueToProjects = false, alwaysPrompt = false } = {}
 ) {
   session.metadata = session.metadata || {};
+  const profileSnapshot = session.metadata?.profileSnapshot || {};
   const nodes = session.metadata.nodesCache || [];
 
   if (!alwaysPrompt && session.metadata.selectedNode && nodes.length <= 1) {
@@ -2892,9 +3028,13 @@ async function promptNodeSelection(
   }
 
   if (!nodes || nodes.length === 0) {
+    const elevatedAccess = hasElevatedNodeAccess(profileSnapshot);
+    const errorMessage = elevatedAccess
+      ? 'No units exist yet for your organization. Create a unit from the dashboard or assign yourself first, then try again.'
+      : 'No locations are assigned to your account. Please contact your administrator.';
     await whatsappNotificationService.sendErrorMessage(
       phoneNumber,
-      'No locations are assigned to your account. Please contact your administrator.'
+      errorMessage
     );
     return false;
   }
