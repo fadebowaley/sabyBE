@@ -104,14 +104,14 @@ jobs:
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
             
-            echo "📥 Pulling latest backend image (no cache)..."
-            docker-compose -f docker-compose.staging.yml pull --no-parallel backend
+            echo "📥 Pulling latest backend and WhatsApp images (no cache)..."
+            docker-compose -f docker-compose.staging.yml pull --no-parallel backend whatsapp
             
-            echo "🛑 Stopping old backend container..."
-            docker-compose -f docker-compose.staging.yml stop backend || true
+            echo "🛑 Stopping old backend and WhatsApp containers..."
+            docker-compose -f docker-compose.staging.yml stop backend whatsapp || true
             
-            echo "🗑️ Removing old backend container..."
-            docker-compose -f docker-compose.staging.yml rm -f backend || true
+            echo "🗑️ Removing old backend and WhatsApp containers..."
+            docker-compose -f docker-compose.staging.yml rm -f backend whatsapp || true
             
             echo "🚀 Starting new backend container..."
             docker-compose -f docker-compose.staging.yml up -d --force-recreate backend
@@ -119,22 +119,35 @@ jobs:
             echo "⏳ Waiting for backend to be healthy..."
             sleep 20
             
-            echo "🏥 Health check..."
+            echo "🏥 Backend health check..."
             docker-compose -f docker-compose.staging.yml ps backend
             
             echo "📊 Testing backend endpoint..."
             curl -f http://localhost:4000 || echo "⚠️ Backend not responding yet, may need more time"
             
-            echo "📝 Recent logs:"
+            echo "📝 Recent backend logs:"
             docker logs saby-backend-staging --tail 20
             
-            echo "✅ Backend deployment completed!"
+            echo "🚀 Restarting WhatsApp service with new backend image..."
+            docker-compose -f docker-compose.staging.yml up -d --force-recreate whatsapp
+            
+            echo "⏳ Waiting for WhatsApp to be healthy..."
+            sleep 10
+            
+            echo "🏥 WhatsApp health check..."
+            docker-compose -f docker-compose.staging.yml ps whatsapp
+            
+            echo "📝 Recent WhatsApp logs:"
+            docker logs saby-staging-whatsapp --tail 20 || true
+            
+            echo "✅ Backend and WhatsApp deployment completed!"
           ENDSSH
 
       - name: ✅ Deployment Summary
         run: |
-          echo "✅ Backend deployed to unified staging VM"
-          echo "🌐 Accessible at: http://${{ secrets.NEW_STAGING_IP }}:4000"
+          echo "✅ Backend and WhatsApp deployed to unified staging VM"
+          echo "🌐 Backend accessible at: http://${{ secrets.NEW_STAGING_IP }}:4000"
+          echo "📱 WhatsApp service restarted with latest backend image"
 
   # ═══════════════════════════════════════════════════════════════════
   # DEPLOY TO PRODUCTION - UNIFIED VM
@@ -164,17 +177,26 @@ jobs:
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
             
-            echo "📥 Pulling latest backend image..."
-            docker-compose -f docker-compose.production.yml pull backend
+            echo "📥 Pulling latest backend and WhatsApp images..."
+            docker-compose -f docker-compose.production.yml pull backend whatsapp
             
             echo "🚀 Restarting backend service..."
-            docker-compose -f docker-compose.production.yml up -d backend
+            docker-compose -f docker-compose.production.yml up -d --force-recreate backend
             
             echo "⏳ Waiting for backend to start..."
             sleep 10
             
-            echo "🏥 Health check..."
+            echo "🏥 Backend health check..."
             docker-compose -f docker-compose.production.yml ps backend
             
-            echo "✅ Backend deployment completed!"
+            echo "🚀 Restarting WhatsApp service with new backend image..."
+            docker-compose -f docker-compose.production.yml up -d --force-recreate whatsapp
+            
+            echo "⏳ Waiting for WhatsApp to start..."
+            sleep 10
+            
+            echo "🏥 WhatsApp health check..."
+            docker-compose -f docker-compose.production.yml ps whatsapp
+            
+            echo "✅ Backend and WhatsApp deployment completed!"
           ENDSSH
