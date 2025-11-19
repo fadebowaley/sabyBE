@@ -141,48 +141,6 @@ const BASE_NODE_UPDATE_FIELDS = [
     type: 'boolean',
     aliases: ['active'],
   },
-  {
-    key: 'dateOfEstablishment',
-    label: 'Date Established',
-    description: 'Format: YYYY-MM-DD',
-    path: ['profile', 'dateOfEstablishment'],
-    type: 'date',
-    aliases: ['established', 'establishment date'],
-  },
-  {
-    key: 'propertyStatus',
-    label: 'Property Status',
-    description: 'Owned, Rented, Leased, Other',
-    path: ['profile', 'propertyStatus'],
-    type: 'enum',
-    options: ['Owned', 'Rented', 'Leased', 'Other'],
-  },
-  {
-    key: 'estimatedValue',
-    label: 'Estimated Value',
-    description: 'Estimated property value',
-    path: ['profile', 'estimatedValue'],
-    type: 'number',
-    min: 0,
-    aliases: ['value'],
-  },
-  {
-    key: 'buildingType',
-    label: 'Building Type',
-    description: 'Facility/building type',
-    path: ['profile', 'buildingType'],
-    type: 'text',
-    maxLength: 120,
-  },
-  {
-    key: 'facilityStatus',
-    label: 'Facility Status',
-    description: 'Active, Inactive, Under Construction',
-    path: ['profile', 'facilityStatus'],
-    type: 'enum',
-    options: ['Active', 'Inactive', 'Under Construction'],
-    aliases: ['status'],
-  },
 ];
 
 function normalizeFieldKey(value = '') {

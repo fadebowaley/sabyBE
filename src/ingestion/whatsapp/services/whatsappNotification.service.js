@@ -1774,13 +1774,13 @@ Type *done* when finished or *cancel* to exit.`;
             `• ${item.label}: ${item.display ?? item.value ?? '(updated)'}`
         )
         .join('\n');
-      sections.push(`✅ *Updated*\n${lines}`);
+      sections.push(`✨ *Changes Saved*\n${lines}`);
     }
     if (result.errors.length > 0) {
       const lines = result.errors
         .map((item) => `• ${item.label}: ${item.error}`)
         .join('\n');
-      sections.push(`⚠️ *Invalid*\n${lines}`);
+      sections.push(`⚠️ *Needs Attention*\n${lines}`);
     }
     if (result.unknown.length > 0) {
       const lines = result.unknown
@@ -1788,9 +1788,14 @@ Type *done* when finished or *cancel* to exit.`;
         .join('\n');
       sections.push(`❓ *Unrecognized*\n${lines}`);
     }
-    const message = `${sections.join('\n\n') || 'No changes detected.'}
 
-Send more updates or type *done* to finish.`;
+    const message = `✅ *Profile update complete!*
+${sections.join('\n\n') || 'No changes detected.'}
+
+• Send more updates if needed
+• Type *done* to finish
+• Type *cancel* to exit`;
+
     await this.sendTextMessage(phoneNumber, message);
   }
 
