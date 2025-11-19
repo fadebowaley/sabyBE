@@ -290,17 +290,40 @@ async function fetchAccessibleNodes(
  * Fetch user nodes and store in session metadata
  */
 async function preloadUserNodes(session, options = {}) {
-  const { allowTenantFallback = true } = options;
+  const { allowTenantFallback = true, skipSave = false } = options;
   try {
+    // Preserve existing email/loginEmail before any operations
+    const existingLoginEmail = session?.metadata?.loginEmail;
+    const existingUserEmail = session?.metadata?.userEmail;
+    const existingProfileSnapshot = session?.metadata?.profileSnapshot;
+
     const profileSnapshot = await ensureProfileSnapshot(session);
+
+    // Restore email if it was lost (shouldn't happen, but safety check)
+    if (existingLoginEmail && !session.metadata.loginEmail) {
+      session.metadata.loginEmail = existingLoginEmail;
+    }
+    if (existingUserEmail && !session.metadata.userEmail) {
+      session.metadata.userEmail = existingUserEmail;
+    }
+    // Restore profileSnapshot if it was overwritten with empty object
+    if (
+      existingProfileSnapshot &&
+      existingProfileSnapshot.email &&
+      (!profileSnapshot || !profileSnapshot.email)
+    ) {
+      session.metadata.profileSnapshot = existingProfileSnapshot;
+    }
+
     const tenantId = session.tenantId || profileSnapshot.tenantId || null;
     const canFallback =
       allowTenantFallback && tenantId && hasElevatedNodeAccess(profileSnapshot);
 
-    const nodes = (await fetchAccessibleNodes(session, {
-      allowTenantFallback: Boolean(canFallback),
-      tenantId,
-    })) || [];
+    const nodes =
+      (await fetchAccessibleNodes(session, {
+        allowTenantFallback: Boolean(canFallback),
+        tenantId,
+      })) || [];
 
     session.metadata = session.metadata || {};
     session.metadata.nodesCache = nodes.map((node) => ({
@@ -317,7 +340,11 @@ async function preloadUserNodes(session, options = {}) {
       customFieldsVersion: node.customFieldsVersion || 0,
     }));
     session.markModified('metadata');
-    await session.save();
+
+    // Only save if not explicitly skipped (e.g., during phone auth, caller will save)
+    if (!skipSave) {
+      await session.save();
+    }
   } catch (error) {
     logger.error(
       `❌ Failed to preload nodes for user ${session.userId}:`,
@@ -1041,7 +1068,8 @@ function describeOtpDestinations(session, delivery = {}) {
   if (parts.length === 0) {
     const fallbackEmail =
       email ||
-      getLoginEmail(session) ||
+      session?.metadata?.loginEmail ||
+      session?.metadata?.userEmail ||
       session?.metadata?.profileSnapshot?.email ||
       null;
     if (fallbackEmail) {
@@ -1061,13 +1089,60 @@ function describeOtpDestinations(session, delivery = {}) {
   return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
-function getLoginEmail(session) {
-  return (
+async function getLoginEmail(session) {
+  // First check session metadata
+  const email =
     session?.metadata?.loginEmail ||
     session?.metadata?.userEmail ||
-    session?.metadata?.profileSnapshot?.email ||
-    null
-  );
+    session?.metadata?.profileSnapshot?.email;
+
+  if (email) {
+    return email;
+  }
+
+  // Fallback: try to get email from user record if we have userId
+  if (session?.userId) {
+    try {
+      const user = await userService.getUserById(session.userId);
+      if (user?.email) {
+        // Cache it in session for future use
+        session.metadata = session.metadata || {};
+        session.metadata.loginEmail = user.email;
+        session.metadata.userEmail = user.email;
+        session.markModified('metadata');
+        await session.save();
+        return user.email;
+      }
+    } catch (error) {
+      logger.warn(
+        `⚠️ Failed to fetch email for user ${session.userId}:`,
+        error.message
+      );
+    }
+  }
+
+  // Last resort: try to get email from phone number
+  if (session?.phoneNumber) {
+    try {
+      const user = await userService.getUserByPhone(session.phoneNumber);
+      if (user?.email) {
+        // Cache it in session for future use
+        session.metadata = session.metadata || {};
+        session.metadata.loginEmail = user.email;
+        session.metadata.userEmail = user.email;
+        session.markModified('metadata');
+        await session.save();
+        return user.email;
+      }
+    } catch (error) {
+      logger.warn(
+        `⚠️ Failed to fetch email for phone ${session.phoneNumber}:`,
+        error.message
+      );
+    }
+  }
+
+  return null;
 }
 
 function derivePasscodeFromPhone(phone = '') {
@@ -1091,7 +1166,7 @@ async function promptForCurrentStage(phoneNumber, session) {
   const stage = session.metadata?.loginStage || 'password';
   switch (stage) {
     case 'otp': {
-      const email = getLoginEmail(session);
+      const email = await getLoginEmail(session);
       await whatsappNotificationService.sendOtpVerificationPrompt(
         phoneNumber,
         maskEmail(email)
@@ -1113,7 +1188,7 @@ async function promptForCurrentStage(phoneNumber, session) {
     default: {
       await whatsappNotificationService.sendLoginPrompt(
         phoneNumber,
-        getLoginEmail(session)
+        await getLoginEmail(session)
       );
       break;
     }
@@ -1257,7 +1332,7 @@ async function promptForLogin(
 
   await whatsappNotificationService.sendLoginPrompt(
     phoneNumber,
-    getLoginEmail(session)
+    await getLoginEmail(session)
   );
 }
 
@@ -1356,7 +1431,7 @@ async function finalizePendingLogin(
     }
 
     if (!resolvedUser) {
-      const email = session.metadata.pendingEmail || getLoginEmail(session);
+      const email = session.metadata.pendingEmail || await getLoginEmail(session);
       if (email) {
         resolvedUser = await userService.getUserByEmail(email);
       }
@@ -1570,7 +1645,8 @@ exports.handlePhoneAuthentication = async (phoneNumber, session) => {
     session.metadata.forceReloginAfter = null;
 
     // Preload node list for selection once authentication completes
-    await preloadUserNodes(session);
+    // Skip save here - session will be saved after this
+    await preloadUserNodes(session, { skipSave: true });
 
     session.status = 'awaiting_login';
     session.markModified('metadata');
@@ -1582,7 +1658,7 @@ exports.handlePhoneAuthentication = async (phoneNumber, session) => {
 
     await whatsappNotificationService.sendLoginPrompt(
       phoneNumber,
-      getLoginEmail(session)
+      await getLoginEmail(session)
     );
   } catch (error) {
     logger.error(
@@ -1818,7 +1894,7 @@ exports.triggerVerification = async (phoneNumber, session) => {
     if (session.status === 'awaiting_login') {
       await whatsappNotificationService.sendLoginPrompt(
         phoneNumber,
-        getLoginEmail(session)
+        await getLoginEmail(session)
       );
       return;
     }
@@ -1906,11 +1982,11 @@ exports.handleLoginChallenge = async (phoneNumber, session, input = '') => {
       if (!password) {
         await whatsappNotificationService.sendLoginPrompt(
           phoneNumber,
-          getLoginEmail(session)
+          await getLoginEmail(session)
         );
         return;
       }
-      const email = getLoginEmail(session);
+      const email = await getLoginEmail(session);
       if (!email) {
         await whatsappNotificationService.sendErrorMessage(
           phoneNumber,
@@ -2049,7 +2125,7 @@ exports.handleLoginChallenge = async (phoneNumber, session, input = '') => {
 
     await whatsappNotificationService.sendLoginPrompt(
       phoneNumber,
-      getLoginEmail(session)
+      await getLoginEmail(session)
     );
     return;
   }
@@ -2101,7 +2177,7 @@ exports.handleLoginChallenge = async (phoneNumber, session, input = '') => {
       trimmed.match(/^(?:code|otp)\s*(\d{4,6})$/i) ||
       trimmed.match(/^(\d{4,6})$/);
     if (otpCodeMatch) {
-      const email = session.metadata.pendingEmail || getLoginEmail(session);
+      const email = session.metadata.pendingEmail || await getLoginEmail(session);
       if (!email) {
         await whatsappNotificationService.sendErrorMessage(
           phoneNumber,
@@ -2145,7 +2221,7 @@ exports.handleLoginChallenge = async (phoneNumber, session, input = '') => {
     await whatsappNotificationService.sendOtpVerificationPrompt(
       phoneNumber,
       describeOtpDestinations(session, {
-        email: session.metadata.pendingEmail || getLoginEmail(session),
+        email: session.metadata.pendingEmail || await getLoginEmail(session),
         channels: ['email'],
       })
     );
@@ -2252,7 +2328,7 @@ exports.handleLoginChallenge = async (phoneNumber, session, input = '') => {
         }
 
         if (!resolvedUser) {
-          const email = session.metadata.pendingEmail || getLoginEmail(session);
+          const email = session.metadata.pendingEmail || await getLoginEmail(session);
           if (email) {
             resolvedUser = await userService.getUserByEmail(email);
           }
@@ -2338,7 +2414,7 @@ exports.lockSession = async (phoneNumber, session, reason = 'secure_lock') => {
 
   await whatsappNotificationService.sendSessionLockNotice(
     phoneNumber,
-    getLoginEmail(session)
+    await getLoginEmail(session)
   );
 };
 
@@ -3104,7 +3180,7 @@ async function startPasswordReset(phoneNumber, session) {
 
     session.metadata.passwordReset = {
       stage: 'awaiting_code',
-      email: otpDelivery.email || getLoginEmail(session),
+      email: otpDelivery.email || await getLoginEmail(session),
       channels: otpDelivery.channels || [],
       lastOtpSentAt: new Date(),
     };
@@ -3303,7 +3379,7 @@ async function handlePasswordReset(phoneNumber, input, session) {
   session.metadata = session.metadata || {};
   session.metadata.passwordReset = session.metadata.passwordReset || {
     stage: 'awaiting_code',
-    email: getLoginEmail(session),
+    email: await getLoginEmail(session),
   };
 
   const state = session.metadata.passwordReset;
@@ -3320,7 +3396,7 @@ async function handlePasswordReset(phoneNumber, input, session) {
       await whatsappNotificationService.sendPasswordResetIntro(
         phoneNumber,
         describeOtpDestinations(session, {
-          email: state.email || getLoginEmail(session),
+          email: state.email || await getLoginEmail(session),
           channels: ['email'],
         })
       );
@@ -3389,7 +3465,7 @@ async function handlePasswordReset(phoneNumber, input, session) {
       }
 
       const code = codeMatch[1];
-      const email = state.email || getLoginEmail(session);
+      const email = state.email || await getLoginEmail(session);
       const expectedPasscode = session.metadata.expectedPasscode;
 
       if (expectedPasscode && code === expectedPasscode) {
