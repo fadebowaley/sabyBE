@@ -1747,19 +1747,21 @@ Reply with the number or name of the field you want to update, or type *cancel* 
     const fieldLines = fields
       .map((field) => {
         const hint = buildFieldHint(field);
-        return `${field.key}: ${field.label}${hint ? ` — ${hint}` : ''}`;
+        const sampleValue = field.sampleValue || field.label || field.key;
+        return `\`${field.key}: ${sampleValue}\`${hint ? ` — ${hint}` : ''}`;
       })
       .join('\n');
+
     const message = `🛠️ *Profile Bulk Update*
 
 Send any fields to change as \`field: value\`. One per line. Example:
 \`firstname: Jane\`
 \`maritalStatus: Married\`
 
-Available fields:
 ${fieldLines}
 
 Type *done* when finished or *cancel* to exit.`;
+
     await this.sendTextMessage(phoneNumber, message);
   }
 
@@ -1796,19 +1798,21 @@ Send more updates or type *done* to finish.`;
     const fieldLines = fields
       .map((field) => {
         const hint = buildFieldHint(field);
-        return `${field.key}: ${field.label}${hint ? ` — ${hint}` : ''}`;
+        const sampleValue = field.sampleValue || field.label || field.key;
+        return `\`${field.key}: ${sampleValue}\`${hint ? ` — ${hint}` : ''}`;
       })
       .join('\n');
+
     const message = `🏢 *Update ${node.name || node.nodeId}*
 
 Send changes as \`field: value\`. Example:
 \`address: 12 Unity Street\`
 \`isMain: yes\`
 
-Available fields:
 ${fieldLines}
 
 Type *done* when finished or *cancel* to exit.`;
+
     await this.sendTextMessage(phoneNumber, message);
   }
 
