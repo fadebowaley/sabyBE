@@ -36,3 +36,4 @@ module.exports.StorageFolder = require('./storageFolder.model');
 module.exports.StorageSettings = require('./storageSettings.model');
 module.exports.StorageActivity = require('./storageActivity.model');
 module.exports.Waitlist = require('./waitlist.model');
+module.exports.TenantConfig = require('./tenantConfig.model');

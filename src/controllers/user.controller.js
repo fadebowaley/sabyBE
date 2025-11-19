@@ -8,13 +8,17 @@ const { userService } = require('../services');
 const ownerCreate = catchAsync(async (req, res) => {
   req.body.createdBy = req.user._id; // 🔐 enforce ownership context
   const user = await userService.ownerCreate(req.body);
-  res.status(httpStatus.CREATED).send(user);
+  res
+    .status(httpStatus.CREATED)
+    .send(userService.buildUserResponse(user));
 });
 
 // Function to create SabyUser (Global Admin)
 const createSabyUser = catchAsync(async (req, res) => {
   const user = await userService.createSabyUser(req.body);
-  res.status(httpStatus.CREATED).send(user);
+  res
+    .status(httpStatus.CREATED)
+    .send(userService.buildUserResponse(user));
 });
 
 // Function to bulk create users
@@ -103,7 +107,9 @@ const restoreUsers = catchAsync(async (req, res) => {
   // Return success response with detailed report
   res.status(httpStatus.OK).send({
     message: `${restoredUsers.length} users restored successfully`,
-    restoredUsers,
+    restoredUsers: restoredUsers.map((user) =>
+      userService.buildUserResponse(user)
+    ),
     failedUsers,
   });
 });
@@ -130,7 +136,7 @@ const restoreUser = catchAsync(async (req, res) => {
   // Return success response with the restored user data
   res.status(httpStatus.OK).send({
     message: 'User restored successfully',
-    restoredUser,
+    restoredUser: userService.buildUserResponse(restoredUser),
   });
 });
 
@@ -180,8 +186,7 @@ const getUser = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  // Return user directly (profile model doesn't exist yet)
-  res.send(user);
+  res.send(userService.buildUserResponse(user));
 });
 
 const updateUser = catchAsync(async (req, res) => {
@@ -202,7 +207,7 @@ const updateUser = catchAsync(async (req, res) => {
     );
 
     console.log(`✅ [UserController.updateUser] User updated successfully`);
-    res.send(user);
+    res.send(userService.buildUserResponse(user));
   } catch (error) {
     console.error(`❌ [UserController.updateUser] Update failed:`, error);
     console.error(`❌ [UserController.updateUser] Error details:`, {

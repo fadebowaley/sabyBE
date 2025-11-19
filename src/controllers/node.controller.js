@@ -17,7 +17,9 @@ const createNode = catchAsync(async (req, res) => {
     '[NODE CONTROLLER - CREATE] Node created successfully:',
     node._id
   );
-  res.status(httpStatus.CREATED).send(node);
+  res
+    .status(httpStatus.CREATED)
+    .send(nodeService.buildNodeResponse(node));
 });
 
 // Get node by ID (with profile)
@@ -35,7 +37,7 @@ const getNodeById = catchAsync(async (req, res) => {
   }
 
   // Return node directly (profile model doesn't exist yet)
-  res.send(node);
+  res.send(nodeService.buildNodeResponse(node));
 });
 
 // Get node by name
@@ -44,7 +46,7 @@ const getNodeByName = catchAsync(async (req, res) => {
   if (!node) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Node not found');
   }
-  res.send(node);
+  res.send(nodeService.buildNodeResponse(node));
 });
 
 // Update node by ID
@@ -67,7 +69,7 @@ const updateNodeById = catchAsync(async (req, res) => {
     req.params.nodeId,
     req.body
   );
-  res.send(updatedNode);
+  res.send(nodeService.buildNodeResponse(updatedNode));
 });
 
 // Delete node by ID
@@ -114,7 +116,7 @@ const restoreNodeById = catchAsync(async (req, res) => {
     req.params.nodeId,
     req.body || {}
   );
-  res.send(restoredNode);
+  res.send(nodeService.buildNodeResponse(restoredNode));
 });
 
 // Query nodes with filters and pagination
@@ -152,19 +154,21 @@ const queryNodes = catchAsync(async (req, res) => {
 // Get nodes by type
 const getNodesByType = catchAsync(async (req, res) => {
   const nodes = await nodeService.getNodesByType(req.params.nodeType);
-  res.send(nodes);
+  res.send(nodes.map((node) => nodeService.buildNodeResponse(node)));
 });
 
 // Get parent node
 const getParentNode = catchAsync(async (req, res) => {
   const parentNode = await nodeService.getParentNode(req.params.nodeId);
-  res.send(parentNode);
+  res.send(nodeService.buildNodeResponse(parentNode));
 });
 
 // Get child nodes
 const getChildNodes = catchAsync(async (req, res) => {
   const childNodes = await nodeService.getChildNodes(req.params.nodeId);
-  res.send(childNodes);
+  res.send(
+    childNodes.map((node) => nodeService.buildNodeResponse(node))
+  );
 });
 
 // Move node to a new parent
@@ -173,7 +177,7 @@ const moveNodeToParent = catchAsync(async (req, res) => {
     req.params.nodeId,
     req.body.parentId
   );
-  res.send(updatedNode);
+  res.send(nodeService.buildNodeResponse(updatedNode));
 });
 
 // Get node path
@@ -185,13 +189,13 @@ const getNodePath = catchAsync(async (req, res) => {
 // Activate a node
 const activateNode = catchAsync(async (req, res) => {
   const updatedNode = await nodeService.activateNode(req.params.nodeId);
-  res.send(updatedNode);
+  res.send(nodeService.buildNodeResponse(updatedNode));
 });
 
 // Deactivate a node
 const deactivateNode = catchAsync(async (req, res) => {
   const updatedNode = await nodeService.deactivateNode(req.params.nodeId);
-  res.send(updatedNode);
+  res.send(nodeService.buildNodeResponse(updatedNode));
 });
 
 // Assign users to a node
@@ -200,7 +204,7 @@ const assignUsersToNode = catchAsync(async (req, res) => {
     req.params.nodeId,
     req.body.userIds
   );
-  res.send(updatedNode);
+  res.send(nodeService.buildNodeResponse(updatedNode));
 });
 
 // Bulk import nodes
@@ -208,7 +212,7 @@ const bulkImportNodes = catchAsync(async (req, res) => {
   const nodes = await nodeService.bulkImportNodes(req.body.nodes);
   res.status(httpStatus.CREATED).json({
     message: `${nodes.length} nodes successfully imported.`,
-    data: nodes,
+    data: nodes.map((node) => nodeService.buildNodeResponse(node)),
   });
 });
 

@@ -164,6 +164,7 @@ const updateUser = {
         stateOfResidence: Joi.string(),
         lgaOfResidence: Joi.string(),
       }),
+    customFields: Joi.object(),
     })
     .min(1),
 };

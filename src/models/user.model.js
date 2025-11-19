@@ -110,6 +110,17 @@ const userSchema = mongoose.Schema(
     createdAt: { type: Date, default: Date.now },
 
     // ========== MERGED PROFILE FIELDS FROM USERPROFILE ==========
+    /**
+     * NOTE: The detailed profile fields below are retained for backward compatibility.
+     * Tenants should prefer capturing these attributes via `customFields` configuration.
+     * Fields migrated to the custom-field builder:
+     * - title, otherName, gender, dateOfBirth
+     * - highestQualification, professional, employmentCategory, occupation, employeeId
+     * - maritalStatus, spouse.name, spouse.phoneNumber, spouse.dateOfBirth
+     * - nextOfKin.name, nextOfKin.phoneNumber, nextOfKin.relationship
+     * - stateOfOrigin, lgaOfOrigin, homeTown
+     * - residentialAddress, stateOfResidence, lgaOfResidence
+     */
     profile: {
       // Personal details
       title: { type: String }, // Mr., Mrs., Dr., etc.

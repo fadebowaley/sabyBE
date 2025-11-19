@@ -1,0 +1,52 @@
+const USER_ESSENTIAL_FIELDS = [
+  '_id',
+  'id',
+  'userId',
+  'haloId',
+  'tenantId',
+  'firstname',
+  'lastname',
+  'email',
+  'phoneNumber',
+  'status',
+  'avatar',
+  'isOwner',
+  'isSuper',
+  'isSaby',
+  'isPhoneVerified',
+  'isEmailVerified',
+  'roles',
+  'profile',
+  'createdAt',
+  'updatedAt',
+];
+
+const NODE_ESSENTIAL_FIELDS = [
+  '_id',
+  'id',
+  'nodeId',
+  'tenantId',
+  'level',
+  'structure',
+  'parent',
+  'name',
+  'isMain',
+  'address',
+  'city',
+  'state',
+  'country',
+  'postalCode',
+  'dateOfEstablishment',
+  'isActive',
+  'users',
+  'path',
+  'profile',
+  'createdAt',
+  'updatedAt',
+];
+
+module.exports = {
+  USER_ESSENTIAL_FIELDS,
+  NODE_ESSENTIAL_FIELDS,
+};
+

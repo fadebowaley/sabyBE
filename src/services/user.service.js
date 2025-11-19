@@ -2,6 +2,40 @@ const mongoose = require('mongoose');
 const httpStatus = require('http-status');
 const { User, Role } = require('../models');
 const ApiError = require('../utils/ApiError');
+const { validateCustomFields } = require('./customField.service');
+const { USER_ESSENTIAL_FIELDS } = require('../config/essentials');
+
+const buildUserResponse = (userDoc) => {
+  if (!userDoc) {
+    return null;
+  }
+  const plain =
+    typeof userDoc.toObject === 'function'
+      ? userDoc.toObject({ virtuals: true })
+      : userDoc;
+  const response = {};
+
+  USER_ESSENTIAL_FIELDS.forEach((field) => {
+    if (plain[field] !== undefined) {
+      response[field] = plain[field];
+    }
+  });
+
+  if (response.profile === undefined) {
+    response.profile = plain.profile || {};
+  }
+
+  if (
+    plain.customFields &&
+    typeof plain.customFields === 'object' &&
+    Object.keys(plain.customFields).length > 0
+  ) {
+    response.customFields = plain.customFields;
+    response.customFieldsVersion = plain.customFieldsVersion || 0;
+  }
+
+  return response;
+};
 
 /**
  * Create a user
@@ -13,7 +47,36 @@ const createUser = async (userBody) => {
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
-  return User.createUser(userBody);
+
+  // Handle customFields validation if provided
+  const customFieldsProvided = Object.prototype.hasOwnProperty.call(
+    userBody,
+    'customFields'
+  );
+  const customFieldsPayload = customFieldsProvided
+    ? userBody.customFields
+    : undefined;
+
+  if (customFieldsProvided) {
+    delete userBody.customFields;
+  }
+
+  // Create user first to get tenantId
+  const user = await User.createUser(userBody);
+
+  // Validate and apply customFields if provided
+  if (customFieldsProvided) {
+    const { values, version } = await validateCustomFields({
+      tenantId: user.tenantId,
+      entityType: 'user',
+      payload: customFieldsPayload,
+    });
+    user.customFields = values;
+    user.customFieldsVersion = version;
+    await user.save();
+  }
+
+  return user;
 };
 
 const ownerCreate = async (userBody) => {
@@ -24,7 +87,36 @@ const ownerCreate = async (userBody) => {
     );
   }
   console.log('this is owner creatre', userBody);
-  return User.createUser(userBody);
+
+  // Handle customFields validation if provided
+  const customFieldsProvided = Object.prototype.hasOwnProperty.call(
+    userBody,
+    'customFields'
+  );
+  const customFieldsPayload = customFieldsProvided
+    ? userBody.customFields
+    : undefined;
+
+  if (customFieldsProvided) {
+    delete userBody.customFields;
+  }
+
+  // Create user first to get tenantId
+  const user = await User.createUser(userBody);
+
+  // Validate and apply customFields if provided
+  if (customFieldsProvided) {
+    const { values, version } = await validateCustomFields({
+      tenantId: user.tenantId,
+      entityType: 'user',
+      payload: customFieldsPayload,
+    });
+    user.customFields = values;
+    user.customFieldsVersion = version;
+    await user.save();
+  }
+
+  return user;
 };
 
 /**
@@ -54,7 +146,36 @@ const createSabyUser = async (userBody) => {
   userBody.isOwner = true;
 
   console.log('Creating SabyUser:', userBody);
-  return User.createUser(userBody);
+
+  // Handle customFields validation if provided
+  const customFieldsProvided = Object.prototype.hasOwnProperty.call(
+    userBody,
+    'customFields'
+  );
+  const customFieldsPayload = customFieldsProvided
+    ? userBody.customFields
+    : undefined;
+
+  if (customFieldsProvided) {
+    delete userBody.customFields;
+  }
+
+  // Create user first to get tenantId
+  const user = await User.createUser(userBody);
+
+  // Validate and apply customFields if provided
+  if (customFieldsProvided) {
+    const { values, version } = await validateCustomFields({
+      tenantId: user.tenantId,
+      entityType: 'user',
+      payload: customFieldsPayload,
+    });
+    user.customFields = values;
+    user.customFieldsVersion = version;
+    await user.save();
+  }
+
+  return user;
 };
 
 // const bulkCreate = async (usersBody) => {
@@ -255,6 +376,10 @@ const queryUsers = async (filter, options) => {
     });
   }
 
+  if (result.results && result.results.length > 0) {
+    result.results = result.results.map((user) => buildUserResponse(user));
+  }
+
   return result;
 };
 
@@ -362,6 +487,17 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
         }
       : 'No current user'
   );
+
+  const customFieldsProvided = Object.prototype.hasOwnProperty.call(
+    updateBody,
+    'customFields'
+  );
+  const customFieldsPayload = customFieldsProvided
+    ? updateBody.customFields
+    : undefined;
+  if (customFieldsProvided) {
+    delete updateBody.customFields;
+  }
 
   const user = await User.findById(userId);
 
@@ -578,6 +714,16 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
       user[key] = userUpdate[key];
     });
 
+    if (customFieldsProvided) {
+      const { values, version } = await validateCustomFields({
+        tenantId: user.tenantId,
+        entityType: 'user',
+        payload: customFieldsPayload,
+      });
+      user.customFields = values;
+      user.customFieldsVersion = version;
+    }
+
     await user.save();
     console.log(
       `✅ [UserService.updateUserById] User updated successfully: ${user.firstname} ${user.lastname}`
@@ -747,4 +893,5 @@ module.exports = {
   getUserByPhone,
   getUserRoles,
   getUserNodes,
+  buildUserResponse,
 };

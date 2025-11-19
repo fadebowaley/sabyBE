@@ -20,6 +20,7 @@ const createNode = {
     postalCode: Joi.string(),
     dateOfEstablishment: Joi.date(),
     users: Joi.array().items(Joi.string().custom(objectId)),
+    customFields: Joi.object(),
   }),
 };
 
@@ -86,6 +87,7 @@ const updateNodeById = {
           'Under Construction'
         ),
       }),
+      customFields: Joi.object(),
     })
     .min(1),
 };

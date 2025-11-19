@@ -52,7 +52,14 @@ const nodeSchema = mongoose.Schema(
       default: 0,
     },
 
-    // ========== MERGED PROFILE FIELDS FROM CHURCHPROFILE/NODEPROFILE ==========
+    /**
+     * NOTE: The profile fields below are handled through tenant-managed custom fields.
+     * Legacy properties kept for backward compatibility:
+     * - propertyStatus
+     * - estimatedValue
+     * - buildingType
+     * - facilityStatus
+     */
     profile: {
       // Property/Facility information
       propertyStatus: {

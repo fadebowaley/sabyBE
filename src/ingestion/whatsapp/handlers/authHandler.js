@@ -4,12 +4,15 @@ const {
   authService,
   tokenService,
   nodeService,
+  tenantConfigService,
+  customFieldService,
 } = require('../../../services');
-const { User } = require('../../../models');
 const whatsappValidationService = require('../services/whatsappValidation.service');
 const whatsappNotificationService = require('../services/whatsappNotification.service');
 const formHandler = require('./formHandler');
 const logger = require('../../../config/logger');
+
+const { validateCustomFields } = customFieldService;
 
 const AFFIRMATIVE_RESPONSES = [
   'yes',
@@ -31,7 +34,7 @@ const RECENT_PASSCODE_WINDOW_MS = 5 * 60 * 1000;
 
 const WHATSAPP_INTEGRATION_KEY = 'whatsapp';
 
-const PROFILE_UPDATE_FIELDS = [
+const BASE_PROFILE_UPDATE_FIELDS = [
   {
     key: 'firstname',
     label: 'First Name',
@@ -260,7 +263,7 @@ const PROFILE_UPDATE_FIELDS = [
   },
 ];
 
-const NODE_UPDATE_FIELDS = [
+const BASE_NODE_UPDATE_FIELDS = [
   {
     key: 'name',
     label: 'Unit Name',
@@ -393,6 +396,8 @@ async function preloadUserNodes(session) {
       isMain: node.isMain,
       levelName: node.level?.name,
       structureName: node.structure?.name,
+      customFields: node.customFields || {},
+      customFieldsVersion: node.customFieldsVersion || 0,
     }));
     session.markModified('metadata');
     await session.save();
@@ -417,8 +422,155 @@ function buildFieldLookup(fields) {
   return map;
 }
 
-const PROFILE_FIELD_LOOKUP = buildFieldLookup(PROFILE_UPDATE_FIELDS);
-const NODE_FIELD_LOOKUP = buildFieldLookup(NODE_UPDATE_FIELDS);
+const SUPPORTED_CUSTOM_FIELD_TYPES = new Set([
+  'text',
+  'textarea',
+  'number',
+  'date',
+  'boolean',
+  'select',
+  'multi-select',
+]);
+
+function mapCustomFieldToPrompt(field) {
+  if (!field || !field.id) {
+    return null;
+  }
+  const type = (field.type || 'text').toLowerCase();
+  if (!SUPPORTED_CUSTOM_FIELD_TYPES.has(type)) {
+    return null;
+  }
+
+  const prompt = {
+    key: field.id,
+    label: field.label || field.id,
+    description: field.description || field.placeholder || 'Custom field',
+    path: ['customFields', field.id],
+    type: 'text',
+    aliases: [],
+    isCustomField: true,
+    customFieldId: field.id,
+    validation: field.validation || {},
+    required: Boolean(field.required),
+  };
+
+  switch (type) {
+    case 'number':
+      prompt.type = 'number';
+      if (field.validation?.min !== undefined) {
+        prompt.min = field.validation.min;
+      }
+      if (field.validation?.max !== undefined) {
+        prompt.max = field.validation.max;
+      }
+      break;
+    case 'date':
+      prompt.type = 'date';
+      break;
+    case 'boolean':
+      prompt.type = 'boolean';
+      break;
+    case 'select':
+      prompt.type = 'enum';
+      prompt.options = (field.options || [])
+        .map((option) =>
+          option && option.value !== undefined ? option.value : option?.label
+        )
+        .filter((value) => value !== undefined);
+      break;
+    case 'multi-select':
+      prompt.type = 'checkbox';
+      prompt.multiple = true;
+      prompt.options = (field.options || [])
+        .map((option) =>
+          option && option.value !== undefined ? option.value : option?.label
+        )
+        .filter((value) => value !== undefined);
+      break;
+    default:
+      prompt.type = 'text';
+      if (field.validation?.minLength !== undefined) {
+        prompt.minLength = field.validation.minLength;
+      }
+      if (field.validation?.maxLength !== undefined) {
+        prompt.maxLength = field.validation.maxLength;
+      }
+  }
+
+  return prompt;
+}
+
+function buildCustomFieldPrompts(config) {
+  if (!config || !Array.isArray(config.fields) || !config.fields.length) {
+    return [];
+  }
+  return config.fields
+    .map((field) => mapCustomFieldToPrompt(field))
+    .filter(Boolean);
+}
+
+function getTenantConfigFromSession(session, entityType) {
+  return session?.metadata?.tenantConfigs?.[entityType] || null;
+}
+
+function getProfileUpdateFields(session) {
+  return [
+    ...BASE_PROFILE_UPDATE_FIELDS,
+    ...buildCustomFieldPrompts(getTenantConfigFromSession(session, 'user')),
+  ];
+}
+
+function getNodeUpdateFields(session) {
+  return [
+    ...BASE_NODE_UPDATE_FIELDS,
+    ...buildCustomFieldPrompts(getTenantConfigFromSession(session, 'node')),
+  ];
+}
+
+function getProfileFieldLookup(session) {
+  return buildFieldLookup(getProfileUpdateFields(session));
+}
+
+function getNodeFieldLookup(session) {
+  return buildFieldLookup(getNodeUpdateFields(session));
+}
+
+async function ensureTenantConfigs(session, tenantIdParam = null) {
+  session.metadata = session.metadata || {};
+  const tenantId =
+    tenantIdParam ||
+    session.tenantId ||
+    session.metadata?.profileSnapshot?.tenantId;
+
+  if (!tenantId) {
+    return null;
+  }
+
+  session.metadata.tenantConfigs = session.metadata.tenantConfigs || {};
+  const cache = session.metadata.tenantConfigs;
+  let changed = false;
+
+  if (!cache.user || cache.user.tenantId !== tenantId) {
+    cache.user =
+      (await tenantConfigService.getTenantConfig(tenantId, 'user')) ||
+      tenantConfigService.buildFallbackConfig(tenantId, 'user');
+    changed = true;
+  }
+
+  if (!cache.node || cache.node.tenantId !== tenantId) {
+    cache.node =
+      (await tenantConfigService.getTenantConfig(tenantId, 'node')) ||
+      tenantConfigService.buildFallbackConfig(tenantId, 'node');
+    changed = true;
+  }
+
+  if (changed) {
+    session.markModified('metadata');
+    await session.save();
+  }
+
+  return cache;
+}
 
 const KEY_VALUE_SEPARATOR_REGEX = /[:=|-]/;
 
@@ -520,6 +672,47 @@ function coerceFieldValue(fieldConfig, rawValue) {
       }
       return { success: true, value, display: value };
     }
+    case 'checkbox': {
+      const rawValues = Array.isArray(trimmedValue)
+        ? trimmedValue
+        : trimmedValue.split(',').map((val) => val.trim());
+      const values = rawValues.filter((val) => val.length > 0);
+      if (!values.length) {
+        return {
+          success: false,
+          error: 'Provide at least one value (comma separated).',
+        };
+      }
+      const allowedOptions = fieldConfig.options || [];
+      const normalizedValues = values.map((val) => {
+        if (!allowedOptions.length) {
+          return val;
+        }
+        const match = allowedOptions.find(
+          (option) =>
+            option?.toString().toLowerCase() === val.toString().toLowerCase()
+        );
+        return match !== undefined ? match : val;
+      });
+
+      if (allowedOptions.length) {
+        const invalid = normalizedValues.filter(
+          (val) => !allowedOptions.includes(val)
+        );
+        if (invalid.length) {
+          return {
+            success: false,
+            error: `Invalid option(s): ${invalid.join(', ')}`,
+          };
+        }
+      }
+
+      return {
+        success: true,
+        value: normalizedValues,
+        display: normalizedValues.join(', '),
+      };
+    }
     default: {
       const validatorElement = {
         type: fieldConfig.type,
@@ -604,6 +797,9 @@ function buildBulkUpdatePayload(input, fieldLookup) {
       display: result.display,
       path: fieldConfig.path,
       raw,
+      isCustomField: Boolean(fieldConfig.isCustomField),
+      customFieldId: fieldConfig.customFieldId,
+      entityType: fieldConfig.entityType,
     });
     seenKeys.add(fieldConfig.key);
   });
@@ -615,14 +811,6 @@ function buildBulkUpdatePayload(input, fieldLookup) {
     unknown,
     processedKeys: Array.from(seenKeys),
   };
-}
-
-function buildProfileBulkUpdatePayload(input) {
-  return buildBulkUpdatePayload(input, PROFILE_FIELD_LOOKUP);
-}
-
-function buildNodeBulkUpdatePayload(input) {
-  return buildBulkUpdatePayload(input, NODE_FIELD_LOOKUP);
 }
 
 function setDocumentPath(doc, path, value) {
@@ -704,12 +892,38 @@ async function applyProfileBulkUpdates(session, appliedItems) {
     throw new Error('User not found for profile update');
   }
   const modifiedRoots = new Set();
+  const customFieldUpdates = {};
   appliedItems.forEach((item) => {
-    setDocumentPath(user, item.path, item.value);
-    modifiedRoots.add(item.path[0]);
+    if (item.isCustomField && item.customFieldId) {
+      customFieldUpdates[item.customFieldId] = item.value;
+    } else if (item.path) {
+      setDocumentPath(user, item.path, item.value);
+      modifiedRoots.add(item.path[0]);
+    }
   });
+
+  if (Object.keys(customFieldUpdates).length) {
+    const mergedCustomFields = {
+      ...(user.customFields || {}),
+      ...customFieldUpdates,
+    };
+    const { values, version } = await validateCustomFields({
+      tenantId: user.tenantId,
+      entityType: 'user',
+      payload: mergedCustomFields,
+    });
+    user.customFields = values;
+    user.customFieldsVersion = version;
+    modifiedRoots.add('customFields');
+    modifiedRoots.add('customFieldsVersion');
+  }
+
   modifiedRoots.forEach((root) => user.markModified(root));
   await user.save();
+  return {
+    customFields: user.customFields || {},
+    customFieldsVersion: user.customFieldsVersion || 0,
+  };
 }
 
 async function applyNodeBulkUpdates(nodeId, appliedItems) {
@@ -718,16 +932,41 @@ async function applyNodeBulkUpdates(nodeId, appliedItems) {
     throw new Error('Node not found for update');
   }
   const modifiedRoots = new Set();
+  const customFieldUpdates = {};
   appliedItems.forEach((item) => {
-    setDocumentPath(node, item.path, item.value);
-    modifiedRoots.add(item.path[0]);
+    if (item.isCustomField && item.customFieldId) {
+      customFieldUpdates[item.customFieldId] = item.value;
+    } else if (item.path) {
+      setDocumentPath(node, item.path, item.value);
+      modifiedRoots.add(item.path[0]);
+    }
   });
+
+  if (Object.keys(customFieldUpdates).length) {
+    const mergedCustomFields = {
+      ...(node.customFields || {}),
+      ...customFieldUpdates,
+    };
+    const { values, version } = await validateCustomFields({
+      tenantId: node.tenantId,
+      entityType: 'node',
+      payload: mergedCustomFields,
+    });
+    node.customFields = values;
+    node.customFieldsVersion = version;
+    modifiedRoots.add('customFields');
+    modifiedRoots.add('customFieldsVersion');
+  }
+
   modifiedRoots.forEach((root) => node.markModified(root));
   await node.save();
+  return typeof node.toObject === 'function' ? node.toObject() : node;
 }
 
 async function processProfileBulkUpdate(phoneNumber, session, input) {
-  const result = buildProfileBulkUpdatePayload(input);
+  await ensureTenantConfigs(session);
+  const profileFieldLookup = getProfileFieldLookup(session);
+  const result = buildBulkUpdatePayload(input, profileFieldLookup);
 
   logger.info('📝 Processing profile bulk update', {
     phoneNumber,
@@ -751,11 +990,28 @@ async function processProfileBulkUpdate(phoneNumber, session, input) {
     return;
   }
 
+  let updatedCustomState = null;
   if (result.applied.length > 0) {
-    await applyProfileBulkUpdates(session, result.applied);
+    updatedCustomState = await applyProfileBulkUpdates(session, result.applied);
     result.applied.forEach((item) => {
-      updateProfileSnapshot(session, item.field, item.value, item.path);
+      if (item.isCustomField && item.customFieldId) {
+        session.metadata.profileSnapshot =
+          session.metadata.profileSnapshot || {};
+        session.metadata.profileSnapshot.customFields =
+          session.metadata.profileSnapshot.customFields || {};
+        session.metadata.profileSnapshot.customFields[item.customFieldId] =
+          item.value;
+      } else {
+        updateProfileSnapshot(session, item.field, item.value, item.path);
+      }
     });
+    if (updatedCustomState) {
+      session.metadata.profileSnapshot = session.metadata.profileSnapshot || {};
+      session.metadata.profileSnapshot.customFields =
+        updatedCustomState.customFields || {};
+      session.metadata.profileSnapshot.customFieldsVersion =
+        updatedCustomState.customFieldsVersion || 0;
+    }
     session.markModified('metadata');
     await session.save();
   }
@@ -774,7 +1030,9 @@ async function processNodeBulkUpdate(phoneNumber, session, input) {
     return;
   }
 
-  const result = buildNodeBulkUpdatePayload(input);
+  await ensureTenantConfigs(session);
+  const nodeFieldLookup = getNodeFieldLookup(session);
+  const result = buildBulkUpdatePayload(input, nodeFieldLookup);
 
   logger.info('🏗️ Processing node bulk update', {
     phoneNumber,
@@ -800,18 +1058,26 @@ async function processNodeBulkUpdate(phoneNumber, session, input) {
   }
 
   if (result.applied.length > 0) {
-    await applyNodeBulkUpdates(selectedNode.id, result.applied);
-    const refreshed = await nodeService.getNodeById(selectedNode.id);
+    const updatedNode = await applyNodeBulkUpdates(
+      selectedNode.id,
+      result.applied
+    );
     const plainNode =
-      typeof refreshed.toObject === 'function'
-        ? refreshed.toObject()
-        : refreshed;
+      typeof updatedNode.toObject === 'function'
+        ? updatedNode.toObject()
+        : updatedNode;
+    if (!plainNode.id && plainNode._id) {
+      plainNode.id =
+        typeof plainNode._id.toString === 'function'
+          ? plainNode._id.toString()
+          : plainNode._id;
+    }
     session.metadata.selectedNode = plainNode;
-    session.markModified('metadata');
-    await session.save();
     if (session.metadata.nodeUpdate) {
       session.metadata.nodeUpdate.selectedNode = plainNode;
     }
+    session.markModified('metadata');
+    await session.save();
   }
 
   await whatsappNotificationService.sendNodeBulkResult(
@@ -1679,6 +1945,8 @@ exports.triggerVerification = async (phoneNumber, session) => {
       return;
     }
 
+    await ensureTenantConfigs(session, user.tenantId);
+
     const profileSnapshot = buildProfileSnapshot(user);
 
     session.metadata = session.metadata || {};
@@ -2324,6 +2592,8 @@ exports.startNodeUpdate = async (phoneNumber, session) => {
       return;
     }
 
+    await ensureTenantConfigs(session);
+
     await preloadUserNodes(session);
     const nodes = session.metadata?.nodesCache || [];
 
@@ -2374,6 +2644,7 @@ exports.handleNodeUpdate = async (phoneNumber, input, session) => {
       step: 'select_node',
       instructionsShown: false,
     };
+    await ensureTenantConfigs(session);
     const state = session.metadata.nodeUpdate;
     const nodes = session.metadata.nodesCache || [];
 
@@ -2414,22 +2685,21 @@ exports.handleNodeUpdate = async (phoneNumber, input, session) => {
           phoneNumber,
           nodes
         );
+      } else if (!state.instructionsShown) {
+        const nodeFields = getNodeUpdateFields(session);
+        await whatsappNotificationService.sendNodeBulkInstructions(
+          phoneNumber,
+          activeNode,
+          nodeFields
+        );
+        state.instructionsShown = true;
+        session.markModified('metadata');
+        await session.save();
       } else {
-        if (!state.instructionsShown) {
-          await whatsappNotificationService.sendNodeBulkInstructions(
-            phoneNumber,
-            activeNode,
-            NODE_UPDATE_FIELDS
-          );
-          state.instructionsShown = true;
-          session.markModified('metadata');
-          await session.save();
-        } else {
-          await whatsappNotificationService.sendInfoMessage(
-            phoneNumber,
-            `Send updates as "field: value" or type *done* when finished.`
-          );
-        }
+        await whatsappNotificationService.sendInfoMessage(
+          phoneNumber,
+          `Send updates as "field: value" or type *done* when finished.`
+        );
       }
       return;
     }
@@ -2479,10 +2749,11 @@ exports.handleNodeUpdate = async (phoneNumber, input, session) => {
         session.markModified('metadata');
         await session.save();
 
+        const nodeFields = getNodeUpdateFields(session);
         await whatsappNotificationService.sendNodeBulkInstructions(
           phoneNumber,
           selectedNode,
-          NODE_UPDATE_FIELDS
+          nodeFields
         );
         return;
       }
@@ -2490,10 +2761,11 @@ exports.handleNodeUpdate = async (phoneNumber, input, session) => {
         const activeNode = state.selectedNode || session.metadata.selectedNode;
         if (activeNode) {
           if (!state.instructionsShown) {
+            const nodeFields = getNodeUpdateFields(session);
             await whatsappNotificationService.sendNodeBulkInstructions(
               phoneNumber,
               activeNode,
-              NODE_UPDATE_FIELDS
+              nodeFields
             );
             state.instructionsShown = true;
             session.markModified('metadata');
@@ -2547,6 +2819,8 @@ exports.startProfileUpdate = async (phoneNumber, session) => {
     return;
   }
 
+  await ensureTenantConfigs(session);
+
   session.metadata.profileUpdate = {
     step: 'bulk',
     originalProfile: profileSnapshot,
@@ -2566,9 +2840,10 @@ exports.startProfileUpdate = async (phoneNumber, session) => {
     mode: 'bulk',
   });
 
+  const profileFields = getProfileUpdateFields(session);
   await whatsappNotificationService.sendProfileBulkInstructions(
     phoneNumber,
-    PROFILE_UPDATE_FIELDS
+    profileFields
   );
 };
 async function finishProfileUpdate(
@@ -2620,15 +2895,17 @@ exports.handleProfileUpdate = async (phoneNumber, input, session) => {
   session.metadata.profileUpdate = session.metadata.profileUpdate || {
     step: 'bulk',
   };
+  await ensureTenantConfigs(session);
 
   const trimmed = (input || '').trim();
   const state = session.metadata.profileUpdate;
 
   if (!trimmed) {
     if (!state.instructionsShown) {
+      const profileFields = getProfileUpdateFields(session);
       await whatsappNotificationService.sendProfileBulkInstructions(
         phoneNumber,
-        PROFILE_UPDATE_FIELDS
+        profileFields
       );
       state.instructionsShown = true;
       session.markModified('metadata');
@@ -2764,6 +3041,8 @@ function buildProfileSnapshot(userDoc = {}) {
     phoneNumber: lean.phoneNumber,
     firstname: lean.firstname,
     lastname: lean.lastname,
+    customFields: lean.customFields || {},
+    customFieldsVersion: lean.customFieldsVersion || 0,
     roles: (lean.roles || []).map((role) => {
       if (!role) return null;
       if (typeof role === 'string') return role;
@@ -3274,8 +3553,6 @@ async function handlePasswordReset(phoneNumber, input, session) {
   }
 }
 
-exports.buildProfileBulkUpdatePayload = buildProfileBulkUpdatePayload;
-exports.buildNodeBulkUpdatePayload = buildNodeBulkUpdatePayload;
 exports.requirePasscode = requirePasscode;
 exports.handleMidSessionPasscode = handleMidSessionPasscode;
 exports.ensureNotExpired = ensureNotExpired;

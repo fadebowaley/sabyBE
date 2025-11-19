@@ -37,3 +37,5 @@ module.exports.analyticsReportService = require('./analyticsReport.service');
 module.exports.exportReportService = require('./exportReport.service');
 module.exports.trendAnalysisService = require('./trendAnalysis.service');
 module.exports.rollupReportService = require('./rollupReport.service');
+module.exports.tenantConfigService = require('./tenantConfig.service');
+module.exports.customFieldService = require('./customField.service');

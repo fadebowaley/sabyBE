@@ -1,6 +1,8 @@
 const httpStatus = require('http-status');
 const { Nodes, Structures } = require('../models');
 const ApiError = require('../utils/ApiError');
+const { validateCustomFields } = require('./customField.service');
+const { NODE_ESSENTIAL_FIELDS } = require('../config/essentials');
 
 const isObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(value);
 
@@ -9,12 +11,73 @@ const isObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(value);
  * @param {Object} nodeBody
  * @returns {Promise<Node>}
  */
+const buildNodeResponse = (nodeDoc) => {
+  if (!nodeDoc) {
+    return null;
+  }
+  const plain =
+    typeof nodeDoc.toObject === 'function'
+      ? nodeDoc.toObject({ virtuals: true })
+      : nodeDoc;
+  const response = {};
+
+  NODE_ESSENTIAL_FIELDS.forEach((field) => {
+    if (plain[field] !== undefined) {
+      response[field] = plain[field];
+    }
+  });
+
+  if (response.profile === undefined) {
+    response.profile = plain.profile || {};
+  }
+
+  if (
+    plain.customFields &&
+    typeof plain.customFields === 'object' &&
+    Object.keys(plain.customFields).length > 0
+  ) {
+    response.customFields = plain.customFields;
+    response.customFieldsVersion = plain.customFieldsVersion || 0;
+  }
+
+  return response;
+};
+
 const createNode = async (nodeBody) => {
   // Generate nodeId if not provided
   if (!nodeBody.nodeId) {
     nodeBody.nodeId = await Nodes.generateNodeId();
   }
-  return Nodes.create(nodeBody);
+
+  // Handle customFields validation if provided
+  const customFieldsProvided = Object.prototype.hasOwnProperty.call(
+    nodeBody,
+    'customFields'
+  );
+  const customFieldsPayload = customFieldsProvided
+    ? nodeBody.customFields
+    : undefined;
+
+  if (customFieldsProvided) {
+    delete nodeBody.customFields;
+  }
+
+  // Create node first to get tenantId
+  const node = await Nodes.create(nodeBody);
+
+  // Validate and apply customFields if provided
+  if (customFieldsProvided) {
+    const { values, version } = await validateCustomFields({
+      tenantId: node.tenantId,
+      entityType: 'node',
+      payload: customFieldsPayload,
+    });
+    node.customFields = values;
+    node.customFieldsVersion = version;
+    await node.save();
+  }
+
+  return node;
 };
 
 /**
@@ -69,6 +132,17 @@ const getNodeByName = async (name) => {
  */
 const updateNodeById = async (nodeId, updateBody) => {
   let node = await getNodeById(nodeId);
+
+  const customFieldsProvided = Object.prototype.hasOwnProperty.call(
+    updateBody,
+    'customFields'
+  );
+  const customFieldsPayload = customFieldsProvided
+    ? updateBody.customFields
+    : undefined;
+  if (customFieldsProvided) {
+    delete updateBody.customFields;
+  }
 
   // Separate node fields from profile fields
   const nodeFields = [
@@ -150,12 +224,26 @@ const updateNodeById = async (nodeId, updateBody) => {
     }
   }
 
+  let shouldSave = false;
+
   // Only update fields that are present in nodeUpdate
   Object.keys(nodeUpdate).forEach((key) => {
     node[key] = nodeUpdate[key];
+    shouldSave = true;
   });
 
-  if (Object.keys(nodeUpdate).length > 0) {
+  if (customFieldsProvided) {
+    const { values, version } = await validateCustomFields({
+      tenantId: node.tenantId,
+      entityType: 'node',
+      payload: customFieldsPayload,
+    });
+    node.customFields = values;
+    node.customFieldsVersion = version;
+    shouldSave = true;
+  }
+
+  if (shouldSave) {
     await node.save();
     console.log(`✅ [NodeService.updateNodeById] Node updated successfully`);
   }
@@ -257,6 +345,9 @@ const restoreNodeById = async (nodeId, restoreBody = {}) => {
  */
 const queryNodes = async (filter, options) => {
   const nodes = await Nodes.paginate(filter, options);
+  if (nodes.results && nodes.results.length > 0) {
+    nodes.results = nodes.results.map((node) => buildNodeResponse(node));
+  }
   return nodes;
 };
 
@@ -411,4 +502,5 @@ module.exports = {
   deactivateNode,
   assignUsersToNode,
   bulkImportNodes,
+  buildNodeResponse,
 };
