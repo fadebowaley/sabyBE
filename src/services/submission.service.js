@@ -162,7 +162,7 @@ const getActivityLogs = async (filters = {}) => {
     idx++;
   }
   const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  // Paginated query - all data is denormalized, no JOINs needed!
+  // Paginated query - select all columns that exist in both local and remote databases
   const sql = `
     SELECT 
       id, tenant_id, project_id, project_name, project_category,
@@ -177,18 +177,35 @@ const getActivityLogs = async (filters = {}) => {
     LIMIT $${idx++} OFFSET $${idx}
   `;
   values.push(limit, offset);
-  const { rows } = await postgresPool.query(sql, values);
+
+  let rows;
+  try {
+    const result = await postgresPool.query(sql, values);
+    rows = result.rows;
+  } catch (error) {
+    logger.error('[getActivityLogs] Database query error:', error);
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Failed to fetch activity logs'
+    );
+  }
 
   // Total count query (no limit/offset) - use same filters
   const countSql = `SELECT COUNT(*) FROM submission_activity_log ${whereClause}`;
-  // For count query, we need to exclude limit and offset from values
-  const countValues = status 
-    ? values.slice(0, idx - 2) // Exclude limit and offset
-    : values.slice(0, idx - 2); // Exclude limit and offset (status filters already included)
-  const { rows: countRows } = await postgresPool.query(
-    countSql,
-    countValues
-  );
+  // For count query, we need to exclude limit and offset from values (last 2 values)
+  const countValues = values.slice(0, -2);
+
+  let countRows;
+  try {
+    const result = await postgresPool.query(countSql, countValues);
+    countRows = result.rows;
+  } catch (error) {
+    logger.error('[getActivityLogs] Count query error:', error);
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Failed to count activity logs'
+    );
+  }
   const total = parseInt(countRows[0].count, 10);
 
   return { results: rows, total };
