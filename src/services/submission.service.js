@@ -138,11 +138,17 @@ const getActivityLogs = async (filters = {}) => {
     values.push(userId);
   }
   if (status) {
+    // If status is explicitly set (including 'rejected'), show that status
     where.push(`status = $${idx++}`);
     values.push(status);
+    // If status is 'rejected', also match action='rejected' for consistency
+    if (status === 'rejected') {
+      where.push(`action = $${idx++}`);
+      values.push('rejected');
+    }
   } else {
     // By default, exclude rejected entries - only show actual data submissions
-    // Only exclude if status filter is not explicitly provided
+    // This allows users to see queued, processing, success, failed entries
     where.push(`status != $${idx++}`);
     values.push('rejected');
     where.push(`action != $${idx++}`);
