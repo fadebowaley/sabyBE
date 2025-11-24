@@ -21,8 +21,9 @@ const ApiError = require('../utils/ApiError');
 const {
   eventCalendarService,
   eventComplianceService,
-  calendarEnforcementService,
 } = require('.');
+// Direct import to avoid circular dependency
+const calendarEnforcementService = require('./calendarEnforcement.service');
 
 /**
  * Calculate compliance metrics based on event data
