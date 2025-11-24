@@ -18,11 +18,9 @@ const { v4: uuidv4 } = require('uuid');
 const { postgresPool } = require('../config/postgres');
 const logger = require('../config/logger');
 const ApiError = require('../utils/ApiError');
-const {
-  eventCalendarService,
-  eventComplianceService,
-} = require('.');
-// Direct import to avoid circular dependency
+// Direct imports to avoid circular dependency
+const eventCalendarService = require('./eventCalendar.service');
+const eventComplianceService = require('./eventCompliance.service');
 const calendarEnforcementService = require('./calendarEnforcement.service');
 
 /**
@@ -147,6 +145,11 @@ const submitPERMData = async (payload) => {
     source = 'api',
     submission_date: submission_date_raw,
   } = payload;
+
+// CamelCase aliases for downstream consumers
+const tenantId = tenant_id;
+const projectId = project_id;
+const nodeId = node_id;
 
   logger.info(`[PERM DEBUG] After destructure, month = "${month}"`);
 

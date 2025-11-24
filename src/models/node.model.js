@@ -179,6 +179,52 @@ nodeSchema.pre('save', async function (next) {
   }
 });
 
+// Post-save hook for baseline intelligence updates
+nodeSchema.post('save', async function(doc) {
+  try {
+    // Only trigger baseline updates for meaningful changes
+    const relevantFields = [
+      'profile', 'users', 'dateOfEstablishment', 'isActive', 
+      'customFields', 'level', 'structure', 'parent'
+    ];
+    
+    const hasRelevantChanges = this.isNew || relevantFields.some(field => this.isModified(field));
+    
+    if (hasRelevantChanges) {
+      // Import here to avoid circular dependency
+      const { baselineIntelligenceService } = require('../services');
+      
+      // Handle baseline updates asynchronously to avoid blocking node operations
+      setImmediate(async () => {
+        try {
+          await baselineIntelligenceService.handleNodeChange(doc);
+        } catch (error) {
+          console.error('Error updating baseline intelligence after node change:', error);
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error in node post-save hook:', error);
+  }
+});
+
+// Post-remove hook for baseline intelligence updates
+nodeSchema.post('remove', async function(doc) {
+  try {
+    const { baselineIntelligenceService } = require('../services');
+    
+    setImmediate(async () => {
+      try {
+        await baselineIntelligenceService.handleNodeChange(doc);
+      } catch (error) {
+        console.error('Error updating baseline intelligence after node removal:', error);
+      }
+    });
+  } catch (error) {
+    console.error('Error in node post-remove hook:', error);
+  }
+});
+
 // Static method to update parent and re-calculate hierarchy
 nodeSchema.statics.updateNodeParent = async function (nodeId, newParentId) {
   const node = await this.findById(nodeId);

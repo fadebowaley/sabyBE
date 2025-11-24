@@ -1,6 +1,7 @@
 module.exports.Admin = require('./admin.model');
 module.exports.App = require('./app.model');
 module.exports.Basket = require('./basket.model');
+module.exports.BaselineIntelligence = require('./baselineIntelligence.model');
 module.exports.Capture = require('./capture.model');
 module.exports.Collection = require('./collections.model');
 module.exports.CollectionTag = require('./collectionsTag.model');

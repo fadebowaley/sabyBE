@@ -3,6 +3,8 @@ const apiKeyRoute = require('./apiKey.route');
 const apiKeyApprovalRoute = require('./apiKeyApproval.route');
 const appRoute = require('./app.route');
 const authRoute = require('./auth.route');
+const baselineIntelligenceRoute = require('./baselineIntelligence.route');
+const customFieldConfigRoute = require('./customFieldConfig.route');
 const dataRoute = require('./data.route');
 const docsRoute = require('./docs.route');
 const levelRoute = require('./level.route');
@@ -73,6 +75,14 @@ const defaultRoutes = [
   {
     path: '/auth', // Example: /auth/login, /auth/register
     route: authRoute,
+  },
+  {
+    path: '/baseline', // Example: /baseline/network, /baseline/node/123
+    route: baselineIntelligenceRoute,
+  },
+  {
+    path: '/custom-field-config', // Example: /custom-field-config/user
+    route: customFieldConfigRoute,
   },
   {
     path: '/users', // Example: /users/123, /users/profile

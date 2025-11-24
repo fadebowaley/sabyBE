@@ -344,6 +344,52 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
+// Post-save hook for baseline intelligence updates
+userSchema.post('save', async function(doc) {
+  try {
+    // Only trigger baseline updates for meaningful changes
+    const relevantFields = [
+      'status', 'profile', 'roles', 'isEmailVerified', 'isPhoneVerified',
+      'isOwner', 'isSuper', 'isSaby', 'customFields'
+    ];
+    
+    const hasRelevantChanges = this.isNew || relevantFields.some(field => this.isModified(field));
+    
+    if (hasRelevantChanges) {
+      // Import here to avoid circular dependency
+      const { baselineIntelligenceService } = require('../services');
+      
+      // Handle baseline updates asynchronously to avoid blocking user operations
+      setImmediate(async () => {
+        try {
+          await baselineIntelligenceService.handleUserChange(doc);
+        } catch (error) {
+          console.error('Error updating baseline intelligence after user change:', error);
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error in user post-save hook:', error);
+  }
+});
+
+// Post-remove hook for baseline intelligence updates
+userSchema.post('remove', async function(doc) {
+  try {
+    const { baselineIntelligenceService } = require('../services');
+    
+    setImmediate(async () => {
+      try {
+        await baselineIntelligenceService.handleUserChange(doc);
+      } catch (error) {
+        console.error('Error updating baseline intelligence after user removal:', error);
+      }
+    });
+  } catch (error) {
+    console.error('Error in user post-remove hook:', error);
+  }
+});
+
 // Saving user password
 userSchema.statics.resetPassword = async function (userId, newPassword) {
   const user = await this.findById(userId); // Fetch the user by ID
