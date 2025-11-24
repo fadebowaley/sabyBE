@@ -26,15 +26,18 @@ const updateAnalyticsConfig = {
           'number', 'currency', 'percentage', 
           'select', 'radio', 'text', 
           'date', 'datetime', 
-          'checkbox', 'boolean'
+          'checkbox', 'boolean',
+          'multi-select'
         ).required(),
         analyticsEnabled: Joi.boolean().default(true),
-        options: Joi.array().items(Joi.string()),
-        min: Joi.number(),
-        max: Joi.number(),
-        format: Joi.string(),
-        description: Joi.string(),
-      })
+        // Options: Allow array of any type (strings or objects) - will be normalized in controller
+        options: Joi.array().items(Joi.any()).optional().allow(null).default([]),
+        required: Joi.boolean().optional().allow(null), // Allow required field from frontend
+        min: Joi.number().optional().allow(null),
+        max: Joi.number().optional().allow(null),
+        format: Joi.string().optional().allow(null),
+        description: Joi.string().optional().allow(null),
+      }).unknown(false) // Don't allow extra fields beyond what's defined
     ).required(),
   }),
 };

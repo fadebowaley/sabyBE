@@ -30,6 +30,9 @@ const getAnalyticsConfig = catchAsync(async (req, res) => {
 
 /**
  * Update custom field configuration for analytics
+ * 
+ * CRITICAL FIX: This now updates ONLY analytics settings in existing TenantConfig fields,
+ * instead of replacing all fields (which was causing field deletion bug).
  */
 const updateAnalyticsConfig = catchAsync(async (req, res) => {
   const { tenantId } = req.user;
@@ -40,42 +43,85 @@ const updateAnalyticsConfig = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Entity type must be "user" or "node"');
   }
 
-  // Validate field configurations
-  const validatedFields = fields.map(field => {
-    const { fieldName, displayName, type, analyticsEnabled = true } = field;
+  // Get existing tenant config to preserve all fields
+  const { TenantConfig } = require('../models');
+  const existingConfig = await TenantConfig.findOne({ tenantId, entityType });
+  
+  if (!existingConfig) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Tenant configuration not found. Please create custom fields first.');
+  }
+
+  // Validate incoming analytics fields
+  const analyticsFieldsMap = new Map();
+  fields.forEach(field => {
+    const { fieldName, displayName, type, analyticsEnabled = true, options } = field;
     
     if (!fieldName || !displayName || !type) {
       throw new ApiError(httpStatus.BAD_REQUEST, 'Field must have fieldName, displayName, and type');
     }
 
-    const validTypes = ['number', 'currency', 'percentage', 'select', 'radio', 'text', 'date', 'datetime', 'checkbox', 'boolean'];
+    const validTypes = ['number', 'currency', 'percentage', 'select', 'radio', 'text', 'date', 'datetime', 'checkbox', 'boolean', 'multi-select'];
     if (!validTypes.includes(type)) {
       throw new ApiError(httpStatus.BAD_REQUEST, `Invalid field type: ${type}`);
     }
 
-    return {
+    // Normalize options
+    let normalizedOptions = options;
+    if (Array.isArray(options) && options.length > 0) {
+      if (typeof options[0] === 'object' && options[0] !== null && 'label' in options[0]) {
+        normalizedOptions = options;
+      } else if (typeof options[0] === 'string') {
+        normalizedOptions = options;
+      } else {
+        normalizedOptions = [];
+      }
+    } else {
+      normalizedOptions = [];
+    }
+
+    analyticsFieldsMap.set(fieldName, {
       fieldName,
       displayName,
       type,
       analyticsEnabled,
-      ...pick(field, ['options', 'min', 'max', 'format'])
-    };
+      options: normalizedOptions,
+      ...pick(field, ['required', 'min', 'max', 'format', 'description'])
+    });
   });
 
-  // Update tenant configuration
-  const { TenantConfig } = require('../models');
-  
+  // Update ONLY analytics settings in existing fields, preserve all other field data
+  const updatedFields = existingConfig.fields.map(existingField => {
+    const analyticsField = analyticsFieldsMap.get(existingField.id);
+    
+    if (analyticsField) {
+      // Update analytics settings for this field, preserve all other field properties
+      return {
+        ...existingField.toObject(), // Preserve all existing field properties
+        analytics: {
+          ...existingField.analytics?.toObject?.() || existingField.analytics || {},
+          enabled: analyticsField.analyticsEnabled,
+          type: analyticsField.type,
+          format: analyticsField.format,
+          // Preserve other analytics metadata
+        }
+      };
+    }
+    
+    // Field not in analytics update - preserve as-is
+    return existingField;
+  });
+
+  // Update config with preserved fields + updated analytics
   const updatedConfig = await TenantConfig.findOneAndUpdate(
     { tenantId, entityType },
     { 
       $set: { 
-        fields: validatedFields,
-        analyticsEnabled: true,
+        fields: updatedFields,
         updatedAt: new Date()
       },
       $inc: { version: 1 }
     },
-    { new: true, upsert: true }
+    { new: true }
   );
 
   res.send({

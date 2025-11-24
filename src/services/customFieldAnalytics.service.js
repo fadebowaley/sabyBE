@@ -284,6 +284,34 @@ const analyzeCustomFields = (records, fieldConfigs) => {
           analytics.categorical.push(analyzeCategoricalField(records, config));
           break;
           
+        case 'multi-select':
+          // Handle multi-select fields: extract all values from arrays
+          const multiSelectRecords = records.map(record => {
+            const value = record.customFields?.[config.fieldName];
+            if (Array.isArray(value) && value.length > 0) {
+              // Create a record for each value in the array
+              return value.map(v => ({
+                ...record,
+                customFields: {
+                  ...record.customFields,
+                  [config.fieldName]: String(v)
+                }
+              }));
+            }
+            // If not an array or empty, treat as single value
+            return [{
+              ...record,
+              customFields: {
+                ...record.customFields,
+                [config.fieldName]: value ? String(value) : null
+              }
+            }];
+          }).flat();
+          
+          // Analyze flattened records as categorical
+          analytics.categorical.push(analyzeCategoricalField(multiSelectRecords, config));
+          break;
+          
         case 'date':
         case 'datetime':
           analytics.temporal.push(analyzeTemporalField(records, config));

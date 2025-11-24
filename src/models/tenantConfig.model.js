@@ -40,6 +40,23 @@ const fieldSchema = new mongoose.Schema(
       section: { type: String },
       order: { type: Number, default: 0 },
     },
+    // Analytics configuration (child property)
+    analytics: {
+      enabled: { type: Boolean, default: false }, // User toggle for analytics
+      type: { type: String }, // Auto-mapped analytics type: 'currency', 'percentage', 'datetime', etc.
+      format: { 
+        type: String, 
+        enum: ['currency', 'percentage'],
+        default: undefined 
+      },
+      excludeFromAnalytics: { type: Boolean, default: false },
+      includeTime: { type: Boolean, default: false },
+      lastAnalyzed: { type: Date, default: null },
+      // Analytics-specific metadata
+      min: { type: Number },
+      max: { type: Number },
+      description: { type: String }, // Analytics-specific description
+    },
   },
   { _id: false }
 );
