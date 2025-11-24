@@ -94,16 +94,30 @@ const createSubmissionWorker = () => {
 
       if ((!resolvedNodeName || !resolvedNodeReference) && nodeId) {
         try {
-          const nodeDoc = await Node.findById(nodeId).lean();
-          if (nodeDoc) {
-            resolvedNodeName =
-              resolvedNodeName || nodeDoc.name || nodeDoc.nodeName || null;
-            resolvedNodeReference =
-              resolvedNodeReference ||
-              nodeDoc.reference ||
-              nodeDoc.referenceId ||
-              nodeDoc.nodeReference ||
-              null;
+          // Try PostgreSQL node_dimension table first
+          const nodeQuery = await postgresPool.query(
+            `SELECT node_name, node_reference FROM node_dimension 
+             WHERE node_id = $1 AND tenant_id = $2 LIMIT 1`,
+            [nodeId, tenantId]
+          );
+          
+          if (nodeQuery.rows.length > 0) {
+            const nodeRow = nodeQuery.rows[0];
+            resolvedNodeName = resolvedNodeName || nodeRow.node_name || null;
+            resolvedNodeReference = resolvedNodeReference || nodeRow.node_reference || null;
+          } else {
+            // Fallback to MongoDB Node model
+            const nodeDoc = await Node.findById(nodeId).lean();
+            if (nodeDoc) {
+              resolvedNodeName =
+                resolvedNodeName || nodeDoc.name || nodeDoc.nodeName || null;
+              resolvedNodeReference =
+                resolvedNodeReference ||
+                nodeDoc.reference ||
+                nodeDoc.referenceId ||
+                nodeDoc.nodeReference ||
+                null;
+            }
           }
         } catch (nodeLookupError) {
           logger.warn(
