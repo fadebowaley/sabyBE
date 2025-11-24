@@ -60,7 +60,11 @@ const countSubmissionsForDate = async ({
       WHERE tenant_id = $1
         AND project_id = $2
         AND node_id IS NOT DISTINCT FROM $3
-        AND submission_date = $4
+        AND (
+          submission_date = $4 
+          OR event_date = $4 
+          OR DATE(created_at) = $4
+        )
         AND status != 'deleted'
     `,
     [tenantId, projectId, nodeId, submissionDate]
