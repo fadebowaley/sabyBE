@@ -42,14 +42,48 @@ const sabyUserCreate = {
 const bulkCreate = {
   body: Joi.array()
     .items(
-      Joi.object().keys({
+      Joi.object({
         firstname: Joi.string().required(),
         lastname: Joi.string().required(),
         email: Joi.string().required().email(),
         password: Joi.string().required().custom(password),
+        phoneNumber: Joi.string()
+          .pattern(/^[+]?[1-9][\d]{0,15}$/)
+          .allow('', null)
+          .optional(),
+        roles: Joi.alternatives()
+          .try(
+            Joi.array().items(
+              Joi.alternatives().try(
+                Joi.string().regex(/^[0-9a-fA-F]{24}$/), // ObjectId
+                Joi.string() // Role name
+              )
+            ),
+            Joi.string().allow('') // Comma-separated role names or single role name
+          )
+          .optional()
+          .allow(null, ''),
         isOwner: Joi.boolean().valid(false).default(false),
-        status: Joi.boolean().default(false),
+        isSuper: Joi.boolean().valid(false).default(false),
+        isSaby: Joi.boolean().valid(false).default(false),
+        status: Joi.alternatives()
+          .try(
+            Joi.boolean(),
+            Joi.string().valid('true', 'false', 'Active', 'Inactive', '')
+          )
+          .optional()
+          .allow(null, '')
+          .default(false),
+        isEmailVerified: Joi.alternatives()
+          .try(Joi.boolean(), Joi.string().valid('true', 'false', ''))
+          .optional()
+          .allow(null, ''),
+        isPhoneVerified: Joi.alternatives()
+          .try(Joi.boolean(), Joi.string().valid('true', 'false', ''))
+          .optional()
+          .allow(null, ''),
       })
+        .unknown(false) // Don't allow unknown fields
     )
     .required(),
 };

@@ -411,6 +411,10 @@ userSchema.statics.createBulk = async function (
   if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy)) {
     throw new Error('A valid creator ID (createdBy) must be provided');
   }
+
+  // Import Role model
+  const Role = mongoose.model('Role');
+
   for (const userBody of usersBody) {
     try {
       if (await this.isEmailTaken(userBody.email)) {
@@ -440,6 +444,73 @@ userSchema.statics.createBulk = async function (
         console.log(
           `Bulk creation: Removed super privileges for ${userBody.email}`
         );
+      }
+
+      // Handle status conversion (string to boolean)
+      if (typeof userBody.status === 'string') {
+        userBody.status =
+          userBody.status.toLowerCase() === 'true' ||
+          userBody.status.toLowerCase() === 'active';
+      }
+
+      // Handle phoneNumber: normalize from 'phone' field if present
+      if (userBody.phone && !userBody.phoneNumber) {
+        userBody.phoneNumber = userBody.phone;
+        delete userBody.phone;
+      }
+
+      // Handle roles: convert role names to ObjectIds
+      if (userBody.roles) {
+        let roleIds = [];
+        
+        // Normalize roles to array
+        let roleInput = userBody.roles;
+        if (typeof roleInput === 'string') {
+          // Handle comma-separated string
+          roleInput = roleInput.split(',').map((r) => r.trim()).filter((r) => r);
+        }
+        if (!Array.isArray(roleInput)) {
+          roleInput = [roleInput];
+        }
+
+        // Process each role
+        for (const roleItem of roleInput) {
+          if (!roleItem) continue;
+
+          // Check if it's already an ObjectId
+          if (mongoose.Types.ObjectId.isValid(roleItem)) {
+            // Verify the role exists
+            const role = await Role.findOne({
+              _id: roleItem,
+              tenantId: tenantId,
+            });
+            if (role) {
+              roleIds.push(roleItem);
+            } else {
+              console.warn(
+                `Role ID ${roleItem} not found for tenant ${tenantId}, skipping...`
+              );
+            }
+          } else {
+            // It's a role name, find by name (case-insensitive)
+            // Use regex for case-insensitive matching
+            const role = await Role.findOne({
+              name: { $regex: new RegExp(`^${roleItem.trim()}$`, 'i') },
+              tenantId: tenantId,
+            });
+            if (role) {
+              roleIds.push(role._id);
+            } else {
+              console.warn(
+                `Role "${roleItem}" not found for tenant ${tenantId}, skipping...`
+              );
+            }
+          }
+        }
+
+        userBody.roles = roleIds;
+      } else {
+        userBody.roles = [];
       }
 
       userBody.userId = this.generateUserId();
