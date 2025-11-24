@@ -290,6 +290,25 @@ const nodeId = node_id;
       await client.query('BEGIN');
 
       // Re-check quota with row-level lock to prevent race conditions
+      // Lock rows first, then count to prevent concurrent modifications
+      const lockQuery = `
+        SELECT id
+        FROM form_submissions
+        WHERE tenant_id = $1
+          AND project_id = $2
+          AND node_id IS NOT DISTINCT FROM $3
+          AND submission_date = $4
+          AND status != 'deleted'
+        FOR UPDATE
+      `;
+      await client.query(lockQuery, [
+        tenant_id,
+        project_id,
+        node_id || null,
+        submission_date,
+      ]);
+      
+      // Now count the locked rows
       const quotaCheckQuery = `
         SELECT COUNT(*) AS count
         FROM form_submissions
@@ -298,7 +317,6 @@ const nodeId = node_id;
           AND node_id IS NOT DISTINCT FROM $3
           AND submission_date = $4
           AND status != 'deleted'
-        FOR UPDATE
       `;
       const quotaResult = await client.query(quotaCheckQuery, [
         tenant_id,
