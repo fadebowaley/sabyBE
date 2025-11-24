@@ -107,16 +107,16 @@ const createSubmissionWorker = () => {
             resolvedNodeReference = resolvedNodeReference || nodeRow.node_reference || null;
           } else {
             // Fallback to MongoDB Node model
-            const nodeDoc = await Node.findById(nodeId).lean();
-            if (nodeDoc) {
-              resolvedNodeName =
-                resolvedNodeName || nodeDoc.name || nodeDoc.nodeName || null;
-              resolvedNodeReference =
-                resolvedNodeReference ||
-                nodeDoc.reference ||
-                nodeDoc.referenceId ||
-                nodeDoc.nodeReference ||
-                null;
+          const nodeDoc = await Node.findById(nodeId).lean();
+          if (nodeDoc) {
+            resolvedNodeName =
+              resolvedNodeName || nodeDoc.name || nodeDoc.nodeName || null;
+            resolvedNodeReference =
+              resolvedNodeReference ||
+              nodeDoc.reference ||
+              nodeDoc.referenceId ||
+              nodeDoc.nodeReference ||
+              null;
             }
           }
         } catch (nodeLookupError) {
@@ -212,15 +212,15 @@ const createSubmissionWorker = () => {
 
         if (result) {
           try {
-            const catalog = await SubmissionCatalogService.getCatalogByProject(
-              projectId
-            );
-            const facts =
-              (await SubmissionModel.buildFactsFromSubmission(result, catalog)) ||
-              [];
-            if (facts.length > 0) {
-              await insertFacts(facts);
-              submissionRollupService.scheduleRefresh();
+          const catalog = await SubmissionCatalogService.getCatalogByProject(
+            projectId
+          );
+          const facts =
+            (await SubmissionModel.buildFactsFromSubmission(result, catalog)) ||
+            [];
+          if (facts.length > 0) {
+            await insertFacts(facts);
+            submissionRollupService.scheduleRefresh();
             }
           } catch (catalogError) {
             // Don't fail submission if catalog processing fails

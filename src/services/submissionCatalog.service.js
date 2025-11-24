@@ -18,48 +18,48 @@ const SubmissionCatalogService = {
     }
 
     try {
-      const result = await postgresPool.query(
-        `
-          SELECT field_key, field_label, field_type, transformations, aliases
-          FROM form_field_catalog
-          WHERE project_id = $1
-        `,
-        [projectId]
-      );
+    const result = await postgresPool.query(
+      `
+        SELECT field_key, field_label, field_type, transformations, aliases
+        FROM form_field_catalog
+        WHERE project_id = $1
+      `,
+      [projectId]
+    );
 
-      const catalog = {};
-      result.rows.forEach((row) => {
-        const normaliseArray = (value) => {
-          if (Array.isArray(value)) {
-            return value;
-          }
-          if (value === null || value === undefined) {
+    const catalog = {};
+    result.rows.forEach((row) => {
+      const normaliseArray = (value) => {
+        if (Array.isArray(value)) {
+          return value;
+        }
+        if (value === null || value === undefined) {
+          return [];
+        }
+        if (typeof value === 'string') {
+          try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch (err) {
             return [];
           }
-          if (typeof value === 'string') {
-            try {
-              const parsed = JSON.parse(value);
-              return Array.isArray(parsed) ? parsed : [];
-            } catch (err) {
-              return [];
-            }
-          }
-          if (typeof value === 'object') {
-            return Object.values(value).filter((item) => item != null);
-          }
-          return [];
-        };
+        }
+        if (typeof value === 'object') {
+          return Object.values(value).filter((item) => item != null);
+        }
+        return [];
+      };
 
-        catalog[row.field_key] = {
-          field_label: row.field_label,
-          field_type: row.field_type,
-          transformations: normaliseArray(row.transformations),
-          aliases: normaliseArray(row.aliases),
-        };
-      });
+      catalog[row.field_key] = {
+        field_label: row.field_label,
+        field_type: row.field_type,
+        transformations: normaliseArray(row.transformations),
+        aliases: normaliseArray(row.aliases),
+      };
+    });
 
-      this.cache.set(projectId, catalog);
-      return catalog;
+    this.cache.set(projectId, catalog);
+    return catalog;
     } catch (error) {
       // Table doesn't exist or other error - return empty catalog
       // This allows submissions to proceed without catalog
