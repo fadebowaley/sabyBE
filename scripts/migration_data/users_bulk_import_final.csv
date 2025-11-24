@@ -1,0 +1,10 @@
+firstname,lastname,email,password,phoneNumber,roles,status,isEmailVerified,isPhoneVerified
+John,Doe,john.doe@example.com,Password123!,+1234567890,Admin Manager,Active,true,true
+Jane,Smith,jane.smith@example.com,Password123!,+1234567891,Manager Analyst,true,true,false
+Mike,Johnson,mike.johnson@example.com,Password123!,+1234567892,Supervisor,Active,false,false
+Sarah,Wilson,sarah.wilson@example.com,Password123!,+1234567893,Support Agent,false,true,true
+David,Brown,david.brown@example.com,Password123!,+1234567894,,true,false,false
+Lisa,Davis,lisa.davis@example.com,Password123!,+1234567895,Coordinator Assistant,Active,true,true
+Tom,Miller,tom.miller@example.com,Password123!,+1234567896,Specialist,true,false,false
+Emma,Garcia,emma.garcia@example.com,Password123!,+1234567897,Assistant,false,true,false
+
