@@ -251,14 +251,20 @@ const nodeId = node_id;
       payload.payload?.date ||
       new Date().toISOString().split('T')[0];
 
-    await calendarEnforcementService.validateSubmissionDate({
-      tenantId,
-      projectId,
-      nodeId,
-      month,
-      submissionDate: submission_date,
-      allowBackdating: calendar?.permSettings?.allowBackdating || false,
-    });
+    // Validate backdating and calendar existence BEFORE transaction
+    // (quota check will be done inside transaction with locking)
+    if (calendar) {
+      const submissionDateObj = new Date(submission_date);
+      const today = new Date();
+      const allowBackdating = calendar.permSettings?.allowBackdating || false;
+
+      if (!allowBackdating && submissionDateObj < today.setHours(0, 0, 0, 0)) {
+        throw new ApiError(
+          httpStatus.UNPROCESSABLE_ENTITY,
+          'Backdated submissions are not allowed for this form'
+        );
+      }
+    }
 
     const compliancePercentage =
       complianceMetrics.event_compliance_percentage ??
@@ -278,27 +284,83 @@ const nodeId = node_id;
       }
     }
 
-    const insertQuery = `
-      INSERT INTO form_submissions (
-        id, tenant_id, project_id, node_id, form_id,
-        project_name, project_category, user_id,
-        data, source, status,
-        month, year, perm_enabled,
-        event_compliance_percentage, completeness_status,
-        total_events_required, total_events_submitted,
-        validation_status, validation_errors, validation_warnings,
-        submitted_by, submitted_at, created_at, updated_at
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
-        $12, $13, $14, $15, $16, $17, $18, $19, $20,
-        $21, $22, $23, NOW(), NOW()
-      )
-      RETURNING *
-    `;
+    // Use transaction with row-level locking to prevent race conditions
+    const client = await postgresPool.connect();
+    try {
+      await client.query('BEGIN');
 
-    const submissionId = uuidv4();
+      // Re-check quota with row-level lock to prevent race conditions
+      const quotaCheckQuery = `
+        SELECT COUNT(*) AS count
+        FROM form_submissions
+        WHERE tenant_id = $1
+          AND project_id = $2
+          AND node_id IS NOT DISTINCT FROM $3
+          AND submission_date = $4
+          AND status != 'deleted'
+        FOR UPDATE
+      `;
+      const quotaResult = await client.query(quotaCheckQuery, [
+        tenant_id,
+        project_id,
+        node_id || null,
+        submission_date,
+      ]);
+      const usedSlots = Number(quotaResult.rows[0]?.count || 0);
 
-    const insertResult = await postgresPool.query(insertQuery, [
+      // Get calendar slot to check quota limit
+      const calendarRows = await eventCalendarService.getCalendar(
+        tenant_id,
+        project_id,
+        month
+      );
+      if (!calendarRows || calendarRows.length === 0) {
+        throw new ApiError(
+          httpStatus.NOT_FOUND,
+          'Calendar not found for this month'
+        );
+      }
+
+      const slot = calendarRows[0];
+      const config = slot.daily_config || slot.weekly_config || {};
+      const dates = config.dates || [];
+      const submissionDateStr = submission_date;
+      let totalSlots = 1;
+
+      if (dates.includes(submissionDateStr)) {
+        totalSlots = config.frequency_per_day || config.count || 1;
+      }
+
+      if (usedSlots >= totalSlots) {
+        await client.query('ROLLBACK');
+        throw new ApiError(
+          httpStatus.TOO_MANY_REQUESTS,
+          'Daily submission quota reached for this date'
+        );
+      }
+
+      // Insert submission within transaction
+      const insertQuery = `
+        INSERT INTO form_submissions (
+          id, tenant_id, project_id, node_id, form_id,
+          project_name, project_category, user_id,
+          data, source, status,
+          month, year, perm_enabled,
+          event_compliance_percentage, completeness_status,
+          total_events_required, total_events_submitted,
+          validation_status, validation_errors, validation_warnings,
+          submitted_by, submitted_at, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+          $12, $13, $14, $15, $16, $17, $18, $19, $20,
+          $21, $22, $23, NOW(), NOW()
+        )
+        RETURNING *
+      `;
+
+      const submissionId = uuidv4();
+
+      const insertResult = await client.query(insertQuery, [
       submissionId,
       tenant_id,
       project_id,
@@ -324,18 +386,25 @@ const nodeId = node_id;
       new Date(submission_date),
     ]);
 
-    const submission = insertResult.rows[0];
-    logger.info(`✅ PERM submission created: ${submission.id}`);
+      await client.query('COMMIT');
+      const submission = insertResult.rows[0];
+      logger.info(`✅ PERM submission created: ${submission.id}`);
 
-    return {
-      submission,
-      action: 'created',
-      existed: false,
-      compliance: complianceMetrics,
-      validation,
-      tracking_mode: calendar?.tracking_mode || 'legacy',
-      calendar_id: calendar?.id || null,
-    };
+      return {
+        submission,
+        action: 'created',
+        existed: false,
+        compliance: complianceMetrics,
+        validation,
+        tracking_mode: calendar?.tracking_mode || 'legacy',
+        calendar_id: calendar?.id || null,
+      };
+    } catch (txError) {
+      await client.query('ROLLBACK');
+      throw txError;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     logger.error('❌ Error submitting PERM data:', error.message);
     throw new ApiError(
