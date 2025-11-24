@@ -211,15 +211,22 @@ const createSubmissionWorker = () => {
         }
 
         if (result) {
-          const catalog = await SubmissionCatalogService.getCatalogByProject(
-            projectId
-          );
-          const facts =
-            (await SubmissionModel.buildFactsFromSubmission(result, catalog)) ||
-            [];
-          if (facts.length > 0) {
-            await insertFacts(facts);
-            submissionRollupService.scheduleRefresh();
+          try {
+            const catalog = await SubmissionCatalogService.getCatalogByProject(
+              projectId
+            );
+            const facts =
+              (await SubmissionModel.buildFactsFromSubmission(result, catalog)) ||
+              [];
+            if (facts.length > 0) {
+              await insertFacts(facts);
+              submissionRollupService.scheduleRefresh();
+            }
+          } catch (catalogError) {
+            // Don't fail submission if catalog processing fails
+            logger.warn(
+              `[Worker] Catalog processing failed for submission ${result.id}: ${catalogError.message}`
+            );
           }
         }
 
