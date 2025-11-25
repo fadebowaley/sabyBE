@@ -7,8 +7,7 @@ const sendConfigResponse = (res, config, tenantId, entityType) => {
   res
     .status(httpStatus.OK)
     .send(
-      config ||
-        tenantConfigService.buildFallbackConfig(tenantId, entityType)
+      config || tenantConfigService.buildFallbackConfig(tenantId, entityType)
     );
 };
 
@@ -59,6 +58,7 @@ const toggleFieldAnalytics = catchAsync(async (req, res) => {
 
   // Debug logging (safe - avoid circular reference issues)
   const enabledValue = typeof enabled === 'object' ? '[Object]' : enabled;
+  // eslint-disable-next-line no-console
   console.log(
     '🔍 [toggleFieldAnalytics] enabled type:',
     typeof enabled,
@@ -126,6 +126,7 @@ const toggleFieldAnalytics = catchAsync(async (req, res) => {
     enabled = true;
   }
 
+  // eslint-disable-next-line no-console
   console.log(
     '✅ [toggleFieldAnalytics] Normalized enabled to:',
     enabled,
@@ -157,10 +158,16 @@ const getAnalyticsSummary = catchAsync(async (req, res) => {
   const { entityType } = req.params;
 
   if (!['user', 'node'].includes(entityType)) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Entity type must be "user" or "node"');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Entity type must be "user" or "node"'
+    );
   }
 
-  const summary = await tenantConfigService.getAnalyticsSummary(tenantId, entityType);
+  const summary = await tenantConfigService.getAnalyticsSummary(
+    tenantId,
+    entityType
+  );
 
   res.status(httpStatus.OK).send({
     success: true,
@@ -177,4 +184,3 @@ module.exports = {
   toggleFieldAnalytics,
   getAnalyticsSummary,
 };
-
