@@ -71,8 +71,10 @@ const toggleFieldAnalytics = async (tenantId, entityType, fieldId, enabled) => {
     field.analytics = {};
   }
 
-  // Update enabled state
+  // Update enabled state (ensure it's a boolean)
   field.analytics.enabled = Boolean(enabled);
+  
+  console.log(`💾 [toggleFieldAnalytics] Saving analytics.enabled = ${field.analytics.enabled} for field ${fieldId}`);
 
   // Auto-map analytics type if enabling for first time
   if (enabled && !field.analytics.type) {
@@ -107,7 +109,20 @@ const toggleFieldAnalytics = async (tenantId, entityType, fieldId, enabled) => {
   }
 
   await config.save();
-  return field.toObject();
+  
+  // Return the field with analytics state properly included
+  const fieldObj = field.toObject ? field.toObject() : field;
+  
+  // Ensure analytics.enabled is included in the response
+  if (!fieldObj.analytics) {
+    fieldObj.analytics = {};
+  }
+  fieldObj.analytics.enabled = Boolean(enabled);
+  
+  // eslint-disable-next-line no-console
+  console.log(`✅ [toggleFieldAnalytics] Returning field with analytics.enabled = ${fieldObj.analytics.enabled}`);
+  
+  return fieldObj;
 };
 
 /**

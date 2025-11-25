@@ -26,26 +26,22 @@ router
   );
 
 // Analytics endpoints
-router.route('/:entityType/fields/:fieldId/analytics').patch(
-  auth(),
-  validate({
-    params: Joi.object().keys({
-      entityType: Joi.string().valid('user', 'node').required(),
-      fieldId: Joi.string().required(),
+router
+  .route('/:entityType/fields/:fieldId/analytics')
+  .patch(
+    auth(),
+    validate({
+      params: Joi.object().keys({
+        entityType: Joi.string().valid('user', 'node').required(),
+        fieldId: Joi.string().required(),
+      }),
+      body: Joi.object().keys({
+        // Accept any value - conversion handled in controller
+        enabled: Joi.any().required(),
+      }),
     }),
-    body: Joi.object().keys({
-      // Accept boolean, string boolean, or number - conversion handled in controller
-      enabled: Joi.alternatives()
-        .try(
-          Joi.boolean(),
-          Joi.string().valid('true', 'false', '1', '0'),
-          Joi.number().integer().valid(0, 1)
-        )
-        .required(),
-    }),
-  }),
-  tenantConfigController.toggleFieldAnalytics
-);
+    tenantConfigController.toggleFieldAnalytics
+  );
 
 router.route('/:entityType/analytics/summary').get(
   auth(),
