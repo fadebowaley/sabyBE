@@ -1,0 +1,6 @@
+name,code,type,level,parent,description
+Root Structure,,headquarters,Root,,Root structure for national HQ
+Division Structure,,division,Division,Root Structure,Division/Region level structure
+Diocese Structure,,region,Diocese,Division Structure,Diocese level structure
+Zone Structure,,zone,Zone,Diocese Structure,Zone level structure
+Parish Structure,,branch,Parish,Zone Structure,Parish level structure

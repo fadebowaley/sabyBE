@@ -1,0 +1,468 @@
+email,firstname,lastname,password,phoneNumber,isEmailVerified,isPhoneVerified,status,roles
+kehinde.ajibola.covenant.cathedral@sotsm.org,Kehinde,Ajibola,H@lopa55word,+2348055257130,false,true,true,Senior Pastor
+dele.owomoyela.amero@sotsm.org,Dele,Owomoyela,H@lopa55word,+2348059722655,false,true,true,Senior Pastor
+abioye.ayorinde.ologuneru@sotsm.org,Abioye,Ayorinde,H@lopa55word,+2348035872625,false,true,true,Pastor
+emmanuel.mabayoje.ikolaba.ii@sotsm.org,Emmanuel,Mabayoje,H@lopa55word,+2348035673720,false,true,true,Senior Pastor
+akinwale.coker.garden.of.victory@sotsm.org,Akinwale,Coker,H@lopa55word,+2348033644074,false,true,true,Senior Pastor
+olatunji.afolabi.alagbayun@sotsm.org,Olatunji,Afolabi,H@lopa55word,+2348056511492,false,true,true,Pastor
+adeleke.nelson.akingbade@sotsm.org,Adeleke,Nelson,H@lopa55word,+2349037635572,false,true,true,Pastor
+dotun.omokemi.fountain.of.life.aba.osho@sotsm.org,Dotun,Omokemi,H@lopa55word,+2348034274118,false,true,true,Pastor
+olawale.aluko.onideure.zone@sotsm.org,Olawale,Aluko,H@lopa55word,+2348066185951,false,true,true,Pastor
+toki.oluwole.new.garment.alakia.zone@sotsm.org,Toki,Oluwole,H@lopa55word,+2348053368692,false,true,true,Pastor
+olubunmi.adeyemi.ajameta@sotsm.org,Olubunmi,Adeyemi,H@lopa55word,+2348076003353,false,true,true,Pastor
+adesoji.adeniji.loyola@sotsm.org,Adesoji,Adeniji,H@lopa55word,+2348033519150,false,true,true,Senior Pastor
+samuel.aderombi.ogungbade@sotsm.org,Samuel,Aderombi,H@lopa55word,+2348038381836,false,true,true,Senior Pastor
+enoch.nathaniel.the.rock@sotsm.org,Enoch,Nathaniel,H@lopa55word,+2348038060717,false,true,true,Senior Pastor
+oladimeji.olusegun.lade.zone@sotsm.org,Oladimeji,Olusegun,H@lopa55word,+2348055309619,false,true,true,Pastor
+yemi.adeleke.bakatari.zone@sotsm.org,Yemi,Adeleke,H@lopa55word,+2347014930055,false,true,true,Pastor
+femi.fayemi.ogungbade.zone@sotsm.org,Femi,Fayemi,H@lopa55word,+2348028450749,false,true,true,Pastor
+ojo.ibukun.opoopin@sotsm.org,Ojo,Ibukun,H@lopa55word,+2348131181856,false,true,true,Pastor
+adejumo.williams.alase@sotsm.org,Adejumo,Williams,H@lopa55word,,false,false,true,Brother
+bamiduro.taiwo.miracle.centre@sotsm.org,Bamiduro,Taiwo,H@lopa55word,+2348053512142,false,true,true,Pastor
+adebola.taiwo.olubadan.estate@sotsm.org,Adebola,Taiwo,H@lopa55word,+2348033530345,false,true,true,Senior Pastor
+olatubosun.olayemi.adelubi.zone@sotsm.org,Olatubosun,Olayemi,H@lopa55word,+2348032230038,false,true,true,Pastor
+comfort.adebola.akoka@sotsm.org,Comfort,Adebola,H@lopa55word,+2348037115966,false,true,true,Pastor
+victor.ayoade.grace.arena@sotsm.org,Victor,Ayoade,H@lopa55word,+2348068482811,false,true,true,Senior Pastor
+goke.omotoso.olaogun.zone@sotsm.org,Goke,Omotoso,H@lopa55word,+2348038076121,false,true,true,Pastor
+adesola.emmanuel.king.of.glory@sotsm.org,Adesola,Emmanuel,H@lopa55word,+2348102859430,false,true,true,Pastor
+kuti.olusegun.kulodi@sotsm.org,Kuti,Olusegun,H@lopa55word,+2348035181350,false,true,true,Pastor
+mrs.adeniyi.rachael.eruomu@sotsm.org,(Mrs.),Adeniyi Rachael,H@lopa55word,+2348077877730,false,true,true,Senior Pastor
+muyiwa.isola.ile.marun.zone@sotsm.org,Muyiwa,Isola,H@lopa55word,+2348032468940,false,true,true,Pastor
+uzoka.patrick.resurrection.zone@sotsm.org,Uzoka,Patrick,H@lopa55word,+2348060436606,false,true,true,Pastor
+oyetunde.aiyedun.salawu.zone@sotsm.org,Oyetunde,Aiyedun,H@lopa55word,+2348110198482,false,true,true,Pastor
+alade.esther.alabidun@sotsm.org,Alade,Esther,H@lopa55word,+2348069181563,false,true,true,Pastor
+gbenro.aderibigbe.alarere@sotsm.org,Gbenro,Aderibigbe,H@lopa55word,+2347033306518,false,true,true,Pastor
+lekan.olakorede.paara@sotsm.org,Lekan,Olakorede,H@lopa55word,+2348060184389,false,true,true,Pastor
+dipo.oke.felele@sotsm.org,Dipo,Oke,H@lopa55word,+2348052075008,false,true,true,Pastor
+olugbogi.moses.soka@sotsm.org,Olugbogi,Moses,H@lopa55word,+2348036170288,false,true,true,Pastor
+wole.okunola.akinfenwa@sotsm.org,Wole,Okunola,H@lopa55word,+2348066478204,false,true,true,Elder
+fagbemi.john.redemptorist@sotsm.org,Fagbemi,John,H@lopa55word,+2348034540363,false,true,true,Pastor
+aliu.peter.new.gbagi@sotsm.org,Aliu,Peter,H@lopa55word,+2348036297648,false,true,true,Pastor
+abifarin.olatunde.kasumu@sotsm.org,Abifarin,Olatunde,H@lopa55word,+2348034229559,false,true,true,Pastor
+adeaga.niyi.airport@sotsm.org,Adeaga,Niyi,H@lopa55word,+2348030840224,false,true,true,Pastor
+ojo.ademola.idi.obi@sotsm.org,Ojo,Ademola,H@lopa55word,+2348064199065,false,true,true,Pastor
+david.popoola.oluwo@sotsm.org,David,Popoola,H@lopa55word,+2348033184867,false,true,true,Pastor
+mrs.adetutu.akintayo.akobo.ii@sotsm.org,(Mrs.),Adetutu Akintayo,H@lopa55word,+2348055601832,false,true,true,Senior Pastor
+muyiwa.akinbode.kute.i@sotsm.org,Muyiwa,Akinbode,H@lopa55word,+2348152036100,false,true,true,Pastor
+timothy.akinremi.kute.ii@sotsm.org,Timothy,Akinremi,H@lopa55word,+2347030126694,false,true,true,Pastor
+oladejo.florence.kute.iii@sotsm.org,Oladejo,Florence,H@lopa55word,+2347068342809,false,true,true,Minister
+silas.miniyos.hausa.church.i@sotsm.org,Silas,Miniyos,H@lopa55word,+2347033333702,false,true,true,Pastor
+iliya.tonde.hausa.church.ii@sotsm.org,Iliya,Tonde,H@lopa55word,+2347010178252,false,true,true,Minister
+dayo.ajayi.abidiodan@sotsm.org,Dayo,Ajayi,H@lopa55word,+2348037286233,false,true,true,Pastor
+gbenga.afolabi.ibadan.central.div@sotsm.org,Gbenga,Afolabi,H@lopa55word,+2348033189558,false,true,true,Senior Pastor
+moses.adekanye.ashi@sotsm.org,Moses,Adekanye,H@lopa55word,+2348033280371,false,true,true,Senior Pastor
+david.oluwaseun.inu.koko@sotsm.org,David,Oluwaseun,H@lopa55word,+2348038739279,false,true,true,Pastor
+adeniyi.familua.clc.ikolaba.zone@sotsm.org,Adeniyi,Familua,H@lopa55word,+2348039183293,false,true,true,Pastor
+olowolayemo.tope.clc.olorunda@sotsm.org,Olowolayemo,Tope,H@lopa55word,+2348038498428,false,true,true,Pastor
+funke.oladebo.clc.bada.zone@sotsm.org,Funke,Oladebo,H@lopa55word,+2348102552564,false,true,true,Pastor
+james.kayode.clc.ojurin@sotsm.org,James,Kayode,H@lopa55word,+2348069778670,false,true,true,Pastor
+timothy.o.abodunrin.clc.olorunda.aba.zone@sotsm.org,Timothy,O. Abodunrin,H@lopa55word,+2348033436852,false,true,true,Deacon
+olatunde.o.bada.ii@sotsm.org,Olatunde,O.,H@lopa55word,+2349090628780,false,true,true,Brother
+mrs.olunike.babarinde.olorunda.aba.ii@sotsm.org,(Mrs.),Olunike Babarinde,H@lopa55word,+2347031055343,false,true,true,Elder
+gbenga.adebambo.iwo.road.i@sotsm.org,Gbenga,Adebambo,H@lopa55word,+2348053139316,false,true,true,Pastor
+adedayo.enobahor.clc.bode.wasimi.zone@sotsm.org,Adedayo,Enobahor,H@lopa55word,+2348094974964,false,true,true,Pastor
+olujide.richard.olujaye.clc.aliwo.zone@sotsm.org,Olujide,Richard Olujaye,H@lopa55word,+2348038239439,false,true,true,Pastor
+banjo.adedeji.clc.gbenla@sotsm.org,Banjo,Adedeji,H@lopa55word,+2348053531022,false,true,true,Pastor
+francis.ojo.clc.oje@sotsm.org,Francis,Ojo,H@lopa55word,+2348088133766,false,true,true,Minister
+ishola.tunde.jenriyin@sotsm.org,Ishola,Tunde,H@lopa55word,+2348064492167,false,true,true,Minister
+lawrence.adebayo.total.garden@sotsm.org,Lawrence,Adebayo,H@lopa55word,+2348035181303,false,true,true,Senior Pastor
+aderonke.oluokun.clc.adeoyo@sotsm.org,Aderonke,Oluokun,H@lopa55word,+2348051947288,false,true,true,Deaconess
+tomide.olayiwola.adegbayi@sotsm.org,Tomide,Olayiwola,H@lopa55word,+2349060045790,false,true,true,Pastor
+tunde.yoade.agbadagudu@sotsm.org,Tunde,Yoade,H@lopa55word,+2348062374943,false,true,true,Deacon
+olufemi.akindele.oke.adu@sotsm.org,Olufemi,Akindele,H@lopa55word,+2347062257669,false,true,true,Pastor
+ayeni.stella.clc.oke.are.zone@sotsm.org,Ayeni,Stella,H@lopa55word,+2348038404092,false,true,true,Pastor
+dare.akeju.clc.padre@sotsm.org,Dare,Akeju,H@lopa55word,+2348027817852,false,true,true,Pastor
+bukunmi.adetunji.clc.idi.obi@sotsm.org,Bukunmi,Adetunji,H@lopa55word,+2348061668962,false,true,true,Minister
+susana.nwosu.baba.isale@sotsm.org,Susana,Nwosu,H@lopa55word,+2348057358535,false,true,true,Pastor
+olayiwola.abosede.odooye.zone@sotsm.org,Olayiwola,Abosede,H@lopa55word,+2348034661984,false,true,true,Pastor
+oladeji.o.olusola.agbowo.victory.centre@sotsm.org,Oladeji,O.Olusola,H@lopa55word,+2348052334926,false,true,true,Pastor
+ayodele.oladipo.alaba.aho.ajibode@sotsm.org,Ayodele,Oladipo Alaba,H@lopa55word,+2347031552553,false,true,true,Pastor
+tunde.adejumo.agbowo.express.zone@sotsm.org,Tunde,Adejumo,H@lopa55word,+2347031819553,false,true,true,Pastor
+edward.peter.ogabor.orogun.zone@sotsm.org,Edward,Peter Ogabor,H@lopa55word,+2348055676932,false,true,true,Pastor
+williams.bababunmi.barika@sotsm.org,Williams,Bababunmi,H@lopa55word,+2347055330073,false,true,true,Minister
+tunde.akinola.elewuro@sotsm.org,Tunde,Akinola,H@lopa55word,+2348034627636,false,true,true,Pastor
+adekunle.obilade.aduloju@sotsm.org,Adekunle,Obilade,H@lopa55word,+2348039706833,false,true,true,Pastor
+bamidele.john.laaniba.zone@sotsm.org,Bamidele,John,H@lopa55word,+2348101223654,false,true,true,Pastor
+kehinde.eto.oluwa.alapata@sotsm.org,Kehinde,Eto'Oluwa,H@lopa55word,+2348038534682,false,true,true,Minister
+adekunle.obilade.ajetumobi@sotsm.org,Adekunle,Obilade,H@lopa55word,+2348039706833,false,true,true,Minister
+kareem.olayinka.aba.odo@sotsm.org,Kareem,Olayinka,H@lopa55word,+2348060496423,false,true,true,Brother
+busari.kayode.jakan.oasis@sotsm.org,Busari,Kayode,H@lopa55word,+2348094247688,false,true,true,Pastor
+olusegun.ojesanmi.iwo.road.ii@sotsm.org,Olusegun,Ojesanmi,H@lopa55word,+2348056052007,false,true,true,Pastor
+david.olumide.youth.church@sotsm.org,David,Olumide,H@lopa55word,+2347035168375,false,true,true,Minister
+tolu.olusegun.omotoso.clc.basorun.zone@sotsm.org,Tolu,Olusegun Omotoso,H@lopa55word,+2348034336240,false,true,true,Pastor
+peters.abiodun.clc.yawiri@sotsm.org,Peters,Abiodun,H@lopa55word,+2348163193515,false,true,true,Pastor
+awogbade.henry.a.clc.jonku.zone@sotsm.org,Awogbade,Henry A.,H@lopa55word,+2348076044080,false,true,true,Pastor
+oladiti.moses.oludele.clc.ofatedo@sotsm.org,Oladiti,Moses Oludele,H@lopa55word,+2348060093311,false,true,true,Pastor
+akinyemi.olusegun.molade.i.zone@sotsm.org,Akinyemi,Olusegun,H@lopa55word,+2348055122749,false,true,true,Pastor
+oluyomi.lawal.molade.ii@sotsm.org,Oluyomi,Lawal,H@lopa55word,+2348034061970,false,true,true,Pastor
+awe.olusegun.egbeda@sotsm.org,Awe,Olusegun,H@lopa55word,+2348028625127,false,true,true,Minister
+femi.akanle.elewuro.ii@sotsm.org,Femi,Akanle,H@lopa55word,+2348138525262,false,true,true,Deacon
+bisi.adetifa.ojoo@sotsm.org,Bisi,Adetifa,H@lopa55word,+2348062588274,false,true,true,Pastor
+olayiwola.omolabi.clc.onile.aro.zone@sotsm.org,Olayiwola,Omolabi,H@lopa55word,+2348059759455,false,true,true,Pastor
+bolanle.adelabu.clc.idi.ose@sotsm.org,Bolanle,Adelabu,H@lopa55word,+2348071475563,false,true,true,Pastor
+ibukun.abioye.clc.ajibode.zone@sotsm.org,Ibukun,Abioye,H@lopa55word,+2348023841633,false,true,true,Pastor
+ademola.dare.clc.akingbile@sotsm.org,Ademola,Dare,H@lopa55word,+2348058930914,false,true,true,Pastor
+grace.akin.ajayi.clc.niser.itesiwju.zone@sotsm.org,Grace,Akin-Ajayi,H@lopa55word,+2348060755188,false,true,true,Pastor
+jacob.gbolagbade.clc.kole@sotsm.org,Jacob,Gbolagbade,H@lopa55word,+2348028799517,false,true,true,Minister
+sogunle.oluyemisi.clc.aroro.yerokun@sotsm.org,Sogunle,Oluyemisi,H@lopa55word,+2348072010029,false,true,true,Pastor
+fatai.adams.clc.moniya.zone@sotsm.org,Fatai,Adams,H@lopa55word,+2348035641617,false,true,true,Pastor
+abiodun.adebayo.clc.ajibade@sotsm.org,Abiodun,Adebayo,H@lopa55word,,false,false,true,Minister
+oladeni.omolara.clc.osajin.lakoto@sotsm.org,Oladeni,Omolara,H@lopa55word,+2348032242496,false,true,true,Pastor
+sina.ogunrotimi.clc.igbo.oloyin@sotsm.org,Sina,Ogunrotimi,H@lopa55word,+2348033643523,false,true,true,Pastor
+gbenga.afolabi.bashorun@sotsm.org,Gbenga,Afolabi,H@lopa55word,+2348033189558,false,true,true,Senior Pastor
+adewumi.sijibomi.clc.gbagi.zone@sotsm.org,Adewumi,Sijibomi,H@lopa55word,+2348169978315,false,true,true,Pastor
+adeniyi.adetunji.clc.sawmill@sotsm.org,Adeniyi,Adetunji,H@lopa55word,+2348034171691,false,true,true,Pastor
+bello.ifedayo.akeem.clc.badeku@sotsm.org,Bello,Ifedayo Akeem,H@lopa55word,+2348160934375,false,true,true,Brother
+akinwale.emmanuel.clc.wakajaye.zone@sotsm.org,Akinwale,Emmanuel,H@lopa55word,+2347039471943,false,true,true,Pastor
+gbolagade.adebayo.clc.oki@sotsm.org,Gbolagade,Adebayo,H@lopa55word,+2348074497766,false,true,true,Pastor
+olanisebe.adeyemi.clc.segelu@sotsm.org,Olanisebe,Adeyemi,H@lopa55word,+2348034418798,false,true,true,Pastor
+pst.afolabi.obafemi.johnson.clc.aremo.zone@sotsm.org,Pst.,Afolabi Obafemi Johnson,H@lopa55word,+2348086896528,false,true,true,Pastor
+oyetunde.abiola.clc.agbeja@sotsm.org,Oyetunde,Abiola,H@lopa55word,+2348185671851,false,true,true,Pastor
+adio.adewale.oluseyi.clc.bodija.i.zone@sotsm.org,Adio,Adewale Oluseyi,H@lopa55word,+2347037616197,false,true,true,Pastor
+oyeyemi.olapade.clc.alapata@sotsm.org,Oyeyemi,Olapade,H@lopa55word,+2348060040098,false,true,true,Pastor
+bibilola.oladeji.cultural.centre@sotsm.org,Bibilola,Oladeji,H@lopa55word,+2348058312614,false,true,true,Pastor
+onadele.muyiwa.oranyan@sotsm.org,Onadele,Muyiwa,H@lopa55word,+2348037505831,false,true,true,Pastor
+sola.arowolo.amuloko@sotsm.org,Sola,Arowolo,H@lopa55word,+2349123825432,false,true,true,Pastor
+busari.kehinde.ode.aje@sotsm.org,Busari,Kehinde,H@lopa55word,+2348033713971,false,true,true,Pastor
+moses.laoye.agugu@sotsm.org,Moses,Laoye,H@lopa55word,+2348059134756,false,true,true,Pastor
+segun.wright.ode.aje.ii@sotsm.org,Segun,Wright,H@lopa55word,+2348067186794,false,true,true,Minister
+blessing.adekole.oranyan.ii@sotsm.org,Blessing,Adekole,H@lopa55word,+2348074499799,false,true,true,Pastor
+wole.oyeyemi.ibadan.north.division@sotsm.org,Wole,Oyeyemi,H@lopa55word,+2348033978456,false,true,true,Senior Pastor
+wole.oyeyemi.akobo@sotsm.org,Wole,Oyeyemi,H@lopa55word,+2348033978456,false,true,true,Senior Pastor
+segun.awopeju.clc.abidiodan@sotsm.org,Segun,Awopeju,H@lopa55word,+2348134580665,false,true,true,Minister
+dara.awe.clc.eni.irapada@sotsm.org,Dara,Awe,H@lopa55word,+2348033535309,false,true,true,Pastor
+oladeji.a.o.clc.onikokoro@sotsm.org,Oladeji,A.O.,H@lopa55word,+2348055862926,false,true,true,Pastor
+abiodun.adejumo.clc.ore.ofe@sotsm.org,Abiodun,Adejumo,H@lopa55word,+2348020503649,false,true,true,Senior Pastor
+kunmi.gbenro.clc.isokan.estate@sotsm.org,Kunmi,Gbenro,H@lopa55word,+2348075457129,false,true,true,Pastor
+julius.fayemi.clc.olorunda.abaa@sotsm.org,Julius,Fayemi,H@lopa55word,+2348067917911,false,true,true,Pastor
+adegboyega.raphael.clc.aba.igbagbo@sotsm.org,Adegboyega,Raphael,H@lopa55word,+2348061489269,false,true,true,Pastor
+l.o.olayiwola.agugu@sotsm.org,L.O.,Olayiwola,H@lopa55word,+2348034262961,false,true,true,Pastor
+balogun.olusayo.gbaremu.zone@sotsm.org,Balogun,Olusayo,H@lopa55word,+2347051408003,false,true,true,Pastor
+olalekan.akinsipe.babanla.zone@sotsm.org,Olalekan,Akinsipe,H@lopa55word,+2348036093357,false,true,true,Pastor
+oyekunle.olubunmi.idi.osan@sotsm.org,Oyekunle,Olubunmi,H@lopa55word,+2348086525347,false,true,true,Minister
+oladejo.kunle.itamerin@sotsm.org,Oladejo,Kunle,H@lopa55word,+2349061648326,false,true,true,Pastor
+james.friday.ifesowapo@sotsm.org,James,Friday,H@lopa55word,+2349051281409,false,true,true,Minister
+adewole.olalekan.ayekale.ii@sotsm.org,Adewole,Olalekan,H@lopa55word,+2347032366751,false,true,true,Minister
+adewuyi.bamise.erunmu@sotsm.org,Adewuyi,Bamise,H@lopa55word,+2348058356898,false,true,true,Pastor
+oyeniyi.oyelese.aperin@sotsm.org,Oyeniyi,Oyelese,H@lopa55word,+2347030103565,false,true,true,Pastor
+oladiran.bolanle.adesola.zone@sotsm.org,Oladiran,Bolanle,H@lopa55word,+2348156937323,false,true,true,Pastor
+oladejo.olusegun.clc.elekuro@sotsm.org,Oladejo,Olusegun,H@lopa55word,+2348034312378,false,true,true,Pastor
+olumide.akinlabi.clc.ajegunle@sotsm.org,Olumide,Akinlabi,H@lopa55word,+2348032549444,false,true,true,Pastor
+adebayo.hassan.taiwo.clc.olorunsogo@sotsm.org,Adebayo,Hassan Taiwo,H@lopa55word,+2347039367883,false,true,true,Pastor
+olumide.laniyan.ogbere.ti.oya.zone@sotsm.org,Olumide,Laniyan,H@lopa55word,+2348053592557,false,true,true,Senior Pastor
+adeyi.oluwakayode.a.clc.olunloyo@sotsm.org,Adeyi,Oluwakayode A.,H@lopa55word,+2348032219582,false,true,true,Pastor
+aramide.olaniyan.clc.odinjo@sotsm.org,Aramide,Olaniyan,H@lopa55word,+2348062115269,false,true,true,Pastor
+amoo.olayinka.clc.idi.iroko.olodo@sotsm.org,Amoo,Olayinka,H@lopa55word,+2348056549358,false,true,true,Pastor
+ojo.abayomi.t.clc.ariyo@sotsm.org,Ojo,Abayomi T.,H@lopa55word,+2348081653922,false,true,true,Deacon
+kayode.olusola.oja.london.zone@sotsm.org,Kayode,Olusola,H@lopa55word,+2348028584394,false,true,true,Pastor
+adebisi.ademola.clc.ologede.olodo@sotsm.org,Adebisi,Ademola,H@lopa55word,+2348026998818,false,true,true,Pastor
+oyewusi.deborah.clc.koloko@sotsm.org,Oyewusi,Deborah,H@lopa55word,+2348066683699,false,true,true,Pastor
+segun.oladimeji.clc.monatan@sotsm.org,Segun,Oladimeji,H@lopa55word,+2348057673455,false,true,true,Senior Pastor
+olusegun.lawson.clc.adogba.zone@sotsm.org,Olusegun,Lawson,H@lopa55word,+2348074487296,false,true,true,Pastor
+abiodun.omotoso.clc.iyana.church.i@sotsm.org,Abiodun,Omotoso,H@lopa55word,+2348038303374,false,true,true,Pastor
+ayeni.ayodele.samuel.clc.iyana.church.ii@sotsm.org,Ayeni,Ayodele Samuel,H@lopa55word,+2348033576393,false,true,true,Pastor
+adekunle.adedolapo.clc.segelu@sotsm.org,Adekunle,Adedolapo,H@lopa55word,+2348053624121,false,true,true,Pastor
+adelabu.adesokan.clc.gbena.zone@sotsm.org,Adelabu,Adesokan,H@lopa55word,+2348033575184,false,true,true,Pastor
+efemedoh.hope.clc.adex@sotsm.org,Efemedoh,Hope,H@lopa55word,+2348065625312,false,true,true,Pastor
+layi.adisa.isegun@sotsm.org,Layi,Adisa,H@lopa55word,+2348033832870,false,true,true,Senior Pastor
+olayinka.adubi.isegun.ii.zone@sotsm.org,Olayinka,Adubi,H@lopa55word,+2348055881844,false,true,true,Pastor
+sunday.jayeoba.clc.oloruntedo@sotsm.org,Sunday,Jayeoba,H@lopa55word,+2348164659436,false,true,true,Pastor
+bolaji.olatunde.kengbe.zone@sotsm.org,Bolaji,Olatunde,H@lopa55word,+2348022036344,false,true,true,Pastor
+adewale.temitope.clc.olosan@sotsm.org,Adewale,Temitope,H@lopa55word,+2348169599606,false,true,true,Pastor
+adesina.omotayo.clc.akanle@sotsm.org,Adesina,Omotayo,H@lopa55word,+2348067769699,false,true,true,Pastor
+oyedele.sola.airport.zone@sotsm.org,Oyedele,Sola,H@lopa55word,+2348032569742,false,true,true,Pastor
+stella.ayeni.clc.ife.olu@sotsm.org,Stella,Ayeni,H@lopa55word,+2347038168070,false,true,true,Pastor
+falade.olusoji.clc.ogo.oluwa@sotsm.org,Falade,Olusoji,H@lopa55word,+2349067216792,false,true,true,Pastor
+adeyeni.adewole.clc.youth@sotsm.org,Adeyeni,Adewole,H@lopa55word,+2348034213094,false,true,true,Pastor
+kunmi.adeyinka.adegbayi@sotsm.org,Kunmi,Adeyinka,H@lopa55word,+2348034079605,false,true,true,Senior Pastor
+akintunde.olufemi.ifesowapo.zone@sotsm.org,Akintunde,Olufemi,H@lopa55word,+2348066850800,false,true,true,Pastor
+pst.hammed.oladiran.taiwo.famojuro.egbeda.zone@sotsm.org,Pst,Hammed Oladiran Taiwo Famojuro,H@lopa55word,+2348055115940,false,true,true,Pastor
+adejumo.mercy.m.iyana.agbala@sotsm.org,Adejumo,Mercy M.,H@lopa55word,+2347081788907,false,true,true,Pastor
+oluwakunle.moses.oluwo@sotsm.org,Oluwakunle,Moses,H@lopa55word,+2348025353746,false,true,true,Pastor
+ojeyinka.abosede.lam.adesina@sotsm.org,Ojeyinka,Abosede,H@lopa55word,+2347039295979,false,true,true,Pastor
+jayeoba.olumide.sunday.kukumada@sotsm.org,Jayeoba,Olumide Sunday,H@lopa55word,+2348038625188,false,true,true,Pastor
+filani.omolara.olodo.kumapayi@sotsm.org,Filani,Omolara,H@lopa55word,+2348162887959,false,true,true,Pastor
+omotayo.esther.ejioku@sotsm.org,Omotayo,Esther,H@lopa55word,+2349014499192,false,true,true,Pastor
+ojewande.olukayode.ajagba@sotsm.org,Ojewande,Olukayode,H@lopa55word,+2348139471915,false,true,true,Pastor
+john.olusegun.fatoki.lalupon.zone@sotsm.org,John,Olusegun Fatoki,H@lopa55word,+2348125022799,false,true,true,Pastor
+abomide.tolulope.amosun.zone@sotsm.org,Abomide,Tolulope,H@lopa55word,+2348038594709,false,true,true,Pastor
+akinro.k.bolaji.oki.olodo@sotsm.org,Akinro,K. Bolaji,H@lopa55word,+2348060461249,false,true,true,Pastor
+ajao.peter.olodo.bank@sotsm.org,Ajao,Peter,H@lopa55word,+2348038461956,false,true,true,Pastor
+aderinwale.jaralyne.wakajaye@sotsm.org,Aderinwale,Jaralyne,H@lopa55word,+2348073165104,false,true,true,Pastor
+adeoye.taiwo.balogun@sotsm.org,Adeoye,Taiwo,H@lopa55word,+2348067183600,false,true,true,Pastor
+oladiti.abiodun.elijah.arubiewe@sotsm.org,Oladiti,Abiodun Elijah,H@lopa55word,+2347063717927,false,true,true,Pastor
+oladimeji.israel.olodo.kumapayi@sotsm.org,Oladimeji,Israel,H@lopa55word,+2349034542611,false,true,true,Pastor
+oladayo.fatanmi.o.jenriyin@sotsm.org,Oladayo,Fatanmi O.,H@lopa55word,+2347033206141,false,true,true,Pastor
+sunday.jegede.clc.itesiwaju.erunmu@sotsm.org,Sunday,Jegede,H@lopa55word,+2347040173359,false,true,true,Pastor
+obalana.abiodun.francis.clc.adeleye@sotsm.org,Obalana,Abiodun Francis,H@lopa55word,+2348071855911,false,true,true,Pastor
+kuku.abayomi.clc.odan.eleekan.zone@sotsm.org,Kuku,Abayomi,H@lopa55word,+2348156073895,false,true,true,Pastor
+idowu.kehinde.m.clc.jinarere@sotsm.org,Idowu,kehinde M.,H@lopa55word,+2348108711311,false,true,true,Pastor
+abiodun.adebowale.clc.egba.akinlumo@sotsm.org,Abiodun,Adebowale,H@lopa55word,+2348062196394,false,true,true,Pastor
+olaibi.taiwo.amuloko.i@sotsm.org,Olaibi,Taiwo,H@lopa55word,+2348060943544,false,true,true,Pastor
+aboderin.joseph.alawaye@sotsm.org,Aboderin,Joseph,H@lopa55word,+2348056978536,false,true,true,Pastor
+olaniyan.oluyemi.elewe@sotsm.org,Olaniyan,Oluyemi,H@lopa55word,+2348067623246,false,true,true,Pastor
+adeagbo.oluwatoyin.aye.tuntun@sotsm.org,Adeagbo,Oluwatoyin,H@lopa55word,+2348053741949,false,true,true,Pastor
+olanlokun.kehinde.idi.ose@sotsm.org,Olanlokun,Kehinde,H@lopa55word,+2348155081695,false,true,true,Pastor
+oyeleke.temitayo.clc.olomiyeye@sotsm.org,Oyeleke,Temitayo,H@lopa55word,+2347038850089,false,true,true,Pastor
+emiola.temitope.amuloko.ii@sotsm.org,Emiola,Temitope,H@lopa55word,+2348168181544,false,true,true,Pastor
+olaniyi.ajani.akanran@sotsm.org,Olaniyi,Ajani,H@lopa55word,+2348035369671,false,true,true,Pastor
+lanaeoluwa.emmanuel.olonda.ogunsola@sotsm.org,Lanaeoluwa,Emmanuel,H@lopa55word,+2347031848396,false,true,true,Minister
+fabiyi.seun.ezekiel.apara@sotsm.org,Fabiyi,Seun Ezekiel,H@lopa55word,+2348101147137,false,true,true,Minister
+adio.oluwaseun.mato.ajia@sotsm.org,Adio,Oluwaseun,H@lopa55word,+2348033815129,false,true,true,Pastor
+adeleke.olawale.matthew.idi.iroko@sotsm.org,Adeleke,Olawale Matthew,H@lopa55word,+2347055308192,false,true,true,Pastor
+folashade.ajibade.oluyole@sotsm.org,Folashade,Ajibade,H@lopa55word,+2348023504402,false,true,true,Senior Pastor
+kunmi.adedeji.adabeji@sotsm.org,Kunmi,Adedeji,H@lopa55word,+2348035833916,false,true,true,Pastor
+niyi.olanipekun.fatusi.ii@sotsm.org,Niyi,Olanipekun,H@lopa55word,+2348056926204,false,true,true,Pastor
+zacheus.oloruntola.idi.ishin.elebu@sotsm.org,Zacheus,Oloruntola,H@lopa55word,+2348023462054,false,true,true,Pastor
+alabi.dolapo.jiboye@sotsm.org,Alabi,Dolapo,H@lopa55word,+2348135758855,false,true,true,Pastor
+david.femi.fatusi.i@sotsm.org,David,Femi,H@lopa55word,+2349035784052,false,true,true,Pastor
+ojo.tosin.akala@sotsm.org,Ojo,Tosin,H@lopa55word,+2347030679507,false,true,true,Pastor
+olosunde.member.zion.assembly@sotsm.org,Olosunde,Member,H@lopa55word,+2347041140298,false,true,true,Pastor
+olahansoye.moses.ring.road@sotsm.org,Olahansoye,Moses,H@lopa55word,+234805038182008033883497,false,true,true,Senior Pastor
+isaac.k.klenz.orita@sotsm.org,Isaac,K.Klenz,H@lopa55word,+2348050946426,false,true,true,Pastor
+fadayomi.andrew.o.challenge.zone@sotsm.org,Fadayomi,Andrew O.,H@lopa55word,+2348035266072,false,true,true,Pastor
+azeez.oluremi.m.odo.ona.elewe.zone@sotsm.org,Azeez,Oluremi M.,H@lopa55word,+2348063171045,false,true,true,Pastor
+olabode.david.k.adeoyo.zone@sotsm.org,Olabode,David K.,H@lopa55word,+2348028940099,false,true,true,Pastor
+dejo.oyeyiola.felele@sotsm.org,Dejo,Oyeyiola,H@lopa55word,+2348083423871,false,true,true,Senior Pastor
+adetipe.adeniyi.clc.odo.oba.zone@sotsm.org,Adetipe,Adeniyi,H@lopa55word,+2348032299954,false,true,true,Minister
+akinlolu.olugbenga.clc.koso@sotsm.org,Akinlolu,Olugbenga,H@lopa55word,+2348033774522,false,true,true,Elder
+olusola.akindele.clc.ehin.grammar.zone@sotsm.org,Olusola,Akindele,H@lopa55word,+2348069016756,false,true,true,Pastor
+toba.gideon.clc.molete.olorunsogo@sotsm.org,Toba,Gideon,H@lopa55word,+2348035639765,false,true,true,Pastor
+oluwatosin.akinrinde.clc.idi.oya@sotsm.org,Oluwatosin,Akinrinde,H@lopa55word,+2348136632586,false,true,true,Minister
+yetunde.oloside.apadaba@sotsm.org,Yetunde,Oloside,H@lopa55word,+2347041140298,false,true,true,Pastor
+peter.adeniran.irewolede@sotsm.org,Peter,Adeniran,H@lopa55word,+2348024666180,false,true,true,Elder
+ogunremi.soji.olunde@sotsm.org,Ogunremi,Soji,H@lopa55word,+2348028625088,false,true,true,Pastor
+akomolafe.esther.clc.omiyale.zone@sotsm.org,Akomolafe,Esther,H@lopa55word,+2348137634945,false,true,true,Pastor
+lawal.paul.clc.papa.jesu@sotsm.org,Lawal,Paul,H@lopa55word,+2348030462486,false,true,true,Pastor
+ojewale.bukola.clc.miofeakoba@sotsm.org,Ojewale,Bukola,H@lopa55word,+2348035153506,false,true,true,Pastor
+adeyemo.samuel.o.ayegun.zone@sotsm.org,Adeyemo,Samuel O.,H@lopa55word,+2348058146801,false,true,true,Pastor
+taiwo.yerokun.clc.ago@sotsm.org,Taiwo,Yerokun,H@lopa55word,+2348033515833,false,true,true,Pastor
+atinuke.olunloyo.clc.olunde.ii@sotsm.org,Atinuke,Olunloyo,H@lopa55word,+2348033704157,false,true,true,Pastor
+bimbo.ajayi.liberty.pavilion@sotsm.org,Bimbo,Ajayi,H@lopa55word,+2348032350700,false,true,true,Senior Pastor
+moses.o.adigun.city.temple.zone@sotsm.org,Moses,O. Adigun,H@lopa55word,+2348033490612,false,true,true,Pastor
+tunde.bolarinwa.olaiya.ososami.zone@sotsm.org,Tunde,Bolarinwa Olaiya,H@lopa55word,+2348076217338,false,true,true,Pastor
+ajala.oladipupo.elebu.alaro.zone@sotsm.org,Ajala,Oladipupo,H@lopa55word,+2348135658438,false,true,true,Pastor
+michael.talubi.idi.arere.zone@sotsm.org,Michael,Talubi,H@lopa55word,+2348060276340,false,true,true,Pastor
+oluseun.osifeko.oke.bola@sotsm.org,Oluseun,Osifeko,H@lopa55word,+2348033663100,false,true,true,Pastor
+ayodele.ogunleye.akilapa@sotsm.org,Ayodele,Ogunleye,H@lopa55word,+2348035427125,false,true,true,Pastor
+kolawole.hamzat.agbokojo@sotsm.org,Kolawole,Hamzat,H@lopa55word,+2348166313958,false,true,true,Pastor
+o.akanni.molete@sotsm.org,O.,Akanni,H@lopa55word,+2348051500940,false,true,true,Deaconess
+anthony.adeosun.liberty.arena@sotsm.org,Anthony,Adeosun,H@lopa55word,+2348023158607,false,true,true,Pastor
+olalekan.akanni.ayetoro@sotsm.org,Olalekan,Akanni,H@lopa55word,+2348057823618,false,true,true,Pastor
+emmanuel.adenegan.lanisa@sotsm.org,Emmanuel,Adenegan,H@lopa55word,+2348065751863,false,true,true,Deacon
+bolatito.ayoola.elebu.ii@sotsm.org,Bolatito,Ayoola,H@lopa55word,+2348050618792,false,true,true,Deaconess
+oladokun.solomon.o.clc.bembo@sotsm.org,Oladokun,Solomon O.,H@lopa55word,+2348056168075,false,true,true,Pastor
+isaac.olubayo.sure.mercy.zone@sotsm.org,Isaac,Olubayo,H@lopa55word,+2348079725083,false,true,true,Pastor
+emmanuel.adewale.jubilee@sotsm.org,Emmanuel,Adewale,H@lopa55word,+2348106778080,false,true,true,Pastor
+pst.mrs.hannah.gbolagade.rehoboth.zone@sotsm.org,Pst.,(Mrs.) Hannah Gbolagade,H@lopa55word,+2348138385715,false,true,true,Pastor
+gbenga.ogunlesi.youth.church@sotsm.org,Gbenga,Ogunlesi,H@lopa55word,+2348123239286,false,true,true,Pastor
+olayiwola.michael.adebayo.oloko.zone@sotsm.org,Olayiwola,Michael Adebayo,H@lopa55word,+2348062153950,false,true,true,Pastor
+afolabi.f.martins.heritage@sotsm.org,Afolabi,F. Martins,H@lopa55word,+2348087528649,false,true,true,Pastor
+justina.ajayi.glorious.assembly@sotsm.org,Justina,Ajayi,H@lopa55word,+2348038271923,false,true,true,Pastor
+adetoro.adedotun.great.joy@sotsm.org,Adetoro,Adedotun,H@lopa55word,+2347038948567,false,true,true,Minister
+olubayo.olubunmi.liberty.centre@sotsm.org,Olubayo,Olubunmi,H@lopa55word,+2348162086099,false,true,true,Pastor
+mrs.rosemary.okotie.house.of.glory@sotsm.org,(Mrs.),Rosemary Okotie,H@lopa55word,+2348037037197,false,true,true,Senior Pastor
+omoniyi.imafojie.life.centre.zone@sotsm.org,Omoniyi,Imafojie,H@lopa55word,+2348033596032,false,true,true,Pastor
+elijah.oyedotun.upper.room@sotsm.org,Elijah,Oyedotun,H@lopa55word,+2348033819184,false,true,true,Elder
+ibukun.olayinka.kuola.zone@sotsm.org,Ibukun,Olayinka,H@lopa55word,+2348060171035,false,true,true,Pastor
+timileyin.awosanya.ateere@sotsm.org,Timileyin,Awosanya,H@lopa55word,+2348135848493,false,true,true,Minister
+adeoti.ayinde.alaaka@sotsm.org,Adeoti,Ayinde,H@lopa55word,+2347015743367,false,true,true,Pastor
+abiodun.ogunniyi.captain.area.sop@sotsm.org,Abiodun,Ogunniyi,H@lopa55word,+2348055373584,false,true,true,Pastor
+adekunle.olu.s.ago.olugbala@sotsm.org,Adekunle,Olu S.,H@lopa55word,+2348036058323,false,true,true,Senior Pastor
+oguntunde.l.o.omi.onigbagbo.zone@sotsm.org,Oguntunde,L.O.,H@lopa55word,+2348034830484,false,true,true,Pastor
+akanbi.oludayo.odo.ona.zone@sotsm.org,Akanbi,Oludayo,H@lopa55word,+2348098356200,false,true,true,Pastor
+dosumu.ezekiel.oludayo.owode.zone@sotsm.org,Dosumu,Ezekiel Oludayo,H@lopa55word,+2347018803229,false,true,true,Pastor
+agboola.o.agbofieti.zone@sotsm.org,Agboola,O.,H@lopa55word,+2348038163372,false,true,true,Pastor
+olaobayemi.o.j.ago.olugbala@sotsm.org,Olaobayemi,O.J.,H@lopa55word,+2348130795993,false,true,true,Pastor
+chris.uwagba.great.grace@sotsm.org,Chris,Uwagba,H@lopa55word,+234816578939,false,true,true,Pastor
+olanrewaju.member.orisumibare@sotsm.org,Olanrewaju,Member,H@lopa55word,+2347055520531,false,true,true,Deacon
+ajetumobi.o.omi.adio.aba.tisa@sotsm.org,Ajetumobi,O.,H@lopa55word,+2348035525730,false,true,true,Pastor
+salawu.mathias.odo.ona.ii@sotsm.org,Salawu,Mathias,H@lopa55word,+2348166600871,false,true,true,Pastor
+samuel.amosu.city.of.god@sotsm.org,Samuel,Amosu,H@lopa55word,+2349048905812,false,true,true,Minister
+adebiyi.member.abundance.grace@sotsm.org,Adebiyi,Member,H@lopa55word,+2348035567375,false,true,true,Deaconess
+abiodun.adegoke.idi.ishin@sotsm.org,Abiodun,Adegoke,H@lopa55word,+2348063450500,false,true,true,Pastor
+olaide.badru.kusela@sotsm.org,Olaide,Badru,H@lopa55word,+2348037196393,false,true,true,Deacon
+babawale.ayinde.ekotedo@sotsm.org,Babawale,Ayinde,H@lopa55word,+2348032065498,false,true,true,Pastor
+olorunfemi.adetoro.mokola.zone@sotsm.org,Olorunfemi,Adetoro,H@lopa55word,+2348022627031,false,true,true,Pastor
+femi.adesanoye.mokola.ii@sotsm.org,Femi,Adesanoye,H@lopa55word,+2347061275089,false,true,true,Pastor
+adegbite.olalekan.ologuneru.zone@sotsm.org,Adegbite,Olalekan,H@lopa55word,+2348023366076,false,true,true,Pastor
+emmanuel.oladejo.alafara@sotsm.org,Emmanuel,Oladejo,H@lopa55word,+2347031968314,false,true,true,Pastor
+ogedengbe.kayode.ile.tutun.zone@sotsm.org,Ogedengbe,Kayode,H@lopa55word,+2348130491367,false,true,true,Pastor
+ukpong.udofia.adejumo@sotsm.org,Ukpong,Udofia,H@lopa55word,+2347062045500,false,true,true,Pastor
+meshach.oyekanmi.adetokun@sotsm.org,Meshach,Oyekanmi,H@lopa55word,+2347033793466,false,true,true,Minister
+jude.oseghole.elenusonso@sotsm.org,Jude,Oseghole,H@lopa55word,+2348074349056,false,true,true,Deacon
+kunle.adesanya.lighthouse@sotsm.org,Kunle,Adesanya,H@lopa55word,+2348038302191,false,true,true,Pastor
+bamidele.adegunwa.mokola.i@sotsm.org,Bamidele,Adegunwa,H@lopa55word,+2348038006784,false,true,true,Pastor
+odekunle.lola.m.a.eleyele@sotsm.org,Odekunle,Lola M.A.,H@lopa55word,+2348098057971,false,true,true,Pastor
+samuel.ajayi.arola.apete@sotsm.org,Samuel,Ajayi,H@lopa55word,+2348067863209,false,true,true,Pastor
+taiwo.obayemi.sango.zone@sotsm.org,Taiwo,Obayemi,H@lopa55word,+2347035666650,false,true,true,Pastor
+pius.james.jesus.assembly.awotan.apete@sotsm.org,Pius,James,H@lopa55word,+2348126960047,false,true,true,Pastor
+audu.oziododo.coca.cola@sotsm.org,Audu,Oziododo,H@lopa55word,+2348132565845,false,true,true,Pastor
+godwin.ogudu.oke.itunu@sotsm.org,Godwin,Ogudu,H@lopa55word,+2347084740390,false,true,true,Pastor
+michael.adeniyi.zion.assembly.akodu.apete@sotsm.org,Michael,Adeniyi,H@lopa55word,+2348143598855,false,true,true,Pastor
+oluseyi.adebayo.boluwaji@sotsm.org,Oluseyi,Adebayo,H@lopa55word,+2348033606038,false,true,true,Pastor
+oluwasesan.adeyemo.idi.mango@sotsm.org,Oluwasesan,Adeyemo,H@lopa55word,+2348028949960,false,true,true,Pastor
+oludele.samson.oyelere.academy@sotsm.org,Oludele,Samson Oyelere,H@lopa55word,+2348035623850,false,true,true,Pastor
+iriemi.mercy.sanyo@sotsm.org,Iriemi,Mercy,H@lopa55word,+2347032029993,false,true,true,Pastor
+adedotun.christianah.soka@sotsm.org,Adedotun,Christianah,H@lopa55word,+2347039399101,false,true,true,Pastor
+ige.samson.ogo.oluwa@sotsm.org,Ige,Samson,H@lopa55word,+2348034818066,false,true,true,Brother
+adeniran.adeolu.boluwaji@sotsm.org,Adeniran,Adeolu,H@lopa55word,+2348036434246,false,true,true,Minister
+muyiwa.ademiju.dominion@sotsm.org,Muyiwa,Ademiju,H@lopa55word,+2348033606038,false,true,true,Senior Pastor
+muyiwa.ademiju.dominion.arena@sotsm.org,Muyiwa,Ademiju,H@lopa55word,+2348033606038,false,true,true,Senior Pastor
+nafiu.bamidupe.ilesa@sotsm.org,Nafiu,Bamidupe,H@lopa55word,+2347018032037,false,true,true,Pastor
+olumide.adio.ido.osun@sotsm.org,Olumide,Adio,H@lopa55word,+2348145848627,false,true,true,Pastor
+omikunle.olakunle.kuse.ido.osun@sotsm.org,Omikunle,Olakunle,H@lopa55word,+2348032415304,false,true,true,Pastor
+adeyinka.adedokun.igbonna@sotsm.org,Adeyinka,Adedokun,H@lopa55word,+2348035653261,false,true,true,Pastor
+kayode.akinsola.oroki.zone@sotsm.org,Kayode,Akinsola,H@lopa55word,+2347038391553,false,true,true,Pastor
+deji.omisakin.odi.olowo.zone@sotsm.org,Deji,Omisakin,H@lopa55word,+2348030820910,false,true,true,Pastor
+lateef.fatumbi.ayetoro@sotsm.org,Lateef,Fatumbi,H@lopa55word,+2347062048968,false,true,true,Pastor
+olusola.awe.owode.ede@sotsm.org,Olusola,Awe,H@lopa55word,+2348022467206,false,true,true,Pastor
+yomi.hope.akingbade.oke.onitea@sotsm.org,Yomi,Hope Akingbade,H@lopa55word,+2348030769963,false,true,true,Pastor
+nathaniel.denis.kings.parish@sotsm.org,Nathaniel,Denis,H@lopa55word,+2348124629530,false,true,true,Minister
+james.ajiroba.alabameta@sotsm.org,James,Ajiroba,H@lopa55word,+2348060942366,false,true,true,Minister
+john.oladapo.oke.baale@sotsm.org,John,Oladapo,H@lopa55word,+2348068692226,false,true,true,Pastor
+olabintan.funmilola.celilia.presidential@sotsm.org,Olabintan,Funmilola Celilia,H@lopa55word,+2348136785992,false,true,true,Minister
+ayodele.laogun.glorious.life@sotsm.org,Ayodele,Laogun,H@lopa55word,+2348024204085,false,true,true,Pastor
+femi.adesoye.kingsquare.zone@sotsm.org,Femi,Adesoye,H@lopa55word,+2348135618189,false,true,true,Pastor
+jonathan.omofoye.ikirun.1.zone@sotsm.org,Jonathan,Omofoye,H@lopa55word,+2348035268674,false,true,true,Pastor
+gbenga.ibitoye.agunbelewo.zone@sotsm.org,Gbenga,Ibitoye,H@lopa55word,+2348035749597,false,true,true,Pastor
+adepoju.aderopo.ikirun.ii@sotsm.org,Adepoju,Aderopo,H@lopa55word,+2348069163640,false,true,true,Brother
+paul.opeyemi.ige.ada@sotsm.org,Paul,Opeyemi Ige,H@lopa55word,+2348065759454,false,true,true,Pastor
+akinloye.rotimi.omobolanle@sotsm.org,Akinloye,Rotimi,H@lopa55word,+2348033819229,false,true,true,Deacon
+oyeleke.shina.okuku@sotsm.org,Oyeleke,Shina,H@lopa55word,+2348077466356,false,true,true,Pastor
+moses.oloruntoba.ayekale@sotsm.org,Moses,Oloruntoba,H@lopa55word,+2348035704907,false,true,true,Pastor
+olanrewaju.adekunle.success@sotsm.org,Olanrewaju,Adekunle,H@lopa55word,+2347039625396,false,true,true,Minister
+muyiwa.akintokun.ido.osun@sotsm.org,Muyiwa,Akintokun,H@lopa55word,+2348038226682,false,true,true,Senior Pastor
+longe.alfred.ogo.oluwa.zone@sotsm.org,Longe,Alfred,H@lopa55word,+2349066681483,false,true,true,Pastor
+michael.oyebisi.ede.1.zone@sotsm.org,Michael,Oyebisi,H@lopa55word,+2348034064726,false,true,true,Pastor
+goodluck.ajeye.ejigbo.zone@sotsm.org,Goodluck,Ajeye,H@lopa55word,+2347066377491,false,true,true,Pastor
+tinubu.olubunmi.ofatedo@sotsm.org,Tinubu,Olubunmi,H@lopa55word,+2348066872934,false,true,true,Pastor
+simeon.kayode.ilobu@sotsm.org,Simeon,Kayode,H@lopa55word,+2348038060775,false,true,true,Pastor
+dr.akande.joel.owode.ilesa.road@sotsm.org,(Dr.),Akande Joel,H@lopa55word,+2347066377491,false,true,true,Deacon
+ogundele.ibrahim.old.government.office@sotsm.org,Ogundele,Ibrahim,H@lopa55word,+2348065008793,false,true,true,Elder
+olatemiju.sunday.gbongan@sotsm.org,Olatemiju,Sunday,H@lopa55word,+2348036372416,false,true,true,Pastor
+adegbenjo.olanrewaju.ede.ii@sotsm.org,Adegbenjo,Olanrewaju,H@lopa55word,+2348034732422,false,true,true,Pastor
+taiwo.badmus.akoda@sotsm.org,Taiwo,Badmus,H@lopa55word,+2347039997150,false,true,true,Minister
+isaac.oke.lekki@sotsm.org,Isaac,Oke,H@lopa55word,+2348036953245,false,true,true,Pastor
+temitope.abraham.oyadeyi.how.bodija@sotsm.org,Temitope,Abraham Oyadeyi,H@lopa55word,+2348035269515,false,true,true,Pastor
+dolapo.kehinde.jaiyeola.how.place.of.reality@sotsm.org,Dolapo,Kehinde Jaiyeola,H@lopa55word,+2348066097052,false,true,true,Pastor
+tunji.onasanwo.how.lighthouse@sotsm.org,Tunji,Onasanwo,H@lopa55word,+2348055264769,false,true,true,Pastor
+isaac.oloogunebi.how.the.nehemiah.gen@sotsm.org,Isaac,Oloogunebi,H@lopa55word,+2348052573511,false,true,true,Pastor
+adegoke.oluwajarewon.how.gen.of.champions@sotsm.org,Adegoke,Oluwajarewon,H@lopa55word,+2348138594389,false,true,true,Minister
+temitope.abraham.oyadeyi.lincoln@sotsm.org,Temitope,Abraham Oyadeyi,H@lopa55word,+447769962777,false,true,true,Pastor
+akinwande.tobi.wigan@sotsm.org,Akinwande,Tobi,H@lopa55word,+447733724979,false,true,true,Pastor
+funmilola.bamidele.gloucester@sotsm.org,Funmilola,Bamidele,H@lopa55word,+447831331434,false,true,true,Pastor
+pelumi.adeoye.plymouth@sotsm.org,Pelumi,Adeoye,H@lopa55word,,false,false,true,Pastor
+kehinde.jaiyeola.canada@sotsm.org,Kehinde,Jaiyeola,H@lopa55word,,false,false,true,Pastor
+philip.windapo.campus.fellowships@sotsm.org,Philip,Windapo,H@lopa55word,+2348134116345,false,true,true,Pastor
+olaoluwapo.ifeoluwa.funnab@sotsm.org,Olaoluwapo,Ifeoluwa,H@lopa55word,+2347089311441,false,true,true,Pastor
+alabi.oluwadamilare.u.i@sotsm.org,Alabi,Oluwadamilare,H@lopa55word,+2348107261414,false,true,true,Pastor
+olayinka.oluwatomiwa.eksu@sotsm.org,Olayinka,Oluwatomiwa,H@lopa55word,+2348137854505,false,true,true,Pastor
+ademoyegun.tobiloba.oau@sotsm.org,Ademoyegun,Tobiloba,H@lopa55word,+2349037904031,false,true,true,Pastor
+ayodeji.timileyin.polytechnic.ibadan@sotsm.org,Ayodeji,Timileyin,H@lopa55word,+2347054372294,false,true,true,Pastor
+ore.member.polytechnic.esa.oke@sotsm.org,Ore,Member,H@lopa55word,+2348167648920,false,true,true,Sister
+kareem.opeyemi.john.polytechnic.eruwa@sotsm.org,Kareem,Opeyemi John,H@lopa55word,+2349034821828,false,true,true,Pastor
+sangolade.joseph.moore.plantation@sotsm.org,Sangolade,Joseph,H@lopa55word,+2349039580430,false,true,true,Pastor
+ogunribido.damilola.polytechnic.ede@sotsm.org,Ogunribido,Damilola,H@lopa55word,+2348101115006,false,true,true,Pastor
+daniel.ajayi.benue@sotsm.org,Daniel,Ajayi,H@lopa55word,+2347062188172,false,true,true,Minister
+minitster.abraham.nurudeen.kogi@sotsm.org,Minitster,Abraham Nurudeen,H@lopa55word,+2347034342107,false,true,true,Pastor
+peter.ojuluwayo.kogi@sotsm.org,Peter,Ojuluwayo,H@lopa55word,+2348061663654,false,true,true,Minister
+oluwasegun.adejare.kwara@sotsm.org,Oluwasegun,Adejare,H@lopa55word,+2348074451851,false,true,true,Missionary
+ajayi.daniel.kwara@sotsm.org,Ajayi,Daniel,H@lopa55word,+2347062188172,false,true,true,Minister
+adeola.akinbola.nasarawa@sotsm.org,Adeola,Akinbola,H@lopa55word,+2348030406022,false,true,true,Pastor
+james.jedieal.niger@sotsm.org,James,Jedieal,H@lopa55word,+2348130888005,false,true,true,Missionary
+toluwabori.adedeji.plateau@sotsm.org,Toluwabori,Adedeji,H@lopa55word,+2348156733849,false,true,true,Missionary
+richard.pius.adamawa.jimeta@sotsm.org,Richard,Pius,H@lopa55word,+2347031387822,false,true,true,Missionary
+samuel.ishaq.adamawa.sangere@sotsm.org,Samuel,Ishaq,H@lopa55word,,false,false,true,Missionary
+john.tonga.adamawa.mala.madugu@sotsm.org,John,Tonga,H@lopa55word,,false,false,true,Missionary
+olusegun.ojo.bauchi@sotsm.org,Olusegun,Ojo,H@lopa55word,+2348140479891,false,true,true,Missionary
+folami.ayodele.borno@sotsm.org,Folami,Ayodele,H@lopa55word,+2348068586089,false,true,true,Minister
+favour.adeyeye.gombe@sotsm.org,Favour,Adeyeye,H@lopa55word,+2348127830391,false,true,true,Minister
+samuel.peter.gombe@sotsm.org,Samuel,Peter,H@lopa55word,+2348038637292,false,true,true,Minister
+damilare.olakiigbe.taraba@sotsm.org,Damilare,Olakiigbe,H@lopa55word,+2347033131669,false,true,true,Missionary
+james.jenyo.yobe@sotsm.org,James,Jenyo,H@lopa55word,+2347069074118,false,true,true,Missionary
+kayode.amusan.kaduna@sotsm.org,Kayode,Amusan,H@lopa55word,+2347069080918,false,true,true,Missionary
+tobi.olasoji.kaduna@sotsm.org,Tobi,Olasoji,H@lopa55word,+2349070790416,false,true,true,Missionary
+muyiwa.aluko.katsina@sotsm.org,Muyiwa,Aluko,H@lopa55word,+2348165061902,false,true,true,Pastor
+david.ekeagbo.kano@sotsm.org,David,Ekeagbo,H@lopa55word,+2348134220262,false,true,true,Missionary
+maiyaki.john.oveze.kano@sotsm.org,Maiyaki,John Oveze,H@lopa55word,+2348150745074,false,true,true,Missionary
+olumide.david.kebbi@sotsm.org,Olumide,David,H@lopa55word,+2347035168375,false,true,true,Missionary
+paul.anjorin.sokoto@sotsm.org,Paul,Anjorin,H@lopa55word,+2348152602031,false,true,true,Missionary
+aladetan.endurance.jigawa@sotsm.org,Aladetan,Endurance,H@lopa55word,+2348107831098,false,true,true,Missionary
+obayuwana.richard.zamfara@sotsm.org,Obayuwana,Richard,H@lopa55word,+2347038834282,false,true,true,Missionary
+awotunde.olusola.abia@sotsm.org,Awotunde,Olusola,H@lopa55word,+2348060698526,false,true,true,Missionary
+atanda.matthew.abia@sotsm.org,Atanda,Matthew,H@lopa55word,+2347033301544,false,true,true,Missionary
+babajide.damilola.anambra@sotsm.org,Babajide,Damilola,H@lopa55word,+2348038300759,false,true,true,Missionary
+orimoloye.mercy.anambra@sotsm.org,Orimoloye,Mercy,H@lopa55word,+2348038300759,false,true,true,Missionary
+ayewa.abiola.samuel.ebonyi@sotsm.org,Ayewa,Abiola Samuel,H@lopa55word,+2348105321555,false,true,true,Missionary
+ajiboye.oluwaseun.s.enugu@sotsm.org,Ajiboye,Oluwaseun S.,H@lopa55word,+2349014593533,false,true,true,Missionary
+peter.moses.enugu@sotsm.org,Peter,Moses,H@lopa55word,+2348119646986,false,true,true,Missionary
+oyesola.paul.imo@sotsm.org,Oyesola,Paul,H@lopa55word,+2348123662663,false,true,true,Missionary
+bimbo.ajala.akwa.ibom.oron@sotsm.org,Bimbo,Ajala,H@lopa55word,+2348035222010,false,true,true,Pastor
+efeneme.godbless.akwa.ibom.oron@sotsm.org,Efeneme,Godbless,H@lopa55word,+2349156080300,false,true,true,Missionary
+okiato.timothy.akwa.ibom.uyo@sotsm.org,Okiato,Timothy,H@lopa55word,,false,false,true,Missionary
+adelanwa.ayomide.bayelsa@sotsm.org,Adelanwa,Ayomide,H@lopa55word,+2348109873725,false,true,true,Missionary
+sunday.olabode.cross.river@sotsm.org,Sunday,Olabode,H@lopa55word,+2348152829953,false,true,true,Missionary
+joseph.ogar.delta@sotsm.org,Joseph,Ogar,H@lopa55word,+2348034362684,false,true,true,Pastor
+david.olaigbe.edo@sotsm.org,David,Olaigbe,H@lopa55word,+2348132186658,false,true,true,Pastor
+tosin.adeniyi.rivers@sotsm.org,Tosin,Adeniyi,H@lopa55word,+2347059715445,false,true,true,Missionary
+prof.abiola.oladapo.abeokuta@sotsm.org,(Prof.),Abiola Oladapo,H@lopa55word,+2348062483207,false,true,true,Pastor
+prof.abiola.oladapo.kotopo@sotsm.org,(Prof.),Abiola Oladapo,H@lopa55word,+2348062483207,false,true,true,Pastor
+rotimi.lawal.isabo@sotsm.org,Rotimi,Lawal,H@lopa55word,+2348069150368,false,true,true,Pastor
+adekola.adeniji.adigbe@sotsm.org,Adekola,Adeniji,H@lopa55word,+2347026257984,false,true,true,Pastor
+dele.onilude.lagos@sotsm.org,Dele,Onilude,H@lopa55word,+2348037271221,false,true,true,Senior Pastor
+dele.onilude.ogidan@sotsm.org,Dele,Onilude,H@lopa55word,+2348037271221,false,true,true,Senior Pastor
+seye.alenkhe.mowe@sotsm.org,Seye,Alenkhe,H@lopa55word,+2348033181422,false,true,true,Pastor
+saba.gbolahan.oke.osa@sotsm.org,Saba,Gbolahan,H@lopa55word,+2348053054585,false,true,true,Pastor
+oluwole.adeyemi.ikorodu@sotsm.org,Oluwole,Adeyemi,H@lopa55word,+2348069414052,false,true,true,Pastor
+dare.omoniyi.ikorodu.igbe@sotsm.org,Dare,Omoniyi,H@lopa55word,+2348127690645,false,true,true,Pastor
+seyii.j.agunbiade.egbe@sotsm.org,Seyii,J. Agunbiade,H@lopa55word,+2348055476042,false,true,true,Pastor
+james.odumeru.lambe@sotsm.org,James,Odumeru,H@lopa55word,+2348036148029,false,true,true,Pastor
+abiodun.kolawole.surulere@sotsm.org,Abiodun,Kolawole,H@lopa55word,+2348035225426,false,true,true,Pastor
+yemi.fagbolahan.ogba@sotsm.org,Yemi,Fagbolahan,H@lopa55word,+2348126566248,false,true,true,Pastor
+soji.ojo.ogijo@sotsm.org,Soji,Ojo,H@lopa55word,,false,false,true,Pastor
+ademola.akinlabi.ondo@sotsm.org,Ademola,Akinlabi,H@lopa55word,+2348032030484,false,true,true,Pastor
+ademola.akinlabi.akure@sotsm.org,Ademola,Akinlabi,H@lopa55word,+2348032030484,false,true,true,Pastor
+fadoju.imole.john.ondo@sotsm.org,Fadoju,Imole John,H@lopa55word,+2348165639398,false,true,true,Pastor
+felix.ogbon.otan.okiti.pupa@sotsm.org,Felix,Ogbon-otan,H@lopa55word,+2348052648086,false,true,true,Pastor
+omoya.s.olagoke.ado.ekiti@sotsm.org,Omoya,S. Olagoke,H@lopa55word,+2348030637978,false,true,true,Pastor
+omoya.s.olagoke.ado.ekiti+1@sotsm.org,Omoya,S. Olagoke,H@lopa55word,+2348030637978,false,true,true,Pastor
+mrs.abiola.ajibola.abuja@sotsm.org,(Mrs.),Abiola Ajibola,H@lopa55word,+2348038302209,false,true,true,Senior Pastor
+mrs.abiola.ajibola.wuse@sotsm.org,(Mrs.),Abiola Ajibola,H@lopa55word,+2348038302209,false,true,true,Senior Pastor
+james.oloyede.kuje@sotsm.org,James,Oloyede,H@lopa55word,+2348033281401,false,true,true,Senior Pastor
+alex.akinsanya.karu@sotsm.org,Alex,Akinsanya,H@lopa55word,+2348137316232,false,true,true,Pastor
+michael.avwerhota.stronghold@sotsm.org,Michael,Avwerhota,H@lopa55word,+2348033960794,false,true,true,Pastor
+lolade.olaleye.gwagwalada@sotsm.org,Lolade,Olaleye,H@lopa55word,+2348060261734,false,true,true,Pastor
+oluseye.oyeniran.tundunwada@sotsm.org,Oluseye,Oyeniran,H@lopa55word,+2348185100930,false,true,true,Pastor
+deola.akinbola.lafia@sotsm.org,Deola,Akinbola,H@lopa55word,+2348030406022,false,true,true,Pastor
+deola.akinbola.lafia+1@sotsm.org,Deola,Akinbola,H@lopa55word,+2348030406022,false,true,true,Pastor
+abiodun.adeniji.port.harcourt@sotsm.org,Abiodun,Adeniji,H@lopa55word,+2348034063406,false,true,true,Bishop
+abiodun.adeniji.port.harcourt+1@sotsm.org,Abiodun,Adeniji,H@lopa55word,+2348034063406,false,true,true,Bishop
+e.m.olubunmi.kenya.east.africa@sotsm.org,E.M.,Olubunmi,H@lopa55word,+254718236847,false,true,true,Senior Pastor
+e.m.olubunmi.juja@sotsm.org,E.M.,Olubunmi,H@lopa55word,+254718236847,false,true,true,Senior Pastor
+raphael.wanjor.kiandutu@sotsm.org,Raphael,Wanjor,H@lopa55word,,false,false,true,Pastor
+simon.chege.malaba@sotsm.org,Simon,Chege,H@lopa55word,,false,false,true,Pastor
+benjamin.emikpe.ghana@sotsm.org,Benjamin,Emikpe,H@lopa55word,+233549410841,false,true,true,Senior Pastor
+kola.ibikunle.uk@sotsm.org,Kola,Ibikunle,H@lopa55word,+2347733167415,false,true,true,Pastor
+kola.ibikunle.charlton@sotsm.org,Kola,Ibikunle,H@lopa55word,+2347733167415,false,true,true,Pastor
+mobolaji.carew.tooting@sotsm.org,Mobolaji,Carew,H@lopa55word,+2347878233841,false,true,true,Pastor
+adelani.ayeni.northampton@sotsm.org,Adelani,Ayeni,H@lopa55word,+2347847530525,false,true,true,Pastor
+adewumi.adekugbe.erith@sotsm.org,Adewumi,Adekugbe,H@lopa55word,+2347411130965,false,true,true,Pastor
+mary.ojediran.orpington@sotsm.org,Mary,Ojediran,H@lopa55word,+2347454833181,false,true,true,Pastor
+samson.ologunola.irelands@sotsm.org,Samson,Ologunola,H@lopa55word,+353899417995,false,true,true,Pastor
+olumuyiwa.ojo.north.america@sotsm.org,Olumuyiwa,Ojo,H@lopa55word,+14047671450,false,true,true,Bishop
+olumuyiwa.ojo.philadelphia@sotsm.org,Olumuyiwa,Ojo,H@lopa55word,+14047671450,false,true,true,Bishop
+lana.segun.moses.maryland@sotsm.org,Lana,Segun Moses,H@lopa55word,+14437903704,false,true,true,Senior Pastor
+oladokun.john.atlanta@sotsm.org,Oladokun,John,H@lopa55word,+14049510146,false,true,true,Pastor
+alabi.olutunde.houston@sotsm.org,Alabi,Olutunde,H@lopa55word,+18327745340,false,true,true,Pastor
+aderinoye.kunle.dc@sotsm.org,Aderinoye,Kunle,H@lopa55word,,false,false,true,Pastor
+anibaba.taiwo.everett@sotsm.org,Anibaba,Taiwo,H@lopa55word,+14252328209,false,true,true,Pastor
+olaniyan.abraham.chicago@sotsm.org,Olaniyan,Abraham,H@lopa55word,,false,false,true,Pastor
+oni.anthony.randmd@sotsm.org,Oni,Anthony,H@lopa55word,,false,false,true,Pastor
+amoo.bukola.dallas@sotsm.org,Amoo,Bukola,H@lopa55word,+14696718135,false,true,true,Pastor
+onyeneke.tony.new.jersey@sotsm.org,Onyeneke,Tony,H@lopa55word,,false,false,true,Pastor
+ojo.patience.philadelphia@sotsm.org,Ojo,Patience,H@lopa55word,,false,false,true,Senior Pastor
+olorunkemi.adeyele.manitoba@sotsm.org,Olorunkemi,Adeyele,H@lopa55word,,false,false,true,Pastor
+francis.adetifa.quebec@sotsm.org,Francis,Adetifa,H@lopa55word,,false,false,true,Pastor
+seyi.ojo.ontario@sotsm.org,Seyi,Ojo,H@lopa55word,,false,false,true,Pastor
+ayo.ajayi.qatar@sotsm.org,Ayo,Ajayi,H@lopa55word,+97430060680,false,true,true,Pastor

@@ -8,7 +8,7 @@ const roleSchema = mongoose.Schema({
     type: String,
     index: true,
   },
-  name: { type: String, unique: true, required: true },
+  name: { type: String, required: true, trim: true },
   description: {
     type: String,
     trim: true,
@@ -37,6 +37,7 @@ roleSchema.plugin(toJSON);
 roleSchema.plugin(paginate);
 roleSchema.plugin(tenantPlugin);
 roleSchema.index({ userId: 1 }, { unique: false });
+roleSchema.index({ tenantId: 1, name: 1 }, { unique: true });
 
 /**
  * Create a role (with tenant support)

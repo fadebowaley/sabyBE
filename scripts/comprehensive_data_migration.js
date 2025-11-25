@@ -10,6 +10,65 @@ const Level = require('../src/models/level.model');
 const Structures = require('../src/models/structure.model');
 const Nodes = require('../src/models/node.model');
 
+const DEFAULT_OPTIONS = {
+  tenantEmail: null,
+  csvDir: path.join(__dirname, 'migration_data'),
+  rolesFile: 'roles.csv',
+  usersFile: 'users.csv',
+  levelsFile: 'levels.csv',
+  structuresFile: 'structures.csv',
+  nodesFile: 'nodes.csv',
+  userNodesFile: 'user_nodes.csv',
+};
+
+function resolvePath(baseDir, fileName) {
+  if (!fileName) return null;
+  if (path.isAbsolute(fileName)) return fileName;
+  return path.join(baseDir, fileName);
+}
+
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const options = { ...DEFAULT_OPTIONS };
+
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === '--tenantEmail' && args[i + 1]) {
+      options.tenantEmail = args[i + 1];
+      i += 1;
+    } else if (arg === '--csvDir' && args[i + 1]) {
+      options.csvDir = path.resolve(process.cwd(), args[i + 1]);
+      i += 1;
+    } else if (arg === '--rolesFile' && args[i + 1]) {
+      options.rolesFile = args[i + 1];
+      i += 1;
+    } else if (arg === '--usersFile' && args[i + 1]) {
+      options.usersFile = args[i + 1];
+      i += 1;
+    } else if (arg === '--levelsFile' && args[i + 1]) {
+      options.levelsFile = args[i + 1];
+      i += 1;
+    } else if (arg === '--structuresFile' && args[i + 1]) {
+      options.structuresFile = args[i + 1];
+      i += 1;
+    } else if (arg === '--nodesFile' && args[i + 1]) {
+      options.nodesFile = args[i + 1];
+      i += 1;
+    } else if (arg === '--userNodesFile' && args[i + 1]) {
+      options.userNodesFile = args[i + 1];
+      i += 1;
+    }
+  }
+
+  if (!options.tenantEmail) {
+    console.error('❌  Missing required flag: --tenantEmail <email>');
+    process.exit(1);
+  }
+
+  options.csvDir = path.resolve(options.csvDir);
+  return options;
+}
+
 /**
  * Comprehensive Data Migration Script
  * Handles migration in the correct order:
@@ -17,15 +76,31 @@ const Nodes = require('../src/models/node.model');
  * 2. Structure, Level and Node
  */
 class DataMigrationManager {
-  constructor() {
+  constructor(options = DEFAULT_OPTIONS) {
+    this.options = options;
     this.tenantId = null;
     this.createdBy = null;
+    this.fileConfig = {
+      roles: resolvePath(this.options.csvDir, this.options.rolesFile),
+      users: resolvePath(this.options.csvDir, this.options.usersFile),
+      levels: resolvePath(this.options.csvDir, this.options.levelsFile),
+      structures: resolvePath(
+        this.options.csvDir,
+        this.options.structuresFile
+      ),
+      nodes: resolvePath(this.options.csvDir, this.options.nodesFile),
+      userNodes: resolvePath(
+        this.options.csvDir,
+        this.options.userNodesFile
+      ),
+    };
     this.migrationResults = {
       roles: { created: 0, errors: 0, details: [] },
       users: { created: 0, errors: 0, details: [] },
       levels: { created: 0, errors: 0, details: [] },
       structures: { created: 0, errors: 0, details: [] },
       nodes: { created: 0, errors: 0, details: [] },
+      userNodes: { created: 0, attached: 0, errors: 0, details: [] },
     };
   }
 
@@ -40,14 +115,14 @@ class DataMigrationManager {
       await mongoose.connect(config.mongoose.url, config.mongoose.options);
       console.log('✅ Connected to MongoDB');
 
-      // Get tenant context from fadebowaley@gmail.com
-      const fadebowale = await User.findOne({ email: 'fadebowaley@gmail.com' });
-      if (!fadebowale) {
-        throw new Error('fadebowaley@gmail.com not found in database');
+      // Get tenant context from provided email
+      const tenantOwner = await User.findOne({ email: this.options.tenantEmail });
+      if (!tenantOwner) {
+        throw new Error(`${this.options.tenantEmail} not found in database`);
       }
 
-      this.tenantId = fadebowale.tenantId;
-      this.createdBy = fadebowale._id;
+      this.tenantId = tenantOwner.tenantId;
+      this.createdBy = tenantOwner._id;
 
       console.log(`   ✅ Tenant ID: ${this.tenantId}`);
       console.log(`   ✅ Created By: ${this.createdBy}`);
@@ -108,7 +183,7 @@ class DataMigrationManager {
     console.log('1️⃣ Migrating Roles...');
 
     try {
-      const rolesData = await this.readCSV('roles.csv');
+      const rolesData = await this.readCSV('roles');
 
       for (const roleData of rolesData) {
         try {
@@ -173,7 +248,7 @@ class DataMigrationManager {
     console.log('2️⃣ Migrating Users...');
 
     try {
-      const usersData = await this.readCSV('users.csv');
+      const usersData = await this.readCSV('users');
 
       for (const userData of usersData) {
         try {
@@ -239,7 +314,7 @@ class DataMigrationManager {
     console.log('1️⃣ Migrating Levels...');
 
     try {
-      const levelsData = await this.readCSV('levels.csv');
+      const levelsData = await this.readCSV('levels');
 
       for (const levelData of levelsData) {
         try {
@@ -304,7 +379,7 @@ class DataMigrationManager {
     console.log('2️⃣ Migrating Structures...');
 
     try {
-      const structuresData = await this.readCSV('structures.csv');
+      const structuresData = await this.readCSV('structures');
 
       for (const structureData of structuresData) {
         try {
@@ -394,7 +469,7 @@ class DataMigrationManager {
     console.log('3️⃣ Migrating Nodes...');
 
     try {
-      const nodesData = await this.readCSV('nodes.csv');
+      const nodesData = await this.readCSV('nodes');
 
       for (const nodeData of nodesData) {
         try {
@@ -503,15 +578,87 @@ class DataMigrationManager {
   }
 
   /**
+   * Attach users to nodes from CSV
+   */
+  async migrateUserNodeLinks() {
+    if (!this.fileConfig.userNodes) {
+      console.log('🔗 Skipping user-node mapping (no file configured)');
+      return;
+    }
+
+    console.log('🔗 Attaching Users to Nodes...');
+
+    try {
+      const links = await this.readCSV('userNodes');
+      if (!links.length) {
+        console.log('   ⚠️  No user-node mapping data found, skipping...\n');
+        return;
+      }
+
+      for (const link of links) {
+        try {
+          const email = link.email?.trim().toLowerCase();
+          const nodeName = link.nodeName?.trim();
+          if (!email || !nodeName) continue;
+
+          const user = await User.findOne({ email, tenantId: this.tenantId });
+          if (!user) {
+            throw new Error(`User ${email} not found`);
+          }
+
+          const node = await Nodes.findOne({
+            name: nodeName,
+            tenantId: this.tenantId,
+          });
+          if (!node) {
+            throw new Error(`Node "${nodeName}" not found`);
+          }
+
+          await Nodes.updateOne(
+            { _id: node._id },
+            { $addToSet: { users: user._id } }
+          );
+
+          this.migrationResults.userNodes.attached += 1;
+          this.migrationResults.userNodes.created += 1;
+        } catch (error) {
+          this.migrationResults.userNodes.errors += 1;
+          this.migrationResults.userNodes.details.push({
+            email: link.email,
+            nodeName: link.nodeName,
+            error: error.message,
+          });
+          console.log(
+            `   ❌ Failed to attach ${link.email} to ${link.nodeName}: ${error.message}`
+          );
+        }
+      }
+
+      console.log(
+        `   📊 User-Node Links: ${this.migrationResults.userNodes.attached} attached, ${this.migrationResults.userNodes.errors} errors\n`
+      );
+    } catch (error) {
+      console.log(`   ❌ User-node mapping failed: ${error.message}`);
+    }
+  }
+
+  /**
    * Read CSV file
    */
-  async readCSV(filename) {
+  async readCSV(key) {
     return new Promise((resolve, reject) => {
       const results = [];
-      const filePath = path.join(__dirname, 'migration_data', filename);
+      const fileName = this.fileConfig[key] || key;
+
+      if (!fileName) {
+        resolve([]);
+        return;
+      }
+
+      const filePath = resolvePath(this.options.csvDir, fileName);
 
       if (!fs.existsSync(filePath)) {
-        console.log(`   ⚠️  File ${filename} not found, skipping...`);
+        console.log(`   ⚠️  File ${fileName} not found, skipping...`);
         resolve([]);
         return;
       }
@@ -550,6 +697,10 @@ class DataMigrationManager {
 
     console.log('='.repeat(50));
     console.log(`TOTAL: ${totalCreated} created, ${totalErrors} errors`);
+    console.log(
+      `User-Node Links: ${this.migrationResults.userNodes.attached} attached, ${this.migrationResults.userNodes.errors} errors`
+    );
+
     console.log('='.repeat(50));
   }
 
@@ -565,8 +716,8 @@ class DataMigrationManager {
 /**
  * Main migration function
  */
-async function runMigration() {
-  const migrationManager = new DataMigrationManager();
+async function runMigration(options) {
+  const migrationManager = new DataMigrationManager(options);
 
   try {
     // Initialize
@@ -577,6 +728,7 @@ async function runMigration() {
 
     // Phase 2: Levels, Structures, and Nodes
     await migrationManager.migrateLevelsStructuresAndNodes();
+    await migrationManager.migrateUserNodeLinks();
 
     // Generate report
     migrationManager.generateReport();
@@ -591,7 +743,8 @@ async function runMigration() {
 
 // Run migration if this file is executed directly
 if (require.main === module) {
-  runMigration();
+  const options = parseArgs();
+  runMigration(options);
 }
 
 module.exports = DataMigrationManager;
