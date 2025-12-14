@@ -22,6 +22,7 @@ const config = require('../config/config');
 const { createSubmissionWorker } = require('./submission.worker');
 const { createPermNotificationWorker } = require('./permNotification.worker');
 const { createNotificationWorker } = require('./notification.worker');
+const { initializeBaselineWorkers, shutdownBaselineWorkers } = require('./baseline.worker');
 
 // Email ingestor is optional (requires imap-simple)
 let createEmailIngestorWorker = null;
@@ -36,6 +37,7 @@ let submissionWorker = null;
 let permNotificationWorker = null;
 let notificationWorker = null;
 let emailIngestorWorker = null;
+let baselineWorkersInitialized = false;
 
 /**
  * Initialize all workers
@@ -64,6 +66,16 @@ const initializeWorkers = async () => {
       logger.info('⊘ Email ingestor worker not available (missing dependencies)');
     } else {
       logger.info('⊘ Email ingestor worker disabled (EMAIL_ENABLED=false)');
+    }
+
+    // Initialize baseline intelligence workers
+    try {
+      await initializeBaselineWorkers();
+      baselineWorkersInitialized = true;
+      logger.info('✅ Baseline intelligence workers started');
+    } catch (error) {
+      logger.error('❌ Failed to initialize baseline workers:', error);
+      // Non-critical - continue without baseline workers
     }
 
     logger.info('🎉 All workers initialized successfully');
@@ -110,6 +122,14 @@ const shutdownWorkers = async () => {
       emailIngestorWorker
         .close()
         .then(() => logger.info('✅ Email ingestor worker stopped'))
+    );
+  }
+
+  // Shutdown baseline workers
+  if (baselineWorkersInitialized) {
+    shutdownPromises.push(
+      shutdownBaselineWorkers()
+        .then(() => logger.info('✅ Baseline workers stopped'))
     );
   }
 

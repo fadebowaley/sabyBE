@@ -202,7 +202,13 @@ async function readCsvRows(inputPath) {
 }
 
 function ensureNode(nodesMap, params) {
-  const { name, parentNode = null, levelName, structureName } = params;
+  const {
+    name,
+    displayName = name,
+    parentNode = null,
+    levelName,
+    structureName,
+  } = params;
   const parentFullPath = parentNode?.fullPath || '';
   const parentDisplayName = parentNode?.displayName || '';
   const fullPath = parentFullPath ? `${parentFullPath} > ${name}` : name;
@@ -211,7 +217,7 @@ function ensureNode(nodesMap, params) {
   if (!nodesMap.has(nodeKey)) {
     nodesMap.set(nodeKey, {
       name,
-      displayName: name,
+      displayName,
       fullPath,
       parentDisplayName,
       parentFullPath,
@@ -219,6 +225,11 @@ function ensureNode(nodesMap, params) {
       structureName,
       users: new Set(),
     });
+  } else {
+    const existing = nodesMap.get(nodeKey);
+    if (displayName && existing.displayName !== displayName) {
+      existing.displayName = displayName;
+    }
   }
 
   return nodesMap.get(nodeKey);
@@ -314,6 +325,8 @@ function processRows(rows, tenantDomain) {
     diocese: null,
     zone: null,
   };
+  const pendingLabels = [];
+  let resetHierarchyOnNextNode = false;
 
   const rootNode = ensureNode(nodesMap, {
     name: missionConfig.rootNodeName,
@@ -329,9 +342,27 @@ function processRows(rows, tenantDomain) {
     const nodeName = cleanString(rawRow.Node);
     const userName = cleanString(rawRow.user);
     const phone = cleanString(rawRow.PhoneNumber);
+    const serialNumber = cleanString(rawRow['S/N']);
 
     if (!nodeName && !userName) {
       return;
+    }
+
+    const isLabelRow = !serialNumber && Boolean(nodeName);
+    if (isLabelRow) {
+      pendingLabels.push(nodeName);
+      hierarchyState.division = null;
+      hierarchyState.diocese = null;
+      hierarchyState.zone = null;
+      resetHierarchyOnNextNode = true;
+      return;
+    }
+
+    if (resetHierarchyOnNextNode) {
+      hierarchyState.division = null;
+      hierarchyState.diocese = null;
+      hierarchyState.zone = null;
+      resetHierarchyOnNextNode = false;
     }
 
     const nodeType = detectNodeType(nodeName, Boolean(userName));
@@ -340,9 +371,18 @@ function processRows(rows, tenantDomain) {
       return;
     }
 
+    const decoratedName = pendingLabels.length
+      ? `${pendingLabels.join(' - ')} - ${nodeName}`
+      : nodeName;
+    const resolvedName = decoratedName || nodeName;
+    if (pendingLabels.length) {
+      pendingLabels.length = 0;
+    }
+
     if (nodeType === 'division') {
       const divisionNode = ensureNode(nodesMap, {
-        name: nodeName,
+        name: resolvedName,
+        displayName: resolvedName,
         parentNode: rootNode,
         levelName: 'Division',
         structureName: getStructureName('Division'),
@@ -376,7 +416,8 @@ function processRows(rows, tenantDomain) {
     if (nodeType === 'diocese') {
       const parentNode = hierarchyState.division || rootNode;
       const dioceseNode = ensureNode(nodesMap, {
-        name: nodeName,
+        name: resolvedName,
+        displayName: resolvedName,
         parentNode,
         levelName: 'Diocese',
         structureName: getStructureName('Diocese'),
@@ -412,7 +453,8 @@ function processRows(rows, tenantDomain) {
         hierarchyState.division ||
         rootNode;
       const zoneNode = ensureNode(nodesMap, {
-        name: nodeName,
+        name: resolvedName,
+        displayName: resolvedName,
         parentNode,
         levelName: 'Zone',
         structureName: getStructureName('Zone'),
@@ -449,7 +491,8 @@ function processRows(rows, tenantDomain) {
         rootNode;
 
       const parishNode = ensureNode(nodesMap, {
-        name: nodeName,
+        name: resolvedName,
+        displayName: resolvedName,
         parentNode,
         levelName: 'Parish',
         structureName: getStructureName('Parish'),

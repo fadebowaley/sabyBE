@@ -11,8 +11,12 @@ router.get('/activity-log', submissionController.getActivityLogs);
 router.get('/activity-log/summary', submissionController.getActivityLogSummary);
 router
   .route('/')
-  .post(requireAccess('create:submission'), validate(submissionValidation.submitData), submissionController.submitData)
-  .get(auth('view:submission'), submissionController.listSubmissions);
+  .post(
+    requireAccess('submission:create'),
+    validate(submissionValidation.submitData),
+    submissionController.submitData
+  )
+  .get(auth('submission:read'), submissionController.listSubmissions);
 
 router.route('/:form_id').get(submissionController.getSubmissionById).delete(submissionController.deleteSubmission);
 

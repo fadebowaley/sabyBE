@@ -4,6 +4,9 @@ const apiKeyApprovalRoute = require('./apiKeyApproval.route');
 const appRoute = require('./app.route');
 const authRoute = require('./auth.route');
 const baselineIntelligenceRoute = require('./baselineIntelligence.route');
+const baselineJobsRoute = require('./baselineJobs.route');
+const baselineAnalysisConfigRoute = require('./baselineAnalysisConfig.route');
+const complianceRoute = require('./compliance.route');
 const customFieldConfigRoute = require('./customFieldConfig.route');
 const dataRoute = require('./data.route');
 const docsRoute = require('./docs.route');
@@ -34,6 +37,7 @@ const postgresRoute = require('./postgres.route');
 const storageRoute = require('./storage.route');
 const storageFolderRoute = require('./storageFolder.route');
 const tenantConfigRoute = require('./tenantConfig.route');
+const schemaRoute = require('./schema.route');
 const submissionRoute = require('./submission.route');
 const telegramWebAppRoute = require('./telegramWebApp.route');
 const waitlistRoute = require('./waitlist.route');
@@ -79,6 +83,18 @@ const defaultRoutes = [
   {
     path: '/baseline', // Example: /baseline/network, /baseline/node/123
     route: baselineIntelligenceRoute,
+  },
+  {
+    path: '/baseline/jobs', // Example: /baseline/jobs/stats, /baseline/jobs/metrics
+    route: baselineJobsRoute,
+  },
+  {
+    path: '/baseline-analysis-config', // Example: /baseline-analysis-config/user
+    route: baselineAnalysisConfigRoute,
+  },
+  {
+    path: '/compliance', // Example: /compliance/table, /compliance/summary
+    route: complianceRoute,
   },
   {
     path: '/custom-field-config', // Example: /custom-field-config/user
@@ -201,6 +217,10 @@ const defaultRoutes = [
   {
     path: '/tenant-config',
     route: tenantConfigRoute,
+  },
+  {
+    path: '/schema',
+    route: schemaRoute,
   },
   {
     path: '/telegram',

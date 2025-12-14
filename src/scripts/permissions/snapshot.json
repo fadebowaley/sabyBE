@@ -510,6 +510,266 @@
     "isAdminLevel": false
   },
   {
+    "name": "view:baselineAnalysisConfig::entityType",
+    "action": "view",
+    "resource": "baselineAnalysisConfig",
+    "path": "/:entityType",
+    "method": "GET",
+    "description": "view permission on view:baselineAnalysisConfig::entityType",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "update:baselineAnalysisConfig:essential-metrics",
+    "action": "update",
+    "resource": "baselineAnalysisConfig",
+    "path": "/:entityType/essential-metrics",
+    "method": "PUT",
+    "description": "update permission on update:baselineAnalysisConfig:essential-metrics",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "update:baselineAnalysisConfig::fieldId",
+    "action": "update",
+    "resource": "baselineAnalysisConfig",
+    "path": "/:entityType/custom-fields/:fieldId",
+    "method": "PUT",
+    "description": "update permission on update:baselineAnalysisConfig::fieldId",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "update:baselineAnalysisConfig:global-settings",
+    "action": "update",
+    "resource": "baselineAnalysisConfig",
+    "path": "/:entityType/global-settings",
+    "method": "PUT",
+    "description": "update permission on update:baselineAnalysisConfig:global-settings",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "create:baselineAnalysisConfig:sync",
+    "action": "create",
+    "resource": "baselineAnalysisConfig",
+    "path": "/:entityType/sync",
+    "method": "POST",
+    "description": "create permission on create:baselineAnalysisConfig:sync",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineIntelligence:health",
+    "action": "view",
+    "resource": "baselineIntelligence",
+    "path": "/health",
+    "method": "GET",
+    "description": "view permission on view:baselineIntelligence:health",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineIntelligence:stats",
+    "action": "view",
+    "resource": "baselineIntelligence",
+    "path": "/stats",
+    "method": "GET",
+    "description": "view permission on view:baselineIntelligence:stats",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineIntelligence:summary",
+    "action": "view",
+    "resource": "baselineIntelligence",
+    "path": "/summary",
+    "method": "GET",
+    "description": "view permission on view:baselineIntelligence:summary",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineIntelligence:network",
+    "action": "view",
+    "resource": "baselineIntelligence",
+    "path": "/network",
+    "method": "GET",
+    "description": "view permission on view:baselineIntelligence:network",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineIntelligence:insights",
+    "action": "view",
+    "resource": "baselineIntelligence",
+    "path": "/network/insights",
+    "method": "GET",
+    "description": "view permission on view:baselineIntelligence:insights",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "create:baselineIntelligence:recompute",
+    "action": "create",
+    "resource": "baselineIntelligence",
+    "path": "/network/recompute",
+    "method": "POST",
+    "description": "create permission on create:baselineIntelligence:recompute",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineIntelligence:top-nodes",
+    "action": "view",
+    "resource": "baselineIntelligence",
+    "path": "/network/top-nodes",
+    "method": "GET",
+    "description": "view permission on view:baselineIntelligence:top-nodes",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineIntelligence:geographic-distribution",
+    "action": "view",
+    "resource": "baselineIntelligence",
+    "path": "/network/geographic-distribution",
+    "method": "GET",
+    "description": "view permission on view:baselineIntelligence:geographic-distribution",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineIntelligence:health-score",
+    "action": "view",
+    "resource": "baselineIntelligence",
+    "path": "/network/health-score",
+    "method": "GET",
+    "description": "view permission on view:baselineIntelligence:health-score",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineIntelligence:my-network",
+    "action": "view",
+    "resource": "baselineIntelligence",
+    "path": "/my-network",
+    "method": "GET",
+    "description": "view permission on view:baselineIntelligence:my-network",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineIntelligence:my-family",
+    "action": "view",
+    "resource": "baselineIntelligence",
+    "path": "/my-family",
+    "method": "GET",
+    "description": "view permission on view:baselineIntelligence:my-family",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineIntelligence::nodeId",
+    "action": "view",
+    "resource": "baselineIntelligence",
+    "path": "/node/:nodeId",
+    "method": "GET",
+    "description": "view permission on view:baselineIntelligence::nodeId",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineIntelligence:insights",
+    "action": "view",
+    "resource": "baselineIntelligence",
+    "path": "/node/:nodeId/insights",
+    "method": "GET",
+    "description": "view permission on view:baselineIntelligence:insights",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "create:baselineIntelligence:recompute",
+    "action": "create",
+    "resource": "baselineIntelligence",
+    "path": "/node/:nodeId/recompute",
+    "method": "POST",
+    "description": "create permission on create:baselineIntelligence:recompute",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "create:baselineIntelligence:all",
+    "action": "create",
+    "resource": "baselineIntelligence",
+    "path": "/recompute/all",
+    "method": "POST",
+    "description": "create permission on create:baselineIntelligence:all",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineJobs:stats",
+    "action": "view",
+    "resource": "baselineJobs",
+    "path": "/stats",
+    "method": "GET",
+    "description": "view permission on view:baselineJobs:stats",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineJobs:metrics",
+    "action": "view",
+    "resource": "baselineJobs",
+    "path": "/metrics",
+    "method": "GET",
+    "description": "view permission on view:baselineJobs:metrics",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineJobs:history",
+    "action": "view",
+    "resource": "baselineJobs",
+    "path": "/history",
+    "method": "GET",
+    "description": "view permission on view:baselineJobs:history",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:baselineJobs::jobId",
+    "action": "view",
+    "resource": "baselineJobs",
+    "path": "/:queueType/:jobId",
+    "method": "GET",
+    "description": "view permission on view:baselineJobs::jobId",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "create:baselineJobs:clear",
+    "action": "create",
+    "resource": "baselineJobs",
+    "path": "/clear",
+    "method": "POST",
+    "description": "create permission on create:baselineJobs:clear",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "create:baselineJobs:queue",
+    "action": "create",
+    "resource": "baselineJobs",
+    "path": "/queue",
+    "method": "POST",
+    "description": "create permission on create:baselineJobs:queue",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
     "name": "create:capture",
     "action": "create",
     "resource": "capture",
@@ -650,6 +910,56 @@
     "isAdminLevel": false
   },
   {
+    "name": "view:compliance:table",
+    "action": "view",
+    "resource": "compliance",
+    "path": "/table",
+    "method": "GET",
+    "description": "view permission on view:compliance:table",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:compliance:summary",
+    "action": "view",
+    "resource": "compliance",
+    "path": "/summary",
+    "method": "GET",
+    "description": "view permission on view:compliance:summary",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "update:compliance::userId",
+    "action": "update",
+    "resource": "compliance",
+    "path": "/user/:userId",
+    "method": "PATCH",
+    "description": "update permission on update:compliance::userId",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "update:compliance::nodeId",
+    "action": "update",
+    "resource": "compliance",
+    "path": "/node/:nodeId",
+    "method": "PATCH",
+    "description": "update permission on update:compliance::nodeId",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:compliance:score",
+    "action": "view",
+    "resource": "compliance",
+    "path": "/user/:userId/score",
+    "method": "GET",
+    "description": "view permission on view:compliance:score",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
     "name": "view:complianceReport",
     "action": "view",
     "resource": "complianceReport",
@@ -756,6 +1066,36 @@
     "path": "/:id/reset",
     "method": "POST",
     "description": "create permission on create:complianceReport:reset",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:customFieldConfig::entityType",
+    "action": "view",
+    "resource": "customFieldConfig",
+    "path": "/:entityType",
+    "method": "GET",
+    "description": "view permission on view:customFieldConfig::entityType",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "update:customFieldConfig::entityType",
+    "action": "update",
+    "resource": "customFieldConfig",
+    "path": "/:entityType",
+    "method": "PUT",
+    "description": "update permission on update:customFieldConfig::entityType",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:customFieldConfig:sample",
+    "action": "view",
+    "resource": "customFieldConfig",
+    "path": "/:entityType/sample",
+    "method": "GET",
+    "description": "view permission on view:customFieldConfig:sample",
     "isWildcard": false,
     "isAdminLevel": false
   },
@@ -1020,6 +1360,36 @@
     "isAdminLevel": false
   },
   {
+    "name": "create:eventCalendar:preview",
+    "action": "create",
+    "resource": "eventCalendar",
+    "path": "/preview",
+    "method": "POST",
+    "description": "create permission on create:eventCalendar:preview",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "create:eventCalendar::id",
+    "action": "create",
+    "resource": "eventCalendar",
+    "path": "/regenerate/:id",
+    "method": "POST",
+    "description": "create permission on create:eventCalendar::id",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:eventCalendar::month",
+    "action": "view",
+    "resource": "eventCalendar",
+    "path": "/stats/:month",
+    "method": "GET",
+    "description": "view permission on view:eventCalendar::month",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
     "name": "create:eventCalendar:generate",
     "action": "create",
     "resource": "eventCalendar",
@@ -1076,6 +1446,16 @@
     "path": "/:id",
     "method": "PUT",
     "description": "update permission on update:eventCalendar::id",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "update:eventCalendar:dates",
+    "action": "update",
+    "resource": "eventCalendar",
+    "path": "/:id/dates",
+    "method": "PATCH",
+    "description": "update permission on update:eventCalendar:dates",
     "isWildcard": false,
     "isAdminLevel": false
   },
@@ -1610,6 +1990,16 @@
     "isAdminLevel": false
   },
   {
+    "name": "create:node:branches",
+    "action": "create",
+    "resource": "node",
+    "path": "/branches",
+    "method": "POST",
+    "description": "create permission on create:node:branches",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
     "name": "create:node:bulk-import",
     "action": "create",
     "resource": "node",
@@ -1646,6 +2036,36 @@
     "path": "/:nodeId",
     "method": "DELETE",
     "description": "delete permission on delete:node::nodeId",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:node:branch",
+    "action": "view",
+    "resource": "node",
+    "path": "/:nodeId/branch",
+    "method": "GET",
+    "description": "view permission on view:node:branch",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "update:node:restore",
+    "action": "update",
+    "resource": "node",
+    "path": "/:nodeId/restore",
+    "method": "PATCH",
+    "description": "update permission on update:node:restore",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "delete:node:hard",
+    "action": "delete",
+    "resource": "node",
+    "path": "/:nodeId/hard",
+    "method": "DELETE",
+    "description": "delete permission on delete:node:hard",
     "isWildcard": false,
     "isAdminLevel": false
   },
@@ -1730,62 +2150,12 @@
     "isAdminLevel": false
   },
   {
-    "name": "create:nodeprofile:upsert",
-    "action": "create",
-    "resource": "nodeprofile",
-    "path": "/upsert",
-    "method": "POST",
-    "description": "create permission on create:nodeprofile:upsert",
-    "isWildcard": false,
-    "isAdminLevel": false
-  },
-  {
-    "name": "create:nodeprofile",
-    "action": "create",
-    "resource": "nodeprofile",
-    "path": "/",
-    "method": "POST",
-    "description": "create permission on create:nodeprofile",
-    "isWildcard": false,
-    "isAdminLevel": false
-  },
-  {
-    "name": "view:nodeprofile::nodeId",
-    "action": "view",
-    "resource": "nodeprofile",
-    "path": "/node/:nodeId",
-    "method": "GET",
-    "description": "view permission on view:nodeprofile::nodeId",
-    "isWildcard": false,
-    "isAdminLevel": false
-  },
-  {
-    "name": "view:nodeprofile::profileId",
-    "action": "view",
-    "resource": "nodeprofile",
-    "path": "/:profileId",
-    "method": "GET",
-    "description": "view permission on view:nodeprofile::profileId",
-    "isWildcard": false,
-    "isAdminLevel": false
-  },
-  {
-    "name": "update:nodeprofile::profileId",
+    "name": "update:node:profile-compliance",
     "action": "update",
-    "resource": "nodeprofile",
-    "path": "/:profileId",
+    "resource": "node",
+    "path": "/:nodeId/profile-compliance",
     "method": "PATCH",
-    "description": "update permission on update:nodeprofile::profileId",
-    "isWildcard": false,
-    "isAdminLevel": false
-  },
-  {
-    "name": "delete:nodeprofile::profileId",
-    "action": "delete",
-    "resource": "nodeprofile",
-    "path": "/:profileId",
-    "method": "DELETE",
-    "description": "delete permission on delete:nodeprofile::profileId",
+    "description": "update permission on update:node:profile-compliance",
     "isWildcard": false,
     "isAdminLevel": false
   },
@@ -2100,6 +2470,16 @@
     "isAdminLevel": false
   },
   {
+    "name": "view:permReport",
+    "action": "view",
+    "resource": "permReport",
+    "path": "/",
+    "method": "GET",
+    "description": "view permission on view:permReport",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
     "name": "create:permSubmission:validate",
     "action": "create",
     "resource": "permSubmission",
@@ -2360,6 +2740,16 @@
     "isAdminLevel": false
   },
   {
+    "name": "view:projectForm:deleted",
+    "action": "view",
+    "resource": "projectForm",
+    "path": "/deleted",
+    "method": "GET",
+    "description": "view permission on view:projectForm:deleted",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
     "name": "view:projectForm::projectId",
     "action": "view",
     "resource": "projectForm",
@@ -2386,6 +2776,16 @@
     "path": "/project/:projectId/analytics",
     "method": "GET",
     "description": "view permission on view:projectForm:analytics",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "update:projectForm:payment-config",
+    "action": "update",
+    "resource": "projectForm",
+    "path": "/project/:projectId/payment-config",
+    "method": "PATCH",
+    "description": "update permission on update:projectForm:payment-config",
     "isWildcard": false,
     "isAdminLevel": false
   },
@@ -2476,6 +2876,16 @@
     "path": "/:projectFormId/archive",
     "method": "PATCH",
     "description": "update permission on update:projectForm:archive",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "delete:projectForm::projectId",
+    "action": "delete",
+    "resource": "projectForm",
+    "path": "/project/:projectId",
+    "method": "DELETE",
+    "description": "delete permission on delete:projectForm::projectId",
     "isWildcard": false,
     "isAdminLevel": false
   },
@@ -2756,6 +3166,46 @@
     "path": "/bulk",
     "method": "POST",
     "description": "create permission on create:role:bulk",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:rollupReport:daily",
+    "action": "view",
+    "resource": "rollupReport",
+    "path": "/daily",
+    "method": "GET",
+    "description": "view permission on view:rollupReport:daily",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:rollupReport:weekly",
+    "action": "view",
+    "resource": "rollupReport",
+    "path": "/weekly",
+    "method": "GET",
+    "description": "view permission on view:rollupReport:weekly",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:rollupReport:monthly",
+    "action": "view",
+    "resource": "rollupReport",
+    "path": "/monthly",
+    "method": "GET",
+    "description": "view permission on view:rollupReport:monthly",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:rollupReport:status",
+    "action": "view",
+    "resource": "rollupReport",
+    "path": "/status",
+    "method": "GET",
+    "description": "view permission on view:rollupReport:status",
     "isWildcard": false,
     "isAdminLevel": false
   },
@@ -3250,6 +3700,16 @@
     "isAdminLevel": false
   },
   {
+    "name": "delete:submission:cleanup-test-data",
+    "action": "delete",
+    "resource": "submission",
+    "path": "/cleanup-test-data",
+    "method": "DELETE",
+    "description": "delete permission on delete:submission:cleanup-test-data",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
     "name": "view:submissionReport",
     "action": "view",
     "resource": "submissionReport",
@@ -3500,6 +3960,66 @@
     "isAdminLevel": false
   },
   {
+    "name": "view:tenantConfig:user",
+    "action": "view",
+    "resource": "tenantConfig",
+    "path": "/user",
+    "method": "GET",
+    "description": "view permission on view:tenantConfig:user",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "update:tenantConfig:user",
+    "action": "update",
+    "resource": "tenantConfig",
+    "path": "/user",
+    "method": "PUT",
+    "description": "update permission on update:tenantConfig:user",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:tenantConfig:node",
+    "action": "view",
+    "resource": "tenantConfig",
+    "path": "/node",
+    "method": "GET",
+    "description": "view permission on view:tenantConfig:node",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "update:tenantConfig:node",
+    "action": "update",
+    "resource": "tenantConfig",
+    "path": "/node",
+    "method": "PUT",
+    "description": "update permission on update:tenantConfig:node",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "update:tenantConfig:analytics",
+    "action": "update",
+    "resource": "tenantConfig",
+    "path": "/:entityType/fields/:fieldId/analytics",
+    "method": "PATCH",
+    "description": "update permission on update:tenantConfig:analytics",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:tenantConfig:summary",
+    "action": "view",
+    "resource": "tenantConfig",
+    "path": "/:entityType/analytics/summary",
+    "method": "GET",
+    "description": "view permission on view:tenantConfig:summary",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
     "name": "view:trendAnalysis:timeline",
     "action": "view",
     "resource": "trendAnalysis",
@@ -3580,6 +4100,16 @@
     "isAdminLevel": false
   },
   {
+    "name": "view:unifiedSubmission:enhanced",
+    "action": "view",
+    "resource": "unifiedSubmission",
+    "path": "/activity-log/enhanced",
+    "method": "GET",
+    "description": "view permission on view:unifiedSubmission:enhanced",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
     "name": "view:unifiedSubmission:recent",
     "action": "view",
     "resource": "unifiedSubmission",
@@ -3650,6 +4180,26 @@
     "isAdminLevel": false
   },
   {
+    "name": "create:unifiedSubmission:bulk-delete-by-jobs",
+    "action": "create",
+    "resource": "unifiedSubmission",
+    "path": "/bulk-delete-by-jobs",
+    "method": "POST",
+    "description": "create permission on create:unifiedSubmission:bulk-delete-by-jobs",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "delete:unifiedSubmission:cleanup-test-data",
+    "action": "delete",
+    "resource": "unifiedSubmission",
+    "path": "/cleanup-test-data",
+    "method": "DELETE",
+    "description": "delete permission on delete:unifiedSubmission:cleanup-test-data",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
     "name": "create:unifiedSubmission",
     "action": "create",
     "resource": "unifiedSubmission",
@@ -3690,6 +4240,26 @@
     "isAdminLevel": false
   },
   {
+    "name": "update:unifiedSubmission::id",
+    "action": "update",
+    "resource": "unifiedSubmission",
+    "path": "/:id",
+    "method": "PATCH",
+    "description": "update permission on update:unifiedSubmission::id",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "delete:unifiedSubmission::id",
+    "action": "delete",
+    "resource": "unifiedSubmission",
+    "path": "/:id",
+    "method": "DELETE",
+    "description": "delete permission on delete:unifiedSubmission::id",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
     "name": "create:user",
     "action": "create",
     "resource": "user",
@@ -3706,6 +4276,16 @@
     "path": "/saby",
     "method": "POST",
     "description": "create permission on create:user:saby",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "view:user:profile-update-leaderboard",
+    "action": "view",
+    "resource": "user",
+    "path": "/profile-update-leaderboard",
+    "method": "GET",
+    "description": "view permission on view:user:profile-update-leaderboard",
     "isWildcard": false,
     "isAdminLevel": false
   },
@@ -3766,6 +4346,16 @@
     "path": "/:userId/nodes",
     "method": "GET",
     "description": "view permission on view:user:nodes",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "update:user:profile-compliance",
+    "action": "update",
+    "resource": "user",
+    "path": "/:userId/profile-compliance",
+    "method": "PATCH",
+    "description": "update permission on update:user:profile-compliance",
     "isWildcard": false,
     "isAdminLevel": false
   },
@@ -3906,36 +4496,6 @@
     "path": "/user/:userId",
     "method": "DELETE",
     "description": "delete permission on delete:userFormSettings::userId",
-    "isWildcard": false,
-    "isAdminLevel": false
-  },
-  {
-    "name": "view:userProfile::userId",
-    "action": "view",
-    "resource": "userProfile",
-    "path": "/:userId",
-    "method": "GET",
-    "description": "view permission on view:userProfile::userId",
-    "isWildcard": false,
-    "isAdminLevel": false
-  },
-  {
-    "name": "update:userProfile::userId",
-    "action": "update",
-    "resource": "userProfile",
-    "path": "/:userId",
-    "method": "PUT",
-    "description": "update permission on update:userProfile::userId",
-    "isWildcard": false,
-    "isAdminLevel": false
-  },
-  {
-    "name": "delete:userProfile::userId",
-    "action": "delete",
-    "resource": "userProfile",
-    "path": "/:userId",
-    "method": "DELETE",
-    "description": "delete permission on delete:userProfile::userId",
     "isWildcard": false,
     "isAdminLevel": false
   },

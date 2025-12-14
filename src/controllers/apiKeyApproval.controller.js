@@ -13,10 +13,36 @@ const getPendingApprovals = catchAsync(async (req, res) => {
   const filter = pick(req.query, ['tenant', 'category']);
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
 
+  console.log(
+    '[getPendingApprovals] Fetching pending approvals with filter:',
+    filter,
+    'options:',
+    options
+  );
   const result = await apiKeyApprovalService.getPendingApprovals(
     filter,
     options
   );
+
+  console.log('[getPendingApprovals] Result structure:', {
+    hasResults: !!result.results,
+    resultsCount: result.results?.length,
+    totalResults: result.totalResults,
+    page: result.page,
+    limit: result.limit,
+    totalPages: result.totalPages,
+  });
+
+  // Log first result structure for debugging
+  if (result.results && result.results.length > 0) {
+    const firstResult = result.results[0];
+    console.log('[getPendingApprovals] First result structure:', {
+      hasApiKey: !!firstResult.apiKey,
+      apiKeyId: firstResult.apiKey?.id,
+      apiKeyLabel: firstResult.apiKey?.label,
+      apiKeyKeys: firstResult.apiKey ? Object.keys(firstResult.apiKey) : [],
+    });
+  }
 
   res.send(result);
 });
@@ -30,7 +56,33 @@ const getApprovals = catchAsync(async (req, res) => {
   const filter = pick(req.query, ['tenant', 'status', 'category']);
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
 
+  console.log(
+    '[getApprovals] Fetching approvals with filter:',
+    filter,
+    'options:',
+    options
+  );
   const result = await apiKeyApprovalService.getApprovals(filter, options);
+
+  console.log('[getApprovals] Result structure:', {
+    hasResults: !!result.results,
+    resultsCount: result.results?.length,
+    totalResults: result.totalResults,
+    page: result.page,
+    limit: result.limit,
+    totalPages: result.totalPages,
+  });
+
+  // Log first result structure for debugging
+  if (result.results && result.results.length > 0) {
+    const firstResult = result.results[0];
+    console.log('[getApprovals] First result structure:', {
+      hasApiKey: !!firstResult.apiKey,
+      apiKeyId: firstResult.apiKey?.id,
+      apiKeyLabel: firstResult.apiKey?.label,
+      apiKeyKeys: firstResult.apiKey ? Object.keys(firstResult.apiKey) : [],
+    });
+  }
 
   res.send(result);
 });

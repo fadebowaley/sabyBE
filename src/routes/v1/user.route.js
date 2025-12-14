@@ -132,10 +132,23 @@ const router = express.Router();
 
 
 // Create a new user (owner only)
-router.post('/', requireAccess('create:user'), validate(userValidation.ownerCreate), userController.ownerCreate);
+// Test route: Using hybridAuth + requireAccess pattern for optimized API key handling
+router.post(
+  '/',
+  requireAccess('user:create'), // Uses req.apiKey if set, skips duplicate verification
+  validate(userValidation.ownerCreate),
+  userController.ownerCreate
+);
 
 // Create a SabyUser (global admin - only accessible via direct admin)
 router.post('/saby', auth(), validate(userValidation.sabyUserCreate), userController.createSabyUser);
+
+// Get profile update leaderboard (must be before /:userId route)
+router.get(
+  '/profile-update-leaderboard',
+  auth(),
+  userController.getProfileUpdateLeaderboard
+);
 
 /**
  * @swagger
@@ -184,7 +197,13 @@ router.post('/saby', auth(), validate(userValidation.sabyUserCreate), userContro
 
 
 // Get all users
-router.get('/', requireAccess('view:user'), validate(userValidation.getUsers), userController.getUsers);
+// Test route: Using hybridAuth + requireAccess pattern for optimized API key handling
+router.get(
+  '/',
+  requireAccess('user:read'), // Uses req.apiKey if set, skips duplicate verification
+  validate(userValidation.getUsers),
+  userController.getUsers
+);
 
 /**
  * @swagger
@@ -262,7 +281,12 @@ router.get('/', requireAccess('view:user'), validate(userValidation.getUsers), u
  */
 
 // Get user by ID
-router.get('/:userId', requireAccess('view:user::userId'), validate(userValidation.getUser), userController.getUser);
+router.get(
+  '/:userId',
+  requireAccess('user:read'),
+  validate(userValidation.getUser),
+  userController.getUser
+);
 
 
 /**
@@ -296,17 +320,43 @@ router.get('/:userId', requireAccess('view:user::userId'), validate(userValidati
  *         description: Not Found
  */
 
-router.post('/bulk-create', requireAccess('create:user:bulk-create'), validate(userValidation.bulkCreate), userController.bulkCreate);
+router.post(
+  '/bulk-create',
+  requireAccess('user:import'),
+  validate(userValidation.bulkCreate),
+  userController.bulkCreate
+);
 
 // Update user
-router.patch('/:userId', requireAccess('update:user::userId'), validate(userValidation.updateUser), userController.updateUser);
+// Test route: Using hybridAuth + requireAccess pattern for optimized API key handling
+router.patch(
+  '/:userId',
+  requireAccess('user:update'),
+  validate(userValidation.updateUser),
+  userController.updateUser
+);
 
 // Get user roles
-router.get('/:userId/roles', requireAccess('read:user::userId'), userController.getUserRoles);
+router.get(
+  '/:userId/roles',
+  requireAccess('user:read'),
+  userController.getUserRoles
+);
 
 // Get user nodes
-router.get('/:userId/nodes', requireAccess('read:user::userId'), userController.getUserNodes);
+router.get(
+  '/:userId/nodes',
+  requireAccess('user:read'),
+  userController.getUserNodes
+);
 
+// Update profile update compliance
+router.patch(
+  '/:userId/profile-compliance',
+  requireAccess('user:update'),
+  validate(userValidation.updateProfileCompliance),
+  userController.updateProfileCompliance
+);
 
 /**
  * @swagger
@@ -362,7 +412,6 @@ router.get('/:userId/nodes', requireAccess('read:user::userId'), userController.
  *       "404":
  *         description: Not Found
  */
-
 
 /**
  * @swagger
@@ -476,12 +525,16 @@ router.get('/:userId/nodes', requireAccess('read:user::userId'), userController.
  */
 
 // Delete user
-router.delete('/:userId', requireAccess('delete:user::userId'), validate(userValidation.deleteUser), userController.deleteUser);
-
+router.delete(
+  '/:userId',
+  requireAccess('user:delete'),
+  validate(userValidation.deleteUser),
+  userController.deleteUser
+);
 
 router.post(
   '/restore',
-  auth('create:user:restore'),
+  auth('user:restore'),
   validate(userValidation.restoreUsers),
   userController.restoreUsers
 );
@@ -518,8 +571,9 @@ router.post(
  *       "404":
  *         description: Not Found
  */
-router.post('/restore/:userId', // Expecting userId as URL parameter
-  auth('create:user::userId'),
+router.post(
+  '/restore/:userId', // Expecting userId as URL parameter
+  auth('user:restore'),
   validate(userValidation.restoreUser), // Validation for userId
   userController.restoreUser // Controller function to restore the user
 );
@@ -556,11 +610,18 @@ router.post('/restore/:userId', // Expecting userId as URL parameter
  *       "404":
  *         description: Not Found
  */
-router.post('/soft-delete/:userId', auth('create:user::userId'), userController.softDeleteUser);
+router.post(
+  '/soft-delete/:userId',
+  auth('user:restore'),
+  userController.softDeleteUser
+);
 
 router
   .route('/:id/assign-roles')
-  .patch(auth('assign:roles'), validate(userValidation.assignRoles), userController.assignRoles);
-
+  .patch(
+    auth('user:assign'),
+    validate(userValidation.assignRoles),
+    userController.assignRoles
+  );
 
 module.exports = router;

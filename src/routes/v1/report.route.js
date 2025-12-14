@@ -166,8 +166,8 @@ const router = express.Router();
 // Route for creating a new report
 router
   .route('/')
-  .post(auth('create:report'), validate(reportValidation.createReport), reportController.createReport)
-  .get(auth('view:report'), validate(reportValidation.queryReports), reportController.queryReports);
+  .post(auth('report:create'), validate(reportValidation.createReport), reportController.createReport)
+  .get(auth('report:read'), validate(reportValidation.queryReports), reportController.queryReports);
 
 /**
  * @swagger
@@ -225,7 +225,7 @@ router
 // Route for bulk importing reports
 router
   .route('/bulk-import')
-  .post(auth('create:report'), validate(reportValidation.bulkImportReports), reportController.bulkImportReports);
+  .post(auth('report:create'), validate(reportValidation.bulkImportReports), reportController.bulkImportReports);
 
 /**
  * @swagger
@@ -330,9 +330,9 @@ router
 // Route for fetching a report by ID
 router
   .route('/:reportId')
-  .get(auth('view:report'), validate(reportValidation.getReport), reportController.getReport)
-  .patch(auth('update:report'), validate(reportValidation.updateReport), reportController.updateReport)
-  .delete(auth('delete:report'), validate(reportValidation.deleteReport), reportController.deleteReport);
+  .get(auth('report:read'), validate(reportValidation.getReport), reportController.getReport)
+  .patch(auth('report:update'), validate(reportValidation.updateReport), reportController.updateReport)
+  .delete(auth('report:delete'), validate(reportValidation.deleteReport), reportController.deleteReport);
 
 /**
  * @swagger
@@ -355,6 +355,6 @@ router
 // Route for deleting all reports
 router
   .route('/delete-all')
-  .delete(auth('delete:report'), validate(reportValidation.deleteAllReports), reportController.deleteAllReports);
+  .delete(auth('report:delete'), validate(reportValidation.deleteAllReports), reportController.deleteAllReports);
 
 module.exports = router;

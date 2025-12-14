@@ -9,52 +9,52 @@ const router = express.Router();
 // Route for creating a new level
 router
   .route('/')
-  .post(auth('create:level'), validate(levelValidation.createLevel), levelController.createLevel)
-  .get(auth('view:level'), validate(levelValidation.queryLevels), levelController.queryLevels);
+  .post(auth('level:create'), validate(levelValidation.createLevel), levelController.createLevel)
+  .get(auth('level:read'), validate(levelValidation.queryLevels), levelController.queryLevels);
 
 // Route for getting next and previous levels (MUST come before /:levelId routes)
 router
   .route('/next')
-  .get(auth('view:level'), levelController.getNextLevel);
+  .get(auth('level:read'), levelController.getNextLevel);
 
 router
   .route('/previous')
-  .get(auth('view:level'), levelController.getPreviousLevel);
+  .get(auth('level:read'), levelController.getPreviousLevel);
 
 // Route for fetching levels by hierarchy
 router
   .route('/hierarchy')
-  .get(auth('view:level'), validate(levelValidation.getLevelsByHierarchy), levelController.getLevelsByHierarchy);
+  .get(auth('level:read'), validate(levelValidation.getLevelsByHierarchy), levelController.getLevelsByHierarchy);
 
 // Route for fetching, updating, and deleting a level by ID
 router
   .route('/:levelId')
-  .get(auth('view:level'), validate(levelValidation.getLevelById), levelController.getLevelById)
-  .patch(auth('update:level'), validate(levelValidation.updateLevelById), levelController.updateLevelById)
-  .delete(auth('delete:level'), validate(levelValidation.deleteLevelById), levelController.deleteLevelById);
+  .get(auth('level:read'), validate(levelValidation.getLevelById), levelController.getLevelById)
+  .patch(auth('level:update'), validate(levelValidation.updateLevelById), levelController.updateLevelById)
+  .delete(auth('level:delete'), validate(levelValidation.deleteLevelById), levelController.deleteLevelById);
 
 // Route for fetching parent and child levels
 router
   .route('/:levelId/parent')
-  .get(auth('view:level'), validate(levelValidation.getParentLevel), levelController.getParentLevel);
+  .get(auth('level:read'), validate(levelValidation.getParentLevel), levelController.getParentLevel);
 
 router
   .route('/:levelId/children')
-  .get(auth('view:level'), validate(levelValidation.getChildLevels), levelController.getChildLevels);
+  .get(auth('level:read'), validate(levelValidation.getChildLevels), levelController.getChildLevels);
 
 // Routes for activating and deactivating levels
 router
   .route('/:levelId/activate')
-  .patch(auth('update:level'), validate(levelValidation.activateLevel), levelController.activateLevel);
+  .patch(auth('level:update'), validate(levelValidation.activateLevel), levelController.activateLevel);
 
 router
   .route('/:levelId/deactivate')
-  .patch(auth('update:level'), validate(levelValidation.deactivateLevel), levelController.deactivateLevel);
+  .patch(auth('level:update'), validate(levelValidation.deactivateLevel), levelController.deactivateLevel);
 
 // Route for moving a level to a parent level
 router
   .route('/:levelId/move')
-  .patch(auth('update:level'), validate(levelValidation.moveLevelToParent), levelController.moveLevelToParent);
+  .patch(auth('level:update'), validate(levelValidation.moveLevelToParent), levelController.moveLevelToParent);
 
 module.exports = router;
 

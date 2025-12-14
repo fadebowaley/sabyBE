@@ -1,241 +1,215 @@
 const axios = require('axios');
-const { NigeriaBulkSMSClient } = require('nigeriabulksms-sdk');
 const config = require('../config/config');
 const logger = require('../config/logger');
 
-const PROVIDERS = {
-  SENDAR: 'sendar',
-  NIGERIA_BULKSMS: 'nigeriabulksms',
-};
+// Constants
+const DEFAULT_SENDER_ID = 'N-Alert';
+const DEFAULT_CHANNEL = 'dnd';
+const DEFAULT_TYPE = 'plain';
+const NIGERIA_COUNTRY_CODE = '234';
+const OTP_MESSAGE_TEMPLATE =
+  'Your Saby verification Pin is: {otp}. It expires in 30 minutes.';
 
-const provider = (config.sms?.provider || PROVIDERS.SENDAR).toLowerCase();
-const DEFAULT_SENDER_ID =
-  config.sms?.senderId || process.env.SMS_SENDER_ID || 'Saby';
-const DEFAULT_WALLET_TYPE =
-  config.sms?.walletType || process.env.SMS_WALLET_TYPE || 'promotional';
-
-const sanitizePhoneNumber = (value = '', { keepPlus = false } = {}) => {
-  if (!value && value !== 0) {
-    return '';
-  }
-  const stringValue = value.toString().trim();
-  if (keepPlus) {
-    return stringValue.replace(/\s+/g, '');
-  }
-  return stringValue.replace(/[^\d,]/g, '');
-};
-
-const sanitizeSenderId = (value = DEFAULT_SENDER_ID) =>
-  (value || DEFAULT_SENDER_ID).toString().slice(0, 11);
-
-let nigeriaBulkSmsClient = null;
-if (provider === PROVIDERS.NIGERIA_BULKSMS) {
-  const credentials = config.sms?.nigeriaBulkSms || {};
-  if (credentials.username && credentials.password) {
-    const clientOptions = {
-      username: credentials.username,
-      password: credentials.password,
-    };
-    if (credentials.baseUrl) {
-      clientOptions.baseUrl = credentials.baseUrl;
-    }
-    if (Number.isFinite(credentials.timeout)) {
-      clientOptions.timeout = credentials.timeout;
-    }
-    if (Number.isFinite(credentials.retries)) {
-      clientOptions.retries = credentials.retries;
-    }
-    try {
-      nigeriaBulkSmsClient = new NigeriaBulkSMSClient(clientOptions);
-      logger.info('NigeriaBulkSMS client initialised');
-    } catch (error) {
-      logger.error(
-        'Failed to initialise NigeriaBulkSMS client:',
-        error.message
-      );
-    }
-  } else {
-    logger.warn(
-      'NigeriaBulkSMS credentials missing. SMS will be skipped until configured.'
-    );
-  }
-}
-
-const isSendarConfigured =
-  !!config.sms?.sendar_api_url && !!config.sms?.sms_api_key?.length;
-
-const hasSmsConfig =
-  (provider === PROVIDERS.SENDAR && isSendarConfigured) ||
-  (provider === PROVIDERS.NIGERIA_BULKSMS && !!nigeriaBulkSmsClient);
+// Configuration check
+const hasSmsConfig = config.sms.sms_api_key && config.sms.sms_base_url;
 
 /**
- * Sends SMS to multiple recipients
- * @param {string} senderId
- * @param {Array<{number: string, body: string, sms_type?: string, schedule_at?: string}>} messages
- * @param {string} walletType
- * @returns {Promise<object>}
+ * Format phone number to international format (e.g., 08145045108 -> 2348145045108)
+ * @param {string} phoneNumber - Phone number in local or international format
+ * @returns {string} - Phone number in international format
  */
-async function sendSms(
-  senderId = DEFAULT_SENDER_ID,
-  messages = [],
-  walletType = DEFAULT_WALLET_TYPE
-) {
-  if (!messages.length) {
-    logger.warn('No SMS messages supplied. Nothing to send.');
-    return { skipped: true, reason: 'no_messages' };
+const formatPhoneNumber = (phoneNumber) => {
+  const cleaned = phoneNumber.replace(/\D/g, '');
+
+  if (cleaned.startsWith('0')) {
+    return NIGERIA_COUNTRY_CODE + cleaned.substring(1);
   }
-
-  if (!hasSmsConfig) {
-    logger.warn('SMS service not configured. Skipping send.');
-    return { skipped: true, reason: 'sms_not_configured' };
+  if (!cleaned.startsWith(NIGERIA_COUNTRY_CODE)) {
+    return NIGERIA_COUNTRY_CODE + cleaned;
   }
+  return cleaned;
+};
 
-  const normalisedSenderId = sanitizeSenderId(senderId);
-
-  if (provider === PROVIDERS.NIGERIA_BULKSMS) {
-    if (!nigeriaBulkSmsClient) {
-      throw new Error('NigeriaBulkSMS client not initialised');
-    }
-
-    const preparedMessages = messages
-      .map((message) => {
-        const rawNumber = message.number || message.numbers || message.mobiles;
-        if (!rawNumber) {
-          logger.warn('Missing recipient number for NigeriaBulkSMS payload.');
-          return null;
-        }
-        const mobiles = sanitizePhoneNumber(rawNumber);
-        if (!mobiles) {
-          logger.warn(
-            `Recipient ${rawNumber} is invalid for NigeriaBulkSMS; skipping.`
-          );
-          return null;
-        }
-        return {
-          mobiles,
-          body: message.body,
-        };
-      })
-      .filter(Boolean);
-
-    if (!preparedMessages.length) {
-      return { skipped: true, reason: 'invalid_recipients' };
-    }
-
-    try {
-      const responses = await Promise.all(
-        preparedMessages.map((message) =>
-          nigeriaBulkSmsClient.sms.send({
-            message: message.body,
-            sender: normalisedSenderId,
-            mobiles: message.mobiles,
-          })
-        )
-      );
-      logger.info('NigeriaBulkSMS dispatched successfully.');
-      return responses.length === 1 ? responses[0] : responses;
-    } catch (error) {
-      const errorPayload = error?.response?.data || error.message;
-      logger.error('NigeriaBulkSMS dispatch failed:', errorPayload);
-      throw error;
-    }
+/**
+ * Format phone numbers (single or array)
+ * @param {string|string[]} phoneNumber - Phone number(s) to format
+ * @returns {string|string[]} - Formatted phone number(s)
+ */
+const formatPhoneNumbers = (phoneNumber) => {
+  if (Array.isArray(phoneNumber)) {
+    return phoneNumber.map(formatPhoneNumber);
   }
+  return formatPhoneNumber(phoneNumber);
+};
 
-  const payload = {
-    wallet_type: walletType,
-    sender_id: normalisedSenderId,
-    contact: messages.map((message) => ({
-      sms_type: 'plain',
-      ...message,
-      number: sanitizePhoneNumber(message.number, { keepPlus: true }),
-    })),
+/**
+ * Get sender ID with fallback logic
+ * @param {string|null} providedSenderId - Sender ID provided by caller
+ * @returns {string} - Final sender ID to use
+ */
+const getSenderId = (providedSenderId = null) => {
+  return providedSenderId || config.sms.senderId || DEFAULT_SENDER_ID;
+};
+
+/**
+ * Make API request to Termii
+ * @param {string} endpoint - API endpoint (relative to base URL)
+ * @param {Object} data - Request data
+ * @param {string} method - HTTP method (default: 'POST')
+ * @returns {Promise<Object>} - API response
+ */
+const makeApiRequest = async (endpoint, data = null, method = 'POST') => {
+  const url = `${config.sms.sms_base_url}${endpoint}`;
+  const options = {
+    method,
+    url,
+    headers: {
+      'Content-Type': 'application/json',
+    },
   };
 
-  logger.debug(
-    `Sending SMS via Sendar (${config.sms.sendar_api_url})`,
-    JSON.stringify(payload, null, 2)
+  if (method === 'GET') {
+    options.params = data;
+  } else {
+    options.data = data;
+  }
+
+  try {
+    const response = await axios(options);
+    return response.data;
+  } catch (error) {
+    logger.error('SMS API error', {
+      endpoint,
+      error: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+    throw error;
+  }
+};
+
+/**
+ * Send SMS using Termii API
+ * @param {string|string[]} phoneNumber - Phone number(s) in local or international format
+ * @param {string} message - Message text to send
+ * @param {string|null} senderId - Sender ID. Defaults to 'N-Alert'
+ * @param {string} channel - Channel type. Defaults to 'dnd'
+ * @param {string} type - Message type. Defaults to 'plain'
+ * @returns {Promise<Object>} - API response
+ */
+const sendSms = async (
+  phoneNumber,
+  message,
+  senderId = null,
+  channel = DEFAULT_CHANNEL,
+  type = DEFAULT_TYPE
+) => {
+  if (!hasSmsConfig) {
+    throw new Error(
+      'SMS configuration is missing. Please set SMS_API_KEY and SMS_BASE_URL'
+    );
+  }
+
+  const formattedPhoneNumbers = formatPhoneNumbers(phoneNumber);
+  const from = getSenderId(senderId);
+
+  const data = {
+    to: formattedPhoneNumbers,
+    from,
+    sms: message,
+    type,
+    api_key: config.sms.sms_api_key,
+    channel,
+  };
+
+  logger.info(
+    `Sending SMS to ${
+      Array.isArray(formattedPhoneNumbers)
+        ? formattedPhoneNumbers.join(', ')
+        : formattedPhoneNumbers
+    }`
   );
 
-  try {
-    const response = await axios.post(
-      `${config.sms.sendar_api_url}/sms/send`,
-      payload,
-      {
-        headers: {
-          'Api-key': config.sms.sms_api_key,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    logger.info('SMS dispatched successfully.');
-    return response.data;
-  } catch (error) {
-    const errorPayload = error.response?.data || error.message;
-    logger.error('SMS dispatch failed:', errorPayload);
-    throw error;
-  }
-}
+  const response = await makeApiRequest('/api/sms/send', data);
+  logger.info('SMS sent successfully', { response });
+  return response;
+};
 
 /**
- * Send OTP SMS to a single recipient
- * @param {Object} params
- * @param {string} params.recipient - Phone number in international format
- * @param {string} params.otp - OTP code
- * @param {string} [params.senderId]
+ * Parse sendOtpSms parameters (supports both object and individual parameters)
+ * @param {string|Object} phoneNumberOrOptions - Phone number or options object
+ * @param {string} [otp] - OTP code (if first param is string)
+ * @param {string} [senderId] - Optional sender ID (if first param is string)
+ * @returns {Object} - Parsed parameters { phoneNumber, otp, senderId }
  */
-async function sendOtpSms({ recipient, otp, senderId = DEFAULT_SENDER_ID }) {
-  if (!recipient || !otp) {
-    logger.warn('Missing recipient or OTP; skipping SMS send.');
-    return { skipped: true, reason: 'missing_data' };
+const parseOtpParameters = (phoneNumberOrOptions, otp, senderId = null) => {
+  if (
+    typeof phoneNumberOrOptions === 'object' &&
+    phoneNumberOrOptions !== null
+  ) {
+    return {
+      phoneNumber:
+        phoneNumberOrOptions.recipient || phoneNumberOrOptions.phoneNumber,
+      otp: phoneNumberOrOptions.otp,
+      senderId: phoneNumberOrOptions.senderId || null,
+    };
   }
 
-  const message = {
-    number: recipient,
-    body: `Your Saby OTP code is ${otp}. It expires in 10 minutes.`,
+  return {
+    phoneNumber: phoneNumberOrOptions,
+    otp,
+    senderId,
   };
-
-  return sendSms(senderId, [message]);
-}
+};
 
 /**
- * Retrieves SMS status by UID
- * @param {string} uid
- * @returns {Promise<object>}
+ * Send OTP SMS
+ * Supports both object parameter and individual parameters for backward compatibility
+ * @param {string|Object} phoneNumberOrOptions - Phone number (string) or options object with {recipient, otp, senderId}
+ * @param {string} [otp] - OTP code to send (if first param is string)
+ * @param {string} [senderId] - Optional sender ID (if first param is string)
+ * @returns {Promise<Object>} - API response
  */
-async function getSmsStatus(uid) {
-  if (provider !== PROVIDERS.SENDAR) {
-    logger.warn('SMS status retrieval not supported for this provider.');
-    return { skipped: true, reason: 'sms_not_configured' };
-  }
+const sendOtpSms = async (phoneNumberOrOptions, otp, senderId = null) => {
+  const {
+    phoneNumber,
+    otp: otpCode,
+    senderId: senderIdValue,
+  } = parseOtpParameters(phoneNumberOrOptions, otp, senderId);
 
-  if (!uid) {
-    logger.warn('Missing SMS UID; skipping status check.');
-    return { skipped: true, reason: 'missing_uid' };
-  }
+  const message = OTP_MESSAGE_TEMPLATE.replace('{otp}', otpCode);
+  return sendSms(
+    phoneNumber,
+    message,
+    senderIdValue,
+    DEFAULT_CHANNEL,
+    DEFAULT_TYPE
+  );
+};
 
-  try {
-    const response = await axios.get(
-      `${config.sms.sendar_api_url}/get/sms/${uid}`,
-      {
-        headers: {
-          'Api-key': config.sms.sms_api_key,
-        },
-      }
+/**
+ * Get SMS status (if supported by Termii API)
+ * @param {string} smsId - SMS ID from send response
+ * @returns {Promise<Object>} - SMS status
+ */
+const getSmsStatus = async (smsId) => {
+  if (!hasSmsConfig) {
+    throw new Error(
+      'SMS configuration is missing. Please set SMS_API_KEY and SMS_BASE_URL'
     );
-
-    logger.debug('SMS status retrieved successfully.', response.data);
-    return response.data;
-  } catch (error) {
-    const errorPayload = error.response?.data || error.message;
-    logger.error('Failed to fetch SMS status:', errorPayload);
-    throw error;
   }
-}
+
+  return makeApiRequest(
+    `/api/sms/${smsId}`,
+    { api_key: config.sms.sms_api_key },
+    'GET'
+  );
+};
 
 module.exports = {
   hasSmsConfig,
   sendSms,
   sendOtpSms,
   getSmsStatus,
+  formatPhoneNumber,
 };

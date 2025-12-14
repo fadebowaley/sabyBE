@@ -30,6 +30,12 @@ const queryNodes = {
     tenantId: Joi.string().pattern(/^[a-zA-Z0-9\-_]+$/),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),
+    sortBy: Joi.string(),
+    parent: Joi.alternatives()
+      .try(Joi.string().custom(objectId), Joi.valid('root', null))
+      .optional(),
+    type: Joi.string().valid('main', 'owner'),
+    search: Joi.string().trim().allow('').optional(),
     status: Joi.string().valid('active', 'archived', 'all').default('active'),
   }),
 };
@@ -86,6 +92,8 @@ const updateNodeById = {
           'Inactive',
           'Under Construction'
         ),
+        averageAttendance: Joi.number().min(0).allow(null),
+        averageIncome: Joi.number().min(0).allow(null),
       }),
       customFields: Joi.object(),
     })
@@ -153,6 +161,16 @@ const deactivateNode = {
   }),
 };
 
+// Validation schema for updating profile compliance
+const updateProfileCompliance = {
+  params: Joi.object().keys({
+    nodeId: Joi.string().custom(nodeIdentifier).required(),
+  }),
+  body: Joi.object().keys({
+    profileUpdateCompliant: Joi.boolean().required(),
+  }),
+};
+
 // Validation schema for assigning users to a node
 const assignUsersToNode = {
   params: Joi.object().keys({
@@ -209,6 +227,16 @@ const bulkImportNodes = {
   }),
 };
 
+const getNodeBranches = {
+  body: Joi.object().keys({
+    nodeIds: Joi.array()
+      .items(Joi.string().custom(nodeIdentifier))
+      .min(1)
+      .required(),
+    includeDeleted: Joi.boolean().optional(),
+  }),
+};
+
 module.exports = {
   createNode,
   queryNodes,
@@ -226,4 +254,6 @@ module.exports = {
   deactivateNode,
   assignUsersToNode,
   bulkImportNodes,
+  getNodeBranches,
+  updateProfileCompliance,
 };

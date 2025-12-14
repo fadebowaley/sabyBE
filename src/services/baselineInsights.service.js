@@ -1,6 +1,7 @@
 const logger = require('../config/logger');
 const { BaselineIntelligence } = require('../models');
 const { generateCustomFieldInsights } = require('./customFieldAnalytics.service');
+const baselineAnalysisConfigService = require('./baselineAnalysisConfig.service');
 
 /**
  * Baseline Insights Service
@@ -9,11 +10,16 @@ const { generateCustomFieldInsights } = require('./customFieldAnalytics.service'
 
 /**
  * Generate demographic insights
- * @param {Object} userMetrics 
+ * @param {Object} userMetrics
  * @param {string} context - 'node' or 'network'
+ * @param {Object} analysisConfig - BaselineAnalysisConfig (optional)
  * @returns {Array} insights
  */
-const generateDemographicInsights = (userMetrics, context = 'node') => {
+const generateDemographicInsights = (
+  userMetrics,
+  context = 'node',
+  analysisConfig = null
+) => {
   const insights = [];
   const { total, demographics, verification, hierarchy } = userMetrics;
 
@@ -24,15 +30,20 @@ const generateDemographicInsights = (userMetrics, context = 'node') => {
       text: `No users found in this ${context}.`,
       priority: 'medium',
       dataPoints: ['users.total'],
-      recommendations: ['Consider adding users to this node', 'Verify node configuration'],
+      recommendations: [
+        'Consider adding users to this node',
+        'Verify node configuration',
+      ],
     });
     return insights;
   }
 
   // Age distribution insights
   const ageGroups = demographics.ageGroups;
-  const totalWithAge = Object.values(ageGroups).reduce((sum, count) => sum + count, 0) - ageGroups.unknown;
-  
+  const totalWithAge =
+    Object.values(ageGroups).reduce((sum, count) => sum + count, 0) -
+    ageGroups.unknown;
+
   if (totalWithAge > 0) {
     const agePercentages = {
       under18: Math.round((ageGroups.under18 / totalWithAge) * 100),
@@ -43,15 +54,17 @@ const generateDemographicInsights = (userMetrics, context = 'node') => {
     };
 
     // Find dominant age group
-    const dominantAge = Object.entries(agePercentages)
-      .reduce((max, [group, percentage]) => percentage > max.percentage ? { group, percentage } : max, 
-        { group: 'unknown', percentage: 0 });
+    const dominantAge = Object.entries(agePercentages).reduce(
+      (max, [group, percentage]) =>
+        percentage > max.percentage ? { group, percentage } : max,
+      { group: 'unknown', percentage: 0 }
+    );
 
     if (dominantAge.percentage >= 40) {
       const ageLabel = {
         under18: 'under 18',
         '19to30': '19-30',
-        '31to45': '31-45', 
+        '31to45': '31-45',
         '46to60': '46-60',
         over60: 'over 60',
       }[dominantAge.group];
@@ -62,12 +75,13 @@ const generateDemographicInsights = (userMetrics, context = 'node') => {
         text: `Your ${context} workforce is predominantly aged ${ageLabel} (${dominantAge.percentage}% of members).`,
         priority: dominantAge.percentage >= 60 ? 'high' : 'medium',
         dataPoints: ['demographics.ageGroups', 'demographics.averageAge'],
-        recommendations: dominantAge.percentage >= 60 ? [
-          'Consider programs to attract other age groups',
-          'Plan for age diversity in leadership development',
-        ] : [
-          'Leverage this age group\'s strengths in planning',
-        ],
+        recommendations:
+          dominantAge.percentage >= 60
+            ? [
+                'Consider programs to attract other age groups',
+                'Plan for age diversity in leadership development',
+              ]
+            : ["Leverage this age group's strengths in planning"],
       });
     }
 
@@ -110,10 +124,12 @@ const generateDemographicInsights = (userMetrics, context = 'node') => {
   // Gender distribution insights
   const gender = demographics.gender;
   const totalWithGender = gender.male + gender.female + gender.other;
-  
+
   if (totalWithGender > 0) {
     const malePercentage = Math.round((gender.male / totalWithGender) * 100);
-    const femalePercentage = Math.round((gender.female / totalWithGender) * 100);
+    const femalePercentage = Math.round(
+      (gender.female / totalWithGender) * 100
+    );
 
     if (Math.abs(malePercentage - femalePercentage) > 30) {
       const dominant = malePercentage > femalePercentage ? 'male' : 'female';
@@ -126,7 +142,9 @@ const generateDemographicInsights = (userMetrics, context = 'node') => {
         priority: dominantPercentage > 70 ? 'high' : 'medium',
         dataPoints: ['demographics.gender'],
         recommendations: [
-          `Develop programs to attract more ${dominant === 'male' ? 'female' : 'male'} members`,
+          `Develop programs to attract more ${
+            dominant === 'male' ? 'female' : 'male'
+          } members`,
           'Review communication and outreach strategies',
         ],
       });
@@ -144,11 +162,17 @@ const generateDemographicInsights = (userMetrics, context = 'node') => {
 
   // Marital status insights
   const marital = demographics.maritalStatus;
-  const totalWithMarital = Object.values(marital).reduce((sum, count) => sum + count, 0) - marital.unknown;
-  
+  const totalWithMarital =
+    Object.values(marital).reduce((sum, count) => sum + count, 0) -
+    marital.unknown;
+
   if (totalWithMarital > 0) {
-    const singlePercentage = Math.round((marital.single / totalWithMarital) * 100);
-    const marriedPercentage = Math.round((marital.married / totalWithMarital) * 100);
+    const singlePercentage = Math.round(
+      (marital.single / totalWithMarital) * 100
+    );
+    const marriedPercentage = Math.round(
+      (marital.married / totalWithMarital) * 100
+    );
 
     if (singlePercentage > 70) {
       insights.push({
@@ -177,13 +201,29 @@ const generateDemographicInsights = (userMetrics, context = 'node') => {
     }
   }
 
-  // Verification insights
-  if (verification.emailRate < 50) {
+  // Get thresholds from config (with defaults)
+  const thresholds = analysisConfig?.globalSettings?.thresholds || {};
+  const complianceRateThreshold = thresholds.complianceRate || {
+    target: 80,
+    warning: 70,
+  };
+  const leadershipRatioThreshold = thresholds.leadershipRatio || {
+    optimal: { min: 15, max: 25 },
+    warning: { min: 10, max: 30 },
+  };
+
+  // Verification insights (using config thresholds)
+  const emailWarningThreshold = complianceRateThreshold.warning || 70;
+  const emailTargetThreshold = complianceRateThreshold.target || 80;
+
+  if (verification.emailRate < emailTargetThreshold) {
+    const priority =
+      verification.emailRate < emailWarningThreshold ? 'high' : 'medium';
     insights.push({
       type: 'demographic',
       category: 'verification',
-      text: `Low email verification rate (${verification.emailRate}%) limits digital engagement capabilities.`,
-      priority: verification.emailRate < 30 ? 'high' : 'medium',
+      text: `Low email verification rate (${verification.emailRate}%) limits digital engagement capabilities. Target: ${emailTargetThreshold}%.`,
+      priority,
       dataPoints: ['verification.emailRate'],
       recommendations: [
         'Launch email verification campaign',
@@ -193,12 +233,14 @@ const generateDemographicInsights = (userMetrics, context = 'node') => {
     });
   }
 
-  if (verification.phoneRate < 50) {
+  if (verification.phoneRate < emailTargetThreshold) {
+    const priority =
+      verification.phoneRate < emailWarningThreshold ? 'high' : 'medium';
     insights.push({
       type: 'demographic',
       category: 'verification',
-      text: `Low phone verification rate (${verification.phoneRate}%) may impact communication effectiveness.`,
-      priority: verification.phoneRate < 30 ? 'high' : 'medium',
+      text: `Low phone verification rate (${verification.phoneRate}%) may impact communication effectiveness. Target: ${emailTargetThreshold}%.`,
+      priority,
       dataPoints: ['verification.phoneRate'],
       recommendations: [
         'Encourage phone number verification',
@@ -207,46 +249,87 @@ const generateDemographicInsights = (userMetrics, context = 'node') => {
     });
   }
 
-  // Hierarchy insights
-  const totalHierarchy = hierarchy.owners + hierarchy.supers + hierarchy.ordinary + hierarchy.sabyUsers;
-  if (totalHierarchy > 0) {
-    const leadershipPercentage = Math.round(((hierarchy.owners + hierarchy.supers) / totalHierarchy) * 100);
-    
-    if (leadershipPercentage < 10) {
-      insights.push({
-        type: 'demographic',
-        category: 'leadership',
-        text: `Low leadership ratio (${leadershipPercentage}%) may indicate need for leadership development.`,
-        priority: 'high',
-        dataPoints: ['hierarchy'],
-        recommendations: [
-          'Implement leadership development programs',
-          'Identify and train potential leaders',
-          'Review organizational structure',
-        ],
-      });
-    } else if (leadershipPercentage > 30) {
-      insights.push({
-        type: 'demographic',
-        category: 'leadership',
-        text: `High leadership ratio (${leadershipPercentage}%) suggests strong organizational capacity.`,
-        priority: 'low',
-        dataPoints: ['hierarchy'],
-        recommendations: [
-          'Leverage leadership strength for expansion',
-          'Consider delegation opportunities',
-        ],
-      });
-    }
-  }
+  // Hierarchy insights (DISABLED - hierarchy computation was removed)
+  // We no longer track system roles (owners, supers, ordinary, sabyUsers)
+  // All hierarchy-related insights have been disabled since we only focus on Role model roles now
+  // if (false && hierarchy && typeof hierarchy === 'object') {
+  //   const totalHierarchy =
+  //     (hierarchy.owners || 0) +
+  //     (hierarchy.supers || 0) +
+  //     (hierarchy.ordinary || 0) +
+  //     (hierarchy.sabyUsers || 0);
+  //   if (totalHierarchy > 0) {
+  //     const leadershipPercentage = Math.round(
+  //       ((hierarchy.owners + hierarchy.supers) / totalHierarchy) * 100
+  //     );
+  //     const optimalMin = leadershipRatioThreshold.optimal?.min || 15;
+  //     const optimalMax = leadershipRatioThreshold.optimal?.max || 25;
+  //     const warningMin = leadershipRatioThreshold.warning?.min || 10;
+  //     const warningMax = leadershipRatioThreshold.warning?.max || 30;
+
+  //     if (leadershipPercentage < warningMin) {
+  //       insights.push({
+  //         type: 'demographic',
+  //         category: 'leadership',
+  //         text: `Low leadership ratio (${leadershipPercentage}%) is below warning threshold (${warningMin}%). Optimal range: ${optimalMin}-${optimalMax}%.`,
+  //         priority: 'high',
+  //         dataPoints: ['hierarchy'],
+  //         recommendations: [
+  //           'Implement leadership development programs',
+  //           'Identify and train potential leaders',
+  //           'Review organizational structure',
+  //         ],
+  //       });
+  //     } else if (leadershipPercentage > warningMax) {
+  //       insights.push({
+  //         type: 'demographic',
+  //         category: 'leadership',
+  //         text: `High leadership ratio (${leadershipPercentage}%) exceeds warning threshold (${warningMax}%). Optimal range: ${optimalMin}-${optimalMax}%.`,
+  //         priority: 'medium',
+  //         dataPoints: ['hierarchy'],
+  //         recommendations: [
+  //           'Review delegation and empowerment',
+  //           'Ensure effective use of leadership capacity',
+  //         ],
+  //       });
+  //     } else if (
+  //       leadershipPercentage < optimalMin ||
+  //       leadershipPercentage > optimalMax
+  //     ) {
+  //       insights.push({
+  //         type: 'demographic',
+  //         category: 'leadership',
+  //         text: `Leadership ratio (${leadershipPercentage}%) is outside optimal range (${optimalMin}-${optimalMax}%).`,
+  //         priority: 'low',
+  //         dataPoints: ['hierarchy'],
+  //         recommendations: [
+  //           'Monitor leadership ratio trends',
+  //           'Consider adjustments if needed',
+  //         ],
+  //       });
+  //     } else {
+  //       insights.push({
+  //         type: 'demographic',
+  //         category: 'leadership',
+  //         text: `Leadership ratio (${leadershipPercentage}%) is within optimal range (${optimalMin}-${optimalMax}%).`,
+  //         priority: 'low',
+  //         dataPoints: ['hierarchy'],
+  //         recommendations: [
+  //           'Maintain current leadership structure',
+  //           'Continue leadership development programs',
+  //         ],
+  //       });
+  //     }
+  //   }
+  // }
 
   return insights;
 };
 
 /**
  * Generate geographic insights
- * @param {Array} geography 
- * @param {string} context 
+ * @param {Array} geography
+ * @param {string} context
  * @returns {Array} insights
  */
 const generateGeographicInsights = (geography, context = 'node') => {
@@ -257,20 +340,24 @@ const generateGeographicInsights = (geography, context = 'node') => {
   }
 
   const totalUsers = geography.reduce((sum, geo) => sum + geo.count, 0);
-  
+
   // Sort by count to find dominant regions
   const sortedGeo = geography.sort((a, b) => b.count - a.count);
-  
+
   // Check for geographic concentration
   const topRegions = sortedGeo.slice(0, 3);
   const topRegionUsers = topRegions.reduce((sum, geo) => sum + geo.count, 0);
-  const concentrationPercentage = Math.round((topRegionUsers / totalUsers) * 100);
+  const concentrationPercentage = Math.round(
+    (topRegionUsers / totalUsers) * 100
+  );
 
   if (concentrationPercentage > 80 && geography.length > 3) {
     insights.push({
       type: 'geographic',
       category: 'concentration',
-      text: `High geographic concentration: ${concentrationPercentage}% of members from top 3 regions (${topRegions.map(g => g.state).join(', ')}).`,
+      text: `High geographic concentration: ${concentrationPercentage}% of members from top 3 regions (${topRegions
+        .map((g) => g.state)
+        .join(', ')}).`,
       priority: 'medium',
       dataPoints: ['geography'],
       recommendations: [
@@ -284,7 +371,9 @@ const generateGeographicInsights = (geography, context = 'node') => {
   // Identify dominant state/region
   if (sortedGeo.length > 0) {
     const dominantRegion = sortedGeo[0];
-    const dominantPercentage = Math.round((dominantRegion.count / totalUsers) * 100);
+    const dominantPercentage = Math.round(
+      (dominantRegion.count / totalUsers) * 100
+    );
 
     if (dominantPercentage > 50) {
       insights.push({
@@ -335,8 +424,8 @@ const generateGeographicInsights = (geography, context = 'node') => {
 
 /**
  * Generate facility insights
- * @param {Object} facility 
- * @param {string} context 
+ * @param {Object} facility
+ * @param {string} context
  * @returns {Array} insights
  */
 const generateFacilityInsights = (facility, context = 'node') => {
@@ -347,7 +436,7 @@ const generateFacilityInsights = (facility, context = 'node') => {
   // Property ownership insights
   if (facility.propertyStatus) {
     const status = facility.propertyStatus.toLowerCase();
-    
+
     if (status === 'rented') {
       insights.push({
         type: 'facility',
@@ -391,7 +480,7 @@ const generateFacilityInsights = (facility, context = 'node') => {
   // Facility status insights
   if (facility.facilityStatus) {
     const status = facility.facilityStatus.toLowerCase();
-    
+
     if (status === 'under construction') {
       insights.push({
         type: 'facility',
@@ -424,12 +513,14 @@ const generateFacilityInsights = (facility, context = 'node') => {
   // Establishment age insights
   if (facility.establishmentAge !== undefined) {
     const age = facility.establishmentAge;
-    
+
     if (age < 2) {
       insights.push({
         type: 'facility',
         category: 'maturity',
-        text: `New establishment (${age} year${age !== 1 ? 's' : ''} old) - focus on growth and stability.`,
+        text: `New establishment (${age} year${
+          age !== 1 ? 's' : ''
+        } old) - focus on growth and stability.`,
         priority: 'medium',
         dataPoints: ['facility.establishmentAge'],
         recommendations: [
@@ -469,7 +560,7 @@ const generateFacilityInsights = (facility, context = 'node') => {
   // Hierarchy insights
   if (facility.hierarchy) {
     const { depth, parentCount } = facility.hierarchy;
-    
+
     if (depth > 5) {
       insights.push({
         type: 'facility',
@@ -505,7 +596,7 @@ const generateFacilityInsights = (facility, context = 'node') => {
 
 /**
  * Generate network-level insights
- * @param {Object} networkMetrics 
+ * @param {Object} networkMetrics
  * @returns {Array} insights
  */
 const generateNetworkInsights = (networkMetrics) => {
@@ -513,13 +604,13 @@ const generateNetworkInsights = (networkMetrics) => {
 
   if (!networkMetrics) return insights;
 
-  const { 
-    totalNodes, 
-    activeNodes, 
-    nodesByProperty, 
+  const {
+    totalNodes,
+    activeNodes,
+    nodesByProperty,
     nodesByFacility,
     regionalDistribution,
-    establishmentStats 
+    establishmentStats,
   } = networkMetrics;
 
   // Network size insights
@@ -553,8 +644,10 @@ const generateNetworkInsights = (networkMetrics) => {
 
   // Node activity insights
   if (totalNodes > 0) {
-    const inactivePercentage = Math.round(((totalNodes - activeNodes) / totalNodes) * 100);
-    
+    const inactivePercentage = Math.round(
+      ((totalNodes - activeNodes) / totalNodes) * 100
+    );
+
     if (inactivePercentage > 20) {
       insights.push({
         type: 'operational',
@@ -572,10 +665,17 @@ const generateNetworkInsights = (networkMetrics) => {
   }
 
   // Property ownership insights
-  const totalPropertyNodes = Object.values(nodesByProperty).reduce((sum, count) => sum + count, 0);
+  const totalPropertyNodes = Object.values(nodesByProperty).reduce(
+    (sum, count) => sum + count,
+    0
+  );
   if (totalPropertyNodes > 0) {
-    const ownedPercentage = Math.round((nodesByProperty.owned / totalPropertyNodes) * 100);
-    const rentedPercentage = Math.round((nodesByProperty.rented / totalPropertyNodes) * 100);
+    const ownedPercentage = Math.round(
+      (nodesByProperty.owned / totalPropertyNodes) * 100
+    );
+    const rentedPercentage = Math.round(
+      (nodesByProperty.rented / totalPropertyNodes) * 100
+    );
 
     if (rentedPercentage > 60) {
       insights.push({
@@ -606,10 +706,15 @@ const generateNetworkInsights = (networkMetrics) => {
   }
 
   // Facility status insights
-  const totalFacilityNodes = Object.values(nodesByFacility).reduce((sum, count) => sum + count, 0);
+  const totalFacilityNodes = Object.values(nodesByFacility).reduce(
+    (sum, count) => sum + count,
+    0
+  );
   if (totalFacilityNodes > 0 && nodesByFacility.underConstruction > 0) {
-    const constructionPercentage = Math.round((nodesByFacility.underConstruction / totalFacilityNodes) * 100);
-    
+    const constructionPercentage = Math.round(
+      (nodesByFacility.underConstruction / totalFacilityNodes) * 100
+    );
+
     insights.push({
       type: 'facility',
       category: 'construction',
@@ -626,12 +731,21 @@ const generateNetworkInsights = (networkMetrics) => {
 
   // Regional distribution insights
   if (regionalDistribution && regionalDistribution.length > 0) {
-    const totalRegionalUsers = regionalDistribution.reduce((sum, region) => sum + region.users, 0);
-    const sortedRegions = regionalDistribution.sort((a, b) => b.users - a.users);
-    
+    const totalRegionalUsers = regionalDistribution.reduce(
+      (sum, region) => sum + region.users,
+      0
+    );
+    const sortedRegions = regionalDistribution.sort(
+      (a, b) => b.users - a.users
+    );
+
     if (sortedRegions.length >= 3) {
-      const topThreeUsers = sortedRegions.slice(0, 3).reduce((sum, region) => sum + region.users, 0);
-      const concentrationPercentage = Math.round((topThreeUsers / totalRegionalUsers) * 100);
+      const topThreeUsers = sortedRegions
+        .slice(0, 3)
+        .reduce((sum, region) => sum + region.users, 0);
+      const concentrationPercentage = Math.round(
+        (topThreeUsers / totalRegionalUsers) * 100
+      );
 
       if (concentrationPercentage > 75) {
         insights.push({
@@ -653,7 +767,7 @@ const generateNetworkInsights = (networkMetrics) => {
   // Establishment maturity insights
   if (establishmentStats) {
     const { averageAge, oldestNode, newestNode } = establishmentStats;
-    
+
     if (averageAge > 0) {
       if (averageAge < 3) {
         insights.push({
@@ -706,9 +820,10 @@ const generateNetworkInsights = (networkMetrics) => {
 /**
  * Generate all insights for baseline data
  * @param {Object} baseline - Baseline intelligence document
- * @returns {Array} all generated insights
+ * @param {string} tenantId - Tenant ID (optional, for fetching analysis config)
+ * @returns {Promise<Array>} all generated insights
  */
-const generateAllInsights = (baseline) => {
+const generateAllInsights = async (baseline, tenantId = null) => {
   const insights = [];
 
   if (!baseline || !baseline.metrics) {
@@ -717,12 +832,31 @@ const generateAllInsights = (baseline) => {
 
   const { type, metrics } = baseline;
 
-  // Generate user demographic insights
+  // Get analysis config if tenantId is provided
+  let userAnalysisConfig = null;
+  let nodeAnalysisConfig = null;
+  if (tenantId) {
+    try {
+      userAnalysisConfig =
+        await baselineAnalysisConfigService.getAnalysisConfig(tenantId, 'user');
+      nodeAnalysisConfig =
+        await baselineAnalysisConfigService.getAnalysisConfig(tenantId, 'node');
+    } catch (error) {
+      logger.error('Error fetching analysis config for insights:', error);
+      // Continue without config (backward compatible)
+    }
+  }
+
+  // Generate user demographic insights with config
   if (metrics.users) {
-    insights.push(...generateDemographicInsights(metrics.users, type));
-    
+    insights.push(
+      ...generateDemographicInsights(metrics.users, type, userAnalysisConfig)
+    );
+
     if (metrics.users.geography) {
-      insights.push(...generateGeographicInsights(metrics.users.geography, type));
+      insights.push(
+        ...generateGeographicInsights(metrics.users.geography, type)
+      );
     }
   }
 
@@ -736,24 +870,147 @@ const generateAllInsights = (baseline) => {
     insights.push(...generateNetworkInsights(metrics.network));
   }
 
-  // Generate custom field insights
+  // Generate custom field insights with analysis config
   if (metrics.customAnalytics) {
     if (metrics.customAnalytics.users) {
-      insights.push(...generateCustomFieldInsights(metrics.customAnalytics.users));
+      insights.push(
+        ...generateCustomFieldInsights(
+          metrics.customAnalytics.users,
+          userAnalysisConfig
+        )
+      );
     }
     if (metrics.customAnalytics.node) {
-      insights.push(...generateCustomFieldInsights(metrics.customAnalytics.node));
+      insights.push(
+        ...generateCustomFieldInsights(
+          metrics.customAnalytics.node,
+          nodeAnalysisConfig
+        )
+      );
     }
     if (metrics.customAnalytics.nodes) {
-      insights.push(...generateCustomFieldInsights(metrics.customAnalytics.nodes));
+      insights.push(
+        ...generateCustomFieldInsights(
+          metrics.customAnalytics.nodes,
+          nodeAnalysisConfig
+        )
+      );
     }
+  }
+
+  // Apply global insight rules from config
+  if (userAnalysisConfig?.globalSettings?.insightRules) {
+    const globalInsights = generateGlobalInsights(
+      metrics,
+      userAnalysisConfig.globalSettings.insightRules
+    );
+    insights.push(...globalInsights);
   }
 
   // Sort insights by priority
   const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
-  insights.sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]);
+  insights.sort(
+    (a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
+  );
 
   return insights;
+};;
+
+/**
+ * Generate insights from global insight rules
+ * @param {Object} metrics - Baseline metrics
+ * @param {Array} insightRules - Global insight rules from config
+ * @returns {Array} generated insights
+ */
+const generateGlobalInsights = (metrics, insightRules) => {
+  const insights = [];
+
+  if (!insightRules || !Array.isArray(insightRules)) {
+    return insights;
+  }
+
+  insightRules.forEach((rule) => {
+    if (!rule.enabled) {
+      return; // Skip disabled rules
+    }
+
+    try {
+      // Get metric value from nested metrics object
+      const metricValue = getNestedMetricValue(metrics, rule.metric);
+
+      if (metricValue === null || metricValue === undefined) {
+        return; // Metric not found, skip rule
+      }
+
+      // Evaluate condition
+      const conditionMet = evaluateInsightCondition(
+        metricValue,
+        rule.condition
+      );
+
+      if (conditionMet) {
+        insights.push({
+          type: 'global-rule',
+          category: 'custom',
+          text: rule.message,
+          priority: rule.priority || 'medium',
+          dataPoints: [rule.metric],
+          recommendations: rule.recommendations || [],
+        });
+      }
+    } catch (error) {
+      logger.error(`Error evaluating global insight rule "${rule.id}":`, error);
+    }
+  });
+
+  return insights;
+};
+
+/**
+ * Get nested metric value from metrics object
+ * @param {Object} metrics - Metrics object
+ * @param {string} metricPath - Dot-separated path (e.g., "users.hierarchy.owners")
+ * @returns {*} Metric value or null
+ */
+const getNestedMetricValue = (metrics, metricPath) => {
+  try {
+    const parts = metricPath.split('.');
+    let value = metrics;
+
+    for (const part of parts) {
+      if (value === null || value === undefined) {
+        return null;
+      }
+      value = value[part];
+    }
+
+    return value;
+  } catch (error) {
+    logger.error(
+      `Error getting nested metric value for "${metricPath}":`,
+      error
+    );
+    return null;
+  }
+};
+
+/**
+ * Evaluate insight condition (simple evaluator)
+ * @param {*} value - Metric value
+ * @param {string} condition - Condition string (e.g., "value < 50")
+ * @returns {boolean} Whether condition is met
+ */
+const evaluateInsightCondition = (value, condition) => {
+  try {
+    // Replace "value" with actual value
+    let evalString = condition.replace(/\bvalue\b/g, value);
+
+    // Evaluate the condition (use Function constructor for safety)
+    return new Function('return ' + evalString)();
+  } catch (error) {
+    logger.error(`Error evaluating condition "${condition}":`, error);
+    return false;
+  }
 };
 
 /**

@@ -7,7 +7,8 @@
  */
 
 const express = require('express');
-const auth = require('../../middlewares/auth');
+const { hybridAuth } = require('../../middlewares/apiKeyAuth');
+const requireAccess = require('../../middlewares/requireAccess');
 const validate = require('../../middlewares/validate');
 const validationReportValidation = require('../../validations/validationReport.validation');
 const validationReportController = require('../../controllers/validationReport.controller');
@@ -18,7 +19,8 @@ const router = express.Router();
 router
   .route('/')
   .get(
-    auth(),
+    hybridAuth(),
+    requireAccess('validation:read'),
     validate(validationReportValidation.getValidations),
     validationReportController.getValidations
   );
@@ -26,7 +28,8 @@ router
 router
   .route('/stats')
   .get(
-    auth(),
+    hybridAuth(),
+    requireAccess('validation:read'),
     validate(validationReportValidation.getValidationStats),
     validationReportController.getValidationStats
   );
@@ -34,7 +37,8 @@ router
 router
   .route('/failed')
   .get(
-    auth(),
+    hybridAuth(),
+    requireAccess('validation:read'),
     validate(validationReportValidation.getFailedValidations),
     validationReportController.getFailedValidations
   );
@@ -42,7 +46,8 @@ router
 router
   .route('/errors')
   .get(
-    auth(),
+    hybridAuth(),
+    requireAccess('validation:read'),
     validate(validationReportValidation.getValidationErrors),
     validationReportController.getValidationErrors
   );
@@ -50,7 +55,8 @@ router
 router
   .route('/submission/:id')
   .get(
-    auth(),
+    hybridAuth(),
+    requireAccess('validation:read'),
     validate(validationReportValidation.getValidationsBySubmission),
     validationReportController.getValidationsBySubmission
   );
@@ -58,12 +64,14 @@ router
 router
   .route('/:id')
   .get(
-    auth(),
+    hybridAuth(),
+    requireAccess('validation:read'),
     validate(validationReportValidation.getValidationById),
     validationReportController.getValidationById
   )
   .delete(
-    auth(),
+    hybridAuth(),
+    requireAccess('validation:delete'),
     validate(validationReportValidation.deleteValidation),
     validationReportController.deleteValidation
   );
@@ -72,7 +80,8 @@ router
 router
   .route('/:id/resolve')
   .patch(
-    auth(),
+    hybridAuth(),
+    requireAccess('validation:update'),
     validate(validationReportValidation.resolveValidation),
     validationReportController.resolveValidation
   );
@@ -80,7 +89,8 @@ router
 router
   .route('/bulk-resolve')
   .post(
-    auth(),
+    hybridAuth(),
+    requireAccess('validation:update'),
     validate(validationReportValidation.bulkResolveValidations),
     validationReportController.bulkResolveValidations
   );

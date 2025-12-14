@@ -144,59 +144,82 @@ const mapNodeToDimension = async (nodeDoc) => {
 };
 
 const upsertNodeDimension = async (nodeDoc) => {
-  const payload = await mapNodeToDimension(nodeDoc);
-  if (!payload) {
-    return;
-  }
-
-  const columns = [
-    'node_id',
-    'node_code',
-    'tenant_id',
-    'node_name',
-    'node_reference',
-    'structure_id',
-    'structure_name',
-    'level_id',
-    'level_name',
-    'parent_node_id',
-    'lineage_ids',
-    'lineage_codes',
-    'lineage_names',
-    'lineage_refs',
-    'depth',
-    'is_active',
-    'is_main',
-    'updated_at',
-  ];
-
-  const values = columns.map((column) => {
-    if (column === 'updated_at') {
-      return new Date();
+  try {
+    const payload = await mapNodeToDimension(nodeDoc);
+    if (!payload) {
+      logger.warn(`[NodeSync] No payload generated for node ${nodeDoc?._id || 'unknown'}`);
+      return;
     }
-    return payload[column];
-  });
 
-  const placeholders = columns.map((_, index) => `$${index + 1}`).join(', ');
-  const updateAssignments = columns
-    .filter((column) => column !== 'node_id')
-    .map((column) => `${column} = EXCLUDED.${column}`)
-    .join(', ');
+    const columns = [
+      'node_id',
+      'node_code',
+      'tenant_id',
+      'node_name',
+      'node_reference',
+      'structure_id',
+      'structure_name',
+      'level_id',
+      'level_name',
+      'parent_node_id',
+      'lineage_ids',
+      'lineage_codes',
+      'lineage_names',
+      'lineage_refs',
+      'depth',
+      'is_active',
+      'is_main',
+      'updated_at',
+    ];
 
-  const sql = `
-    INSERT INTO node_dimension (${columns.join(', ')})
-    VALUES (${placeholders})
-    ON CONFLICT (node_id)
-    DO UPDATE SET ${updateAssignments}
-  `;
+    const values = columns.map((column) => {
+      if (column === 'updated_at') {
+        return new Date();
+      }
+      return payload[column];
+    });
 
-  await postgresPool.query(sql, values);
+    const placeholders = columns.map((_, index) => `$${index + 1}`).join(', ');
+    const updateAssignments = columns
+      .filter((column) => column !== 'node_id')
+      .map((column) => `${column} = EXCLUDED.${column}`)
+      .join(', ');
+
+    const sql = `
+      INSERT INTO node_dimension (${columns.join(', ')})
+      VALUES (${placeholders})
+      ON CONFLICT (node_id)
+      DO UPDATE SET ${updateAssignments}
+    `;
+
+    await postgresPool.query(sql, values);
+  } catch (error) {
+    // Log detailed error information but don't crash
+    logger.error(`[NodeSync] Failed to upsert node dimension: ${error.message}`);
+    logger.error(`[NodeSync] Node ID: ${nodeDoc?._id || 'unknown'}`);
+    logger.error(`[NodeSync] Error stack: ${error.stack}`);
+    
+    // If it's a connection error, it will be handled by the pool error handler
+    // For other errors (constraints, etc.), we log and continue
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+      logger.error('[NodeSync] Postgres connection error - check database connectivity');
+    }
+    
+    // Re-throw only critical errors that should stop processing
+    // For now, we catch all errors to prevent nodeSync from crashing
+    // The change stream will continue processing other nodes
+  }
 };
 
 const deleteNodeDimension = async (nodeId) => {
-  await postgresPool.query('DELETE FROM node_dimension WHERE node_id = $1', [
-    nodeId,
-  ]);
+  try {
+    await postgresPool.query('DELETE FROM node_dimension WHERE node_id = $1', [
+      nodeId,
+    ]);
+  } catch (error) {
+    logger.error(`[NodeSync] Failed to delete node dimension ${nodeId}: ${error.message}`);
+    // Don't re-throw - allow processing to continue
+  }
 };
 
 const handleChangeEvent = async (change) => {
@@ -206,7 +229,15 @@ const handleChangeEvent = async (change) => {
       if (nodeId) {
         await deleteNodeDimension(nodeId);
         logger.info(`[NodeSync] Deleted node ${nodeId} from dimension table`);
+      } else {
+        logger.warn('[NodeSync] Delete event received but no node ID found');
       }
+      return;
+    }
+
+    const nodeId = change.documentKey?._id?.toString();
+    if (!nodeId) {
+      logger.warn('[NodeSync] Change event received but no node ID found');
       return;
     }
 
@@ -220,13 +251,26 @@ const handleChangeEvent = async (change) => {
         .lean({ virtuals: false }));
 
     if (!doc) {
+      logger.warn(`[NodeSync] Node ${nodeId} not found in database - skipping sync`);
+      return;
+    }
+
+    // Check if node is deleted (soft delete)
+    if (doc.deletedAt) {
+      logger.info(`[NodeSync] Node ${nodeId} is soft-deleted - removing from dimension table`);
+      await deleteNodeDimension(nodeId);
       return;
     }
 
     await upsertNodeDimension(Nodes.hydrate(doc));
-    logger.info(`[NodeSync] Upserted node ${doc._id} into dimension table`);
+    logger.info(`[NodeSync] Upserted node ${nodeId} into dimension table`);
   } catch (error) {
     logger.error(`[NodeSync] Failed to process change event: ${error.message}`);
+    logger.error(`[NodeSync] Change event: ${JSON.stringify(change, null, 2)}`);
+    if (error.stack) {
+      logger.error(`[NodeSync] Error stack: ${error.stack}`);
+    }
+    // Don't re-throw - allow change stream to continue processing other events
   }
 };
 

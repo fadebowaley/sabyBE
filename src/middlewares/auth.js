@@ -55,30 +55,52 @@ const verifyCallback =
       // eslint-disable-next-line no-console
       console.log('🔍 Required Rights:', requiredRights);
 
+      // Normalize permission format (support both old and new during migration)
+      const normalizePermission = (permission) => {
+        if (!permission || typeof permission !== 'string') {
+          return permission;
+        }
+        // Special cases
+        if (permission === '*' || permission === 'all:*') {
+          return '*';
+        }
+        // If already in new format (resource:action), extract resource
+        if (
+          permission.match(
+            /^[a-z]+[A-Z]?[a-z]*:(read|create|update|delete|manage|import|export|assign|restore|activate|deactivate|move|upload|download|share|copy|publish|archive|submit|process|complete|cancel|refund|regenerate|deleteAll|toggleStatus|assignRole|sendMessage|forgotPassword|resetPassword|verify|refresh|send|draft|retry|public|private|permissions|status|auth)$/
+          )
+        ) {
+          return permission.split(':')[0]; // Return resource part
+        }
+        // Old format (action:resource) - extract resource
+        const parts = permission.split(':');
+        if (parts.length >= 2) {
+          const resourceParts = parts
+            .slice(1)
+            .filter((p) => p && !p.startsWith('::'));
+          if (resourceParts.length > 0) {
+            return resourceParts[0];
+          }
+        }
+        return permission;
+      };
+
       // Precompile regex patterns for resource matching
       const resourceRegexMap = new Map();
       // Regex to match the resource part of the required right (after the first colon and before any other colons)
       const resourceRegex = /^[a-zA-Z]+:([a-zA-Z]+)/;
 
       requiredRights.forEach((right) => {
-        // Extract the resource part from each right using regex
-        const match = right.match(resourceRegex);
+        // Extract resource from permission (supports both formats)
+        const resource = normalizePermission(right);
 
-        if (match) {
-          const resource = match[1]; // The part after the colon (e.g., 'user', 'payment')
+        // eslint-disable-next-line no-console
+        console.log(`🔍 Extracted Resource from "${right}": "${resource}"`);
 
-          // eslint-disable-next-line no-console
-          console.log(`🔍 Extracted Resource from "${right}": "${resource}"`);
-          // eslint-disable-next-line no-console
-          console.log(`🔍 Resource type: ${typeof resource}`);
-          // eslint-disable-next-line no-console
-          console.log(`🔍 Resource length: ${resource.length}`);
-
-          // If the resource is valid and hasn't been added to the map, create the regex for it
-          if (resource && !resourceRegexMap.has(resource)) {
-            const regex = new RegExp(`(^|:|-)${resource}($|:|-)`, 'i');
-            resourceRegexMap.set(resource, regex);
-          }
+        // If the resource is valid and hasn't been added to the map, create the regex for it
+        if (resource && resource !== '*' && !resourceRegexMap.has(resource)) {
+          const regex = new RegExp(`(^|:|-)${resource}($|:|-)`, 'i');
+          resourceRegexMap.set(resource, regex);
         }
       });
 
@@ -153,6 +175,64 @@ const verifyCallback =
     // eslint-disable-next-line no-console
     console.log('User is a regular user. Checking name-based permissions...');
 
+    // Normalize permission format (support both old and new during migration)
+    const normalizePermission = (permission) => {
+      if (!permission || typeof permission !== 'string') {
+        return permission;
+      }
+      // Special cases
+      if (permission === '*' || permission === 'all:*') {
+        return '*';
+      }
+      // If already in new format (resource:action), return as-is
+      if (
+        permission.match(
+          /^[a-z]+[A-Z]?[a-z]*:(read|create|update|delete|manage|import|export|assign|restore|activate|deactivate|move|upload|download|share|copy|publish|archive|submit|process|complete|cancel|refund|regenerate|deleteAll|toggleStatus|assignRole|sendMessage|forgotPassword|resetPassword|verify|refresh|send|draft|retry|public|private|permissions|status|auth)$/
+        )
+      ) {
+        return permission;
+      }
+      // Try to load mapping if available
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const mappingFile = path.join(
+          __dirname,
+          '../scripts/permissions/permission-mapping-simple.json'
+        );
+        if (fs.existsSync(mappingFile)) {
+          const mapping = JSON.parse(fs.readFileSync(mappingFile, 'utf8'));
+          if (mapping[permission]) {
+            return mapping[permission];
+          }
+        }
+      } catch (error) {
+        // If mapping file doesn't exist or can't be read, continue with fallback logic
+      }
+      // Fallback: Try to convert old format to new format
+      const parts = permission.split(':');
+      if (parts.length >= 2) {
+        const action = parts[0];
+        const resourceParts = parts
+          .slice(1)
+          .filter((p) => p && !p.startsWith('::'));
+        if (resourceParts.length > 0) {
+          const resource = resourceParts[0];
+          const actionMap = {
+            view: 'read',
+            create: 'create',
+            update: 'update',
+            delete: 'delete',
+            manage: 'manage',
+            read: 'read',
+          };
+          const newAction = actionMap[action] || action;
+          return `${resource}:${newAction}`;
+        }
+      }
+      return permission;
+    };
+
     // Fast lookup for regular users
     const userRoles = await Role.find({ _id: { $in: user.roles } }).populate(
       'permissions'
@@ -160,11 +240,23 @@ const verifyCallback =
     const userPermissions = userRoles.flatMap((role) => role.permissions);
     const userPermissionNames = new Set(userPermissions.map((p) => p.name));
 
-    const hasWildcardPermission = userPermissionNames.has('*');
+    // Normalize user permissions (support both formats)
+    const normalizedUserPerms =
+      Array.from(userPermissionNames).map(normalizePermission);
+    const normalizedUserPermSet = new Set(normalizedUserPerms);
 
-    const hasRequiredRights = requiredRights.every(
-      (right) => userPermissionNames.has(right) || hasWildcardPermission
-    );
+    const hasWildcardPermission =
+      userPermissionNames.has('*') || normalizedUserPermSet.has('*');
+
+    const hasRequiredRights = requiredRights.every((right) => {
+      const normalizedRight = normalizePermission(right);
+      // Check both original and normalized formats
+      return (
+        userPermissionNames.has(right) ||
+        normalizedUserPermSet.has(normalizedRight) ||
+        hasWildcardPermission
+      );
+    });
 
     if (!hasRequiredRights) {
       return reject(

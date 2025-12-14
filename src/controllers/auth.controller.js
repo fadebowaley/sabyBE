@@ -1,5 +1,6 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
+const ApiError = require('../utils/ApiError');
 const {
   authService,
   userService,
@@ -7,6 +8,7 @@ const {
   emailService,
   apiKeyService,
 } = require('../services');
+const { Role } = require('../models');
 const logger = require('../config/logger');
 
 /**
@@ -59,8 +61,61 @@ const register = catchAsync(async (req, res) => {
  */
 const login = catchAsync(async (req, res) => {
   const { email, password } = req.body;
-  const user = await authService.loginUserWithEmailAndPassword(email, password);
+
+  // Check if API key was successfully validated by middleware
+  // req.apiKey is set by apiKeyAuth.optional() middleware if validation succeeded
+  const hasApiKey = !!req.apiKey;
+
+  // Pass API key context to login service for channel restrictions
+  const user = await authService.loginUserWithEmailAndPassword(
+    email,
+    password,
+    'web',
+    { hasApiKey }
+  );
   const tokens = await tokenService.generateAuthTokens(user);
+
+  // Populate role permissions for isAdmin and Regular users
+  let permissions = [];
+  if (
+    (user.isAdmin || (!user.isOwner && !user.isSuper && !user.isSaby)) &&
+    user.roles &&
+    user.roles.length > 0
+  ) {
+    const userRoles = await Role.find({ _id: { $in: user.roles } }).populate(
+      'permissions'
+    );
+
+    const allPermissions = new Set();
+    userRoles.forEach((role) => {
+      if (role.permissions && Array.isArray(role.permissions)) {
+        role.permissions.forEach((perm) => {
+          const permName =
+            typeof perm === 'string' ? perm : perm.name || perm._id?.toString();
+          if (permName) {
+            allPermissions.add(permName);
+          }
+        });
+      }
+    });
+
+    permissions = Array.from(allPermissions);
+
+    if (user.isAdmin) {
+      logger.info(
+        `[AuthController.login] isAdmin user permissions from roles: ${JSON.stringify(
+          permissions
+        )} (${permissions.length} permissions)`
+      );
+      if (permissions.length === 0) {
+        logger.warn(
+          `[AuthController.login] WARNING: isAdmin user has NO permissions! User roles: ${JSON.stringify(
+            user.roles
+          )}`
+        );
+      }
+    }
+  }
 
   // Send comprehensive user data for frontend
   const userResponse = {
@@ -77,12 +132,14 @@ const login = catchAsync(async (req, res) => {
     isOwner: user.isOwner,
     isSuper: user.isSuper,
     isSaby: user.isSaby,
+    isAdmin: user.isAdmin,
     isAgreed: user.isAgreed,
     isEmailVerified: user.isEmailVerified,
     isPhoneVerified: user.isPhoneVerified,
     status: user.status,
     createdAt: user.createdAt,
     roles: user.roles,
+    permissions: permissions.length > 0 ? permissions : undefined, // Only include if populated
   };
 
   res.send({ user: userResponse, tokens });

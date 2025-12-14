@@ -15,56 +15,56 @@ const router = express.Router();
 // Get compliance summary
 router.get(
   '/summary',
-  auth('view:compliance'),
+  auth('compliance:read'),
   eventComplianceController.getSummary
 );
 
 // Get compliance dashboard
 router.get(
   '/dashboard',
-  auth('view:compliance'),
+  auth('compliance:read'),
   eventComplianceController.getDashboard
 );
 
 // Recalculate compliance
 router.post(
   '/recalculate/:submissionId',
-  auth('manage:compliance'),
+  auth('compliance:manage'),
   eventComplianceController.recalculate
 );
 
 // Lock submission
 router.post(
   '/lock/:submissionId',
-  auth('manage:compliance'),
+  auth('compliance:manage'),
   eventComplianceController.lockSubmission
 );
 
 // Unlock submission (admin only)
 router.post(
   '/unlock/:submissionId',
-  auth('manage:compliance'),
+  auth('compliance:manage'),
   eventComplianceController.unlockSubmission
 );
 
 // Get compliance report for a node
 router.get(
   '/report/:nodeId/:month',
-  auth('view:compliance'),
+  auth('compliance:read'),
   eventComplianceController.getReport
 );
 
 // Get compliance history for a node
 router.get(
   '/history/:nodeId',
-  auth('view:compliance'),
+  auth('compliance:read'),
   eventComplianceController.getHistory
 );
 
 // Get compliance tracking for a specific node/month
 router.get(
   '/:nodeId/:month',
-  auth('view:compliance'),
+  auth('compliance:read'),
   eventComplianceController.getTracking
 );
 

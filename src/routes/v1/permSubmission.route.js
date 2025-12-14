@@ -16,56 +16,56 @@ const router = express.Router();
 // Validate submission data (dry-run)
 router.post(
   '/validate',
-  auth('create:submission'),
+  auth('submission:create'),
   permSubmissionController.validateData
 );
 
 // Get compliance summary
 router.get(
   '/compliance/summary',
-  auth('view:compliance'),
+  auth('compliance:read'),
   permSubmissionController.getComplianceSummary
 );
 
 // Submit PERM data (upsert with merge)
 router.post(
   '/',
-  requireAccess('create:submission'),
+  requireAccess('submission:create'),
   permSubmissionController.submitData
 );
 
 // Get all submissions for a month
 router.get(
   '/',
-  auth('view:submission'),
+  auth('submission:read'),
   permSubmissionController.getSubmissions
 );
 
 // Lock submission
 router.post(
   '/:id/lock',
-  auth('manage:submission'),
+  auth('submission:manage'),
   permSubmissionController.lockSubmission
 );
 
 // Unlock submission (admin only)
 router.post(
   '/:id/unlock',
-  auth('manage:submission'),
+  auth('submission:manage'),
   permSubmissionController.unlockSubmission
 );
 
 // Delete submission (soft delete)
 router.delete(
   '/:id',
-  auth('manage:submission'),
+  auth('submission:manage'),
   permSubmissionController.deleteSubmission
 );
 
 // Get submission by node and month
 router.get(
   '/:nodeId/:month',
-  auth('view:submission'),
+  auth('submission:read'),
   permSubmissionController.getSubmission
 );
 

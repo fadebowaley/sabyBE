@@ -2,16 +2,23 @@ const { Pool } = require('pg');
 const config = require('./config');
 const logger = require('./logger');
 
+// Determine the correct host - if running locally (not in Docker), use localhost
+// Docker service name 'postgres' only works inside Docker network
+const isRunningInDocker = process.env.DOCKER_ENV === 'true' || process.env.POSTGRES_HOST === 'postgres';
+const postgresHost = config.postgres.host === 'postgres' && !isRunningInDocker 
+  ? 'localhost' 
+  : config.postgres.host;
+
 // Create a PostgreSQL connection pool
 const postgresPool = new Pool({
-  host: config.postgres.host,
+  host: postgresHost,
   port: config.postgres.port,
   user: config.postgres.user,
   password: config.postgres.password,
   database: config.postgres.database,
   max: 20, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 10000, // Return an error after 10 seconds for network databases
+  connectionTimeoutMillis: 30000, // Increased to 30 seconds for better reliability
   ssl: false, // Try without SSL first
 });
 
@@ -19,7 +26,7 @@ const postgresPool = new Pool({
 const testConnection = async () => {
   try {
     logger.info('🔄 Testing PostgreSQL connection...');
-    logger.info(`📊 Host: ${config.postgres.host}:${config.postgres.port}`);
+    logger.info(`📊 Host: ${postgresHost}:${config.postgres.port} (resolved from ${config.postgres.host})`);
     logger.info(`👤 User: ${config.postgres.user}`);
     logger.info(`🗄️  Database: ${config.postgres.database}`);
 
@@ -47,7 +54,7 @@ const testConnection = async () => {
     }
 
     logger.error(
-      `   Connection String: postgresql://${config.postgres.user}:***@${config.postgres.host}:${config.postgres.port}/${config.postgres.database}`
+      `   Connection String: postgresql://${config.postgres.user}:***@${postgresHost}:${config.postgres.port}/${config.postgres.database}`
     );
     return false;
   }

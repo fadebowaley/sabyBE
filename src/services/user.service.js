@@ -518,7 +518,8 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     currentUser &&
     (updateBody.isSaby !== undefined ||
       updateBody.isOwner !== undefined ||
-      updateBody.isSuper !== undefined)
+      updateBody.isSuper !== undefined ||
+      updateBody.isAdmin !== undefined)
   ) {
     console.log(
       `🔒 [UserService.updateUserById] Privilege change detected, validating authorization...`
@@ -640,6 +641,42 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
         `✅ [UserService.updateUserById] SuperUser privilege change authorized`
       );
     }
+
+    // Admin privilege management
+    if (updateBody.isAdmin !== undefined) {
+      console.log(
+        `👔 [UserService.updateUserById] Admin privilege change: ${user.isAdmin} → ${updateBody.isAdmin}`
+      );
+
+      // Owner, SuperUser, or SabyUser can manage Admin privilege
+      if (!currentUser.isOwner && !currentUser.isSuper && !currentUser.isSaby) {
+        console.warn(
+          `⚠️ [UserService.updateUserById] Unauthorized Admin management attempt by ${currentUser.firstname} ${currentUser.lastname}`
+        );
+        throw new ApiError(
+          httpStatus.FORBIDDEN,
+          'Only Owner, SuperUser, or SabyUser can manage Admin privileges'
+        );
+      }
+
+      // Cannot promote SabyUser, SuperUser, or Owner to Admin (they already have higher privileges)
+      if (
+        updateBody.isAdmin === true &&
+        (user.isSaby || user.isSuper || user.isOwner)
+      ) {
+        console.warn(
+          `⚠️ [UserService.updateUserById] Cannot add Admin flag to user with higher privileges`
+        );
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          'Cannot add Admin privilege to SabyUser, SuperUser, or Owner'
+        );
+      }
+
+      console.log(
+        `✅ [UserService.updateUserById] Admin privilege change authorized`
+      );
+    }
   }
 
   // Separate user fields from profile fields
@@ -648,21 +685,26 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     'lastname',
     'email',
     'phone',
+    'phoneNumber', // phoneNumber is a user field, not a profile field
     'password',
     'userId',
     'isSaby',
     'isSuper',
     'isOwner',
+    'isAdmin',
     'isActive',
     'isEmailVerified',
     'roles',
     'tenantId',
+    'profileUpdateCompliant',
+    'profileUpdateCompliantAt',
+    'profileUpdateCompliantBy',
   ];
 
   const profileFields = [
     'title',
     'otherName',
-    'phoneNumber',
+    // phoneNumber removed - it's a user field, not a profile field
     'gender',
     'dateOfBirth',
     'highestQualification',
@@ -683,12 +725,25 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     'employmentCategory',
     'occupation',
     'employeeId',
+    'officeTitle',
   ];
 
   // Extract user-specific fields and profile fields
   const userUpdate = {};
   const profileUpdate = {};
 
+  // Handle nested profile object
+  if (updateBody.profile && typeof updateBody.profile === 'object') {
+    Object.keys(updateBody.profile).forEach((key) => {
+      if (profileFields.includes(key)) {
+        profileUpdate[key] = updateBody.profile[key];
+      }
+    });
+    // Remove profile from updateBody to avoid processing it again
+    delete updateBody.profile;
+  }
+
+  // Handle top-level profile fields
   Object.keys(updateBody).forEach((key) => {
     if (userFields.includes(key)) {
       userUpdate[key] = updateBody[key];
@@ -724,6 +779,27 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
       user.customFieldsVersion = version;
     }
 
+    // Update profile if profile fields exist (BEFORE saving)
+    if (Object.keys(profileUpdate).length > 0) {
+      console.log(
+        `📝 [UserService.updateUserById] Updating profile fields:`,
+        Object.keys(profileUpdate)
+      );
+      // Initialize profile object if it doesn't exist
+      if (!user.profile) {
+        user.profile = {};
+      }
+      // Update profile fields
+      Object.keys(profileUpdate).forEach((key) => {
+        user.profile[key] = profileUpdate[key];
+      });
+      // Mark profile as modified for Mongoose to save it
+      user.markModified('profile');
+      console.log(
+        `✅ [UserService.updateUserById] Profile fields updated successfully`
+      );
+    }
+
     await user.save();
     console.log(
       `✅ [UserService.updateUserById] User updated successfully: ${user.firstname} ${user.lastname}`
@@ -731,20 +807,6 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     console.log(
       `🎖️ [UserService.updateUserById] New privileges: isSaby=${user.isSaby}, isSuper=${user.isSuper}, isOwner=${user.isOwner}`
     );
-
-    // Update profile if profile fields exist
-    if (Object.keys(profileUpdate).length > 0) {
-      console.log(
-        `⚠️ [UserService.updateUserById] Profile fields detected but userProfile model doesn't exist - skipping profile update`
-      );
-      console.log(
-        `📋 [UserService.updateUserById] Profile fields that were skipped:`,
-        Object.keys(profileUpdate)
-      );
-      // TODO: Implement userProfile.model if profile functionality is needed
-      // const UserProfile = require('../models/userProfile.model');
-      // await UserProfile.findOneAndUpdate(...)
-    }
 
     return user;
   } catch (error) {
@@ -875,6 +937,133 @@ const assignRoles = async (userId, inputRoles) => {
   return user;
 };
 
+/**
+ * Get profile update leaderboard
+ * Ranks users by most recent profile updates
+ * @param {string} tenantId
+ * @param {string} timeframe - 'all', '24h', '7d', '30d'
+ * @param {number} limit
+ * @returns {Promise<Object>}
+ */
+const getProfileUpdateLeaderboard = async (
+  tenantId,
+  timeframe = 'all',
+  limit = 50
+) => {
+  try {
+    // Build date filter based on timeframe
+    const dateFilter = {};
+    const now = new Date();
+
+    if (timeframe === '24h') {
+      dateFilter.updatedAt = {
+        $gte: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+      };
+    } else if (timeframe === '7d') {
+      dateFilter.updatedAt = {
+        $gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+      };
+    } else if (timeframe === '30d') {
+      dateFilter.updatedAt = {
+        $gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+      };
+    }
+
+    // Get users sorted by most recent profile update
+    const users = await User.find({
+      tenantId,
+      ...dateFilter,
+      profile: { $exists: true, $ne: null },
+    })
+      .sort({ updatedAt: -1 })
+      .limit(limit)
+      .lean();
+
+    // Get nodes for users
+    const { Nodes } = require('../models');
+    const userIds = users.map((u) => u._id);
+    const nodes = await Nodes.find({
+      tenantId,
+      users: { $in: userIds },
+      deletedAt: null,
+    })
+      .populate('level', 'name')
+      .lean();
+
+    // Create node map by user
+    const nodeMapByUser = new Map();
+    for (const node of nodes) {
+      for (const userId of node.users || []) {
+        const userIdStr = userId.toString();
+        if (!nodeMapByUser.has(userIdStr)) {
+          nodeMapByUser.set(userIdStr, node);
+        }
+      }
+    }
+
+    // Build leaderboard
+    const leaderboard = users.map((user, index) => {
+      const userIdStr = user._id.toString();
+      const userNode = nodeMapByUser.get(userIdStr);
+
+      const diffInMs = now.getTime() - new Date(user.updatedAt).getTime();
+      const daysAgo = Math.floor(diffInMs / (24 * 60 * 60 * 1000));
+
+      return {
+        rank: index + 1,
+        id: userIdStr,
+        userId: user.userId || user.haloId || userIdStr,
+        fullName: `${user.firstname || ''} ${user.lastname || ''}`.trim(),
+        email: user.email,
+        phoneNumber: user.phoneNumber || '',
+        avatar: user.avatar || '',
+        nodeName: userNode?.name || null,
+        nodeLevel: userNode?.level?.name || null,
+        profileUpdatedAt: user.updatedAt,
+        profileUpdateCompliant: user.profileUpdateCompliant || false,
+        profileUpdateCompliantAt: user.profileUpdateCompliantAt || null,
+        daysAgo,
+      };
+    });
+
+    // Calculate stats
+    const allUsers = await User.find({ tenantId }).lean();
+    const last24h = allUsers.filter(
+      (u) =>
+        u.updatedAt &&
+        new Date(u.updatedAt).getTime() >= now.getTime() - 24 * 60 * 60 * 1000
+    ).length;
+    const last7d = allUsers.filter(
+      (u) =>
+        u.updatedAt &&
+        new Date(u.updatedAt).getTime() >=
+          now.getTime() - 7 * 24 * 60 * 60 * 1000
+    ).length;
+    const last30d = allUsers.filter(
+      (u) =>
+        u.updatedAt &&
+        new Date(u.updatedAt).getTime() >=
+          now.getTime() - 30 * 24 * 60 * 60 * 1000
+    ).length;
+
+    return {
+      leaderboard,
+      stats: {
+        totalUpdates: allUsers.length,
+        last24Hours: last24h,
+        last7Days: last7d,
+        last30Days: last30d,
+        averageUpdateTime: 0,
+      },
+    };
+  } catch (error) {
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Failed to get profile update leaderboard'
+    );
+  }
+};
+
 module.exports = {
   createUser,
   queryUsers,
@@ -894,4 +1083,5 @@ module.exports = {
   getUserRoles,
   getUserNodes,
   buildUserResponse,
+  getProfileUpdateLeaderboard,
 };

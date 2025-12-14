@@ -42,7 +42,7 @@ router.get(
  *         name: environment
  *         schema:
  *           type: string
- *           enum: [production, development, staging]
+ *           enum: [production, staging]
  *         description: Filter by environment
  *       - in: query
  *         name: isActive

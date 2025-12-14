@@ -25,7 +25,6 @@ const createSabyUser = catchAsync(async (req, res) => {
 const bulkCreate = catchAsync(async (req, res) => {
   const createdBy = req.user.id;
   const { tenantId } = req.user;
-  console.log(req.user);
   // Validate that createdBy is a valid ObjectId if required
 
   // Call the bulkCreate method from the user service
@@ -142,22 +141,22 @@ const restoreUser = catchAsync(async (req, res) => {
 
 // getting all users or users based on tenantid of owner
 const getUsers = catchAsync(async (req, res) => {
-  const filter = pick(req.query, [
+  let filter = pick(req.query, [
     'firstname',
     'lastname',
     'userId',
     'email',
     'avatar',
   ]);
-  const { q } = req.query;
+  const searchTerm = (req.query.search || req.query.q || '').trim();
 
   // If userId is passed (10-digit string), search by that field directly
   if (filter.userId) {
     filter.userId = filter.userId;
   }
   // If 'q' is present, override filters with regex OR search
-  if (q) {
-    const regex = new RegExp(q, 'i'); // case-insensitive
+  if (searchTerm) {
+    const regex = new RegExp(searchTerm, 'i'); // case-insensitive
     filter = {
       $or: [
         { firstname: regex },
@@ -170,11 +169,6 @@ const getUsers = catchAsync(async (req, res) => {
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
   options.populate = 'roles';
   options.user = req.user; // Add the user object to options for tenant filtering and hierarchy
-
-  console.log(
-    `[getUsers] User: ${req.user.email}, isSaby: ${req.user.isSaby}, isSuper: ${req.user.isSuper}, isOwner: ${req.user.isOwner}, tenantId: ${req.user.tenantId}`
-  );
-
   const result = await userService.queryUsers(filter, options);
   res.send(result);
 });
@@ -246,9 +240,54 @@ const getUserNodes = catchAsync(async (req, res) => {
   res.send(nodes);
 });
 
+/**
+ * Update profile update compliance status
+ * @param {Object} req
+ * @param {Object} res
+ */
+const updateProfileCompliance = catchAsync(async (req, res) => {
+  const { userId } = req.params;
+  const { profileUpdateCompliant } = req.body;
+  const currentUser = req.user;
+
+  if (typeof profileUpdateCompliant !== 'boolean') {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'profileUpdateCompliant must be a boolean value'
+    );
+  }
+
+  const user = await userService.getUserById(userId);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  // SECURITY: Verify user belongs to same tenant
+  if (user.tenantId !== currentUser.tenantId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Access denied - user belongs to different tenant'
+    );
+  }
+
+  // Update compliance fields
+  user.profileUpdateCompliant = profileUpdateCompliant;
+  user.profileUpdateCompliantAt = profileUpdateCompliant ? new Date() : null;
+  user.profileUpdateCompliantBy = profileUpdateCompliant ? currentUser._id : null;
+
+  await user.save();
+
+  res.send({
+    success: true,
+    data: userService.buildUserResponse(user),
+    message: profileUpdateCompliant
+      ? 'Profile update marked as compliant'
+      : 'Profile update compliance removed',
+  });
+});
+
 const softDeleteUser = catchAsync(async (req, res) => {
   const { userId } = req.params; // Get the userId from URL parameters
-  console.log('user-look', userId);
   const { deletedUser, error } = await userService.softDeleteUserById(userId);
   if (error) {
     throw new ApiError(httpStatus.NOT_FOUND, error);
@@ -263,6 +302,26 @@ const softDeleteUser = catchAsync(async (req, res) => {
 const assignRoles = catchAsync(async (req, res) => {
   const userRole = await userService.assignRoles(req.params.id, req.body.roles);
   res.send(userRole);
+});
+
+/**
+ * Get profile update leaderboard
+ * @route GET /v1/users/profile-update-leaderboard
+ */
+const getProfileUpdateLeaderboard = catchAsync(async (req, res) => {
+  const { tenantId } = req.user;
+  const { timeframe = 'all', limit = 50 } = req.query;
+
+  const result = await userService.getProfileUpdateLeaderboard(
+    tenantId,
+    timeframe,
+    parseInt(limit, 10)
+  );
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    data: result,
+  });
 });
 
 module.exports = {
@@ -280,5 +339,7 @@ module.exports = {
   assignRoles,
   getUserRoles,
   getUserNodes,
+  updateProfileCompliance,
+  getProfileUpdateLeaderboard,
   // bulk create
 };

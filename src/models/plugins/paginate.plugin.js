@@ -83,14 +83,22 @@ const paginate = (schema) => {
     const countPromise = this.countDocuments(filter).exec();
     let docsPromise = this.find(filter).sort(sort).skip(skip).limit(limit);
 
+    if (options.select) {
+      docsPromise = docsPromise.select(options.select);
+    }
+
     if (options.populate) {
-      options.populate.split(',').forEach((populateOption) => {
-        docsPromise = docsPromise.populate(
-          populateOption
-            .split('.')
-            .reverse()
-            .reduce((a, b) => ({ path: b, populate: a }))
-        );
+      const populateOptions = Array.isArray(options.populate)
+        ? options.populate
+        : options.populate.split(',').map((populateOption) =>
+            populateOption
+              .split('.')
+              .reverse()
+              .reduce((a, b) => ({ path: b, populate: a }))
+          );
+
+      populateOptions.forEach((populateOption) => {
+        docsPromise = docsPromise.populate(populateOption);
       });
     }
 

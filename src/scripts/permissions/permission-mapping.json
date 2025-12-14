@@ -1,0 +1,902 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2025-12-08T08:06:22.444Z",
+  "stats": {
+    "total": 273,
+    "mapped": 273,
+    "unmapped": 0,
+    "duplicates": 99
+  },
+  "mapping": {
+    "create:admin": "admin:create",
+    "view:admin": "admin:read",
+    "view:admin::adminId": "admin:read",
+    "update:admin::adminId": "admin:update",
+    "delete:admin::adminId": "admin:delete",
+    "view:admin::tenantId": "admin:read",
+    "delete:admin:all": "admin:delete",
+    "view:apiKey": "apiKey:read",
+    "create:apiKey": "apiKey:create",
+    "view:apiKey::keyId": "apiKey:read",
+    "update:apiKey::keyId": "apiKey:update",
+    "delete:apiKey::keyId": "apiKey:delete",
+    "view:apiKey:analytics": "apiKey:read",
+    "create:apiKey:regenerate": "apiKey:regenerate",
+    "create:app": "app:create",
+    "view:app": "app:read",
+    "create:app:bulk-create": "app:import",
+    "view:app::appId": "app:read",
+    "update:app::appId": "app:update",
+    "delete:app::appId": "app:delete",
+    "view:app::userId": "app:read",
+    "delete:app::tenantId": "app:delete",
+    "create:auth:register": "auth:create",
+    "create:auth:login": "auth:create",
+    "create:auth:logout": "auth:create",
+    "create:auth:refresh-tokens": "auth:refresh",
+    "create:auth:forgot-password": "auth:forgotPassword",
+    "create:auth:reset-password": "auth:resetPassword",
+    "create:auth:send-verification-email": "auth:create",
+    "create:auth:verify-email": "auth:verify",
+    "create:auth:verify-otp": "auth:verify",
+    "create:auth:resend-otp": "auth:verify",
+    "create:capture": "capture:create",
+    "view:capture": "capture:read",
+    "create:capture:bulk-create": "capture:import",
+    "view:capture::captureId": "capture:read",
+    "update:capture::captureId": "capture:update",
+    "delete:capture::captureId": "capture:delete",
+    "view:capture::datapointId": "capture:read",
+    "delete:capture::tenantId": "capture:delete",
+    "create:collection": "collection:create",
+    "view:collection": "collection:read",
+    "view:collection::collectionId": "collection:read",
+    "update:collection::collectionId": "collection:update",
+    "delete:collection::collectionId": "collection:delete",
+    "create:data": "data:create",
+    "view:data::dataId": "data:read",
+    "update:data::dataId": "data:update",
+    "delete:data::dataId": "data:delete",
+    "view:data": "data:read",
+    "create:data:import": "data:import",
+    "view:data:export": "data:export",
+    "update:data:public": "data:public",
+    "update:data:private": "data:private",
+    "create:department": "department:create",
+    "view:department": "department:read",
+    "view:department::departmentId": "department:read",
+    "update:department::departmentId": "department:update",
+    "delete:department::departmentId": "department:delete",
+    "create:department:import": "department:import",
+    "view:department:export": "department:export",
+    "view:docs": "docs:read",
+    "create:event": "event:create",
+    "view:event": "event:read",
+    "view:event::eventId": "event:read",
+    "update:event::eventId": "event:update",
+    "delete:event::eventId": "event:delete",
+    "create:event:import": "event:import",
+    "delete:event:deleteAll": "event:deleteAll",
+    "view:event:dateRange": "event:read",
+    "view:event::programId": "event:read",
+    "create:eventConfig": "eventConfig:create",
+    "view:eventConfig": "eventConfig:read",
+    "view:eventConfig::eventConfigId": "eventConfig:read",
+    "update:eventConfig::eventConfigId": "eventConfig:update",
+    "delete:eventConfig::eventConfigId": "eventConfig:delete",
+    "delete:eventConfig:deleteAll": "eventConfig:deleteAll",
+    "view:eventConfig::eventId": "eventConfig:read",
+    "create:inmail": "inmail:create",
+    "view:inmail": "inmail:read",
+    "view:inmail::inmailId": "inmail:read",
+    "update:inmail::inmailId": "inmail:update",
+    "delete:inmail::inmailId": "inmail:delete",
+    "create:inmail:send": "inmail:send",
+    "create:inmail:draft": "inmail:draft",
+    "create:level": "level:create",
+    "view:level": "level:read",
+    "view:level:next": "level:read",
+    "view:level:previous": "level:read",
+    "view:level:hierarchy": "level:read",
+    "view:level::levelId": "level:read",
+    "update:level::levelId": "level:update",
+    "delete:level::levelId": "level:delete",
+    "view:level:parent": "level:read",
+    "view:level:children": "level:read",
+    "update:level:activate": "level:activate",
+    "update:level:deactivate": "level:deactivate",
+    "update:level:move": "level:move",
+    "create:node": "node:create",
+    "view:node": "node:read",
+    "create:node:bulk-import": "node:import",
+    "view:node::nodeId": "node:read",
+    "update:node::nodeId": "node:update",
+    "delete:node::nodeId": "node:delete",
+    "view:node:type": "node:read",
+    "view:node:parent": "node:read",
+    "view:node:children": "node:read",
+    "update:node:move": "node:move",
+    "view:node:path": "node:read",
+    "update:node:activate": "node:activate",
+    "update:node:deactivate": "node:deactivate",
+    "update:node:assign-users": "node:update",
+    "create:payment": "payment:create",
+    "view:payment": "payment:read",
+    "view:payment::paymentId": "payment:read",
+    "update:payment::paymentId": "payment:update",
+    "delete:payment::paymentId": "payment:delete",
+    "view:payment::reference": "payment:read",
+    "view:payment:status": "payment:status",
+    "view:payment::userId": "payment:read",
+    "update:payment:process": "payment:process",
+    "update:payment:complete": "payment:complete",
+    "update:payment:cancel": "payment:cancel",
+    "update:payment:refund": "payment:refund",
+    "view:payment:receipt": "payment:read",
+    "create:permission": "permission:create",
+    "view:permission": "permission:read",
+    "view:permission::permissionName": "permission:read",
+    "update:permission::permissionName": "permission:update",
+    "delete:permission::permissionName": "permission:delete",
+    "create:permission:bulk": "permission:create",
+    "view:postgres:status": "postgres:status",
+    "create:postgres:test-table": "postgres:create",
+    "view:postgres:test-data": "postgres:read",
+    "delete:postgres:cleanup": "postgres:delete",
+    "create:program": "program:create",
+    "view:program": "program:read",
+    "create:program:bulk-import": "program:import",
+    "view:program::programId": "program:read",
+    "update:program::programId": "program:update",
+    "delete:program::programId": "program:delete",
+    "delete:program:delete-all": "program:deleteAll",
+    "update:program:assign": "program:assign",
+    "create:projectForm": "projectForm:create",
+    "view:projectForm": "projectForm:read",
+    "view:projectForm::tenantId": "projectForm:read",
+    "view:projectForm::userId": "projectForm:read",
+    "view:projectForm:search": "projectForm:read",
+    "view:projectForm:stats": "projectForm:read",
+    "view:projectForm::projectId": "projectForm:read",
+    "view:projectForm:analytics": "projectForm:read",
+    "create:projectForm:submit": "projectForm:submit",
+    "view:projectForm::projectFormId": "projectForm:read",
+    "update:projectForm::projectFormId": "projectForm:update",
+    "update:projectForm::projectId": "projectForm:update",
+    "delete:projectForm::projectFormId": "projectForm:delete",
+    "update:projectForm:delete": "projectForm:update",
+    "update:projectForm:restore": "projectForm:restore",
+    "update:projectForm:publish": "projectForm:publish",
+    "update:projectForm:archive": "projectForm:archive",
+    "create:projectForm:bulk": "projectForm:create",
+    "create:projectFormSubmission": "projectFormSubmission:create",
+    "view:projectFormSubmission": "projectFormSubmission:read",
+    "view:projectFormSubmission::projectId": "projectFormSubmission:read",
+    "view:projectFormSubmission::tenantId": "projectFormSubmission:read",
+    "view:projectFormSubmission:stats": "projectFormSubmission:read",
+    "view:projectFormSubmission:export": "projectFormSubmission:export",
+    "view:projectFormSubmission::submissionId": "projectFormSubmission:read",
+    "update:projectFormSubmission:status": "projectFormSubmission:status",
+    "delete:projectFormSubmission::submissionId": "projectFormSubmission:delete",
+    "create:report": "report:create",
+    "view:report": "report:read",
+    "create:report:bulk-import": "report:import",
+    "view:report::reportId": "report:read",
+    "update:report::reportId": "report:update",
+    "delete:report::reportId": "report:delete",
+    "delete:report:delete-all": "report:deleteAll",
+    "view:role:templates": "role:read",
+    "create:role": "role:create",
+    "view:role": "role:read",
+    "delete:role": "role:delete",
+    "view:role::roleId": "role:read",
+    "update:role::roleId": "role:update",
+    "delete:role::roleId": "role:delete",
+    "view:role:permissions": "role:permissions",
+    "update:role:permissions": "role:permissions",
+    "delete:role:permissions": "role:permissions",
+    "create:role:bulk": "role:create",
+    "create:settings": "settings:create",
+    "view:settings": "settings:read",
+    "view:settings::settingId": "settings:read",
+    "update:settings::settingId": "settings:update",
+    "delete:settings::settingId": "settings:delete",
+    "delete:settings::nodeId": "settings:delete",
+    "create:settings:assign": "settings:assign",
+    "create:statement": "statement:create",
+    "view:statement": "statement:read",
+    "view:statement::statementId": "statement:read",
+    "update:statement::statementId": "statement:update",
+    "delete:statement::statementId": "statement:delete",
+    "view:statement::nodeId": "statement:read",
+    "view:statement::collectionId": "statement:read",
+    "create:storage:upload": "storage:upload",
+    "create:storage:upload-multiple": "storage:create",
+    "view:storage": "storage:read",
+    "view:storage:search": "storage:read",
+    "view:storage:stats": "storage:read",
+    "view:storage::fileId": "storage:read",
+    "delete:storage::fileId": "storage:delete",
+    "create:storage:share": "storage:share",
+    "create:storage:move": "storage:move",
+    "create:storage:copy": "storage:copy",
+    "view:storage::shareToken": "storage:read",
+    "view:storage:download": "storage:download",
+    "create:storageFolder": "storageFolder:create",
+    "view:storageFolder": "storageFolder:read",
+    "view:storageFolder:root": "storageFolder:read",
+    "view:storageFolder::folderId": "storageFolder:read",
+    "view:storageFolder:contents": "storageFolder:read",
+    "view:storageFolder:hierarchy": "storageFolder:read",
+    "update:storageFolder::folderId": "storageFolder:update",
+    "delete:storageFolder::folderId": "storageFolder:delete",
+    "create:storageFolder:move": "storageFolder:move",
+    "create:storageFolder:share": "storageFolder:share",
+    "view:storageFolder::shareToken": "storageFolder:read",
+    "create:structure": "structure:create",
+    "view:structure": "structure:read",
+    "view:structure::structureId": "structure:read",
+    "update:structure::structureId": "structure:update",
+    "delete:structure::structureId": "structure:delete",
+    "view:submission:activity-log": "submission:read",
+    "view:submission:summary": "submission:read",
+    "create:submission": "submission:create",
+    "view:submission": "submission:read",
+    "view:submission::form_id": "submission:read",
+    "delete:submission::form_id": "submission:delete",
+    "create:submission:retry": "submission:retry",
+    "create:telegramWebApp:auth": "telegramWebApp:auth",
+    "view:telegramWebApp:projects": "telegramWebApp:read",
+    "view:telegramWebApp::projectId": "telegramWebApp:read",
+    "create:telegramWebApp:submit": "telegramWebApp:submit",
+    "view:telegramWebApp:status": "telegramWebApp:status",
+    "create:user": "user:create",
+    "view:user": "user:read",
+    "view:user::userId": "user:read",
+    "create:user:bulk-create": "user:import",
+    "update:user::userId": "user:update",
+    "delete:user::userId": "user:delete",
+    "create:user:restore": "user:restore",
+    "create:user::userId": "user:create",
+    "update:user:assign-roles": "user:assignRole",
+    "create:userFormSettings": "userFormSettings:create",
+    "view:userFormSettings": "userFormSettings:read",
+    "view:userFormSettings::settingsId": "userFormSettings:read",
+    "view:userFormSettings::userId": "userFormSettings:read",
+    "update:userFormSettings::settingsId": "userFormSettings:update",
+    "update:userFormSettings::userId": "userFormSettings:update",
+    "delete:userFormSettings::settingsId": "userFormSettings:delete",
+    "delete:userFormSettings::userId": "userFormSettings:delete",
+    "view:whatsapp:webhook": "whatsapp:read",
+    "create:whatsapp:webhook": "whatsapp:create",
+    "create:whatsapp:send-message": "whatsapp:sendMessage",
+    "view:whatsapp:status": "whatsapp:status",
+    "create:whatsapp:restart": "whatsapp:create",
+    "view:whatsapp:sessions": "whatsapp:read",
+    "delete:whatsapp::phoneNumber": "whatsapp:delete"
+  },
+  "reverseMapping": {
+    "admin:create": [
+      "create:admin"
+    ],
+    "admin:read": [
+      "view:admin",
+      "view:admin::adminId",
+      "view:admin::tenantId"
+    ],
+    "admin:update": [
+      "update:admin::adminId",
+      "update:admin::adminId"
+    ],
+    "admin:delete": [
+      "delete:admin::adminId",
+      "delete:admin:all"
+    ],
+    "apiKey:read": [
+      "view:apiKey",
+      "view:apiKey::keyId",
+      "view:apiKey:analytics"
+    ],
+    "apiKey:create": [
+      "create:apiKey"
+    ],
+    "apiKey:update": [
+      "update:apiKey::keyId"
+    ],
+    "apiKey:delete": [
+      "delete:apiKey::keyId"
+    ],
+    "apiKey:regenerate": [
+      "create:apiKey:regenerate"
+    ],
+    "app:create": [
+      "create:app"
+    ],
+    "app:read": [
+      "view:app",
+      "view:app::appId",
+      "view:app::userId"
+    ],
+    "app:import": [
+      "create:app:bulk-create"
+    ],
+    "app:update": [
+      "update:app::appId",
+      "update:app::appId",
+      "update:app::appId"
+    ],
+    "app:delete": [
+      "delete:app::appId",
+      "delete:app::tenantId"
+    ],
+    "auth:create": [
+      "create:auth:register",
+      "create:auth:login",
+      "create:auth:logout",
+      "create:auth:send-verification-email"
+    ],
+    "auth:refresh": [
+      "create:auth:refresh-tokens"
+    ],
+    "auth:forgotPassword": [
+      "create:auth:forgot-password"
+    ],
+    "auth:resetPassword": [
+      "create:auth:reset-password"
+    ],
+    "auth:verify": [
+      "create:auth:verify-email",
+      "create:auth:verify-otp",
+      "create:auth:resend-otp"
+    ],
+    "capture:create": [
+      "create:capture"
+    ],
+    "capture:read": [
+      "view:capture",
+      "view:capture::captureId",
+      "view:capture::datapointId",
+      "view:capture::datapointId"
+    ],
+    "capture:import": [
+      "create:capture:bulk-create"
+    ],
+    "capture:update": [
+      "update:capture::captureId"
+    ],
+    "capture:delete": [
+      "delete:capture::captureId",
+      "delete:capture::tenantId"
+    ],
+    "collection:create": [
+      "create:collection"
+    ],
+    "collection:read": [
+      "view:collection",
+      "view:collection::collectionId"
+    ],
+    "collection:update": [
+      "update:collection::collectionId"
+    ],
+    "collection:delete": [
+      "delete:collection::collectionId"
+    ],
+    "data:create": [
+      "create:data"
+    ],
+    "data:read": [
+      "view:data::dataId",
+      "view:data"
+    ],
+    "data:update": [
+      "update:data::dataId"
+    ],
+    "data:delete": [
+      "delete:data::dataId"
+    ],
+    "data:import": [
+      "create:data:import"
+    ],
+    "data:export": [
+      "view:data:export"
+    ],
+    "data:public": [
+      "update:data:public"
+    ],
+    "data:private": [
+      "update:data:private"
+    ],
+    "department:create": [
+      "create:department"
+    ],
+    "department:read": [
+      "view:department",
+      "view:department::departmentId"
+    ],
+    "department:update": [
+      "update:department::departmentId"
+    ],
+    "department:delete": [
+      "delete:department::departmentId"
+    ],
+    "department:import": [
+      "create:department:import"
+    ],
+    "department:export": [
+      "view:department:export"
+    ],
+    "docs:read": [
+      "view:docs"
+    ],
+    "event:create": [
+      "create:event"
+    ],
+    "event:read": [
+      "view:event",
+      "view:event::eventId",
+      "view:event:dateRange",
+      "view:event::programId"
+    ],
+    "event:update": [
+      "update:event::eventId"
+    ],
+    "event:delete": [
+      "delete:event::eventId"
+    ],
+    "event:import": [
+      "create:event:import"
+    ],
+    "event:deleteAll": [
+      "delete:event:deleteAll"
+    ],
+    "eventConfig:create": [
+      "create:eventConfig"
+    ],
+    "eventConfig:read": [
+      "view:eventConfig",
+      "view:eventConfig::eventConfigId",
+      "view:eventConfig::eventId"
+    ],
+    "eventConfig:update": [
+      "update:eventConfig::eventConfigId"
+    ],
+    "eventConfig:delete": [
+      "delete:eventConfig::eventConfigId"
+    ],
+    "eventConfig:deleteAll": [
+      "delete:eventConfig:deleteAll"
+    ],
+    "inmail:create": [
+      "create:inmail"
+    ],
+    "inmail:read": [
+      "view:inmail",
+      "view:inmail::inmailId"
+    ],
+    "inmail:update": [
+      "update:inmail::inmailId"
+    ],
+    "inmail:delete": [
+      "delete:inmail::inmailId"
+    ],
+    "inmail:send": [
+      "create:inmail:send"
+    ],
+    "inmail:draft": [
+      "create:inmail:draft"
+    ],
+    "level:create": [
+      "create:level"
+    ],
+    "level:read": [
+      "view:level",
+      "view:level:next",
+      "view:level:previous",
+      "view:level:hierarchy",
+      "view:level::levelId",
+      "view:level:parent",
+      "view:level:children"
+    ],
+    "level:update": [
+      "update:level::levelId"
+    ],
+    "level:delete": [
+      "delete:level::levelId"
+    ],
+    "level:activate": [
+      "update:level:activate"
+    ],
+    "level:deactivate": [
+      "update:level:deactivate"
+    ],
+    "level:move": [
+      "update:level:move"
+    ],
+    "node:create": [
+      "create:node"
+    ],
+    "node:read": [
+      "view:node",
+      "view:node::nodeId",
+      "view:node:type",
+      "view:node:parent",
+      "view:node:children",
+      "view:node:path"
+    ],
+    "node:import": [
+      "create:node:bulk-import"
+    ],
+    "node:update": [
+      "update:node::nodeId",
+      "update:node:assign-users"
+    ],
+    "node:delete": [
+      "delete:node::nodeId"
+    ],
+    "node:move": [
+      "update:node:move"
+    ],
+    "node:activate": [
+      "update:node:activate"
+    ],
+    "node:deactivate": [
+      "update:node:deactivate"
+    ],
+    "payment:create": [
+      "create:payment"
+    ],
+    "payment:read": [
+      "view:payment",
+      "view:payment::paymentId",
+      "view:payment::reference",
+      "view:payment::userId",
+      "view:payment:receipt"
+    ],
+    "payment:update": [
+      "update:payment::paymentId"
+    ],
+    "payment:delete": [
+      "delete:payment::paymentId"
+    ],
+    "payment:status": [
+      "view:payment:status"
+    ],
+    "payment:process": [
+      "update:payment:process"
+    ],
+    "payment:complete": [
+      "update:payment:complete"
+    ],
+    "payment:cancel": [
+      "update:payment:cancel"
+    ],
+    "payment:refund": [
+      "update:payment:refund"
+    ],
+    "permission:create": [
+      "create:permission",
+      "create:permission:bulk"
+    ],
+    "permission:read": [
+      "view:permission",
+      "view:permission::permissionName"
+    ],
+    "permission:update": [
+      "update:permission::permissionName"
+    ],
+    "permission:delete": [
+      "delete:permission::permissionName"
+    ],
+    "postgres:status": [
+      "view:postgres:status"
+    ],
+    "postgres:create": [
+      "create:postgres:test-table"
+    ],
+    "postgres:read": [
+      "view:postgres:test-data"
+    ],
+    "postgres:delete": [
+      "delete:postgres:cleanup"
+    ],
+    "program:create": [
+      "create:program"
+    ],
+    "program:read": [
+      "view:program",
+      "view:program::programId"
+    ],
+    "program:import": [
+      "create:program:bulk-import"
+    ],
+    "program:update": [
+      "update:program::programId"
+    ],
+    "program:delete": [
+      "delete:program::programId"
+    ],
+    "program:deleteAll": [
+      "delete:program:delete-all"
+    ],
+    "program:assign": [
+      "update:program:assign"
+    ],
+    "projectForm:create": [
+      "create:projectForm",
+      "create:projectForm:bulk"
+    ],
+    "projectForm:read": [
+      "view:projectForm",
+      "view:projectForm::tenantId",
+      "view:projectForm::userId",
+      "view:projectForm:search",
+      "view:projectForm:stats",
+      "view:projectForm::projectId",
+      "view:projectForm::projectId",
+      "view:projectForm:analytics",
+      "view:projectForm::projectFormId"
+    ],
+    "projectForm:submit": [
+      "create:projectForm:submit"
+    ],
+    "projectForm:update": [
+      "update:projectForm::projectFormId",
+      "update:projectForm::projectId",
+      "update:projectForm:delete"
+    ],
+    "projectForm:delete": [
+      "delete:projectForm::projectFormId"
+    ],
+    "projectForm:restore": [
+      "update:projectForm:restore"
+    ],
+    "projectForm:publish": [
+      "update:projectForm:publish"
+    ],
+    "projectForm:archive": [
+      "update:projectForm:archive"
+    ],
+    "projectFormSubmission:create": [
+      "create:projectFormSubmission"
+    ],
+    "projectFormSubmission:read": [
+      "view:projectFormSubmission",
+      "view:projectFormSubmission::projectId",
+      "view:projectFormSubmission::tenantId",
+      "view:projectFormSubmission:stats",
+      "view:projectFormSubmission::submissionId"
+    ],
+    "projectFormSubmission:export": [
+      "view:projectFormSubmission:export"
+    ],
+    "projectFormSubmission:status": [
+      "update:projectFormSubmission:status"
+    ],
+    "projectFormSubmission:delete": [
+      "delete:projectFormSubmission::submissionId"
+    ],
+    "report:create": [
+      "create:report"
+    ],
+    "report:read": [
+      "view:report",
+      "view:report::reportId"
+    ],
+    "report:import": [
+      "create:report:bulk-import"
+    ],
+    "report:update": [
+      "update:report::reportId"
+    ],
+    "report:delete": [
+      "delete:report::reportId"
+    ],
+    "report:deleteAll": [
+      "delete:report:delete-all"
+    ],
+    "role:read": [
+      "view:role:templates",
+      "view:role",
+      "view:role::roleId"
+    ],
+    "role:create": [
+      "create:role",
+      "create:role:bulk"
+    ],
+    "role:delete": [
+      "delete:role",
+      "delete:role::roleId"
+    ],
+    "role:update": [
+      "update:role::roleId"
+    ],
+    "role:permissions": [
+      "view:role:permissions",
+      "update:role:permissions",
+      "delete:role:permissions"
+    ],
+    "settings:create": [
+      "create:settings"
+    ],
+    "settings:read": [
+      "view:settings",
+      "view:settings::settingId"
+    ],
+    "settings:update": [
+      "update:settings::settingId"
+    ],
+    "settings:delete": [
+      "delete:settings::settingId",
+      "delete:settings::nodeId"
+    ],
+    "settings:assign": [
+      "create:settings:assign"
+    ],
+    "statement:create": [
+      "create:statement"
+    ],
+    "statement:read": [
+      "view:statement",
+      "view:statement::statementId",
+      "view:statement::nodeId",
+      "view:statement::collectionId"
+    ],
+    "statement:update": [
+      "update:statement::statementId"
+    ],
+    "statement:delete": [
+      "delete:statement::statementId"
+    ],
+    "storage:upload": [
+      "create:storage:upload"
+    ],
+    "storage:create": [
+      "create:storage:upload-multiple"
+    ],
+    "storage:read": [
+      "view:storage",
+      "view:storage:search",
+      "view:storage:stats",
+      "view:storage::fileId",
+      "view:storage::shareToken"
+    ],
+    "storage:delete": [
+      "delete:storage::fileId"
+    ],
+    "storage:share": [
+      "create:storage:share"
+    ],
+    "storage:move": [
+      "create:storage:move"
+    ],
+    "storage:copy": [
+      "create:storage:copy"
+    ],
+    "storage:download": [
+      "view:storage:download"
+    ],
+    "storageFolder:create": [
+      "create:storageFolder"
+    ],
+    "storageFolder:read": [
+      "view:storageFolder",
+      "view:storageFolder:root",
+      "view:storageFolder::folderId",
+      "view:storageFolder:contents",
+      "view:storageFolder:hierarchy",
+      "view:storageFolder::shareToken"
+    ],
+    "storageFolder:update": [
+      "update:storageFolder::folderId"
+    ],
+    "storageFolder:delete": [
+      "delete:storageFolder::folderId"
+    ],
+    "storageFolder:move": [
+      "create:storageFolder:move"
+    ],
+    "storageFolder:share": [
+      "create:storageFolder:share"
+    ],
+    "structure:create": [
+      "create:structure"
+    ],
+    "structure:read": [
+      "view:structure",
+      "view:structure::structureId"
+    ],
+    "structure:update": [
+      "update:structure::structureId"
+    ],
+    "structure:delete": [
+      "delete:structure::structureId"
+    ],
+    "submission:read": [
+      "view:submission:activity-log",
+      "view:submission:summary",
+      "view:submission",
+      "view:submission::form_id"
+    ],
+    "submission:create": [
+      "create:submission"
+    ],
+    "submission:delete": [
+      "delete:submission::form_id"
+    ],
+    "submission:retry": [
+      "create:submission:retry"
+    ],
+    "telegramWebApp:auth": [
+      "create:telegramWebApp:auth"
+    ],
+    "telegramWebApp:read": [
+      "view:telegramWebApp:projects",
+      "view:telegramWebApp::projectId"
+    ],
+    "telegramWebApp:submit": [
+      "create:telegramWebApp:submit"
+    ],
+    "telegramWebApp:status": [
+      "view:telegramWebApp:status"
+    ],
+    "user:create": [
+      "create:user",
+      "create:user::userId",
+      "create:user::userId"
+    ],
+    "user:read": [
+      "view:user",
+      "view:user::userId"
+    ],
+    "user:import": [
+      "create:user:bulk-create"
+    ],
+    "user:update": [
+      "update:user::userId"
+    ],
+    "user:delete": [
+      "delete:user::userId"
+    ],
+    "user:restore": [
+      "create:user:restore"
+    ],
+    "user:assignRole": [
+      "update:user:assign-roles"
+    ],
+    "userFormSettings:create": [
+      "create:userFormSettings"
+    ],
+    "userFormSettings:read": [
+      "view:userFormSettings",
+      "view:userFormSettings::settingsId",
+      "view:userFormSettings::userId"
+    ],
+    "userFormSettings:update": [
+      "update:userFormSettings::settingsId",
+      "update:userFormSettings::userId",
+      "update:userFormSettings::userId"
+    ],
+    "userFormSettings:delete": [
+      "delete:userFormSettings::settingsId",
+      "delete:userFormSettings::userId"
+    ],
+    "whatsapp:read": [
+      "view:whatsapp:webhook",
+      "view:whatsapp:sessions"
+    ],
+    "whatsapp:create": [
+      "create:whatsapp:webhook",
+      "create:whatsapp:restart"
+    ],
+    "whatsapp:sendMessage": [
+      "create:whatsapp:send-message"
+    ],
+    "whatsapp:status": [
+      "view:whatsapp:status"
+    ],
+    "whatsapp:delete": [
+      "delete:whatsapp::phoneNumber"
+    ]
+  },
+  "unmapped": []
+}

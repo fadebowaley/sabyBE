@@ -4,9 +4,7 @@ const { objectId } = require('./custom.validation');
 const createApiKey = {
   body: Joi.object().keys({
     label: Joi.string().required().min(1).max(100).trim(),
-    environment: Joi.string()
-      .required()
-      .valid('production', 'development', 'staging'),
+    environment: Joi.string().required().valid('production', 'staging'),
     category: Joi.string()
       .valid(
         'web',
@@ -29,7 +27,7 @@ const getApiKeys = {
   query: Joi.object().keys({
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(100).default(10),
-    environment: Joi.string().valid('production', 'development', 'staging'),
+    environment: Joi.string().valid('production', 'staging'),
     isActive: Joi.boolean(),
     category: Joi.string().valid(
       'web',

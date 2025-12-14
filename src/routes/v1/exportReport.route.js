@@ -10,33 +10,99 @@
 const express = require('express');
 const router = express.Router();
 const exportReportController = require('../../controllers/exportReport.controller');
-const auth = require('../../middlewares/auth');
+const { hybridAuth } = require('../../middlewares/apiKeyAuth');
+const requireAccess = require('../../middlewares/requireAccess');
 
 // Submissions Export Routes
-router.get('/submissions/csv', auth(), exportReportController.exportSubmissionsCSV);
-router.get('/submissions/json', auth(), exportReportController.exportSubmissionsJSON);
+router.get(
+  '/submissions/csv',
+  hybridAuth(),
+  requireAccess('export:read'),
+  exportReportController.exportSubmissionsCSV
+);
+router.get(
+  '/submissions/json',
+  hybridAuth(),
+  requireAccess('export:read'),
+  exportReportController.exportSubmissionsJSON
+);
 
 // Compliance Export Routes
-router.get('/compliance/csv', auth(), exportReportController.exportComplianceCSV);
-router.get('/compliance/json', auth(), exportReportController.exportComplianceJSON);
+router.get(
+  '/compliance/csv',
+  hybridAuth(),
+  requireAccess('export:read'),
+  exportReportController.exportComplianceCSV
+);
+router.get(
+  '/compliance/json',
+  hybridAuth(),
+  requireAccess('export:read'),
+  exportReportController.exportComplianceJSON
+);
 
 // Validation Export Routes
-router.get('/validations/csv', auth(), exportReportController.exportValidationsCSV);
-router.get('/validations/json', auth(), exportReportController.exportValidationsJSON);
+router.get(
+  '/validations/csv',
+  hybridAuth(),
+  requireAccess('export:read'),
+  exportReportController.exportValidationsCSV
+);
+router.get(
+  '/validations/json',
+  hybridAuth(),
+  requireAccess('export:read'),
+  exportReportController.exportValidationsJSON
+);
 
 // Notification Export Routes
-router.get('/notifications/csv', auth(), exportReportController.exportNotificationsCSV);
-router.get('/notifications/json', auth(), exportReportController.exportNotificationsJSON);
+router.get(
+  '/notifications/csv',
+  hybridAuth(),
+  requireAccess('export:read'),
+  exportReportController.exportNotificationsCSV
+);
+router.get(
+  '/notifications/json',
+  hybridAuth(),
+  requireAccess('export:read'),
+  exportReportController.exportNotificationsJSON
+);
 
 // Activity Log Export Routes
-router.get('/activity-logs/csv', auth(), exportReportController.exportActivityLogsCSV);
-router.get('/activity-logs/json', auth(), exportReportController.exportActivityLogsJSON);
+router.get(
+  '/activity-logs/csv',
+  hybridAuth(),
+  requireAccess('export:read'),
+  exportReportController.exportActivityLogsCSV
+);
+router.get(
+  '/activity-logs/json',
+  hybridAuth(),
+  requireAccess('export:read'),
+  exportReportController.exportActivityLogsJSON
+);
 
 // Combined Export Routes
-router.get('/combined/csv', auth(), exportReportController.exportCombinedCSV);
-router.get('/combined/json', auth(), exportReportController.exportCombinedJSON);
+router.get(
+  '/combined/csv',
+  hybridAuth(),
+  requireAccess('export:read'),
+  exportReportController.exportCombinedCSV
+);
+router.get(
+  '/combined/json',
+  hybridAuth(),
+  requireAccess('export:read'),
+  exportReportController.exportCombinedJSON
+);
 
 // Export Statistics
-router.get('/stats', auth(), exportReportController.getExportStats);
+router.get(
+  '/stats',
+  hybridAuth(),
+  requireAccess('export:read'),
+  exportReportController.getExportStats
+);
 
 module.exports = router;

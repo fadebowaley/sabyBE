@@ -1,18 +1,20 @@
-
 {
   "ownerResourceBundle": [
-    "user",
-    "app",
-    "structures",
-    "node",
-    "payment",
+    "apikey",
+    "apikeyapproval",
+    "baselineintelligence",
+    "eventcalendar",
+    "inmail",
     "level",
+    "node",
+    "permission",
+    "projectform",
+    "role",
     "storage",
-    "project",
-    "apikeys",
-    "project-form",
-    "roles",
-    "permissions",
-    "submission"
+    "storagefolder",
+    "structure",
+    "submission",
+    "unifiedsubmission",
+    "user"
   ]
 }

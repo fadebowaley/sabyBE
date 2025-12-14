@@ -351,6 +351,85 @@ const queryNodes = async (filter, options) => {
   return nodes;
 };
 
+const getNodeBranchByPath = async (path, options = {}) => {
+  const { includeDeleted = false, select, populate } = options;
+  const filter = { path: { $regex: `^${path}` } };
+  if (!includeDeleted) {
+    filter.deletedAt = null;
+  }
+
+  let query = Nodes.find(filter);
+
+  if (select) {
+    query = query.select(select);
+  }
+
+  if (populate) {
+    query = query.populate(populate);
+  }
+
+  const nodes = await query;
+  return nodes.map((node) => buildNodeResponse(node));
+};
+
+const getNodeBranchesByIds = async (nodeIds = [], options = {}) => {
+  const {
+    includeDeleted = false,
+    tenantId = null,
+    select,
+    populate,
+  } = options;
+
+  if (!Array.isArray(nodeIds) || nodeIds.length === 0) {
+    return [];
+  }
+
+  const uniqueIds = Array.from(
+    new Set(
+      nodeIds
+        .map((value) => (typeof value === 'string' ? value.trim() : value))
+        .filter(Boolean)
+    )
+  );
+
+  const aggregated = [];
+  const seenIds = new Set();
+
+  for (const identifier of uniqueIds) {
+    const node = await getNodeById(identifier, { includeDeleted: true });
+
+    if (
+      tenantId &&
+      node.tenantId &&
+      node.tenantId.toString() !== tenantId.toString()
+    ) {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        'Access denied - node belongs to different tenant'
+      );
+    }
+
+    const branchNodes = await getNodeBranchByPath(node.path, {
+      includeDeleted,
+      select,
+      populate,
+    });
+
+    branchNodes.forEach((branchNode) => {
+      const key =
+        branchNode.id ||
+        branchNode.nodeId ||
+        (branchNode._id && branchNode._id.toString());
+      if (key && !seenIds.has(key)) {
+        seenIds.add(key);
+        aggregated.push(branchNode);
+      }
+    });
+  }
+
+  return aggregated;
+};
+
 /**
  * Get nodes by type
  * @param {string} type - Node type
@@ -490,9 +569,11 @@ module.exports = {
   getNodeById,
   getNodeByName,
   updateNodeById,
+  getNodeBranchByPath,
   deleteNodeById,
   restoreNodeById,
   queryNodes,
+  getNodeBranchesByIds,
   getNodesByType,
   getParentNode,
   getChildNodes,

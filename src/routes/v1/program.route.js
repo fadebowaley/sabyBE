@@ -178,8 +178,8 @@ const router = express.Router();
 // Route for creating a new program
 router
   .route('/')
-  .post(auth('create:program'), validate(programValidation.createProgram), programController.createProgram)
-  .get(auth('view:program'), validate(programValidation.queryPrograms), programController.queryPrograms);
+  .post(auth('program:create'), validate(programValidation.createProgram), programController.createProgram)
+  .get(auth('program:read'), validate(programValidation.queryPrograms), programController.queryPrograms);
 
 /**
  * @swagger
@@ -243,7 +243,7 @@ router
 // Route for bulk importing programs
 router
   .route('/bulk-import')
-  .post(auth('create:program'), validate(programValidation.bulkImportPrograms), programController.bulkImportPrograms);
+  .post(auth('program:create'), validate(programValidation.bulkImportPrograms), programController.bulkImportPrograms);
 
 /**
  * @swagger
@@ -354,9 +354,9 @@ router
 // Route for fetching a program by ID
 router
   .route('/:programId')
-  .get(auth('view:program'), validate(programValidation.getProgram), programController.getProgram)
-  .patch(auth('update:program'), validate(programValidation.updateProgram), programController.updateProgram)
-  .delete(auth('delete:program'), validate(programValidation.deleteProgram), programController.deleteProgram);
+  .get(auth('program:read'), validate(programValidation.getProgram), programController.getProgram)
+  .patch(auth('program:update'), validate(programValidation.updateProgram), programController.updateProgram)
+  .delete(auth('program:delete'), validate(programValidation.deleteProgram), programController.deleteProgram);
 
 /**
  * @swagger
@@ -379,7 +379,7 @@ router
 // Route for deleting all programs
 router
   .route('/delete-all')
-  .delete(auth('delete:program'), validate(programValidation.deleteAllPrograms), programController.deleteAllPrograms);
+  .delete(auth('program:delete'), validate(programValidation.deleteAllPrograms), programController.deleteAllPrograms);
 
 /**
  * @swagger
@@ -430,6 +430,6 @@ router
 // Route for assigning a user to a program
 router
   .route('/:programId/assign')
-  .patch(auth('update:program'), validate(programValidation.assignToProgram), programController.assignToProgram);
+  .patch(auth('program:update'), validate(programValidation.assignToProgram), programController.assignToProgram);
 
 module.exports = router;

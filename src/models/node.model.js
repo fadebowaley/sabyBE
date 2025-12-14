@@ -52,6 +52,21 @@ const nodeSchema = mongoose.Schema(
       default: 0,
     },
 
+    // Profile Update Compliance Tracking
+    profileUpdateCompliant: {
+      type: Boolean,
+      default: false,
+    },
+    profileUpdateCompliantAt: {
+      type: Date,
+      default: null,
+    },
+    profileUpdateCompliantBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+
     /**
      * NOTE: The profile fields below are handled through tenant-managed custom fields.
      * Legacy properties kept for backward compatibility:
@@ -73,6 +88,16 @@ const nodeSchema = mongoose.Schema(
         type: String,
         enum: ['Active', 'Inactive', 'Under Construction'],
         default: 'Active',
+      },
+      // Attendance and Financial metrics
+      averageAttendance: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      averageIncome: {
+        type: mongoose.Schema.Types.Decimal128,
+        default: 0,
       },
     },
   },
@@ -193,11 +218,21 @@ nodeSchema.post('save', async function(doc) {
     if (hasRelevantChanges) {
       // Import here to avoid circular dependency
       const { baselineIntelligenceService } = require('../services');
+      const { batchChangeProcessor } = require('../services');
       
       // Handle baseline updates asynchronously to avoid blocking node operations
       setImmediate(async () => {
         try {
-          await baselineIntelligenceService.handleNodeChange(doc);
+          // Check if this is part of a bulk operation
+          const isBulkOperation = process.env.BULK_OPERATION === 'true' || this.isBulkOperation;
+          
+          if (isBulkOperation && batchChangeProcessor) {
+            // Use batch processing for bulk operations
+            await batchChangeProcessor.addNodeChange(doc);
+          } else {
+            // Use immediate processing for single changes
+            await baselineIntelligenceService.handleNodeChange(doc);
+          }
         } catch (error) {
           console.error('Error updating baseline intelligence after node change:', error);
         }

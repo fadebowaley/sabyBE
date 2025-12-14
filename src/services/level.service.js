@@ -1,5 +1,6 @@
 const httpStatus = require('http-status');
-const { Level } = require('../models');
+const mongoose = require('mongoose');
+const { Level, Structures, Nodes } = require('../models');
 const ApiError = require('../utils/ApiError');
 
 /**
@@ -7,7 +8,55 @@ const ApiError = require('../utils/ApiError');
  * @param {Object} levelBody
  * @returns {Promise<Level>}
  */
-const createLevel = async (levelBody) => Level.createLevel(levelBody);
+const createLevel = async (levelBody) => {
+  console.log('='.repeat(80));
+  console.log('[LEVEL SERVICE - createLevel] ===== CREATING LEVEL =====');
+  console.log(
+    '[LEVEL SERVICE - createLevel] Level body received:',
+    JSON.stringify(levelBody, null, 2)
+  );
+  console.log('[LEVEL SERVICE - createLevel] Level name:', levelBody.name);
+  console.log('[LEVEL SERVICE - createLevel] Level rank:', levelBody.rank);
+  console.log(
+    '[LEVEL SERVICE - createLevel] Level description:',
+    levelBody.description
+  );
+  console.log(
+    '[LEVEL SERVICE - createLevel] Level tenantId:',
+    levelBody.tenantId
+  );
+
+  // Check if Level.createLevel is a static method or if we should use Level.create
+  if (typeof Level.createLevel === 'function') {
+    console.log(
+      '[LEVEL SERVICE - createLevel] Using Level.createLevel static method'
+    );
+    const level = await Level.createLevel(levelBody);
+    console.log(
+      '[LEVEL SERVICE - createLevel] Level created via static method:',
+      JSON.stringify(level, null, 2)
+    );
+    console.log(
+      '[LEVEL SERVICE - createLevel] Created level name:',
+      level.name
+    );
+    return level;
+  } else {
+    console.log(
+      '[LEVEL SERVICE - createLevel] Using Level.create (mongoose default)'
+    );
+    const level = await Level.create(levelBody);
+    console.log(
+      '[LEVEL SERVICE - createLevel] Level created via mongoose create:',
+      JSON.stringify(level, null, 2)
+    );
+    console.log(
+      '[LEVEL SERVICE - createLevel] Created level name:',
+      level.name
+    );
+    return level;
+  }
+};
 
 /**
  * Get level by id
@@ -91,13 +140,106 @@ const updateLevelById = async (levelId, updateBody) => {
 
 /**
  * Delete level by id
+ * Also deletes associated structures and nodes if they exist
  * @param {ObjectId} levelId
  * @returns {Promise<Level>}
  */
 const deleteLevelById = async (levelId) => {
-  const level = await getLevelById(levelId);
-  await level.remove();
+  console.log('[LEVEL SERVICE - DELETE] Deleting level:', levelId);
+  const session = await mongoose.startSession();
+  const useTransaction = !!session.supports?.transactions;
+
+  try {
+    if (useTransaction) {
+      console.log('[LEVEL SERVICE - DELETE] Starting Mongo transaction');
+      await session.startTransaction();
+    } else {
+      console.warn(
+        '[LEVEL SERVICE - DELETE] Transactions not supported in current Mongo topology. Continuing without transaction.'
+      );
+    }
+
+    // Get the level within transaction
+    const level = await Level.findById(levelId).session(
+      useTransaction ? session : null
+    );
+  if (!level) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Level not found');
+  }
+
+    // Check if any structures reference this level
+    const structuresUsingLevel = await Structures.countDocuments({
+      level: levelId,
+    }).session(useTransaction ? session : null);
+
+    // Check if any nodes reference this level
+    const nodesUsingLevel = await Nodes.countDocuments({
+      level: levelId,
+    }).session(useTransaction ? session : null);
+
+    console.log('[LEVEL SERVICE - DELETE] Level usage check:', {
+      levelId,
+      structuresUsingLevel,
+      nodesUsingLevel,
+    });
+
+    // If structures or nodes use this level, delete them first (cascade delete)
+    if (structuresUsingLevel > 0) {
+      console.log(
+        '[LEVEL SERVICE - DELETE] Deleting',
+        structuresUsingLevel,
+        'structures associated with level'
+      );
+      await Structures.deleteMany(
+        { level: levelId },
+        { session: useTransaction ? session : null }
+      );
+    }
+
+    if (nodesUsingLevel > 0) {
+      console.log(
+        '[LEVEL SERVICE - DELETE] Deleting',
+        nodesUsingLevel,
+        'nodes associated with level'
+      );
+      await Nodes.deleteMany(
+        { level: levelId },
+        { session: useTransaction ? session : null }
+      );
+    }
+
+    // Delete the level
+    await Level.deleteOne(
+      { _id: levelId },
+      { session: useTransaction ? session : null }
+    );
+
+    console.log('[LEVEL SERVICE - DELETE] Level deleted successfully', {
+    levelId: level._id?.toString(),
+    tenantId: level.tenantId,
+    name: level.name,
+    rank: level.rank,
+      deletedStructures: structuresUsingLevel,
+      deletedNodes: nodesUsingLevel,
+  });
+
+    if (useTransaction) {
+      await session.commitTransaction();
+      console.log('[LEVEL SERVICE - DELETE] Transaction committed');
+    }
+
   return level;
+  } catch (err) {
+    console.error('[LEVEL SERVICE - DELETE] Error deleting level:', err);
+    if (useTransaction) {
+      await session.abortTransaction();
+      console.log('[LEVEL SERVICE - DELETE] Transaction aborted due to error');
+    }
+    throw err;
+  } finally {
+    session.endSession();
+    console.log('[LEVEL SERVICE - DELETE] Mongo session closed');
+  }
 };
 
 /**
@@ -107,10 +249,85 @@ const deleteLevelById = async (levelId) => {
  * @param {string} [options.sortBy] - Sort option in the format: sortField:(desc|asc)
  * @param {number} [options.limit] - Maximum number of results per page (default = 10)
  * @param {number} [options.page] - Current page (default = 1)
+ * @param {boolean} [options.onlyWithStructures] - If true, only return levels that have active structures
  * @returns {Promise<QueryResult>}
  */
 
-const queryLevels = async (filter, options) => Level.paginate(filter, options);
+const queryLevels = async (filter, options) => {
+  console.log(
+    '[LEVEL SERVICE - queryLevels] Filter:',
+    JSON.stringify(filter, null, 2)
+  );
+  console.log(
+    '[LEVEL SERVICE - queryLevels] Options:',
+    JSON.stringify(options, null, 2)
+  );
+
+  // If onlyWithStructures is true, filter levels to only those with active structures
+  if (options?.onlyWithStructures) {
+    console.log('[LEVEL SERVICE - queryLevels] Filtering levels by active structures');
+    
+    // Get all active structures for the tenant
+    const activeStructures = await Structures.find({
+      tenantId: filter.tenantId,
+      isActive: true,
+    }).select('level').lean();
+
+    // Extract unique level IDs from active structures
+    // Convert to ObjectIds for proper MongoDB query
+    const levelIdsWithStructures = [...new Set(
+      activeStructures
+        .map(s => s.level)
+        .filter(Boolean)
+        .map(id => {
+          // If already ObjectId, use it; otherwise convert string to ObjectId
+          return id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(id);
+        })
+    )];
+
+    console.log('[LEVEL SERVICE - queryLevels] Level IDs with active structures:', levelIdsWithStructures.map(id => id.toString()));
+
+    // Add level ID filter to only include levels that have active structures
+    if (levelIdsWithStructures.length > 0) {
+      filter._id = { $in: levelIdsWithStructures };
+    } else {
+      // If no active structures exist, return empty result
+      console.log('[LEVEL SERVICE - queryLevels] No active structures found, returning empty result');
+      return {
+        results: [],
+        page: options?.page || 1,
+        limit: options?.limit || 10,
+        totalPages: 0,
+        totalResults: 0,
+      };
+    }
+  }
+
+  const result = await Level.paginate(filter, options);
+  console.log('[LEVEL SERVICE - queryLevels] Result from paginate:', {
+    hasResults: !!result.results,
+    resultsLength: result.results?.length || 0,
+    totalPages: result.totalPages,
+    totalResults: result.totalResults,
+    firstLevelKeys: result.results?.[0] ? Object.keys(result.results[0]) : null,
+    firstLevelId: result.results?.[0]?._id?.toString(),
+    firstLevelIdField: result.results?.[0]?.id,
+    firstLevelName: result.results?.[0]?.name,
+  });
+  if (result.results && result.results.length > 0) {
+    console.log(
+      '[LEVEL SERVICE - queryLevels] First level full object:',
+      JSON.stringify(
+        result.results[0].toObject
+          ? result.results[0].toObject()
+          : result.results[0],
+        null,
+        2
+      )
+    );
+  }
+  return result;
+};
 
 /**
  * Get levels by hierarchy

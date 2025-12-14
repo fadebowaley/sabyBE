@@ -69,13 +69,12 @@ const getApiKeys = catchAsync(async (req, res) => {
       : 'Never';
     keyObj.expiresAt = keyObj.expires;
 
-    // Add truncated key for display
+    // Add truncated key for display (using middle dot for cleaner masking)
     if (keyObj.environment === 'production') {
-      keyObj.key = `sk_live_${'●'.repeat(20)}...`;
-    } else if (keyObj.environment === 'staging') {
-      keyObj.key = `sk_staging_${'●'.repeat(20)}...`;
+      keyObj.key = `sk_live_${'·'.repeat(20)}...`;
     } else {
-      keyObj.key = `sk_test_${'●'.repeat(20)}...`;
+      // Default to staging
+      keyObj.key = `sk_staging_${'·'.repeat(20)}...`;
     }
 
     return keyObj;
@@ -180,11 +179,12 @@ const getApiKey = catchAsync(async (req, res) => {
     ? getRelativeTime(keyObj.lastUsedAt)
     : 'Never';
 
-  // Add truncated key for display
+  // Add truncated key for display (using middle dot for cleaner masking)
   if (keyObj.environment === 'production') {
-    keyObj.key = `sk_live_${'●'.repeat(20)}...`;
+    keyObj.key = `sk_live_${'·'.repeat(20)}...`;
   } else {
-    keyObj.key = `sk_test_${'●'.repeat(20)}...`;
+    // Default to staging
+    keyObj.key = `sk_staging_${'·'.repeat(20)}...`;
   }
 
   res.send(keyObj);

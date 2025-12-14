@@ -1,18 +1,22 @@
 const logger = require('../config/logger');
+const baselineAnalysisConfigService = require('./baselineAnalysisConfig.service');
 
 /**
  * Custom Field Analytics Service
  * Provides flexible analysis for tenant-specific custom fields
+ * Now integrates with BaselineAnalysisConfig for tenant-specific analysis settings
  */
 
 /**
  * Analyze numeric custom fields
  * @param {Array} records - Array of records with custom fields
- * @param {Object} fieldConfig - Field configuration
+ * @param {Object} fieldConfig - Field configuration with analysis settings
  * @returns {Object} numeric analytics
  */
 const analyzeNumericField = (records, fieldConfig) => {
-  const { fieldName, displayName, fieldType = 'number' } = fieldConfig;
+  const { fieldName, displayName, fieldType = 'number', analysisConfig } = fieldConfig;
+  const numericConfig = analysisConfig?.numeric || {};
+  const statisticsConfig = numericConfig.statistics || { enabled: true, include: {} };
   
   // Extract values, filtering out null/undefined
   const values = records
@@ -38,43 +42,76 @@ const analyzeNumericField = (records, fieldConfig) => {
     };
   }
 
-  // Calculate statistics
-  const total = values.reduce((sum, val) => sum + val, 0);
-  const average = total / values.length;
-  const sortedValues = [...values].sort((a, b) => a - b);
-  const median = sortedValues.length % 2 === 0
-    ? (sortedValues[sortedValues.length / 2 - 1] + sortedValues[sortedValues.length / 2]) / 2
-    : sortedValues[Math.floor(sortedValues.length / 2)];
-  
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  
-  // Calculate standard deviation
-  const variance = values.reduce((sum, val) => sum + Math.pow(val - average, 2), 0) / values.length;
-  const standardDeviation = Math.sqrt(variance);
+  // Calculate statistics (only if enabled)
+  const stats = {};
+  if (statisticsConfig.enabled !== false) {
+    if (statisticsConfig.include?.total !== false) {
+      stats.total = values.reduce((sum, val) => sum + val, 0);
+    }
+    
+    if (statisticsConfig.include?.average !== false || statisticsConfig.include?.total !== false) {
+      stats.average = values.reduce((sum, val) => sum + val, 0) / values.length;
+    }
+    
+    if (statisticsConfig.include?.median !== false) {
+      const sortedValues = [...values].sort((a, b) => a - b);
+      stats.median = sortedValues.length % 2 === 0
+        ? (sortedValues[sortedValues.length / 2 - 1] + sortedValues[sortedValues.length / 2]) / 2
+        : sortedValues[Math.floor(sortedValues.length / 2)];
+    }
+    
+    if (statisticsConfig.include?.min !== false) {
+      stats.min = Math.min(...values);
+    }
+    
+    if (statisticsConfig.include?.max !== false) {
+      stats.max = Math.max(...values);
+    }
+    
+    if (statisticsConfig.include?.standardDeviation !== false) {
+      const avg = stats.average || (values.reduce((sum, val) => sum + val, 0) / values.length);
+      const variance = values.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / values.length;
+      stats.standardDeviation = Math.sqrt(variance);
+    }
+    
+    stats.count = values.length;
+  }
 
-  // Create distribution ranges
-  const distribution = createNumericDistribution(values, min, max);
+  // Round numeric values
+  Object.keys(stats).forEach(key => {
+    if (typeof stats[key] === 'number' && key !== 'count') {
+      stats[key] = Math.round(stats[key] * 100) / 100;
+    }
+  });
+
+  // Create distribution (only if enabled)
+  let distribution = [];
+  if (numericConfig.distribution?.enabled !== false) {
+    const min = stats.min || Math.min(...values);
+    const max = stats.max || Math.max(...values);
+    
+    if (numericConfig.distribution?.ranges === 'custom' && numericConfig.distribution?.customRanges) {
+      // Use custom ranges
+      distribution = createCustomNumericDistribution(values, numericConfig.distribution.customRanges);
+    } else {
+      // Use auto ranges
+      distribution = createNumericDistribution(values, min, max);
+    }
+  }
 
   return {
     fieldName,
     displayName,
     fieldType,
-    statistics: {
-      total: Math.round(total * 100) / 100,
-      average: Math.round(average * 100) / 100,
-      median: Math.round(median * 100) / 100,
-      min,
-      max,
-      count: values.length,
-      standardDeviation: Math.round(standardDeviation * 100) / 100
-    },
-    distribution
+    format: numericConfig.format || 'number',
+    statistics: stats,
+    distribution,
+    thresholds: numericConfig.thresholds || null
   };
 };
 
 /**
- * Create numeric distribution ranges
+ * Create numeric distribution ranges (auto)
  * @param {Array} values - Numeric values
  * @param {number} min - Minimum value
  * @param {number} max - Maximum value
@@ -108,13 +145,42 @@ const createNumericDistribution = (values, min, max) => {
 };
 
 /**
+ * Create numeric distribution using custom ranges
+ * @param {Array} values - Numeric values
+ * @param {Array} customRanges - Custom range definitions [{name, min, max}]
+ * @returns {Array} distribution ranges
+ */
+const createCustomNumericDistribution = (values, customRanges) => {
+  if (values.length === 0 || !customRanges || customRanges.length === 0) return [];
+
+  const distribution = [];
+
+  customRanges.forEach(range => {
+    const count = values.filter(val => val >= range.min && val <= range.max).length;
+    
+    if (count > 0) {
+      distribution.push({
+        range: range.name || `${range.min}-${range.max}`,
+        count,
+        percentage: Math.round((count / values.length) * 100)
+      });
+    }
+  });
+
+  return distribution;
+};
+
+/**
  * Analyze categorical custom fields
  * @param {Array} records - Array of records with custom fields
- * @param {Object} fieldConfig - Field configuration
+ * @param {Object} fieldConfig - Field configuration with analysis settings
  * @returns {Object} categorical analytics
  */
 const analyzeCategoricalField = (records, fieldConfig) => {
-  const { fieldName, displayName } = fieldConfig;
+  const { fieldName, displayName, analysisConfig } = fieldConfig;
+  const categoricalConfig = analysisConfig?.categorical || {};
+  const distributionConfig = categoricalConfig.distribution || { enabled: true, topN: 10 };
+  const diversityConfig = categoricalConfig.diversity || { enabled: true };
   
   // Extract values, filtering out null/undefined
   const values = records
@@ -138,35 +204,46 @@ const analyzeCategoricalField = (records, fieldConfig) => {
     valueCounts[value] = (valueCounts[value] || 0) + 1;
   });
 
-  // Create value distribution
-  const valueDistribution = Object.entries(valueCounts)
-    .map(([value, count]) => ({
-      value,
-      count,
-      percentage: Math.round((count / values.length) * 100)
-    }))
-    .sort((a, b) => b.count - a.count);
+  // Create value distribution (only if enabled)
+  let valueDistribution = [];
+  if (distributionConfig.enabled !== false) {
+    valueDistribution = Object.entries(valueCounts)
+      .map(([value, count]) => ({
+        value,
+        count,
+        percentage: Math.round((count / values.length) * 100)
+      }))
+      .sort((a, b) => b.count - a.count);
+    
+    // Limit to topN if configured
+    if (distributionConfig.topN && distributionConfig.topN > 0) {
+      valueDistribution = valueDistribution.slice(0, distributionConfig.topN);
+    }
+  }
 
   const mostCommon = valueDistribution.length > 0 ? valueDistribution[0].value : null;
-  const diversity = Object.keys(valueCounts).length;
+  const diversity = diversityConfig.enabled !== false ? Object.keys(valueCounts).length : null;
 
   return {
     fieldName,
     displayName,
     values: valueDistribution,
     mostCommon,
-    diversity
+    diversity,
+    maxUniqueValues: diversityConfig.maxUniqueValues || null
   };
 };
 
 /**
  * Analyze date/temporal custom fields
  * @param {Array} records - Array of records with custom fields
- * @param {Object} fieldConfig - Field configuration
+ * @param {Object} fieldConfig - Field configuration with analysis settings
  * @returns {Object} temporal analytics
  */
 const analyzeTemporalField = (records, fieldConfig) => {
-  const { fieldName, displayName } = fieldConfig;
+  const { fieldName, displayName, analysisConfig } = fieldConfig;
+  const temporalConfig = analysisConfig?.temporal || {};
+  const analysisSettings = temporalConfig.analysis || {};
   
   // Extract and parse dates
   const dates = records
@@ -193,35 +270,43 @@ const analyzeTemporalField = (records, fieldConfig) => {
   }
 
   const sortedDates = dates.sort((a, b) => a - b);
-  const earliest = sortedDates[0];
-  const latest = sortedDates[sortedDates.length - 1];
-  const now = new Date();
+  const stats = {
+    count: dates.length
+  };
+
+  // Calculate statistics based on config
+  if (analysisSettings.earliest !== false) {
+    stats.earliest = sortedDates[0];
+  }
   
-  // Calculate average age in days
-  const totalAge = dates.reduce((sum, date) => sum + (now - date), 0);
-  const averageAge = Math.round(totalAge / (dates.length * 24 * 60 * 60 * 1000)); // Convert to days
+  if (analysisSettings.latest !== false) {
+    stats.latest = sortedDates[sortedDates.length - 1];
+  }
+  
+  if (analysisSettings.averageAge !== false) {
+    const now = new Date();
+    const totalAge = dates.reduce((sum, date) => sum + (now - date), 0);
+    stats.averageAge = Math.round(totalAge / (dates.length * 24 * 60 * 60 * 1000)); // Convert to days
+  }
 
   return {
     fieldName,
     displayName,
-    statistics: {
-      earliest,
-      latest,
-      averageAge,
-      count: dates.length
-    },
-    patterns: [] // Could be enhanced with trend analysis
+    statistics: stats,
+    patterns: analysisSettings.trends ? [] : null // Could be enhanced with trend analysis
   };
 };
 
 /**
  * Analyze boolean custom fields
  * @param {Array} records - Array of records with custom fields
- * @param {Object} fieldConfig - Field configuration
+ * @param {Object} fieldConfig - Field configuration with analysis settings
  * @returns {Object} boolean analytics
  */
 const analyzeBooleanField = (records, fieldConfig) => {
-  const { fieldName, displayName } = fieldConfig;
+  const { fieldName, displayName, analysisConfig } = fieldConfig;
+  const booleanConfig = analysisConfig?.boolean || {};
+  const analysisSettings = booleanConfig.analysis || {};
   
   let trueCount = 0;
   let falseCount = 0;
@@ -241,14 +326,27 @@ const analyzeBooleanField = (records, fieldConfig) => {
   const totalDefined = trueCount + falseCount;
   const truePercentage = totalDefined > 0 ? Math.round((trueCount / totalDefined) * 100) : 0;
 
-  return {
+  const result = {
     fieldName,
-    displayName,
-    trueCount,
-    falseCount,
-    truePercentage,
-    nullCount
+    displayName
   };
+
+  // Only include statistics if enabled
+  if (analysisSettings.trueCount !== false) {
+    result.trueCount = trueCount;
+  }
+  
+  if (analysisSettings.falseCount !== false) {
+    result.falseCount = falseCount;
+  }
+  
+  if (analysisSettings.percentage !== false) {
+    result.truePercentage = truePercentage;
+  }
+  
+  result.nullCount = nullCount; // Always include null count for data quality
+
+  return result;
 };
 
 /**
@@ -336,22 +434,97 @@ const analyzeCustomFields = (records, fieldConfigs) => {
 
 /**
  * Get custom field configuration for a tenant
+ * Merges TenantConfig field definitions with BaselineAnalysisConfig analysis settings
  * @param {string} tenantId - Tenant identifier
  * @param {string} entityType - 'user' or 'node'
- * @returns {Promise<Array>} field configurations
+ * @returns {Promise<Array>} enriched field configurations with analysis settings
  */
 const getCustomFieldConfig = async (tenantId, entityType) => {
   try {
-    // This would typically come from a tenant configuration service
-    // For now, we'll return a sample configuration
     const { TenantConfig } = require('../models');
     
-    const config = await TenantConfig.findOne({ 
+    // Get field definitions from TenantConfig
+    const tenantConfig = await TenantConfig.findOne({ 
       tenantId, 
       entityType 
     });
 
-    return config?.fields || [];
+    if (!tenantConfig || !tenantConfig.fields || tenantConfig.fields.length === 0) {
+      return [];
+    }
+
+    // Get analysis config from BaselineAnalysisConfig
+    const analysisConfig = await baselineAnalysisConfigService.getAnalysisConfig(tenantId, entityType);
+
+    // Merge field definitions with analysis settings
+    const enrichedFields = tenantConfig.fields
+      .filter(field => field.analytics?.enabled === true) // Only include fields with analytics enabled
+      .map(field => {
+        // Find corresponding analysis config for this field
+        const fieldAnalysisConfig = analysisConfig?.customFields?.find(
+          cf => cf.fieldId === field.id
+        );
+
+        // Determine analysis type
+        let analysisType = fieldAnalysisConfig?.analysis?.type;
+        if (!analysisType) {
+          // Auto-map from field type
+          analysisType = mapFieldTypeToAnalysisType(field.type, field.analytics);
+        }
+
+        // Build enriched config
+        const enrichedConfig = {
+          fieldName: field.id,
+          displayName: fieldAnalysisConfig?.analysis?.display?.label || field.label,
+          type: analysisType,
+          fieldType: field.type,
+          description: fieldAnalysisConfig?.analysis?.display?.description || field.description,
+          unit: fieldAnalysisConfig?.analysis?.display?.unit || '',
+          order: fieldAnalysisConfig?.analysis?.display?.order || field.ui?.order || 0,
+          category: fieldAnalysisConfig?.analysis?.display?.category || '',
+          chartType: fieldAnalysisConfig?.analysis?.display?.chartType || 'bar',
+        };
+
+        // Add type-specific analysis settings
+        if (fieldAnalysisConfig?.analysis) {
+          enrichedConfig.analysisConfig = fieldAnalysisConfig.analysis;
+          
+          // Add numeric-specific settings
+          if (analysisType === 'numeric' && fieldAnalysisConfig.analysis.numeric) {
+            enrichedConfig.format = fieldAnalysisConfig.analysis.numeric.format || 'number';
+            enrichedConfig.statistics = fieldAnalysisConfig.analysis.numeric.statistics;
+            enrichedConfig.distribution = fieldAnalysisConfig.analysis.numeric.distribution;
+            enrichedConfig.thresholds = fieldAnalysisConfig.analysis.numeric.thresholds;
+          }
+          
+          // Add categorical-specific settings
+          if (analysisType === 'categorical' && fieldAnalysisConfig.analysis.categorical) {
+            enrichedConfig.distribution = fieldAnalysisConfig.analysis.categorical.distribution;
+            enrichedConfig.diversity = fieldAnalysisConfig.analysis.categorical.diversity;
+          }
+          
+          // Add temporal-specific settings
+          if (analysisType === 'temporal' && fieldAnalysisConfig.analysis.temporal) {
+            enrichedConfig.includeTime = fieldAnalysisConfig.analysis.temporal.includeTime;
+            enrichedConfig.temporalAnalysis = fieldAnalysisConfig.analysis.temporal.analysis;
+          }
+          
+          // Add boolean-specific settings
+          if (analysisType === 'boolean' && fieldAnalysisConfig.analysis.boolean) {
+            enrichedConfig.booleanAnalysis = fieldAnalysisConfig.analysis.boolean.analysis;
+          }
+          
+          // Add insight rules
+          if (fieldAnalysisConfig.analysis.insights) {
+            enrichedConfig.insights = fieldAnalysisConfig.analysis.insights;
+          }
+        }
+
+        return enrichedConfig;
+      })
+      .sort((a, b) => a.order - b.order); // Sort by display order
+
+    return enrichedFields;
   } catch (error) {
     logger.error('Error getting custom field config:', error);
     return [];
@@ -359,46 +532,122 @@ const getCustomFieldConfig = async (tenantId, entityType) => {
 };
 
 /**
+ * Map TenantConfig field type to analysis type
+ * @param {string} fieldType - Field type from TenantConfig
+ * @param {Object} analytics - Analytics metadata from field
+ * @returns {string} Analysis type
+ */
+const mapFieldTypeToAnalysisType = (fieldType, analytics = {}) => {
+  const mapping = {
+    text: 'categorical',
+    textarea: 'categorical',
+    number: 'numeric',
+    date: analytics?.includeTime ? 'temporal' : 'temporal',
+    boolean: 'boolean',
+    select: 'categorical',
+    'multi-select': 'categorical',
+    attachment: 'categorical',
+  };
+
+  return mapping[fieldType] || 'categorical';
+};
+
+/**
  * Generate insights from custom field analytics
+ * Uses insight rules from BaselineAnalysisConfig if available
  * @param {Object} customAnalytics - Custom field analytics
+ * @param {Object} analysisConfig - BaselineAnalysisConfig (optional)
  * @returns {Array} generated insights
  */
-const generateCustomFieldInsights = (customAnalytics) => {
+const generateCustomFieldInsights = (customAnalytics, analysisConfig = null) => {
   const insights = [];
 
   // Numeric field insights
   customAnalytics.numeric?.forEach(field => {
-    const { displayName, statistics } = field;
+    const { displayName, statistics, fieldName, thresholds } = field;
     
     if (statistics.count > 0) {
-      // High variation insight
-      if (statistics.standardDeviation > statistics.average * 0.5) {
-        insights.push({
-          type: 'custom',
-          category: 'variation',
-          text: `High variation in ${displayName} (std dev: ${statistics.standardDeviation}) suggests diverse performance levels.`,
-          priority: 'medium',
-          dataPoints: [`customFields.${field.fieldName}`],
-          recommendations: [
-            `Investigate factors causing ${displayName} variation`,
-            'Consider targeted interventions for outliers'
-          ]
-        });
-      }
+      // Use custom insight rules if available
+      const fieldAnalysisConfig = analysisConfig?.customFields?.find(cf => cf.fieldId === fieldName);
+      const insightRules = fieldAnalysisConfig?.analysis?.insights?.rules || [];
 
-      // Performance insights
-      if (field.fieldType === 'percentage' && statistics.average < 50) {
-        insights.push({
-          type: 'custom',
-          category: 'performance',
-          text: `Low average ${displayName} (${statistics.average}%) indicates improvement opportunities.`,
-          priority: 'high',
-          dataPoints: [`customFields.${field.fieldName}`],
-          recommendations: [
-            `Develop strategies to improve ${displayName}`,
-            'Analyze top performers for best practices'
-          ]
+      if (insightRules.length > 0 && fieldAnalysisConfig.analysis.insights.enabled !== false) {
+        // Evaluate custom rules
+        insightRules.forEach(rule => {
+          try {
+            // Simple condition evaluation (can be enhanced with a proper expression evaluator)
+            const conditionMet = evaluateInsightCondition(statistics, rule.condition);
+            if (conditionMet) {
+              insights.push({
+                type: 'custom',
+                category: 'custom-rule',
+                text: rule.message || `Custom insight for ${displayName}`,
+                priority: rule.priority || 'medium',
+                dataPoints: [`customFields.${fieldName}`],
+                recommendations: rule.recommendations || []
+              });
+            }
+          } catch (error) {
+            logger.error(`Error evaluating insight rule for ${fieldName}:`, error);
+          }
         });
+      } else {
+        // Fallback to default insights
+        // High variation insight
+        if (statistics.standardDeviation && statistics.average && 
+            statistics.standardDeviation > statistics.average * 0.5) {
+          insights.push({
+            type: 'custom',
+            category: 'variation',
+            text: `High variation in ${displayName} (std dev: ${statistics.standardDeviation}) suggests diverse performance levels.`,
+            priority: 'medium',
+            dataPoints: [`customFields.${field.fieldName}`],
+            recommendations: [
+              `Investigate factors causing ${displayName} variation`,
+              'Consider targeted interventions for outliers'
+            ]
+          });
+        }
+
+        // Threshold-based insights
+        if (thresholds) {
+          if (thresholds.warning && statistics.average < thresholds.warning.min) {
+            insights.push({
+              type: 'custom',
+              category: 'threshold',
+              text: `${displayName} average (${statistics.average}) is below warning threshold (${thresholds.warning.min}).`,
+              priority: 'high',
+              dataPoints: [`customFields.${fieldName}`],
+              recommendations: [`Take action to improve ${displayName}`]
+            });
+          }
+          
+          if (thresholds.warning && statistics.average > thresholds.warning.max) {
+            insights.push({
+              type: 'custom',
+              category: 'threshold',
+              text: `${displayName} average (${statistics.average}) exceeds warning threshold (${thresholds.warning.max}).`,
+              priority: 'high',
+              dataPoints: [`customFields.${fieldName}`],
+              recommendations: [`Review ${displayName} values`]
+            });
+          }
+        }
+
+        // Performance insights
+        if (field.fieldType === 'percentage' && statistics.average < 50) {
+          insights.push({
+            type: 'custom',
+            category: 'performance',
+            text: `Low average ${displayName} (${statistics.average}%) indicates improvement opportunities.`,
+            priority: 'high',
+            dataPoints: [`customFields.${field.fieldName}`],
+            recommendations: [
+              `Develop strategies to improve ${displayName}`,
+              'Analyze top performers for best practices'
+            ]
+          });
+        }
       }
     }
   });
@@ -478,6 +727,32 @@ const generateCustomFieldInsights = (customAnalytics) => {
   return insights;
 };
 
+/**
+ * Evaluate insight condition (simple evaluator)
+ * @param {Object} statistics - Field statistics
+ * @param {string} condition - Condition string (e.g., "average < 50")
+ * @returns {boolean} Whether condition is met
+ */
+const evaluateInsightCondition = (statistics, condition) => {
+  try {
+    // Simple condition evaluation - replace variable names with actual values
+    let evalString = condition
+      .replace(/\baverage\b/g, statistics.average || 0)
+      .replace(/\bmedian\b/g, statistics.median || 0)
+      .replace(/\bmin\b/g, statistics.min || 0)
+      .replace(/\bmax\b/g, statistics.max || 0)
+      .replace(/\btotal\b/g, statistics.total || 0)
+      .replace(/\bcount\b/g, statistics.count || 0)
+      .replace(/\bstandardDeviation\b/g, statistics.standardDeviation || 0);
+    
+    // Evaluate the condition (use Function constructor for safety)
+    return new Function('return ' + evalString)();
+  } catch (error) {
+    logger.error(`Error evaluating condition "${condition}":`, error);
+    return false;
+  }
+};
+
 module.exports = {
   analyzeCustomFields,
   getCustomFieldConfig,
@@ -486,4 +761,5 @@ module.exports = {
   analyzeCategoricalField,
   analyzeTemporalField,
   analyzeBooleanField,
+  mapFieldTypeToAnalysisType,
 };

@@ -9,18 +9,18 @@ const router = express.Router();
 
 router
   .route('/user')
-  .get(auth('manage:user'), tenantConfigController.getUserConfig)
+  .get(auth('user:manage'), tenantConfigController.getUserConfig)
   .put(
-    auth('manage:user'),
+    auth('user:manage'),
     validate(tenantConfigValidation.upsertTenantConfig),
     tenantConfigController.upsertUserConfig
   );
 
 router
   .route('/node')
-  .get(auth('manage:node'), tenantConfigController.getNodeConfig)
+  .get(auth('node:manage'), tenantConfigController.getNodeConfig)
   .put(
-    auth('manage:node'),
+    auth('node:manage'),
     validate(tenantConfigValidation.upsertTenantConfig),
     tenantConfigController.upsertNodeConfig
   );

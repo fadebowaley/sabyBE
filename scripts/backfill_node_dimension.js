@@ -29,11 +29,11 @@ async function backfill() {
 
   await mongoose.connect(config.mongoose.url, config.mongoose.options);
 
-  const total = await Nodes.countDocuments();
+  const total = await Nodes.countDocuments({ deletedAt: null });
   console.log(`📦 Nodes to process: ${total}`);
 
   let processed = 0;
-  let cursor = Nodes.find().cursor();
+  let cursor = Nodes.find({ deletedAt: null }).cursor();
 
   const batch = [];
   for await (const doc of cursor) {

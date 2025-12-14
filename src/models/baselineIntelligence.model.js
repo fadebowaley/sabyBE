@@ -13,34 +13,34 @@ const baselineIntelligenceSchema = mongoose.Schema(
       required: true,
       index: true,
     },
-    
+
     nodeId: {
       type: String,
       index: true,
       default: null, // null for network-level baselines
     },
-    
+
     type: {
       type: String,
       enum: ['node', 'network'],
       required: true,
       index: true,
     },
-    
+
     metrics: {
       // User demographics and composition
       users: {
         total: { type: Number, default: 0 },
         active: { type: Number, default: 0 },
         inactive: { type: Number, default: 0 },
-        
+
         verification: {
           email: { type: Number, default: 0 },
           phone: { type: Number, default: 0 },
           emailRate: { type: Number, default: 0 }, // percentage
           phoneRate: { type: Number, default: 0 }, // percentage
         },
-        
+
         demographics: {
           gender: {
             male: { type: Number, default: 0 },
@@ -48,16 +48,16 @@ const baselineIntelligenceSchema = mongoose.Schema(
             other: { type: Number, default: 0 },
             unknown: { type: Number, default: 0 },
           },
-          
+
           ageGroups: {
-            'under18': { type: Number, default: 0 },
+            under18: { type: Number, default: 0 },
             '19to30': { type: Number, default: 0 },
             '31to45': { type: Number, default: 0 },
             '46to60': { type: Number, default: 0 },
-            'over60': { type: Number, default: 0 },
-            'unknown': { type: Number, default: 0 },
+            over60: { type: Number, default: 0 },
+            unknown: { type: Number, default: 0 },
           },
-          
+
           maritalStatus: {
             single: { type: Number, default: 0 },
             married: { type: Number, default: 0 },
@@ -65,42 +65,56 @@ const baselineIntelligenceSchema = mongoose.Schema(
             widowed: { type: Number, default: 0 },
             unknown: { type: Number, default: 0 },
           },
-          
+
           averageAge: { type: Number, default: 0 },
         },
-        
+
         hierarchy: {
           owners: { type: Number, default: 0 },
           supers: { type: Number, default: 0 },
           ordinary: { type: Number, default: 0 },
           sabyUsers: { type: Number, default: 0 },
         },
-        
+
         roles: [
           {
             roleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Role' },
             roleName: String,
             count: { type: Number, default: 0 },
-          }
+          },
         ],
-        
+
         geography: [
           {
             state: String,
             lga: String,
             count: { type: Number, default: 0 },
-          }
+          },
         ],
-        
+
         professional: [
           {
             category: String,
             occupation: String,
             count: { type: Number, default: 0 },
-          }
+          },
+        ],
+
+        officeTitles: [
+          {
+            title: String,
+            count: { type: Number, default: 0 },
+          },
+        ],
+
+        qualifications: [
+          {
+            qualification: String,
+            count: { type: Number, default: 0 },
+          },
         ],
       },
-      
+
       // Node facility information (only for node-level baselines)
       facility: {
         propertyStatus: String, // Owned, Rented, Leased, Other
@@ -108,14 +122,14 @@ const baselineIntelligenceSchema = mongoose.Schema(
         buildingType: String,
         estimatedValue: Number,
         establishmentAge: Number, // years since dateOfEstablishment
-        
+
         location: {
           city: String,
           state: String,
           country: String,
           postalCode: String,
         },
-        
+
         hierarchy: {
           level: String,
           depth: Number,
@@ -123,34 +137,34 @@ const baselineIntelligenceSchema = mongoose.Schema(
           childCount: Number,
         },
       },
-      
+
       // Network-level aggregations (only for network-level baselines)
       network: {
         totalNodes: { type: Number, default: 0 },
         activeNodes: { type: Number, default: 0 },
         inactiveNodes: { type: Number, default: 0 },
-        
+
         nodesByType: [
           {
             structureType: String,
             levelName: String,
             count: { type: Number, default: 0 },
-          }
+          },
         ],
-        
+
         nodesByProperty: {
           owned: { type: Number, default: 0 },
           rented: { type: Number, default: 0 },
           leased: { type: Number, default: 0 },
           other: { type: Number, default: 0 },
         },
-        
+
         nodesByFacility: {
           active: { type: Number, default: 0 },
           inactive: { type: Number, default: 0 },
           underConstruction: { type: Number, default: 0 },
         },
-        
+
         regionalDistribution: [
           {
             region: String,
@@ -158,113 +172,179 @@ const baselineIntelligenceSchema = mongoose.Schema(
             country: String,
             nodes: { type: Number, default: 0 },
             users: { type: Number, default: 0 },
-          }
+          },
         ],
-        
+
+        stateDistribution: [
+          {
+            state: String,
+            count: { type: Number, default: 0 },
+          },
+        ],
+
+        structureDistribution: [
+          {
+            structureName: String,
+            count: { type: Number, default: 0 },
+          },
+        ],
+
+        // Attendance metrics
+        attendance: {
+          total: { type: Number, default: 0 },
+          average: { type: Number, default: 0 },
+          top10: [
+            {
+              rank: Number,
+              nodeId: String,
+              name: String,
+              levelName: String,
+              structureName: String,
+              parentName: String,
+              attendance: Number,
+            },
+          ],
+          rangeDistribution: [
+            {
+              range: String,
+              min: Number,
+              max: Number,
+              count: Number,
+              totalAttendance: Number,
+              totalFinancial: Number,
+              percentage: Number,
+            },
+          ],
+        },
+
+        // Income/Financial metrics
+        income: {
+          total: { type: Number, default: 0 },
+          average: { type: Number, default: 0 },
+          top10: [
+            {
+              rank: Number,
+              nodeId: String,
+              name: String,
+              levelName: String,
+              structureName: String,
+              parentName: String,
+              income: Number,
+            },
+          ],
+        },
+
         hierarchyStats: {
           maxDepth: { type: Number, default: 0 },
           averageDepth: { type: Number, default: 0 },
           totalLevels: { type: Number, default: 0 },
         },
-        
+
         establishmentStats: {
           averageAge: { type: Number, default: 0 },
           oldestNode: { type: Number, default: 0 },
           newestNode: { type: Number, default: 0 },
         },
       },
-      
+
       // Custom fields analytics (tenant-specific)
       customFields: {
         type: mongoose.Schema.Types.Mixed,
         default: {},
       },
-      
+
       // Enhanced custom field analytics
       customAnalytics: {
         // Numeric field analytics
         numeric: [
           {
-            fieldName: String,           // e.g., "averageAttendance"
-            displayName: String,         // e.g., "Average Attendance"
-            fieldType: String,           // "number", "currency", "percentage"
+            fieldName: String, // e.g., "averageAttendance"
+            displayName: String, // e.g., "Average Attendance"
+            fieldType: String, // "number", "currency", "percentage"
             statistics: {
-              total: Number,             // Sum of all values
-              average: Number,           // Mean value
-              median: Number,            // Median value
-              min: Number,               // Minimum value
-              max: Number,               // Maximum value
-              count: Number,             // Number of records with this field
-              standardDeviation: Number  // Standard deviation
+              total: Number, // Sum of all values
+              average: Number, // Mean value
+              median: Number, // Median value
+              min: Number, // Minimum value
+              max: Number, // Maximum value
+              count: Number, // Number of records with this field
+              standardDeviation: Number, // Standard deviation
             },
-            distribution: [             // Value distribution
+            distribution: [
+              // Value distribution
               {
-                range: String,          // e.g., "0-100", "101-200"
-                count: Number,          // Number of records in this range
-                percentage: Number      // Percentage of total
-              }
-            ]
-          }
+                range: String, // e.g., "0-100", "101-200"
+                count: Number, // Number of records in this range
+                percentage: Number, // Percentage of total
+              },
+            ],
+          },
         ],
-        
+
         // Categorical field analytics
         categorical: [
           {
-            fieldName: String,          // e.g., "riskLevel"
-            displayName: String,        // e.g., "Risk Level"
+            fieldName: String, // e.g., "riskLevel"
+            displayName: String, // e.g., "Risk Level"
             values: [
               {
-                value: String,          // e.g., "High", "Medium", "Low"
-                count: Number,          // Number of records with this value
-                percentage: Number      // Percentage of total
-              }
+                value: String, // e.g., "High", "Medium", "Low"
+                count: Number, // Number of records with this value
+                percentage: Number, // Percentage of total
+              },
             ],
-            mostCommon: String,         // Most frequent value
-            diversity: Number           // Number of unique values
-          }
+            mostCommon: String, // Most frequent value
+            diversity: Number, // Number of unique values
+          },
         ],
-        
+
         // Date field analytics
         temporal: [
           {
-            fieldName: String,          // e.g., "lastVisit"
-            displayName: String,        // e.g., "Last Visit Date"
+            fieldName: String, // e.g., "lastVisit"
+            displayName: String, // e.g., "Last Visit Date"
             statistics: {
-              earliest: Date,           // Earliest date
-              latest: Date,             // Latest date
-              averageAge: Number,       // Average days from now
-              count: Number             // Number of records with dates
+              earliest: Date, // Earliest date
+              latest: Date, // Latest date
+              averageAge: Number, // Average days from now
+              count: Number, // Number of records with dates
             },
             patterns: [
               {
-                period: String,         // "daily", "weekly", "monthly"
-                trend: String,          // "increasing", "decreasing", "stable"
-                seasonality: Boolean    // Whether seasonal patterns exist
-              }
-            ]
-          }
+                period: String, // "daily", "weekly", "monthly"
+                trend: String, // "increasing", "decreasing", "stable"
+                seasonality: Boolean, // Whether seasonal patterns exist
+              },
+            ],
+          },
         ],
-        
+
         // Boolean field analytics
         boolean: [
           {
-            fieldName: String,          // e.g., "isVip"
-            displayName: String,        // e.g., "VIP Status"
-            trueCount: Number,          // Number of true values
-            falseCount: Number,         // Number of false values
-            truePercentage: Number,     // Percentage of true values
-            nullCount: Number           // Number of null/undefined values
-          }
-        ]
+            fieldName: String, // e.g., "isVip"
+            displayName: String, // e.g., "VIP Status"
+            trueCount: Number, // Number of true values
+            falseCount: Number, // Number of false values
+            truePercentage: Number, // Percentage of true values
+            nullCount: Number, // Number of null/undefined values
+          },
+        ],
       },
     },
-    
+
     // Generated insights
     insights: [
       {
         type: {
           type: String,
-          enum: ['demographic', 'geographic', 'facility', 'operational', 'custom'],
+          enum: [
+            'demographic',
+            'geographic',
+            'facility',
+            'operational',
+            'custom',
+          ],
           required: true,
         },
         category: String, // subcategory for grouping
@@ -277,15 +357,15 @@ const baselineIntelligenceSchema = mongoose.Schema(
         dataPoints: [String], // supporting data references
         recommendations: [String], // actionable suggestions
         createdAt: { type: Date, default: Date.now },
-      }
+      },
     ],
-    
+
     // Computation metadata
     lastComputed: { type: Date, default: Date.now },
     computedBy: { type: String, default: 'system' }, // 'system' or userId
     computationDuration: { type: Number, default: 0 }, // milliseconds
     version: { type: Number, default: 1 }, // for schema evolution
-    
+
     // Data freshness tracking
     sourceDataHash: String, // hash of source data for change detection
     dependsOn: [String], // list of nodeIds this baseline depends on

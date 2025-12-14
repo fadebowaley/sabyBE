@@ -1,61 +1,122 @@
 const express = require('express');
 const auth = require('../../middlewares/auth');
+const requireAccess = require('../../middlewares/requireAccess');
 const validate = require('../../middlewares/validate');
 const baselineIntelligenceValidation = require('../../validations/baselineIntelligence.validation');
 const baselineIntelligenceController = require('../../controllers/baselineIntelligence.controller');
+const {
+  canAccessNodeBaseline,
+  canRecomputeBaseline,
+} = require('../../middlewares/baselinePermission');
 
 const router = express.Router();
 
 // Health check endpoint
-router.get('/health', auth(), baselineIntelligenceController.healthCheck);
+router.get(
+  '/health',
+  requireAccess('view:baselineintelligence'),
+  baselineIntelligenceController.healthCheck
+);
 
 // Statistics endpoint
-router.get('/stats', auth(), baselineIntelligenceController.getBaselineStats);
+router.get(
+  '/stats',
+  requireAccess('view:baselineintelligence'),
+  baselineIntelligenceController.getBaselineStats
+);
 
 // Summary endpoint (combined node and network data)
 router.get(
   '/summary',
-  auth(),
+  requireAccess('view:baselineintelligence'),
   validate(baselineIntelligenceValidation.getBaselineSummary),
   baselineIntelligenceController.getBaselineSummary
 );
 
 // Network-level endpoints
-router.get('/network', auth(), baselineIntelligenceController.getNetworkBaseline);
+router.get(
+  '/network',
+  requireAccess('view:baselineintelligence'),
+  baselineIntelligenceController.getNetworkBaseline
+);
 
 router.get(
   '/network/insights',
-  auth(),
+  requireAccess('view:baselineintelligence'),
   validate(baselineIntelligenceValidation.getNetworkInsights),
   baselineIntelligenceController.getNetworkInsights
 );
 
-router.post('/network/recompute', auth(), baselineIntelligenceController.recomputeNetworkBaseline);
+router.post(
+  '/network/recompute',
+  requireAccess('create:baselineintelligence'),
+  canRecomputeBaseline,
+  baselineIntelligenceController.recomputeNetworkBaseline
+);
 
-// Node-level endpoints
+router.get(
+  '/network/top-nodes',
+  requireAccess('view:baselineintelligence'),
+  baselineIntelligenceController.getTopNodes
+);
+router.get(
+  '/network/geographic-distribution',
+  requireAccess('view:baselineintelligence'),
+  baselineIntelligenceController.getGeographicDistribution
+);
+router.get(
+  '/network/health-score',
+  requireAccess('view:baselineintelligence'),
+  baselineIntelligenceController.getHealthScore
+);
+
+// User's scoped network baseline (hierarchical access)
+router.get(
+  '/my-network',
+  requireAccess('view:baselineintelligence'),
+  baselineIntelligenceController.getMyNetworkBaseline
+);
+
+// User's node family information
+router.get(
+  '/my-family',
+  requireAccess('view:baselineintelligence'),
+  baselineIntelligenceController.getMyNodeFamily
+);
+
+// Node-level endpoints (with hierarchical permission checks)
 router.get(
   '/node/:nodeId',
-  auth(),
+  requireAccess('view:baselineintelligence'),
+  canAccessNodeBaseline('nodeId'),
   validate(baselineIntelligenceValidation.getNodeBaseline),
   baselineIntelligenceController.getNodeBaseline
 );
 
 router.get(
   '/node/:nodeId/insights',
-  auth(),
+  requireAccess('view:baselineintelligence'),
+  canAccessNodeBaseline('nodeId'),
   validate(baselineIntelligenceValidation.getNodeInsights),
   baselineIntelligenceController.getNodeInsights
 );
 
 router.post(
   '/node/:nodeId/recompute',
-  auth(),
+  requireAccess('create:baselineintelligence'),
+  canRecomputeBaseline,
+  canAccessNodeBaseline('nodeId'),
   validate(baselineIntelligenceValidation.recomputeNodeBaseline),
   baselineIntelligenceController.recomputeNodeBaseline
 );
 
-// Bulk operations
-router.post('/recompute/all', auth(), baselineIntelligenceController.recomputeAllBaselines);
+// Bulk operations (requires elevated permissions)
+router.post(
+  '/recompute/all',
+  requireAccess('create:baselineintelligence'),
+  canRecomputeBaseline,
+  baselineIntelligenceController.recomputeAllBaselines
+);
 
 module.exports = router;
 
@@ -272,7 +333,7 @@ module.exports = router;
  *           format: date-time
  *         version:
  *           type: number
- *     
+ *
  *     Insight:
  *       type: object
  *       properties:

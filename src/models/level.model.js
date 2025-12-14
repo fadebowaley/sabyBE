@@ -10,6 +10,8 @@ const levelSchema = mongoose.Schema(
     name: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
     rank: { type: Number, required: true },
+    isSpecial: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
@@ -31,9 +33,15 @@ levelSchema.index(
   { unique: true, partialFilterExpression: { deletedAt: null } }
 );
 
+// Rank uniqueness: Only enforce for normal levels (isSpecial: false)
+// This allows one normal level per rank, but special levels can share ranks
+// Special levels are already unique by name (enforced above)
 levelSchema.index(
   { tenantId: 1, rank: 1 },
-  { unique: true, partialFilterExpression: { deletedAt: null } }
+  {
+    unique: true,
+    partialFilterExpression: { deletedAt: null, isSpecial: false },
+  }
 );
 
 /**

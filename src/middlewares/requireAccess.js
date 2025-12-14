@@ -4,150 +4,222 @@ const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { apiKeyService } = require('../services');
 const Role = require('../models/role.model');
+const { extractApiKey } = require('./apiKeyAuth');
 const {
   ownerResourceBundle,
 } = require('../scripts/permissions/ownerResource.json');
 
-// Debug: Log the owner resource bundle on startup
-// eslint-disable-next-line no-console
-console.log(
-  '🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded:',
-  ownerResourceBundle
-);
-// eslint-disable-next-line no-console
-console.log('🔍 [REQUIRE ACCESS] Bundle type:', typeof ownerResourceBundle);
-// eslint-disable-next-line no-console
-console.log(
-  '🔍 [REQUIRE ACCESS] Is Array?:',
-  Array.isArray(ownerResourceBundle)
-);
-
 /**
- * Normalize access object: supports both req.user and req.apiKey
+ * Normalize permission format (support both old and new during migration)
+ * Old format: "action:resource" (e.g., "view:user")
+ * New format: "resource:action" (e.g., "user:read")
  */
-const resolveAccessIdentity = async (req, requiredPermissions = []) => {
-  const header = req.header('Authorization');
-  const isJwt = header?.startsWith('Bearer ') && !header?.includes('sk_');
-  const apiKey = req.header('x-api-key') || header;
-
-  console.log('[requireAccess] Incoming headers:', {
-    Authorization: req.header('Authorization'),
-    'x-api-key': req.header('x-api-key'),
-    requiredPermissions,
-  });
-  console.log('[requireAccess] Full request headers:', req.headers);
-
-  // === 1. Try JWT ===
-  if (isJwt) {
-    console.log('[requireAccess] Detected JWT');
-    return new Promise((resolve, reject) => {
-      passport.authenticate(
-        'jwt',
-        { session: false },
-        async (err, user, info) => {
-          if (err || info || !user) {
-            console.log('[requireAccess] JWT auth failed', { err, info, user });
-            return reject(
-              new ApiError(httpStatus.UNAUTHORIZED, 'Invalid or missing JWT')
-            );
-          }
-
-          req.user = user;
-          console.log('[requireAccess] Authenticated user:', user);
-
-          // Superuser bypass
-          if (user.isSuper) return resolve({ type: 'user', value: user });
-
-          // === Owner Check ===
-          if (user.isOwner) {
-            const hasAccess = checkOwnerAccess(requiredPermissions);
-            if (!hasAccess) {
-              console.log('[requireAccess] Owner lacks access');
-              return reject(
-                new ApiError(
-                  httpStatus.FORBIDDEN,
-                  'Owner does not have access to this resource'
-                )
-              );
-            }
-            return resolve({ type: 'user', value: user });
-          }
-
-          // === Role Permission Check ===
-          const userRoles = await Role.find({
-            _id: { $in: user.roles },
-          }).populate('permissions');
-          const userPermissions = userRoles.flatMap((role) =>
-            role.permissions.map((p) => p.name)
-          );
-          const hasWildcard = userPermissions.includes('*');
-
-          const hasRights = requiredPermissions.every(
-            (perm) => userPermissions.includes(perm) || hasWildcard
-          );
-
-          if (!hasRights) {
-            console.log(
-              '[requireAccess] User missing permissions:',
-              requiredPermissions
-            );
-            return reject(
-              new ApiError(
-                httpStatus.FORBIDDEN,
-                `Missing permissions: ${requiredPermissions.join(', ')}`
-              )
-            );
-          }
-
-          return resolve({ type: 'user', value: user });
-        }
-      )(req);
-    });
+const normalizePermission = (permission) => {
+  if (!permission || typeof permission !== 'string') {
+    return permission;
   }
 
-  // === 2. Try API Key ===
-  if (!apiKey)
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'Missing API key or JWT');
+  // Special cases
+  if (permission === '*' || permission === 'all:*') {
+    return '*';
+  }
 
-  console.log('[requireAccess] Detected API key:', apiKey);
-  const apiKeyDoc = await apiKeyService.verifyApiKey(apiKey);
-  console.log('[requireAccess] API key doc:', apiKeyDoc && apiKeyDoc._id);
-
-  // Permissions check
+  // If already in new format (resource:action), return as-is
+  // Check for pattern: lowercase_resource:action (e.g., "user:read", "node:create")
   if (
-    requiredPermissions.length > 0 &&
-    !requiredPermissions.some(
-      (perm) =>
-        apiKeyDoc.permissions.includes(perm) ||
-        apiKeyDoc.permissions.includes('admin')
+    permission.match(
+      /^[a-z]+[A-Z]?[a-z]*:(read|create|update|delete|manage|import|export|assign|restore|activate|deactivate|move|upload|download|share|copy|publish|archive|submit|process|complete|cancel|refund|regenerate|deleteAll|toggleStatus|assignRole|sendMessage|forgotPassword|resetPassword|verify|refresh|send|draft|retry|public|private|permissions|status|auth)$/
     )
   ) {
-    console.log(
-      '[requireAccess] API key lacks required permissions:',
-      requiredPermissions,
-      apiKeyDoc.permissions
-    );
-    throw new ApiError(
-      httpStatus.FORBIDDEN,
-      `API key lacks required permissions: ${requiredPermissions.join(', ')}`
-    );
+    return permission;
   }
 
-  req.apiKey = {
-    id: apiKeyDoc._id,
-    label: apiKeyDoc.label,
-    tenant: apiKeyDoc.tenant,
-    permissions: apiKeyDoc.permissions,
-    scope: apiKeyDoc.scope,
-    environment: apiKeyDoc.environment,
-    rateLimit: apiKeyDoc.rateLimit,
-    usageCount: apiKeyDoc.usageCount,
-  };
+  // Try to load mapping if available
+  try {
+    // eslint-disable-next-line global-require
+    const fs = require('fs');
+    // eslint-disable-next-line global-require
+    const path = require('path');
+    const mappingFile = path.join(
+      __dirname,
+      '../scripts/permissions/permission-mapping-simple.json'
+    );
+    if (fs.existsSync(mappingFile)) {
+      const mapping = JSON.parse(fs.readFileSync(mappingFile, 'utf8'));
+      if (mapping[permission]) {
+        return mapping[permission];
+      }
+    }
+  } catch (error) {
+    // If mapping file doesn't exist or can't be read, continue with fallback logic
+  }
 
-  req.tenantId = apiKeyDoc.tenant._id;
-  req.tenant = apiKeyDoc.tenant;
+  // Fallback: Try to convert old format to new format
+  const parts = permission.split(':');
+  if (parts.length >= 2) {
+    const action = parts[0]; // e.g., 'view', 'create'
+    const resourceParts = parts
+      .slice(1)
+      .filter((p) => p && !p.startsWith('::'));
 
-  return { type: 'apiKey', value: req.apiKey };
+    if (resourceParts.length > 0) {
+      const resource = resourceParts[0];
+
+      // Map old actions to new actions
+      const actionMap = {
+        view: 'read',
+        create: 'create',
+        update: 'update',
+        delete: 'delete',
+        manage: 'manage',
+        read: 'read',
+      };
+
+      const newAction = actionMap[action] || action;
+      return `${resource}:${newAction}`;
+    }
+  }
+
+  // If we can't normalize, return as-is (might be already in correct format or special case)
+  return permission;
+};
+
+/**
+ * Check user permissions with bulk resource support
+ * Supports:
+ * - Exact permission match: "user:read" or "view:user" (both formats during migration)
+ * - Wildcard permission: "*"
+ * - Bulk resource check: "user:*" (all actions on resource) or "*:user" (old format)
+ * - Manage permission: "user:manage" (equivalent to read, create, update, delete)
+ *
+ * @param {string[]} userPermissions - User's permissions array
+ * @param {string[]} requiredPermissions - Required permissions array
+ * @param {boolean} hasWildcard - Whether user has wildcard permission
+ * @returns {boolean} True if user has all required permissions
+ */
+const checkUserPermissions = (
+  userPermissions,
+  requiredPermissions,
+  hasWildcard
+) => {
+  // If user has wildcard, grant all access
+  if (hasWildcard) {
+    return true;
+  }
+
+  // Normalize user permissions (support both formats during migration)
+  const normalizedUserPerms = userPermissions.map(normalizePermission);
+
+  // Check each required permission
+  return requiredPermissions.every((requiredPerm) => {
+    // Normalize required permission
+    const normalizedRequired = normalizePermission(requiredPerm);
+
+    // Direct match (check both normalized and original formats)
+    if (
+      normalizedUserPerms.includes(normalizedRequired) ||
+      userPermissions.includes(requiredPerm)
+    ) {
+      return true;
+    }
+
+    // Parse permission: "resource:action" (new format) or "action:resource" (old format)
+    const parts = normalizedRequired.split(':');
+    if (parts.length !== 2) {
+      // Invalid format, require exact match
+      return false;
+    }
+
+    // Try both formats: resource:action and action:resource
+    const [part1, part2] = parts;
+
+    // Determine if it's new format (resource:action) or old format (action:resource)
+    const isNewFormat = [
+      'read',
+      'create',
+      'update',
+      'delete',
+      'manage',
+      'import',
+      'export',
+      'assign',
+      'restore',
+      'activate',
+      'deactivate',
+      'move',
+      'upload',
+      'download',
+      'share',
+      'copy',
+      'publish',
+      'archive',
+      'submit',
+      'process',
+      'complete',
+      'cancel',
+      'refund',
+    ].includes(part2);
+
+    const resource = isNewFormat ? part1 : part2;
+    const action = isNewFormat ? part2 : part1;
+
+    // Check for bulk resource permission: "resource:*" (new) or "*:resource" (old)
+    if (
+      normalizedUserPerms.includes(`${resource}:*`) ||
+      normalizedUserPerms.includes(`*:${resource}`) ||
+      userPermissions.includes(`*:${resource}`)
+    ) {
+      return true;
+    }
+
+    // Check for manage permission: "resource:manage" covers all CRUD actions
+    if (
+      normalizedUserPerms.includes(`${resource}:manage`) ||
+      userPermissions.includes(`manage:${resource}`)
+    ) {
+      const crudActions = ['read', 'create', 'update', 'delete', 'view'];
+      if (crudActions.includes(action)) {
+        return true;
+      }
+    }
+
+    // Check if user has all CRUD actions for this resource (they effectively have manage)
+    const resourceActions = normalizedUserPerms
+      .filter((perm) => {
+        const permParts = perm.split(':');
+        if (permParts.length !== 2) return false;
+        // Check both formats
+        const permResource = [
+          'read',
+          'create',
+          'update',
+          'delete',
+          'manage',
+        ].includes(permParts[1])
+          ? permParts[0]
+          : permParts[1];
+        return permResource === resource;
+      })
+      .map((perm) => {
+        const permParts = perm.split(':');
+        const isNew = ['read', 'create', 'update', 'delete', 'manage'].includes(
+          permParts[1]
+        );
+        return isNew ? permParts[1] : permParts[0];
+      });
+
+    const hasAllCrud = ['read', 'create', 'update', 'delete'].every(
+      (act) =>
+        resourceActions.includes(act) ||
+        resourceActions.includes(act === 'read' ? 'view' : act)
+    );
+
+    if (hasAllCrud && (action === 'manage' || action === 'view')) {
+      return true;
+    }
+
+    return false;
+  });
 };
 
 /**
@@ -195,19 +267,292 @@ const checkOwnerAccess = (permissions) => {
 };
 
 /**
+ * Normalize access object: supports both req.user and req.apiKey
+ *
+ * **Priority Order:**
+ * 1. Check if `req.apiKey` exists (set by `apiKeyAuth` middleware) - skip verification
+ * 2. Try JWT authentication (if no API key)
+ * 3. Try API key authentication (extract and verify)
+ */
+const resolveAccessIdentity = async (req, requiredPermissions = []) => {
+  console.log('[requireAccess] Incoming headers:', {
+    Authorization: req.header('Authorization'),
+    'x-api-key': req.header('x-api-key'),
+    requiredPermissions,
+    hasReqApiKey: !!req.apiKey,
+  });
+
+  // === 0. Check if req.apiKey already exists (set by apiKeyAuth middleware) ===
+  // This means apiKeyAuth middleware already verified the API key
+  if (req.apiKey) {
+    console.log(
+      '[requireAccess] Using existing req.apiKey from apiKeyAuth middleware:',
+      req.apiKey.id
+    );
+
+    // Check permissions (verification already done by apiKeyAuth middleware)
+    if (requiredPermissions.length > 0) {
+      const hasPermission = requiredPermissions.some(
+        (perm) =>
+          req.apiKey.permissions.includes(perm) ||
+          req.apiKey.permissions.includes('admin')
+      );
+
+      if (!hasPermission) {
+        console.log(
+          '[requireAccess] API key lacks required permissions:',
+          requiredPermissions,
+          req.apiKey.permissions
+        );
+        throw new ApiError(
+          httpStatus.FORBIDDEN,
+          `API key lacks required permissions: ${requiredPermissions.join(
+            ', '
+          )}`
+        );
+      }
+    }
+
+    // Ensure tenant info is set (should already be set by apiKeyAuth, but double-check)
+    if (!req.tenantId && req.apiKey.tenant) {
+      req.tenantId = req.apiKey.tenant._id;
+      req.tenant = req.apiKey.tenant;
+    }
+
+    return { type: 'apiKey', value: req.apiKey };
+  }
+
+  // === 1. Try JWT (only if req.user not already set) ===
+  if (!req.user) {
+    const header = req.header('Authorization');
+    const isJwt = header?.startsWith('Bearer ') && !header?.includes('sk_');
+
+    if (isJwt) {
+      console.log('[requireAccess] Detected JWT, authenticating...');
+      return new Promise((resolve, reject) => {
+        passport.authenticate(
+          'jwt',
+          { session: false },
+          async (err, user, info) => {
+            if (err || info || !user) {
+              console.log('[requireAccess] JWT auth failed', {
+                err,
+                info,
+                user,
+              });
+              return reject(
+                new ApiError(httpStatus.UNAUTHORIZED, 'Invalid or missing JWT')
+              );
+            }
+
+            req.user = user;
+            console.log('[requireAccess] Authenticated user:', user);
+
+            // Superuser bypass
+            if (user.isSuper) return resolve({ type: 'user', value: user });
+
+            // === Owner Check ===
+            if (user.isOwner) {
+              const hasAccess = checkOwnerAccess(requiredPermissions);
+              if (!hasAccess) {
+                console.log('[requireAccess] Owner lacks access');
+                return reject(
+                  new ApiError(
+                    httpStatus.FORBIDDEN,
+                    'Owner does not have access to this resource'
+                  )
+                );
+              }
+              return resolve({ type: 'user', value: user });
+            }
+
+            // === Role Permission Check ===
+            if (user.isAdmin) {
+              console.log(
+                '[requireAccess] isAdmin user - checking role permissions'
+              );
+            }
+
+            const userRoles = await Role.find({
+              _id: { $in: user.roles },
+            }).populate('permissions');
+
+            const userPermissions = userRoles.flatMap((role) =>
+              role.permissions.map((p) => p.name)
+            );
+
+            if (user.isAdmin) {
+              console.log(
+                '[requireAccess] isAdmin roles:',
+                userRoles.map((r) => r.name)
+              );
+              console.log(
+                '[requireAccess] isAdmin permissions:',
+                userPermissions
+              );
+            }
+
+            const hasWildcard = userPermissions.includes('*');
+
+            // Check permissions with bulk resource support
+            const hasRights = checkUserPermissions(
+              userPermissions,
+              requiredPermissions,
+              hasWildcard
+            );
+
+            if (!hasRights) {
+              console.log(
+                '[requireAccess] User missing permissions:',
+                requiredPermissions,
+                'User has:',
+                userPermissions
+              );
+              return reject(
+                new ApiError(
+                  httpStatus.FORBIDDEN,
+                  `Missing permissions: ${requiredPermissions.join(', ')}`
+                )
+              );
+            }
+
+            return resolve({ type: 'user', value: user });
+          }
+        )(req, {}, () => {});
+      });
+    }
+  } else {
+    // req.user already exists - check permissions only
+    console.log('[requireAccess] Using existing req.user');
+    const { user } = req;
+
+    // Superuser bypass
+    if (user.isSuper) return { type: 'user', value: user };
+
+    // Owner check
+    if (user.isOwner) {
+      const hasAccess = checkOwnerAccess(requiredPermissions);
+      if (!hasAccess) {
+        throw new ApiError(
+          httpStatus.FORBIDDEN,
+          'Owner does not have access to this resource'
+        );
+      }
+      return { type: 'user', value: user };
+    }
+
+    // Role permission check
+    const userRoles = await Role.find({
+      _id: { $in: user.roles },
+    }).populate('permissions');
+
+    const userPermissions = userRoles.flatMap((role) =>
+      role.permissions.map((p) => p.name)
+    );
+
+    const hasWildcard = userPermissions.includes('*');
+    const hasRights = checkUserPermissions(
+      userPermissions,
+      requiredPermissions,
+      hasWildcard
+    );
+
+    if (!hasRights) {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        `Missing permissions: ${requiredPermissions.join(', ')}`
+      );
+    }
+    return { type: 'user', value: user };
+  }
+
+  // === 2. Try API Key (only if req.apiKey not already set) ===
+  if (!req.apiKey) {
+    const apiKey = extractApiKey(req);
+
+    if (!apiKey) {
+      throw new ApiError(httpStatus.UNAUTHORIZED, 'Missing API key or JWT');
+    }
+
+    console.log('[requireAccess] Detected API key, verifying...');
+    // Verify API key (this includes all validation: hash, active, expired, approval, limits)
+    const apiKeyDoc = await apiKeyService.verifyApiKey(apiKey);
+    console.log(
+      '[requireAccess] API key verified:',
+      apiKeyDoc && apiKeyDoc._id
+    );
+
+    // Set req.apiKey (duplicate of what apiKeyAuth does, but needed if apiKeyAuth wasn't used)
+    req.apiKey = {
+      id: apiKeyDoc._id,
+      label: apiKeyDoc.label,
+      tenant: apiKeyDoc.tenant,
+      permissions: apiKeyDoc.permissions,
+      scope: apiKeyDoc.scope,
+      environment: apiKeyDoc.environment,
+      rateLimit: apiKeyDoc.rateLimit,
+      usageCount: apiKeyDoc.usageCount,
+    };
+
+    req.tenantId = apiKeyDoc.tenant._id;
+    req.tenant = apiKeyDoc.tenant;
+  } else {
+    console.log('[requireAccess] Using existing req.apiKey');
+  }
+
+  // Permissions check for API key (always check, even if req.apiKey was set by previous middleware)
+  if (
+    requiredPermissions.length > 0 &&
+    !requiredPermissions.some(
+      (perm) =>
+        req.apiKey.permissions.includes(perm) ||
+        req.apiKey.permissions.includes('admin')
+    )
+  ) {
+    console.log(
+      '[requireAccess] API key lacks required permissions:',
+      requiredPermissions,
+      req.apiKey.permissions
+    );
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      `API key lacks required permissions: ${requiredPermissions.join(', ')}`
+    );
+  }
+
+  return { type: 'apiKey', value: req.apiKey };
+};
+
+/**
  * Main middleware: requireAccess(config)
  * Supports JWT & API key auth, RBAC, scope, env, rateLimit, ownership
+ *
+ * Supports both old and new patterns:
+ * - Old: requireAccess('user:read')
+ * - New: requireAccess({ permissions: ['user:read'] })
  */
-const requireAccess = ({
-  permissions = [],
-  scope,
-  environment,
-  rateLimit = false,
-  ownership, // async (req) => tenantId | true
-  jwtOnly = false,
-  apiOnly = false,
-} = {}) =>
-  catchAsync(async (req, res, next) => {
+const requireAccess = (config) => {
+  // Handle old pattern: requireAccess('permission')
+  if (typeof config === 'string') {
+    config = { permissions: [config] };
+  }
+
+  // Handle missing config
+  if (!config || typeof config !== 'object') {
+    config = {};
+  }
+
+  const {
+    permissions = [],
+    scope,
+    environment,
+    rateLimit = false,
+    ownership, // async (req) => tenantId | true
+    jwtOnly = false,
+    apiOnly = false,
+  } = config;
+
+  return catchAsync(async (req, res, next) => {
     try {
       console.log(
         '[requireAccess] Checking access for endpoint:',
@@ -336,5 +681,6 @@ const requireAccess = ({
       next(err);
     }
   });
+};
 
 module.exports = requireAccess;

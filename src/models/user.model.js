@@ -28,6 +28,7 @@ const userSchema = mongoose.Schema(
     roles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Role', default: [] }],
     isOwner: { type: Boolean, default: false },
     isSuper: { type: Boolean, default: false },
+    isAdmin: { type: Boolean, default: false }, // Privileged user - above regular, below Owner
     isSaby: {
       type: Boolean,
       default: false,
@@ -109,6 +110,21 @@ const userSchema = mongoose.Schema(
     deletedAt: { type: Date, default: null },
     createdAt: { type: Date, default: Date.now },
 
+    // Profile Update Compliance Tracking
+    profileUpdateCompliant: {
+      type: Boolean,
+      default: false,
+    },
+    profileUpdateCompliantAt: {
+      type: Date,
+      default: null,
+    },
+    profileUpdateCompliantBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+
     // ========== MERGED PROFILE FIELDS FROM USERPROFILE ==========
     /**
      * NOTE: The detailed profile fields below are retained for backward compatibility.
@@ -137,6 +153,7 @@ const userSchema = mongoose.Schema(
       employmentCategory: { type: String },
       occupation: { type: String },
       employeeId: { type: String },
+      officeTitle: { type: String, trim: true }, // Pastor, HOD, Bishop, Deacon, etc.
 
       // Marital information
       maritalStatus: {
@@ -304,7 +321,7 @@ userSchema.methods.isPasswordMatch = async function (password) {
  * @returns {boolean}
  */
 userSchema.methods.isOrdinaryUser = function () {
-  return !this.isSaby && !this.isSuper && !this.isOwner;
+  return !this.isSaby && !this.isSuper && !this.isOwner && !this.isAdmin;
 };
 
 /**
@@ -312,18 +329,19 @@ userSchema.methods.isOrdinaryUser = function () {
  * @returns {boolean}
  */
 userSchema.methods.canAccessWebPortal = function () {
-  return this.isSaby || this.isSuper || this.isOwner;
+  return this.isSaby || this.isSuper || this.isOwner || this.isAdmin;
 };
 
 /**
  * Get user hierarchy level
- * @returns {number} 1=SabyUser, 2=SuperUser, 3=Owner, 4=OrdinaryUser
+ * @returns {number} 1=SabyUser, 2=SuperUser, 3=Owner, 4=Admin, 5=OrdinaryUser
  */
 userSchema.methods.getHierarchyLevel = function () {
   if (this.isSaby) return 1;
   if (this.isSuper) return 2;
   if (this.isOwner) return 3;
-  return 4;
+  if (this.isAdmin) return 4;
+  return 5;
 };
 
 userSchema.pre('save', async function (next) {
@@ -350,7 +368,7 @@ userSchema.post('save', async function(doc) {
     // Only trigger baseline updates for meaningful changes
     const relevantFields = [
       'status', 'profile', 'roles', 'isEmailVerified', 'isPhoneVerified',
-      'isOwner', 'isSuper', 'isSaby', 'customFields'
+      'isOwner', 'isSuper', 'isAdmin', 'isSaby', 'customFields'
     ];
     
     const hasRelevantChanges = this.isNew || relevantFields.some(field => this.isModified(field));
@@ -358,11 +376,21 @@ userSchema.post('save', async function(doc) {
     if (hasRelevantChanges) {
       // Import here to avoid circular dependency
       const { baselineIntelligenceService } = require('../services');
+      const { batchChangeProcessor } = require('../services');
       
       // Handle baseline updates asynchronously to avoid blocking user operations
       setImmediate(async () => {
         try {
-          await baselineIntelligenceService.handleUserChange(doc);
+          // Check if this is part of a bulk operation (e.g., CSV import)
+          const isBulkOperation = process.env.BULK_OPERATION === 'true' || this.isBulkOperation;
+          
+          if (isBulkOperation && batchChangeProcessor) {
+            // Use batch processing for bulk operations
+            await batchChangeProcessor.addUserChange(doc);
+          } else {
+            // Use immediate processing for single changes
+            await baselineIntelligenceService.handleUserChange(doc);
+          }
         } catch (error) {
           console.error('Error updating baseline intelligence after user change:', error);
         }

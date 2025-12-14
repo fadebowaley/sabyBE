@@ -6,13 +6,49 @@ const { levelService } = require('../services');
 
 // Create a new level
 const createLevel = catchAsync(async (req, res) => {
+  console.log('='.repeat(80));
+  console.log('[LEVEL CONTROLLER - CREATE] ===== LEVEL CREATION REQUEST =====');
+  console.log('[LEVEL CONTROLLER - CREATE] Tenant ID:', req.user.tenantId);
   console.log(
-    '[LEVEL CONTROLLER - CREATE] Creating level for tenant:',
-    req.user.tenantId
+    '[LEVEL CONTROLLER - CREATE] Request Body (raw):',
+    JSON.stringify(req.body, null, 2)
   );
+  console.log(
+    '[LEVEL CONTROLLER - CREATE] Request Body keys:',
+    Object.keys(req.body)
+  );
+  console.log(
+    '[LEVEL CONTROLLER - CREATE] Level name from payload:',
+    req.body.name
+  );
+  console.log(
+    '[LEVEL CONTROLLER - CREATE] Level rank from payload:',
+    req.body.rank
+  );
+  console.log(
+    '[LEVEL CONTROLLER - CREATE] Level description from payload:',
+    req.body.description
+  );
+  console.log('='.repeat(80));
+
   // SECURITY: Add tenantId from authenticated user
   req.body.tenantId = req.user.tenantId;
+
+  console.log(
+    '[LEVEL CONTROLLER - CREATE] Body after adding tenantId:',
+    JSON.stringify(req.body, null, 2)
+  );
+
   const level = await levelService.createLevel(req.body);
+
+  console.log(
+    '[LEVEL CONTROLLER - CREATE] Created level result:',
+    JSON.stringify(level, null, 2)
+  );
+  console.log('[LEVEL CONTROLLER - CREATE] Created level name:', level.name);
+  console.log('[LEVEL CONTROLLER - CREATE] Created level rank:', level.rank);
+  console.log('='.repeat(80));
+
   res.status(httpStatus.CREATED).send(level);
 });
 
@@ -98,13 +134,42 @@ const queryLevels = catchAsync(async (req, res) => {
   const filter = pick(req.query, ['type', 'parent']);
   filter.tenantId = req.user.tenantId;
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
+  
+  // Support filtering levels by active structures
+  // If onlyWithStructures=true, only return levels that have at least one active structure
+  if (req.query.onlyWithStructures === 'true' || req.query.onlyWithStructures === true) {
+    options.onlyWithStructures = true;
+    console.log('[LEVEL CONTROLLER - QUERY] Filtering levels to only those with active structures');
+  }
+  
   console.log('[LEVEL CONTROLLER - QUERY] Filter with tenantId:', filter);
+  console.log('[LEVEL CONTROLLER - QUERY] Options:', options);
   const result = await levelService.queryLevels(filter, options);
   console.log(
     '[LEVEL CONTROLLER - QUERY] Found',
     result.results?.length || 0,
     'levels for tenant:',
     filter.tenantId
+  );
+  console.log('[LEVEL CONTROLLER - QUERY] Result structure:', {
+    hasResults: !!result.results,
+    resultsLength: result.results?.length || 0,
+    totalPages: result.totalPages,
+    totalResults: result.totalResults,
+    firstLevelSample: result.results?.[0]
+      ? {
+          id: result.results[0].id,
+          _id: result.results[0]._id,
+          name: result.results[0].name,
+          rank: result.results[0].rank,
+          tenantId: result.results[0].tenantId,
+          allKeys: Object.keys(result.results[0]),
+        }
+      : null,
+  });
+  console.log(
+    '[LEVEL CONTROLLER - QUERY] Full result:',
+    JSON.stringify(result, null, 2)
   );
   res.send(result);
 });

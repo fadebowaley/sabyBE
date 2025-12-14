@@ -44,12 +44,6 @@ const envVarsSchema = Joi.object()
     SMTP_HOST: Joi.string()
       .allow('')
       .description('server that will send the emails'),
-    SMS_API_KEY: Joi.string()
-      .allow('')
-      .description('sendar.io sms api keys for transactional message'),
-    SENDAR_API_URL: Joi.string()
-      .allow('')
-      .description('sendar.io sms api keys for transactional message'),
     SMTP_PORT: Joi.number()
       .optional()
       .description('port to connect to the email server'),
@@ -66,34 +60,8 @@ const envVarsSchema = Joi.object()
     EMAIL_FROM: Joi.string()
       .allow('')
       .description('the from field in the emails sent by the app'),
-    SMS_PROVIDER: Joi.string()
-      .allow('', 'sendar', 'nigeriabulksms')
-      .default('sendar')
-      .description('SMS provider to use'),
-    SMS_SENDER_ID: Joi.string()
-      .allow('')
-      .description('Default sender ID for SMS messages'),
-    SMS_WALLET_TYPE: Joi.string()
-      .allow('')
-      .description('Wallet type for supported SMS providers'),
-    NIGERIA_BULKSMS_USERNAME: Joi.string()
-      .allow('')
-      .description('NigeriaBulkSMS account username'),
-    NIGERIA_BULKSMS_PASSWORD: Joi.string()
-      .allow('')
-      .description('NigeriaBulkSMS account password'),
-    NIGERIA_BULKSMS_BASE_URL: Joi.string()
-      .allow('')
-      .description('NigeriaBulkSMS API base URL'),
-    NIGERIA_BULKSMS_TIMEOUT: Joi.alternatives()
-      .try(Joi.number(), Joi.string().pattern(/^\d+/))
-      .allow('')
-      .description('NigeriaBulkSMS request timeout (ms)'),
-    NIGERIA_BULKSMS_RETRIES: Joi.alternatives()
-      .try(Joi.number(), Joi.string().pattern(/^\d+/))
-      .allow('')
-      .description('NigeriaBulkSMS request retry count'),
-
+    SMS_BASE_URL: Joi.string().allow('').description('Termii API base URL'),
+    SMS_API_KEY: Joi.string().allow('').description('Termii API key'),
     REDIS_HOST: Joi.string().default('127.0.0.1').description('Redis host'),
     REDIS_PORT: Joi.number().default(6379).description('Redis port'),
     REDIS_PASSWORD: Joi.string()
@@ -112,7 +80,6 @@ const envVarsSchema = Joi.object()
     SOCKET_PING_INTERVAL: Joi.number()
       .default(25000)
       .description('Socket.IO ping interval'),
-
     // Email Ingestion Configuration
     DEMO_IMAP_USER: Joi.string()
       .allow('')
@@ -135,7 +102,6 @@ const envVarsSchema = Joi.object()
     SMTP_HOST_EMAIL_INGESTION: Joi.string()
       .allow('')
       .description('server that will send the emails'),
-
     // Telegram Bot Configuration
     TELEGRAM_BOT_TOKEN: Joi.string()
       .allow('')
@@ -273,22 +239,8 @@ module.exports = {
     from: envVars.EMAIL_FROM || envVars.SMTP_USERNAME,
   },
   sms: {
-    provider: (envVars.SMS_PROVIDER || 'sendar').toLowerCase(),
     sms_api_key: envVars.SMS_API_KEY,
-    sendar_api_url: envVars.SENDAR_API_URL,
-    senderId: envVars.SMS_SENDER_ID,
-    walletType: envVars.SMS_WALLET_TYPE,
-    nigeriaBulkSms: {
-      username: envVars.NIGERIA_BULKSMS_USERNAME,
-      password: envVars.NIGERIA_BULKSMS_PASSWORD,
-      baseUrl: envVars.NIGERIA_BULKSMS_BASE_URL,
-      timeout: envVars.NIGERIA_BULKSMS_TIMEOUT
-        ? Number(envVars.NIGERIA_BULKSMS_TIMEOUT)
-        : undefined,
-      retries: envVars.NIGERIA_BULKSMS_RETRIES
-        ? Number(envVars.NIGERIA_BULKSMS_RETRIES)
-        : undefined,
-    },
+    sms_base_url: envVars.SMS_BASE_URL,
   },
 
   socket: {

@@ -8,27 +8,27 @@ const router = express.Router();
 
 router
   .route('/')
-  .post(auth('create:captures'), validate(captureValidation.createCapture), captureController.createCapture)
-  .get(auth('view:captures'), validate(captureValidation.queryCaptures), captureController.queryCaptures);
+  .post(auth('captures:create'), validate(captureValidation.createCapture), captureController.createCapture)
+  .get(auth('captures:read'), validate(captureValidation.queryCaptures), captureController.queryCaptures);
 
 router
   .route('/bulk-create')
-  .post(auth('create:captures'), validate(captureValidation.bulkInsertCaptures), captureController.bulkInsertCaptures);
+  .post(auth('captures:create'), validate(captureValidation.bulkInsertCaptures), captureController.bulkInsertCaptures);
 
 router
   .route('/:captureId')
-  .get(auth('view:captures'), validate(captureValidation.getCaptureById), captureController.getCaptureById)
-  .patch(auth('update:captures'), validate(captureValidation.updateCaptureById), captureController.updateCaptureById)
-  .delete(auth('delete:captures'), validate(captureValidation.deleteCaptureById), captureController.deleteCaptureById);
+  .get(auth('captures:read'), validate(captureValidation.getCaptureById), captureController.getCaptureById)
+  .patch(auth('captures:update'), validate(captureValidation.updateCaptureById), captureController.updateCaptureById)
+  .delete(auth('captures:delete'), validate(captureValidation.deleteCaptureById), captureController.deleteCaptureById);
 
 router
   .route('/datapoint/:datapointId')
-  .get(auth('view:captures'), validate(captureValidation.getCapturesByDatapoint), captureController.getCapturesByDatapoint);
+  .get(auth('captures:read'), validate(captureValidation.getCapturesByDatapoint), captureController.getCapturesByDatapoint);
 
 router
   .route('/tenant/:tenantId')
   .delete(
-    auth('delete:captures'),
+    auth('captures:delete'),
     validate(captureValidation.deleteAllCapturesByTenant),
     captureController.deleteAllCapturesByTenant
   );
@@ -36,7 +36,7 @@ router
 router
   .route('/export/datapoint/:datapointId')
   .get(
-    auth('view:captures'),
+    auth('captures:read'),
     validate(captureValidation.exportCapturesByDatapoint),
     captureController.exportCapturesByDatapoint
   );

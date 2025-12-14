@@ -7,7 +7,8 @@
  */
 
 const express = require('express');
-const auth = require('../../middlewares/auth');
+const { hybridAuth } = require('../../middlewares/apiKeyAuth');
+const requireAccess = require('../../middlewares/requireAccess');
 const validate = require('../../middlewares/validate');
 const submissionReportValidation = require('../../validations/submissionReport.validation');
 const submissionReportController = require('../../controllers/submissionReport.controller');
@@ -18,7 +19,8 @@ const router = express.Router();
 router
   .route('/')
   .get(
-    auth(),
+    hybridAuth(),
+    requireAccess('submission:read'),
     validate(submissionReportValidation.getSubmissions),
     submissionReportController.getSubmissions
   );
@@ -26,7 +28,8 @@ router
 router
   .route('/stats')
   .get(
-    auth(),
+    hybridAuth(),
+    requireAccess('submission:read'),
     validate(submissionReportValidation.getSubmissionStats),
     submissionReportController.getSubmissionStats
   );
@@ -34,7 +37,8 @@ router
 router
   .route('/locked')
   .get(
-    auth(),
+    hybridAuth(),
+    requireAccess('submission:read'),
     validate(submissionReportValidation.getLockedSubmissions),
     submissionReportController.getLockedSubmissions
   );
@@ -42,7 +46,8 @@ router
 router
   .route('/compliance/:month')
   .get(
-    auth(),
+    hybridAuth(),
+    requireAccess('submission:read'),
     validate(submissionReportValidation.getComplianceReport),
     submissionReportController.getComplianceReport
   );
@@ -50,7 +55,8 @@ router
 router
   .route('/node/:nodeId')
   .get(
-    auth(),
+    hybridAuth(),
+    requireAccess('submission:read'),
     validate(submissionReportValidation.getSubmissionsByNode),
     submissionReportController.getSubmissionsByNode
   );
@@ -58,7 +64,8 @@ router
 router
   .route('/monthly/:month')
   .get(
-    auth(),
+    hybridAuth(),
+    requireAccess('submission:read'),
     validate(submissionReportValidation.getMonthlyReport),
     submissionReportController.getMonthlyReport
   );
@@ -66,7 +73,8 @@ router
 router
   .route('/incomplete/:month')
   .get(
-    auth(),
+    hybridAuth(),
+    requireAccess('submission:read'),
     validate(submissionReportValidation.getIncompleteSubmissions),
     submissionReportController.getIncompleteSubmissions
   );
@@ -74,17 +82,20 @@ router
 router
   .route('/:id')
   .get(
-    auth(),
+    hybridAuth(),
+    requireAccess('submission:read'),
     validate(submissionReportValidation.getSubmissionById),
     submissionReportController.getSubmissionById
   )
   .patch(
-    auth(),
+    hybridAuth(),
+    requireAccess('submission:update'),
     validate(submissionReportValidation.updateSubmission),
     submissionReportController.updateSubmission
   )
   .delete(
-    auth(),
+    hybridAuth(),
+    requireAccess('submission:delete'),
     validate(submissionReportValidation.deleteSubmission),
     submissionReportController.deleteSubmission
   );
@@ -93,7 +104,8 @@ router
 router
   .route('/:id/status')
   .patch(
-    auth(),
+    hybridAuth(),
+    requireAccess('submission:update'),
     validate(submissionReportValidation.updateSubmissionStatus),
     submissionReportController.updateSubmissionStatus
   );
@@ -101,7 +113,8 @@ router
 router
   .route('/:id/lock')
   .post(
-    auth(),
+    hybridAuth(),
+    requireAccess('submission:update'),
     validate(submissionReportValidation.lockSubmission),
     submissionReportController.lockSubmission
   );
@@ -109,7 +122,8 @@ router
 router
   .route('/:id/unlock')
   .post(
-    auth(),
+    hybridAuth(),
+    requireAccess('submission:update'),
     validate(submissionReportValidation.unlockSubmission),
     submissionReportController.unlockSubmission
   );
@@ -118,7 +132,8 @@ router
 router
   .route('/bulk-delete')
   .post(
-    auth(),
+    hybridAuth(),
+    requireAccess('submission:delete'),
     validate(submissionReportValidation.bulkDeleteSubmissions),
     submissionReportController.bulkDeleteSubmissions
   );
@@ -126,26 +141,50 @@ router
 // BULK OPERATIONS (Phase 6)
 router
   .route('/bulk-update-status')
-  .post(auth(), submissionReportController.bulkUpdateStatus);
+  .post(
+    hybridAuth(),
+    requireAccess('submission:update'),
+    submissionReportController.bulkUpdateStatus
+  );
 
 router
   .route('/bulk-lock')
-  .post(auth(), submissionReportController.bulkLockUnlock);
+  .post(
+    hybridAuth(),
+    requireAccess('submission:update'),
+    submissionReportController.bulkLockUnlock
+  );
 
 router
   .route('/bulk-update-compliance')
-  .post(auth(), submissionReportController.bulkUpdateCompliance);
+  .post(
+    hybridAuth(),
+    requireAccess('submission:update'),
+    submissionReportController.bulkUpdateCompliance
+  );
 
 router
   .route('/bulk-archive')
-  .post(auth(), submissionReportController.bulkArchive);
+  .post(
+    hybridAuth(),
+    requireAccess('submission:update'),
+    submissionReportController.bulkArchive
+  );
 
 router
   .route('/bulk-delete-advanced')
-  .post(auth(), submissionReportController.bulkDeleteAdvanced);
+  .post(
+    hybridAuth(),
+    requireAccess('submission:delete'),
+    submissionReportController.bulkDeleteAdvanced
+  );
 
 router
   .route('/bulk-update-metadata')
-  .post(auth(), submissionReportController.bulkUpdateMetadata);
+  .post(
+    hybridAuth(),
+    requireAccess('submission:update'),
+    submissionReportController.bulkUpdateMetadata
+  );
 
 module.exports = router;

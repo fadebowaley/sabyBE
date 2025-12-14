@@ -40,6 +40,8 @@ app.use(mongoSanitize());
 // gzip compression
 app.use(compression());
 
+// CORS configuration
+// For production, consider using environment variables for origins
 const corsOptions = {
   origin: [
     'http://localhost:5173',
@@ -51,10 +53,31 @@ const corsOptions = {
     'https://40.71.204.212:3000', // Old staging frontend HTTPS
     'https://api-staging.saby.ai', // Old staging backend HTTPS
     'https://dev.saby.ai', // NEW: Unified staging frontend
+    // Add production origins from environment variables if needed
+    ...(config.cors?.allowedOrigins || []),
   ],
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+  // Allow custom headers for API key authentication and other integrations
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-API-Key', // API key header for authentication
+    'x-api-key', // Lowercase variant (browsers may normalize)
+    'X-Requested-With', // Common header for AJAX requests
+    'Accept', // Accept header for content negotiation
+    'Origin', // Origin header for CORS
+    'Access-Control-Request-Method', // CORS preflight
+    'Access-Control-Request-Headers', // CORS preflight
+  ],
+  exposedHeaders: [
+    'X-RateLimit-Limit',
+    'X-RateLimit-Remaining',
+    'X-RateLimit-Reset',
+    'X-Request-ID',
+  ],
   credentials: true,
+  // Preflight cache duration (24 hours)
+  maxAge: 86400,
 };
 
 /*

@@ -10,12 +10,10 @@
 const express = require('express');
 const router = express.Router();
 const trendAnalysisController = require('../../controllers/trendAnalysis.controller');
-const auth = require('../../middlewares/auth');
+const { hybridAuth } = require('../../middlewares/apiKeyAuth');
+const requireAccess = require('../../middlewares/requireAccess');
 const validate = require('../../middlewares/validate');
 const trendAnalysisValidation = require('../../validations/trendAnalysis.validation');
-
-// Apply authentication to all routes
-router.use(auth());
 
 /**
  * @swagger
@@ -100,6 +98,8 @@ router.use(auth());
  */
 router.get(
   '/submissions/timeline',
+  hybridAuth(),
+  requireAccess('analytics:read'),
   validate(trendAnalysisValidation.getSubmissionsTimeline),
   trendAnalysisController.getSubmissionsTimeline
 );
@@ -149,6 +149,8 @@ router.get(
  */
 router.get(
   '/compliance/timeline',
+  hybridAuth(),
+  requireAccess('analytics:read'),
   validate(trendAnalysisValidation.getComplianceTimeline),
   trendAnalysisController.getComplianceTimeline
 );
@@ -198,6 +200,8 @@ router.get(
  */
 router.get(
   '/validations/timeline',
+  hybridAuth(),
+  requireAccess('analytics:read'),
   validate(trendAnalysisValidation.getValidationTimeline),
   trendAnalysisController.getValidationTimeline
 );
@@ -234,6 +238,8 @@ router.get(
  */
 router.get(
   '/seasonal/patterns',
+  hybridAuth(),
+  requireAccess('analytics:read'),
   validate(trendAnalysisValidation.getSeasonalPatterns),
   trendAnalysisController.getSeasonalPatterns
 );
@@ -270,6 +276,8 @@ router.get(
  */
 router.get(
   '/growth/metrics',
+  hybridAuth(),
+  requireAccess('analytics:read'),
   validate(trendAnalysisValidation.getGrowthMetrics),
   trendAnalysisController.getGrowthMetrics
 );
@@ -306,6 +314,8 @@ router.get(
  */
 router.get(
   '/predictive/insights',
+  hybridAuth(),
+  requireAccess('analytics:read'),
   validate(trendAnalysisValidation.getPredictiveInsights),
   trendAnalysisController.getPredictiveInsights
 );

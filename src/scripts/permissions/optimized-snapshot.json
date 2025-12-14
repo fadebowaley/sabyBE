@@ -1,0 +1,2652 @@
+[
+  {
+    "name": "admin:assign-role",
+    "resource": "admin",
+    "action": "assign-role",
+    "path": "/assign-role/:adminId",
+    "method": "PATCH",
+    "description": "Assign-role Admin resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "admin:create",
+    "resource": "admin",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Admin resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "admin:delete",
+    "resource": "admin",
+    "action": "delete",
+    "path": "/:adminId",
+    "method": "DELETE",
+    "description": "Delete Admin resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "admin:manage",
+    "resource": "admin",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all admin resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "admin:read",
+    "resource": "admin",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Admin resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "admin:update",
+    "resource": "admin",
+    "action": "update",
+    "path": "/:adminId",
+    "method": "PATCH",
+    "description": "Update Admin resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "analyticsReport:read",
+    "resource": "analyticsReport",
+    "action": "read",
+    "path": "/submissions/summary",
+    "method": "GET",
+    "description": "Read AnalyticsReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "apiKey:create",
+    "resource": "apiKey",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create ApiKey resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "apiKey:delete",
+    "resource": "apiKey",
+    "action": "delete",
+    "path": "/:keyId",
+    "method": "DELETE",
+    "description": "Delete ApiKey resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "apiKey:manage",
+    "resource": "apiKey",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all apiKey resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "apiKey:read",
+    "resource": "apiKey",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read ApiKey resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "apiKey:regenerate",
+    "resource": "apiKey",
+    "action": "regenerate",
+    "path": "/:keyId/regenerate",
+    "method": "POST",
+    "description": "Regenerate ApiKey resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "apiKey:update",
+    "resource": "apiKey",
+    "action": "update",
+    "path": "/:keyId",
+    "method": "PATCH",
+    "description": "Update ApiKey resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "apiKeyApproval:create",
+    "resource": "apiKeyApproval",
+    "action": "create",
+    "path": "/:approvalId/approve",
+    "method": "POST",
+    "description": "Create ApiKeyApproval resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "apiKeyApproval:read",
+    "resource": "apiKeyApproval",
+    "action": "read",
+    "path": "/pending",
+    "method": "GET",
+    "description": "Read ApiKeyApproval resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "app:assign",
+    "resource": "app",
+    "action": "assign",
+    "path": "/assign/:appId",
+    "method": "PATCH",
+    "description": "Assign App resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "app:bulk-create",
+    "resource": "app",
+    "action": "bulk-create",
+    "path": "/bulk-create",
+    "method": "POST",
+    "description": "Bulk-create App resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "app:create",
+    "resource": "app",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create App resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "app:delete",
+    "resource": "app",
+    "action": "delete",
+    "path": "/:appId",
+    "method": "DELETE",
+    "description": "Delete App resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "app:manage",
+    "resource": "app",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all app resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "app:read",
+    "resource": "app",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read App resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "app:toggle-status",
+    "resource": "app",
+    "action": "toggle-status",
+    "path": "/toggle-status/:appId",
+    "method": "PATCH",
+    "description": "Toggle-status App resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "app:update",
+    "resource": "app",
+    "action": "update",
+    "path": "/:appId",
+    "method": "PATCH",
+    "description": "Update App resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "auth:create",
+    "resource": "auth",
+    "action": "create",
+    "path": "/send-verification-email",
+    "method": "POST",
+    "description": "Create Auth resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "auth:forgot-password",
+    "resource": "auth",
+    "action": "forgot-password",
+    "path": "/forgot-password",
+    "method": "POST",
+    "description": "Forgot-password Auth resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "auth:login",
+    "resource": "auth",
+    "action": "login",
+    "path": "/login",
+    "method": "POST",
+    "description": "Login Auth resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "auth:logout",
+    "resource": "auth",
+    "action": "logout",
+    "path": "/logout",
+    "method": "POST",
+    "description": "Logout Auth resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "auth:refresh",
+    "resource": "auth",
+    "action": "refresh",
+    "path": "/refresh-tokens",
+    "method": "POST",
+    "description": "Refresh Auth resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "auth:register",
+    "resource": "auth",
+    "action": "register",
+    "path": "/register",
+    "method": "POST",
+    "description": "Register Auth resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "auth:reset-password",
+    "resource": "auth",
+    "action": "reset-password",
+    "path": "/reset-password",
+    "method": "POST",
+    "description": "Reset-password Auth resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "auth:verify",
+    "resource": "auth",
+    "action": "verify",
+    "path": "/verify-email",
+    "method": "POST",
+    "description": "Verify Auth resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "baselineAnalysisConfig:create",
+    "resource": "baselineAnalysisConfig",
+    "action": "create",
+    "path": "/:entityType/sync",
+    "method": "POST",
+    "description": "Create BaselineAnalysisConfig resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "baselineAnalysisConfig:read",
+    "resource": "baselineAnalysisConfig",
+    "action": "read",
+    "path": "/:entityType",
+    "method": "GET",
+    "description": "Read BaselineAnalysisConfig resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "baselineAnalysisConfig:update",
+    "resource": "baselineAnalysisConfig",
+    "action": "update",
+    "path": "/:entityType/essential-metrics",
+    "method": "PUT",
+    "description": "Update BaselineAnalysisConfig resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "baselineIntelligence:create",
+    "resource": "baselineIntelligence",
+    "action": "create",
+    "path": "/network/recompute",
+    "method": "POST",
+    "description": "Create BaselineIntelligence resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "baselineIntelligence:read",
+    "resource": "baselineIntelligence",
+    "action": "read",
+    "path": "/health",
+    "method": "GET",
+    "description": "Read BaselineIntelligence resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "baselineJobs:create",
+    "resource": "baselineJobs",
+    "action": "create",
+    "path": "/clear",
+    "method": "POST",
+    "description": "Create BaselineJobs resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "baselineJobs:read",
+    "resource": "baselineJobs",
+    "action": "read",
+    "path": "/stats",
+    "method": "GET",
+    "description": "Read BaselineJobs resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "capture:bulk-create",
+    "resource": "capture",
+    "action": "bulk-create",
+    "path": "/bulk-create",
+    "method": "POST",
+    "description": "Bulk-create Capture resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "capture:create",
+    "resource": "capture",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Capture resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "capture:delete",
+    "resource": "capture",
+    "action": "delete",
+    "path": "/:captureId",
+    "method": "DELETE",
+    "description": "Delete Capture resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "capture:export",
+    "resource": "capture",
+    "action": "export",
+    "path": "/export/datapoint/:datapointId",
+    "method": "GET",
+    "description": "Export Capture resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "capture:manage",
+    "resource": "capture",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all capture resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "capture:read",
+    "resource": "capture",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Capture resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "capture:update",
+    "resource": "capture",
+    "action": "update",
+    "path": "/:captureId",
+    "method": "PATCH",
+    "description": "Update Capture resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "collection:create",
+    "resource": "collection",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Collection resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "collection:delete",
+    "resource": "collection",
+    "action": "delete",
+    "path": "/:collectionId",
+    "method": "DELETE",
+    "description": "Delete Collection resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "collection:manage",
+    "resource": "collection",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all collection resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "collection:read",
+    "resource": "collection",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Collection resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "collection:update",
+    "resource": "collection",
+    "action": "update",
+    "path": "/:collectionId",
+    "method": "PATCH",
+    "description": "Update Collection resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "compliance:read",
+    "resource": "compliance",
+    "action": "read",
+    "path": "/table",
+    "method": "GET",
+    "description": "Read Compliance resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "compliance:update",
+    "resource": "compliance",
+    "action": "update",
+    "path": "/user/:userId",
+    "method": "PATCH",
+    "description": "Update Compliance resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "complianceReport:create",
+    "resource": "complianceReport",
+    "action": "create",
+    "path": "/:id/mark-event",
+    "method": "POST",
+    "description": "Create ComplianceReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "complianceReport:delete",
+    "resource": "complianceReport",
+    "action": "delete",
+    "path": "/:id",
+    "method": "DELETE",
+    "description": "Delete ComplianceReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "complianceReport:manage",
+    "resource": "complianceReport",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all complianceReport resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "complianceReport:read",
+    "resource": "complianceReport",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read ComplianceReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "complianceReport:update",
+    "resource": "complianceReport",
+    "action": "update",
+    "path": "/:id",
+    "method": "PATCH",
+    "description": "Update ComplianceReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "customFieldConfig:read",
+    "resource": "customFieldConfig",
+    "action": "read",
+    "path": "/:entityType",
+    "method": "GET",
+    "description": "Read CustomFieldConfig resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "customFieldConfig:update",
+    "resource": "customFieldConfig",
+    "action": "update",
+    "path": "/:entityType",
+    "method": "PUT",
+    "description": "Update CustomFieldConfig resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "data:create",
+    "resource": "data",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Data resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "data:delete",
+    "resource": "data",
+    "action": "delete",
+    "path": "/:dataId",
+    "method": "DELETE",
+    "description": "Delete Data resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "data:export",
+    "resource": "data",
+    "action": "export",
+    "path": "/export",
+    "method": "GET",
+    "description": "Export Data resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "data:import",
+    "resource": "data",
+    "action": "import",
+    "path": "/import",
+    "method": "POST",
+    "description": "Import Data resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "data:manage",
+    "resource": "data",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all data resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "data:private",
+    "resource": "data",
+    "action": "private",
+    "path": "/:dataId/private",
+    "method": "PATCH",
+    "description": "Private Data resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "data:public",
+    "resource": "data",
+    "action": "public",
+    "path": "/:dataId/public",
+    "method": "PATCH",
+    "description": "Public Data resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "data:read",
+    "resource": "data",
+    "action": "read",
+    "path": "/:dataId",
+    "method": "GET",
+    "description": "Read Data resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "data:update",
+    "resource": "data",
+    "action": "update",
+    "path": "/:dataId",
+    "method": "PATCH",
+    "description": "Update Data resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "department:create",
+    "resource": "department",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Department resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "department:delete",
+    "resource": "department",
+    "action": "delete",
+    "path": "/:departmentId",
+    "method": "DELETE",
+    "description": "Delete Department resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "department:export",
+    "resource": "department",
+    "action": "export",
+    "path": "/export",
+    "method": "GET",
+    "description": "Export Department resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "department:import",
+    "resource": "department",
+    "action": "import",
+    "path": "/import",
+    "method": "POST",
+    "description": "Import Department resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "department:manage",
+    "resource": "department",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all department resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "department:read",
+    "resource": "department",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Department resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "department:update",
+    "resource": "department",
+    "action": "update",
+    "path": "/:departmentId",
+    "method": "PATCH",
+    "description": "Update Department resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "docs:read",
+    "resource": "docs",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Docs resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "event:create",
+    "resource": "event",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Event resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "event:delete",
+    "resource": "event",
+    "action": "delete",
+    "path": "/:eventId",
+    "method": "DELETE",
+    "description": "Delete Event resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "event:deleteAll",
+    "resource": "event",
+    "action": "deleteAll",
+    "path": "/deleteAll",
+    "method": "DELETE",
+    "description": "DeleteAll Event resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "event:import",
+    "resource": "event",
+    "action": "import",
+    "path": "/import",
+    "method": "POST",
+    "description": "Import Event resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "event:manage",
+    "resource": "event",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all event resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "event:read",
+    "resource": "event",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Event resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "event:update",
+    "resource": "event",
+    "action": "update",
+    "path": "/:eventId",
+    "method": "PATCH",
+    "description": "Update Event resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "eventCalendar:create",
+    "resource": "eventCalendar",
+    "action": "create",
+    "path": "/preview",
+    "method": "POST",
+    "description": "Create EventCalendar resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "eventCalendar:delete",
+    "resource": "eventCalendar",
+    "action": "delete",
+    "path": "/:id",
+    "method": "DELETE",
+    "description": "Delete EventCalendar resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "eventCalendar:manage",
+    "resource": "eventCalendar",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all eventCalendar resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "eventCalendar:read",
+    "resource": "eventCalendar",
+    "action": "read",
+    "path": "/stats/:month",
+    "method": "GET",
+    "description": "Read EventCalendar resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "eventCalendar:update",
+    "resource": "eventCalendar",
+    "action": "update",
+    "path": "/:id",
+    "method": "PUT",
+    "description": "Update EventCalendar resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "eventCompliance:create",
+    "resource": "eventCompliance",
+    "action": "create",
+    "path": "/recalculate/:submissionId",
+    "method": "POST",
+    "description": "Create EventCompliance resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "eventCompliance:read",
+    "resource": "eventCompliance",
+    "action": "read",
+    "path": "/summary",
+    "method": "GET",
+    "description": "Read EventCompliance resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "eventConfig:create",
+    "resource": "eventConfig",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create EventConfig resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "eventConfig:delete",
+    "resource": "eventConfig",
+    "action": "delete",
+    "path": "/:eventConfigId",
+    "method": "DELETE",
+    "description": "Delete EventConfig resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "eventConfig:manage",
+    "resource": "eventConfig",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all eventConfig resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "eventConfig:read",
+    "resource": "eventConfig",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read EventConfig resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "eventConfig:update",
+    "resource": "eventConfig",
+    "action": "update",
+    "path": "/:eventConfigId",
+    "method": "PATCH",
+    "description": "Update EventConfig resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "exportReport:read",
+    "resource": "exportReport",
+    "action": "read",
+    "path": "/submissions/csv",
+    "method": "GET",
+    "description": "Read ExportReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "inmail:create",
+    "resource": "inmail",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Inmail resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "inmail:delete",
+    "resource": "inmail",
+    "action": "delete",
+    "path": "/:inmailId",
+    "method": "DELETE",
+    "description": "Delete Inmail resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "inmail:draft",
+    "resource": "inmail",
+    "action": "draft",
+    "path": "/draft",
+    "method": "POST",
+    "description": "Draft Inmail resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "inmail:manage",
+    "resource": "inmail",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all inmail resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "inmail:read",
+    "resource": "inmail",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Inmail resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "inmail:send",
+    "resource": "inmail",
+    "action": "send",
+    "path": "/send",
+    "method": "POST",
+    "description": "Send Inmail resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "inmail:update",
+    "resource": "inmail",
+    "action": "update",
+    "path": "/:inmailId/read",
+    "method": "PATCH",
+    "description": "Update Inmail resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "level:activate",
+    "resource": "level",
+    "action": "activate",
+    "path": "/:levelId/activate",
+    "method": "PATCH",
+    "description": "Activate Level resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "level:create",
+    "resource": "level",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Level resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "level:delete",
+    "resource": "level",
+    "action": "delete",
+    "path": "/:levelId",
+    "method": "DELETE",
+    "description": "Delete Level resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "level:manage",
+    "resource": "level",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all level resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "level:move",
+    "resource": "level",
+    "action": "move",
+    "path": "/:levelId/move",
+    "method": "PATCH",
+    "description": "Move Level resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "level:read",
+    "resource": "level",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Level resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "level:update",
+    "resource": "level",
+    "action": "update",
+    "path": "/:levelId",
+    "method": "PATCH",
+    "description": "Update Level resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "node:activate",
+    "resource": "node",
+    "action": "activate",
+    "path": "/:nodeId/activate",
+    "method": "PATCH",
+    "description": "Activate Node resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "node:assign",
+    "resource": "node",
+    "action": "assign",
+    "path": "/:nodeId/assign-users",
+    "method": "PATCH",
+    "description": "Assign Node resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "node:create",
+    "resource": "node",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Node resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "node:delete",
+    "resource": "node",
+    "action": "delete",
+    "path": "/:nodeId",
+    "method": "DELETE",
+    "description": "Delete Node resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "node:import",
+    "resource": "node",
+    "action": "import",
+    "path": "/bulk-import",
+    "method": "POST",
+    "description": "Import Node resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "node:manage",
+    "resource": "node",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all node resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "node:move",
+    "resource": "node",
+    "action": "move",
+    "path": "/:nodeId/move",
+    "method": "PATCH",
+    "description": "Move Node resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "node:read",
+    "resource": "node",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Node resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "node:restore",
+    "resource": "node",
+    "action": "restore",
+    "path": "/:nodeId/restore",
+    "method": "PATCH",
+    "description": "Restore Node resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "node:update",
+    "resource": "node",
+    "action": "update",
+    "path": "/:nodeId",
+    "method": "PATCH",
+    "description": "Update Node resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "notificationReport:create",
+    "resource": "notificationReport",
+    "action": "create",
+    "path": "/cleanup",
+    "method": "POST",
+    "description": "Create NotificationReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "notificationReport:delete",
+    "resource": "notificationReport",
+    "action": "delete",
+    "path": "/:id",
+    "method": "DELETE",
+    "description": "Delete NotificationReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "notificationReport:import",
+    "resource": "notificationReport",
+    "action": "import",
+    "path": "/bulk-retry",
+    "method": "POST",
+    "description": "Import NotificationReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "notificationReport:read",
+    "resource": "notificationReport",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read NotificationReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "payment:cancel",
+    "resource": "payment",
+    "action": "cancel",
+    "path": "/:paymentId/cancel",
+    "method": "PATCH",
+    "description": "Cancel Payment resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "payment:complete",
+    "resource": "payment",
+    "action": "complete",
+    "path": "/:paymentId/complete",
+    "method": "PATCH",
+    "description": "Complete Payment resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "payment:create",
+    "resource": "payment",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Payment resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "payment:delete",
+    "resource": "payment",
+    "action": "delete",
+    "path": "/:paymentId",
+    "method": "DELETE",
+    "description": "Delete Payment resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "payment:manage",
+    "resource": "payment",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all payment resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "payment:process",
+    "resource": "payment",
+    "action": "process",
+    "path": "/:paymentId/process",
+    "method": "PATCH",
+    "description": "Process Payment resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "payment:read",
+    "resource": "payment",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Payment resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "payment:refund",
+    "resource": "payment",
+    "action": "refund",
+    "path": "/:paymentId/refund",
+    "method": "PATCH",
+    "description": "Refund Payment resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "payment:update",
+    "resource": "payment",
+    "action": "update",
+    "path": "/:paymentId",
+    "method": "PATCH",
+    "description": "Update Payment resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "permission:create",
+    "resource": "permission",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Permission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "permission:delete",
+    "resource": "permission",
+    "action": "delete",
+    "path": "/:permissionName",
+    "method": "DELETE",
+    "description": "Delete Permission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "permission:import",
+    "resource": "permission",
+    "action": "import",
+    "path": "/bulk",
+    "method": "POST",
+    "description": "Import Permission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "permission:manage",
+    "resource": "permission",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all permission resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "permission:read",
+    "resource": "permission",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Permission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "permission:update",
+    "resource": "permission",
+    "action": "update",
+    "path": "/:permissionName",
+    "method": "PATCH",
+    "description": "Update Permission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "permReport:read",
+    "resource": "permReport",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read PermReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "permSubmission:create",
+    "resource": "permSubmission",
+    "action": "create",
+    "path": "/validate",
+    "method": "POST",
+    "description": "Create PermSubmission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "permSubmission:delete",
+    "resource": "permSubmission",
+    "action": "delete",
+    "path": "/:id",
+    "method": "DELETE",
+    "description": "Delete PermSubmission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "permSubmission:read",
+    "resource": "permSubmission",
+    "action": "read",
+    "path": "/compliance/summary",
+    "method": "GET",
+    "description": "Read PermSubmission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "postgres:create",
+    "resource": "postgres",
+    "action": "create",
+    "path": "/test-table",
+    "method": "POST",
+    "description": "Create Postgres resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "postgres:delete",
+    "resource": "postgres",
+    "action": "delete",
+    "path": "/cleanup",
+    "method": "DELETE",
+    "description": "Delete Postgres resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "postgres:read",
+    "resource": "postgres",
+    "action": "read",
+    "path": "/status",
+    "method": "GET",
+    "description": "Read Postgres resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "program:assign",
+    "resource": "program",
+    "action": "assign",
+    "path": "/:programId/assign",
+    "method": "PATCH",
+    "description": "Assign Program resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "program:create",
+    "resource": "program",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Program resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "program:delete",
+    "resource": "program",
+    "action": "delete",
+    "path": "/:programId",
+    "method": "DELETE",
+    "description": "Delete Program resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "program:delete-all",
+    "resource": "program",
+    "action": "delete-all",
+    "path": "/delete-all",
+    "method": "DELETE",
+    "description": "Delete-all Program resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "program:import",
+    "resource": "program",
+    "action": "import",
+    "path": "/bulk-import",
+    "method": "POST",
+    "description": "Import Program resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "program:manage",
+    "resource": "program",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all program resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "program:read",
+    "resource": "program",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Program resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "program:update",
+    "resource": "program",
+    "action": "update",
+    "path": "/:programId",
+    "method": "PATCH",
+    "description": "Update Program resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectForm:archive",
+    "resource": "projectForm",
+    "action": "archive",
+    "path": "/:projectFormId/archive",
+    "method": "PATCH",
+    "description": "Archive ProjectForm resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectForm:create",
+    "resource": "projectForm",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create ProjectForm resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectForm:delete",
+    "resource": "projectForm",
+    "action": "delete",
+    "path": "/:projectFormId",
+    "method": "DELETE",
+    "description": "Delete ProjectForm resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectForm:import",
+    "resource": "projectForm",
+    "action": "import",
+    "path": "/bulk",
+    "method": "POST",
+    "description": "Import ProjectForm resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectForm:manage",
+    "resource": "projectForm",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all projectForm resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectForm:publish",
+    "resource": "projectForm",
+    "action": "publish",
+    "path": "/:projectFormId/publish",
+    "method": "PATCH",
+    "description": "Publish ProjectForm resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectForm:read",
+    "resource": "projectForm",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read ProjectForm resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectForm:restore",
+    "resource": "projectForm",
+    "action": "restore",
+    "path": "/:projectFormId/restore",
+    "method": "PATCH",
+    "description": "Restore ProjectForm resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectForm:submit",
+    "resource": "projectForm",
+    "action": "submit",
+    "path": "/project/:projectId/submit",
+    "method": "POST",
+    "description": "Submit ProjectForm resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectForm:update",
+    "resource": "projectForm",
+    "action": "update",
+    "path": "/project/:projectId/payment-config",
+    "method": "PATCH",
+    "description": "Update ProjectForm resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectFormSubmission:create",
+    "resource": "projectFormSubmission",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create ProjectFormSubmission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectFormSubmission:delete",
+    "resource": "projectFormSubmission",
+    "action": "delete",
+    "path": "/:submissionId",
+    "method": "DELETE",
+    "description": "Delete ProjectFormSubmission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectFormSubmission:export",
+    "resource": "projectFormSubmission",
+    "action": "export",
+    "path": "/project/:projectId/export",
+    "method": "GET",
+    "description": "Export ProjectFormSubmission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectFormSubmission:read",
+    "resource": "projectFormSubmission",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read ProjectFormSubmission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "projectFormSubmission:status",
+    "resource": "projectFormSubmission",
+    "action": "status",
+    "path": "/:submissionId/status",
+    "method": "PATCH",
+    "description": "Status ProjectFormSubmission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "report:create",
+    "resource": "report",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Report resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "report:delete",
+    "resource": "report",
+    "action": "delete",
+    "path": "/:reportId",
+    "method": "DELETE",
+    "description": "Delete Report resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "report:delete-all",
+    "resource": "report",
+    "action": "delete-all",
+    "path": "/delete-all",
+    "method": "DELETE",
+    "description": "Delete-all Report resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "report:import",
+    "resource": "report",
+    "action": "import",
+    "path": "/bulk-import",
+    "method": "POST",
+    "description": "Import Report resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "report:manage",
+    "resource": "report",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all report resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "report:read",
+    "resource": "report",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Report resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "report:update",
+    "resource": "report",
+    "action": "update",
+    "path": "/:reportId",
+    "method": "PATCH",
+    "description": "Update Report resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "role:create",
+    "resource": "role",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Role resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "role:delete",
+    "resource": "role",
+    "action": "delete",
+    "path": "/",
+    "method": "DELETE",
+    "description": "Delete Role resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "role:import",
+    "resource": "role",
+    "action": "import",
+    "path": "/bulk",
+    "method": "POST",
+    "description": "Import Role resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "role:manage",
+    "resource": "role",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all role resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "role:permissions",
+    "resource": "role",
+    "action": "permissions",
+    "path": "/:roleId/permissions",
+    "method": "GET",
+    "description": "Permissions Role resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "role:read",
+    "resource": "role",
+    "action": "read",
+    "path": "/templates",
+    "method": "GET",
+    "description": "Read Role resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "role:update",
+    "resource": "role",
+    "action": "update",
+    "path": "/:roleId",
+    "method": "PATCH",
+    "description": "Update Role resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "rollupReport:read",
+    "resource": "rollupReport",
+    "action": "read",
+    "path": "/daily",
+    "method": "GET",
+    "description": "Read RollupReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "schema:read",
+    "resource": "schema",
+    "action": "read",
+    "path": "/user",
+    "method": "GET",
+    "description": "Read Schema resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "settings:assign",
+    "resource": "settings",
+    "action": "assign",
+    "path": "/assign",
+    "method": "POST",
+    "description": "Assign Settings resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "settings:create",
+    "resource": "settings",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Settings resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "settings:delete",
+    "resource": "settings",
+    "action": "delete",
+    "path": "/:settingId",
+    "method": "DELETE",
+    "description": "Delete Settings resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "settings:manage",
+    "resource": "settings",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all settings resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "settings:read",
+    "resource": "settings",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Settings resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "settings:update",
+    "resource": "settings",
+    "action": "update",
+    "path": "/:settingId",
+    "method": "PATCH",
+    "description": "Update Settings resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "statement:create",
+    "resource": "statement",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Statement resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "statement:delete",
+    "resource": "statement",
+    "action": "delete",
+    "path": "/:statementId",
+    "method": "DELETE",
+    "description": "Delete Statement resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "statement:manage",
+    "resource": "statement",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all statement resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "statement:read",
+    "resource": "statement",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Statement resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "statement:update",
+    "resource": "statement",
+    "action": "update",
+    "path": "/:statementId",
+    "method": "PATCH",
+    "description": "Update Statement resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "storage:copy",
+    "resource": "storage",
+    "action": "copy",
+    "path": "/:fileId/copy",
+    "method": "POST",
+    "description": "Copy Storage resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "storage:delete",
+    "resource": "storage",
+    "action": "delete",
+    "path": "/:fileId",
+    "method": "DELETE",
+    "description": "Delete Storage resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "storage:download",
+    "resource": "storage",
+    "action": "download",
+    "path": "/shared/:shareToken/download",
+    "method": "GET",
+    "description": "Download Storage resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "storage:move",
+    "resource": "storage",
+    "action": "move",
+    "path": "/:fileId/move",
+    "method": "POST",
+    "description": "Move Storage resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "storage:read",
+    "resource": "storage",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Storage resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "storage:share",
+    "resource": "storage",
+    "action": "share",
+    "path": "/:fileId/share",
+    "method": "POST",
+    "description": "Share Storage resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "storage:upload",
+    "resource": "storage",
+    "action": "upload",
+    "path": "/upload",
+    "method": "POST",
+    "description": "Upload Storage resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "storageFolder:create",
+    "resource": "storageFolder",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create StorageFolder resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "storageFolder:delete",
+    "resource": "storageFolder",
+    "action": "delete",
+    "path": "/:folderId",
+    "method": "DELETE",
+    "description": "Delete StorageFolder resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "storageFolder:manage",
+    "resource": "storageFolder",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all storageFolder resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "storageFolder:move",
+    "resource": "storageFolder",
+    "action": "move",
+    "path": "/:folderId/move",
+    "method": "POST",
+    "description": "Move StorageFolder resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "storageFolder:read",
+    "resource": "storageFolder",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read StorageFolder resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "storageFolder:share",
+    "resource": "storageFolder",
+    "action": "share",
+    "path": "/:folderId/share",
+    "method": "POST",
+    "description": "Share StorageFolder resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "storageFolder:update",
+    "resource": "storageFolder",
+    "action": "update",
+    "path": "/:folderId",
+    "method": "PATCH",
+    "description": "Update StorageFolder resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "structure:create",
+    "resource": "structure",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Structure resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "structure:delete",
+    "resource": "structure",
+    "action": "delete",
+    "path": "/:structureId",
+    "method": "DELETE",
+    "description": "Delete Structure resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "structure:manage",
+    "resource": "structure",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all structure resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "structure:read",
+    "resource": "structure",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read Structure resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "structure:update",
+    "resource": "structure",
+    "action": "update",
+    "path": "/:structureId",
+    "method": "PATCH",
+    "description": "Update Structure resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "submission:create",
+    "resource": "submission",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Submission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "submission:delete",
+    "resource": "submission",
+    "action": "delete",
+    "path": "/:form_id",
+    "method": "DELETE",
+    "description": "Delete Submission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "submission:read",
+    "resource": "submission",
+    "action": "read",
+    "path": "/activity-log",
+    "method": "GET",
+    "description": "Read Submission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "submission:retry",
+    "resource": "submission",
+    "action": "retry",
+    "path": "/:id/retry",
+    "method": "POST",
+    "description": "Retry Submission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "submissionReport:create",
+    "resource": "submissionReport",
+    "action": "create",
+    "path": "/:id/lock",
+    "method": "POST",
+    "description": "Create SubmissionReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "submissionReport:delete",
+    "resource": "submissionReport",
+    "action": "delete",
+    "path": "/:id",
+    "method": "DELETE",
+    "description": "Delete SubmissionReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "submissionReport:import",
+    "resource": "submissionReport",
+    "action": "import",
+    "path": "/bulk-delete",
+    "method": "POST",
+    "description": "Import SubmissionReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "submissionReport:manage",
+    "resource": "submissionReport",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all submissionReport resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "submissionReport:read",
+    "resource": "submissionReport",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read SubmissionReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "submissionReport:update",
+    "resource": "submissionReport",
+    "action": "update",
+    "path": "/:id",
+    "method": "PATCH",
+    "description": "Update SubmissionReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "telegramWebApp:auth",
+    "resource": "telegramWebApp",
+    "action": "auth",
+    "path": "/auth",
+    "method": "POST",
+    "description": "Auth TelegramWebApp resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "telegramWebApp:read",
+    "resource": "telegramWebApp",
+    "action": "read",
+    "path": "/projects",
+    "method": "GET",
+    "description": "Read TelegramWebApp resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "telegramWebApp:submit",
+    "resource": "telegramWebApp",
+    "action": "submit",
+    "path": "/submit",
+    "method": "POST",
+    "description": "Submit TelegramWebApp resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "tenantConfig:read",
+    "resource": "tenantConfig",
+    "action": "read",
+    "path": "/user",
+    "method": "GET",
+    "description": "Read TenantConfig resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "tenantConfig:update",
+    "resource": "tenantConfig",
+    "action": "update",
+    "path": "/user",
+    "method": "PUT",
+    "description": "Update TenantConfig resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "trendAnalysis:read",
+    "resource": "trendAnalysis",
+    "action": "read",
+    "path": "/submissions/timeline",
+    "method": "GET",
+    "description": "Read TrendAnalysis resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "unifiedSubmission:create",
+    "resource": "unifiedSubmission",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create UnifiedSubmission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "unifiedSubmission:delete",
+    "resource": "unifiedSubmission",
+    "action": "delete",
+    "path": "/activity-log/:id",
+    "method": "DELETE",
+    "description": "Delete UnifiedSubmission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "unifiedSubmission:import",
+    "resource": "unifiedSubmission",
+    "action": "import",
+    "path": "/activity-log/bulk-delete",
+    "method": "POST",
+    "description": "Import UnifiedSubmission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "unifiedSubmission:manage",
+    "resource": "unifiedSubmission",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all unifiedSubmission resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "unifiedSubmission:read",
+    "resource": "unifiedSubmission",
+    "action": "read",
+    "path": "/activity-log",
+    "method": "GET",
+    "description": "Read UnifiedSubmission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "unifiedSubmission:update",
+    "resource": "unifiedSubmission",
+    "action": "update",
+    "path": "/activity-log/:id",
+    "method": "PATCH",
+    "description": "Update UnifiedSubmission resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "user:assign",
+    "resource": "user",
+    "action": "assign",
+    "path": "/:id/assign-roles",
+    "method": "PATCH",
+    "description": "Assign User resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "user:create",
+    "resource": "user",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create User resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "user:delete",
+    "resource": "user",
+    "action": "delete",
+    "path": "/:userId",
+    "method": "DELETE",
+    "description": "Delete User resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "user:import",
+    "resource": "user",
+    "action": "import",
+    "path": "/bulk-create",
+    "method": "POST",
+    "description": "Import User resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "user:manage",
+    "resource": "user",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all user resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "user:read",
+    "resource": "user",
+    "action": "read",
+    "path": "/profile-update-leaderboard",
+    "method": "GET",
+    "description": "Read User resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "user:restore",
+    "resource": "user",
+    "action": "restore",
+    "path": "/restore",
+    "method": "POST",
+    "description": "Restore User resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "user:update",
+    "resource": "user",
+    "action": "update",
+    "path": "/:userId",
+    "method": "PATCH",
+    "description": "Update User resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "userFormSettings:create",
+    "resource": "userFormSettings",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create UserFormSettings resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "userFormSettings:delete",
+    "resource": "userFormSettings",
+    "action": "delete",
+    "path": "/:settingsId",
+    "method": "DELETE",
+    "description": "Delete UserFormSettings resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "userFormSettings:manage",
+    "resource": "userFormSettings",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all userFormSettings resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "userFormSettings:read",
+    "resource": "userFormSettings",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read UserFormSettings resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "userFormSettings:update",
+    "resource": "userFormSettings",
+    "action": "update",
+    "path": "/:settingsId",
+    "method": "PATCH",
+    "description": "Update UserFormSettings resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "validationReport:delete",
+    "resource": "validationReport",
+    "action": "delete",
+    "path": "/:id",
+    "method": "DELETE",
+    "description": "Delete ValidationReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "validationReport:import",
+    "resource": "validationReport",
+    "action": "import",
+    "path": "/bulk-resolve",
+    "method": "POST",
+    "description": "Import ValidationReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "validationReport:read",
+    "resource": "validationReport",
+    "action": "read",
+    "path": "/",
+    "method": "GET",
+    "description": "Read ValidationReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "validationReport:update",
+    "resource": "validationReport",
+    "action": "update",
+    "path": "/:id/resolve",
+    "method": "PATCH",
+    "description": "Update ValidationReport resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "waitlist:create",
+    "resource": "waitlist",
+    "action": "create",
+    "path": "/",
+    "method": "POST",
+    "description": "Create Waitlist resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "waitlist:delete",
+    "resource": "waitlist",
+    "action": "delete",
+    "path": "/admin/:id",
+    "method": "DELETE",
+    "description": "Delete Waitlist resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "waitlist:export",
+    "resource": "waitlist",
+    "action": "export",
+    "path": "/admin/export",
+    "method": "GET",
+    "description": "Export Waitlist resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "waitlist:manage",
+    "resource": "waitlist",
+    "action": "manage",
+    "path": "/",
+    "method": "ALL",
+    "description": "Manage all waitlist resources (create, read, update, delete)",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "waitlist:read",
+    "resource": "waitlist",
+    "action": "read",
+    "path": "/admin",
+    "method": "GET",
+    "description": "Read Waitlist resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "waitlist:update",
+    "resource": "waitlist",
+    "action": "update",
+    "path": "/admin/:id",
+    "method": "PATCH",
+    "description": "Update Waitlist resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "whatsapp:create",
+    "resource": "whatsapp",
+    "action": "create",
+    "path": "/webhook",
+    "method": "POST",
+    "description": "Create Whatsapp resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "whatsapp:delete",
+    "resource": "whatsapp",
+    "action": "delete",
+    "path": "/sessions/:phoneNumber",
+    "method": "DELETE",
+    "description": "Delete Whatsapp resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "whatsapp:read",
+    "resource": "whatsapp",
+    "action": "read",
+    "path": "/webhook",
+    "method": "GET",
+    "description": "Read Whatsapp resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "whatsapp:restart",
+    "resource": "whatsapp",
+    "action": "restart",
+    "path": "/restart",
+    "method": "POST",
+    "description": "Restart Whatsapp resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  },
+  {
+    "name": "whatsapp:send-message",
+    "resource": "whatsapp",
+    "action": "send-message",
+    "path": "/send-message",
+    "method": "POST",
+    "description": "Send-message Whatsapp resources",
+    "isWildcard": false,
+    "isAdminLevel": false
+  }
+]

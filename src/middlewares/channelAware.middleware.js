@@ -41,9 +41,22 @@ const channelAwareAccess = (req, res, next) => {
 /**
  * Web portal access check middleware
  * Explicitly blocks ordinary users from web portal routes
+ * Only allows access if API key was successfully validated by apiKeyAuth middleware
  */
 const webPortalAccess = (req, res, next) => {
   if (!req.user) {
+    return next();
+  }
+
+  // Check if API key was successfully validated by apiKeyAuth middleware
+  // req.apiKey is only set if validation succeeded
+  const hasApiKey = !!req.apiKey;
+
+  // If API key was successfully validated, allow access
+  if (hasApiKey) {
+    console.log(
+      `[WebPortalAccess] Channel restriction bypassed for ${req.user.email} due to validated API key authentication`
+    );
     return next();
   }
 

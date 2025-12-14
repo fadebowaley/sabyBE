@@ -1,17 +1,20 @@
-
 // Import required dependencies
 const express = require('express');
 const validate = require('../../middlewares/validate');
 const authValidation = require('../../validations/auth.validation');
 const authController = require('../../controllers/auth.controller');
 const auth = require('../../middlewares/auth');
-const requireAccess = require('../../middlewares/requireAccess');
+const { apiKeyAuth } = require('../../middlewares/apiKeyAuth');
 
 // Create Express router instance
 const router = express.Router();
 
 // Register a new user
-router.post('/register', validate(authValidation.register), authController.register);
+router.post(
+  '/register',
+  validate(authValidation.register),
+  authController.register
+);
 
 /**
  * @swagger
@@ -70,7 +73,13 @@ router.post('/register', validate(authValidation.register), authController.regis
  */
 
 // Login user
-router.post('/login', validate(authValidation.login), authController.login);
+// Test route: Using optional API key auth for channel bypass support
+router.post(
+  '/login',
+  apiKeyAuth.optional(), // Optional API key authentication (for channel bypass)
+  validate(authValidation.login),
+  authController.login
+);
 
 /**
  * @swagger
@@ -152,7 +161,11 @@ router.post('/logout', validate(authValidation.logout), authController.logout);
  */
 
 // Refresh access tokens
-router.post('/refresh-tokens', validate(authValidation.refreshTokens), authController.refreshTokens);
+router.post(
+  '/refresh-tokens',
+  validate(authValidation.refreshTokens),
+  authController.refreshTokens
+);
 
 /**
  * @swagger
@@ -188,7 +201,11 @@ router.post('/refresh-tokens', validate(authValidation.refreshTokens), authContr
  */
 
 // Request password reset
-router.post('/forgot-password', validate(authValidation.forgotPassword), authController.forgotPassword);
+router.post(
+  '/forgot-password',
+  validate(authValidation.forgotPassword),
+  authController.forgotPassword
+);
 
 /**
  * @swagger
@@ -221,7 +238,11 @@ router.post('/forgot-password', validate(authValidation.forgotPassword), authCon
  */
 
 // Reset password
-router.post('/reset-password', validate(authValidation.resetPassword), authController.resetPassword);
+router.post(
+  '/reset-password',
+  validate(authValidation.resetPassword),
+  authController.resetPassword
+);
 
 /**
  * @swagger
@@ -263,7 +284,11 @@ router.post('/reset-password', validate(authValidation.resetPassword), authContr
  */
 
 // Send verification email
-router.post('/send-verification-email', auth(), authController.sendVerificationEmail);
+router.post(
+  '/send-verification-email',
+  auth(),
+  authController.sendVerificationEmail
+);
 
 /**
  * @swagger
@@ -285,7 +310,11 @@ router.post('/send-verification-email', auth(), authController.sendVerificationE
  */
 
 // Verify email
-router.post('/verify-email', validate(authValidation.verifyEmail), authController.verifyEmail);
+router.post(
+  '/verify-email',
+  validate(authValidation.verifyEmail),
+  authController.verifyEmail
+);
 
 /**
  * @swagger
@@ -313,7 +342,11 @@ router.post('/verify-email', validate(authValidation.verifyEmail), authControlle
  */
 
 // Verify OTP for user
-router.post('/verify-otp', validate(authValidation.verifyOtp), authController.verifyOtp);
+router.post(
+  '/verify-otp',
+  validate(authValidation.verifyOtp),
+  authController.verifyOtp
+);
 
 /**
  * @swagger
@@ -345,7 +378,11 @@ router.post('/verify-otp', validate(authValidation.verifyOtp), authController.ve
  */
 
 // Resend OTP for user
-router.post('/resend-otp', validate(authValidation.resendOtp), authController.resendOtp);
+router.post(
+  '/resend-otp',
+  validate(authValidation.resendOtp),
+  authController.resendOtp
+);
 
 /**
  * @swagger

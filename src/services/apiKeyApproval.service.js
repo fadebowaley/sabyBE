@@ -51,11 +51,62 @@ const createApprovalRequest = async (apiKey, requestedBy, tenantId) => {
  */
 const getPendingApprovals = async (filter = {}, options = {}) => {
   const combinedFilter = { status: 'pending', ...filter };
-  return ApiKeyApproval.paginate(combinedFilter, {
+  const result = await ApiKeyApproval.paginate(combinedFilter, {
     ...options,
     populate: 'apiKey requestedBy',
     sortBy: options.sortBy || 'createdAt:desc',
   });
+
+  // Handle null apiKey references (deleted API keys)
+  // Use requestDetails as fallback data
+  if (result.results && Array.isArray(result.results)) {
+    result.results = result.results.map((approval) => {
+      // Convert to plain object to avoid Mongoose document serialization issues
+      const approvalObj = approval.toObject ? approval.toObject() : approval;
+
+      // If apiKey is null or undefined (deleted), create a fallback object from requestDetails
+      if (
+        (!approvalObj.apiKey || approvalObj.apiKey === null) &&
+        approvalObj.requestDetails
+      ) {
+        // Generate a placeholder ID for deleted keys (frontend expects string, not null)
+        const deletedId = `deleted-${
+          approvalObj.id || approvalObj._id || 'unknown'
+        }`;
+        approvalObj.apiKey = {
+          id: deletedId, // String ID to prevent frontend .slice() errors
+          _id: deletedId, // Also provide _id for compatibility
+          label: approvalObj.requestDetails.label || 'Deleted API Key',
+          category: approvalObj.requestDetails.category || 'web',
+          environment: approvalObj.requestDetails.environment || 'production',
+          permissions: approvalObj.requestDetails.permissions || [],
+          rateLimit: approvalObj.requestDetails.rateLimit || 0,
+          isActive: false,
+          isDeleted: true, // Flag to indicate this is a fallback
+          // Add other expected fields with safe defaults
+          usageCount: 0,
+          createdAt: approvalObj.createdAt,
+          updatedAt: approvalObj.updatedAt,
+          tenant: approvalObj.tenant,
+          scope: approvalObj.requestDetails.category || 'web', // Deprecated but might be expected
+        };
+      }
+      // Ensure apiKey always has id/_id even if it exists but is missing these fields
+      if (
+        approvalObj.apiKey &&
+        !approvalObj.apiKey.id &&
+        !approvalObj.apiKey._id
+      ) {
+        const fallbackId =
+          approvalObj.apiKey._id || approvalObj.apiKey.id || 'unknown';
+        approvalObj.apiKey.id = fallbackId;
+        approvalObj.apiKey._id = approvalObj.apiKey._id || fallbackId;
+      }
+      return approvalObj;
+    });
+  }
+
+  return result;
 };
 
 /**
@@ -64,12 +115,64 @@ const getPendingApprovals = async (filter = {}, options = {}) => {
  * @param {Object} options - Query options
  * @returns {Promise<QueryResult>}
  */
-const getApprovals = async (filter = {}, options = {}) =>
-  ApiKeyApproval.paginate(filter, {
+const getApprovals = async (filter = {}, options = {}) => {
+  const result = await ApiKeyApproval.paginate(filter, {
     ...options,
     populate: 'apiKey requestedBy approvedBy rejectedBy',
     sortBy: options.sortBy || 'createdAt:desc',
   });
+
+  // Handle null apiKey references (deleted API keys)
+  // Use requestDetails as fallback data
+  if (result.results && Array.isArray(result.results)) {
+    result.results = result.results.map((approval) => {
+      // Convert to plain object to avoid Mongoose document serialization issues
+      const approvalObj = approval.toObject ? approval.toObject() : approval;
+
+      // If apiKey is null or undefined (deleted), create a fallback object from requestDetails
+      if (
+        (!approvalObj.apiKey || approvalObj.apiKey === null) &&
+        approvalObj.requestDetails
+      ) {
+        // Generate a placeholder ID for deleted keys (frontend expects string, not null)
+        const deletedId = `deleted-${
+          approvalObj.id || approvalObj._id || 'unknown'
+        }`;
+        approvalObj.apiKey = {
+          id: deletedId, // String ID to prevent frontend .slice() errors
+          _id: deletedId, // Also provide _id for compatibility
+          label: approvalObj.requestDetails.label || 'Deleted API Key',
+          category: approvalObj.requestDetails.category || 'web',
+          environment: approvalObj.requestDetails.environment || 'production',
+          permissions: approvalObj.requestDetails.permissions || [],
+          rateLimit: approvalObj.requestDetails.rateLimit || 0,
+          isActive: false,
+          isDeleted: true, // Flag to indicate this is a fallback
+          // Add other expected fields with safe defaults
+          usageCount: 0,
+          createdAt: approvalObj.createdAt,
+          updatedAt: approvalObj.updatedAt,
+          tenant: approvalObj.tenant,
+          scope: approvalObj.requestDetails.category || 'web', // Deprecated but might be expected
+        };
+      }
+      // Ensure apiKey always has id/_id even if it exists but is missing these fields
+      if (
+        approvalObj.apiKey &&
+        !approvalObj.apiKey.id &&
+        !approvalObj.apiKey._id
+      ) {
+        const fallbackId =
+          approvalObj.apiKey._id || approvalObj.apiKey.id || 'unknown';
+        approvalObj.apiKey.id = fallbackId;
+        approvalObj.apiKey._id = approvalObj.apiKey._id || fallbackId;
+      }
+      return approvalObj;
+    });
+  }
+
+  return result;
+};
 
 /**
  * Approve API key (SabyUser only)

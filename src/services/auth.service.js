@@ -13,8 +13,10 @@ const logger = require('../config/logger');
 const loginUserWithEmailAndPassword = async (
   email,
   password,
-  channel = 'web'
+  channel = 'web',
+  options = {}
 ) => {
+  const { hasApiKey = false } = options;
   const user = await User.findOne({ email });
   if (!user || !(await user.isPasswordMatch(password))) {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Incorrect email or password');
@@ -29,13 +31,20 @@ const loginUserWithEmailAndPassword = async (
   }
 
   // Channel-aware access control
+  // Only allow web access for ordinary users if API key was successfully validated
+  // API key validation is handled by apiKeyAuth middleware - hasApiKey is true only if req.apiKey exists
   if (channel === 'web' && user.isOrdinaryUser && user.isOrdinaryUser()) {
-    throw new ApiError(
-      httpStatus.FORBIDDEN,
-      'Access denied. This account cannot access the web portal. Please use the designated access channel.'
+    if (!hasApiKey) {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        'Access denied. This account cannot access the web portal. Please use the designated access channel.'
+      );
+    }
+    // API key was successfully validated by middleware - allow access
+    logger.info(
+      `[AuthService] Channel restriction bypassed for ${user.email} due to validated API key authentication`
     );
   }
-
   return user;
 };
 
@@ -190,7 +199,9 @@ const sendUserOtp = async (user, options = {}) => {
     if (!allowFallback) {
       throw new Error(message);
     }
-    logger.warn(`⚠️ ${message} for ${user.email}, continuing with fallback flow`);
+    logger.warn(
+      `⚠️ ${message} for ${user.email}, continuing with fallback flow`
+    );
   }
 
   return { email: user.email, otp, channels: deliveryChannels };

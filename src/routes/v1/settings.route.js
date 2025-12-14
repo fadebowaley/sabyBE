@@ -158,8 +158,8 @@ const router = express.Router();
 // Route for creating a new setting
 router
   .route('/')
-  .post(auth('create:setting'), validate(settingsValidation.createSetting), settingsController.createSetting)
-  .get(auth('view:setting'), validate(settingsValidation.getSettings), settingsController.getSettings);
+  .post(auth('setting:create'), validate(settingsValidation.createSetting), settingsController.createSetting)
+  .get(auth('setting:read'), validate(settingsValidation.getSettings), settingsController.getSettings);
 
 /**
  * @swagger
@@ -258,9 +258,9 @@ router
 // Route for fetching a single setting by ID
 router
   .route('/:settingId')
-  .get(auth('view:setting'), validate(settingsValidation.getSetting), settingsController.getSetting)
-  .patch(auth('update:setting'), validate(settingsValidation.updateSetting), settingsController.updateSetting)
-  .delete(auth('delete:setting'), validate(settingsValidation.deleteSetting), settingsController.deleteSetting);
+  .get(auth('setting:read'), validate(settingsValidation.getSetting), settingsController.getSetting)
+  .patch(auth('setting:update'), validate(settingsValidation.updateSetting), settingsController.updateSetting)
+  .delete(auth('setting:delete'), validate(settingsValidation.deleteSetting), settingsController.deleteSetting);
 
 /**
  * @swagger
@@ -293,7 +293,7 @@ router
 router
   .route('/node/:nodeId')
   .delete(
-    auth('delete:setting'),
+    auth('setting:delete'),
     validate(settingsValidation.deleteAllSettingsForNode),
     settingsController.deleteAllSettingsForNode
   );
