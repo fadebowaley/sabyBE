@@ -101,7 +101,7 @@ jobs:
           echo "🐳 Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop"
           echo "🖥️  VM: ${{ secrets.NEW_STAGING_IP }}"
 
-          ssh -o StrictHostKeyChecking=no haloadmin@${{ secrets.NEW_STAGING_IP }} << ENDSSH
+          ssh -o StrictHostKeyChecking=no haloadmin@${{ secrets.NEW_STAGING_IP }} << 'ENDSSH'
             set -e
             cd /opt/saby
             
@@ -177,7 +177,7 @@ jobs:
           echo "🌿 Branch: ${{ github.ref }}"
           echo "🐳 Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production"
 
-          ssh -o StrictHostKeyChecking=no haloadmin@${{ secrets.NEW_STAGING_IP }} << ENDSSH
+          ssh -o StrictHostKeyChecking=no haloadmin@${{ secrets.NEW_STAGING_IP }} << 'ENDSSH'
             set -e
             cd /opt/saby
             
