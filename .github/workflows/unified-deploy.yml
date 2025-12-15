@@ -149,8 +149,9 @@ jobs:
 
       - name: ✅ Deployment Summary
         run: |
-          echo "✅ Backend deployed to unified staging VM"
+          echo "✅ Backend and WhatsApp deployed to unified staging VM"
           echo "🌐 Backend accessible at: http://${{ secrets.NEW_STAGING_IP }}:4000"
+          echo "📱 WhatsApp service accessible at: http://${{ secrets.NEW_STAGING_IP }}:4001"
 
   # ═══════════════════════════════════════════════════════════════════
   # DEPLOY TO PRODUCTION - UNIFIED VM
