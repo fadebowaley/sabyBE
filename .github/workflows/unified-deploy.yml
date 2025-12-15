@@ -171,23 +171,23 @@ jobs:
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
             
-            echo "📥 Pulling latest backend and WhatsApp images (no cache)..."
-            docker-compose -f docker-compose.production.yml pull --no-parallel backend whatsapp
+            echo "📥 Pulling latest backend image (no cache)..."
+            COMPOSE_PROJECT_NAME=saby-production docker-compose -f docker-compose.production.yml pull --no-parallel backend
             
-            echo "🛑 Stopping old backend and WhatsApp containers..."
-            docker-compose -f docker-compose.production.yml stop backend whatsapp || true
+            echo "🛑 Stopping old backend container..."
+            COMPOSE_PROJECT_NAME=saby-production docker-compose -f docker-compose.production.yml stop backend || true
             
-            echo "🗑️ Removing old backend and WhatsApp containers..."
-            docker-compose -f docker-compose.production.yml rm -f backend whatsapp || true
+            echo "🗑️ Removing old backend container..."
+            COMPOSE_PROJECT_NAME=saby-production docker-compose -f docker-compose.production.yml rm -f backend || true
             
             echo "🚀 Starting new backend container (project: saby-production)..."
-            docker-compose -f docker-compose.production.yml up -d --force-recreate backend
+            COMPOSE_PROJECT_NAME=saby-production docker-compose -f docker-compose.production.yml up -d --force-recreate backend
             
             echo "⏳ Waiting for backend to be healthy..."
             sleep 20
             
             echo "🏥 Backend health check..."
-            docker-compose -f docker-compose.production.yml ps backend
+            COMPOSE_PROJECT_NAME=saby-production docker-compose -f docker-compose.production.yml ps backend
             
             echo "📊 Testing backend endpoint..."
             curl -f http://localhost:4000 || echo "⚠️ Backend not responding yet, may need more time"
@@ -195,17 +195,5 @@ jobs:
             echo "📝 Recent backend logs:"
             docker logs saby-backend-production --tail 20
             
-            echo "🚀 Starting WhatsApp service with new backend image..."
-            docker-compose -f docker-compose.production.yml up -d --force-recreate whatsapp
-            
-            echo "⏳ Waiting for WhatsApp to be healthy..."
-            sleep 10
-            
-            echo "🏥 WhatsApp health check..."
-            docker-compose -f docker-compose.production.yml ps whatsapp
-            
-            echo "📝 Recent WhatsApp logs:"
-            docker logs saby-production-whatsapp --tail 20 || true
-            
-            echo "✅ Backend and WhatsApp deployment completed!"
+            echo "✅ Backend deployment completed!"
           ENDSSH
