@@ -106,7 +106,7 @@ jobs:
             cd /opt/saby
             
             echo "🔐 Logging in to GHCR..."
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             echo "📥 Pulling latest backend and WhatsApp images (no cache)..."
             docker-compose -f docker-compose.staging.yml pull --no-parallel backend whatsapp
@@ -182,7 +182,7 @@ jobs:
             cd /opt/saby
             
             echo "🔐 Logging in to GHCR..."
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             echo "📥 Pulling latest backend and WhatsApp images (no cache)..."
             docker-compose -f docker-compose.production.yml pull --no-parallel backend whatsapp
