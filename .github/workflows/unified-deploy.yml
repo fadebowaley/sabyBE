@@ -2,7 +2,7 @@ name: 🚀 Unified VM Deployment (Staging + Production)
 
 on:
   push:
-    branches: [production, develop]
+    branches: [production, develop, proddy]
     tags: ["v*"]
   workflow_dispatch:
     inputs:
@@ -14,6 +14,7 @@ on:
         options:
           - staging
           - production
+          - proddy
 
 env:
   REGISTRY: ghcr.io
@@ -45,8 +46,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: fadebowaley
-          password: ${{ secrets.GHCR_PAT }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🏷️ Extract metadata
         id: meta
@@ -113,7 +114,7 @@ jobs:
             echo "🗑️ Removing old backend and WhatsApp containers..."
             docker-compose -f docker-compose.staging.yml rm -f backend whatsapp || true
             
-            echo "🚀 Starting new backend container..."
+            echo "🚀 Starting new backend container (project: saby-staging)..."
             docker-compose -f docker-compose.staging.yml up -d --force-recreate backend
             
             echo "⏳ Waiting for backend to be healthy..."
@@ -128,7 +129,7 @@ jobs:
             echo "📝 Recent backend logs:"
             docker logs saby-backend-staging --tail 20
             
-            echo "🚀 Restarting WhatsApp service with new backend image..."
+            echo "🚀 Restarting WhatsApp service with new backend image (project: saby-staging)..."
             docker-compose -f docker-compose.staging.yml up -d --force-recreate whatsapp
             
             echo "⏳ Waiting for WhatsApp to be healthy..."
@@ -158,7 +159,8 @@ jobs:
     needs: build-and-push
     if: |
       (github.ref == 'refs/heads/production' && github.event_name == 'push') ||
-      (github.event_name == 'workflow_dispatch' && inputs.environment == 'production')
+      (github.ref == 'refs/heads/proddy' && github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch' && (inputs.environment == 'production' || inputs.environment == 'proddy'))
     environment: production
     steps:
       - name: 🔐 Setup SSH
@@ -169,34 +171,51 @@ jobs:
       - name: 🚀 Deploy to Unified Production VM
         run: |
           echo "🚀 Deploying backend to UNIFIED Production VM"
+          echo "🌿 Branch: ${{ github.ref }}"
+          echo "🐳 Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production"
 
-          ssh -o StrictHostKeyChecking=no haloadmin@${{ secrets.NEW_PRODUCTION_IP }} << 'ENDSSH'
+          ssh -o StrictHostKeyChecking=no haloadmin@${{ secrets.NEW_STAGING_IP }} << 'ENDSSH'
             set -e
             cd /opt/saby
             
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
             
-            echo "📥 Pulling latest backend and WhatsApp images..."
-            docker-compose -f docker-compose.production.yml pull backend whatsapp
+            echo "📥 Pulling latest backend and WhatsApp images (no cache)..."
+            docker-compose -f docker-compose.production.yml pull --no-parallel backend whatsapp
             
-            echo "🚀 Restarting backend service..."
+            echo "🛑 Stopping old backend and WhatsApp containers..."
+            docker-compose -f docker-compose.production.yml stop backend whatsapp || true
+            
+            echo "🗑️ Removing old backend and WhatsApp containers..."
+            docker-compose -f docker-compose.production.yml rm -f backend whatsapp || true
+            
+            echo "🚀 Starting new backend container (project: saby-production)..."
             docker-compose -f docker-compose.production.yml up -d --force-recreate backend
             
-            echo "⏳ Waiting for backend to start..."
-            sleep 10
+            echo "⏳ Waiting for backend to be healthy..."
+            sleep 20
             
             echo "🏥 Backend health check..."
             docker-compose -f docker-compose.production.yml ps backend
             
-            echo "🚀 Restarting WhatsApp service with new backend image..."
+            echo "📊 Testing backend endpoint..."
+            curl -f http://localhost:4000 || echo "⚠️ Backend not responding yet, may need more time"
+            
+            echo "📝 Recent backend logs:"
+            docker logs saby-backend-production --tail 20
+            
+            echo "🚀 Starting WhatsApp service with new backend image..."
             docker-compose -f docker-compose.production.yml up -d --force-recreate whatsapp
             
-            echo "⏳ Waiting for WhatsApp to start..."
+            echo "⏳ Waiting for WhatsApp to be healthy..."
             sleep 10
             
             echo "🏥 WhatsApp health check..."
             docker-compose -f docker-compose.production.yml ps whatsapp
+            
+            echo "📝 Recent WhatsApp logs:"
+            docker logs saby-production-whatsapp --tail 20 || true
             
             echo "✅ Backend and WhatsApp deployment completed!"
           ENDSSH
