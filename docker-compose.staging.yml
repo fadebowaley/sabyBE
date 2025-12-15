@@ -21,7 +21,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-staging-redis-password}
       - JWT_SECRET=${JWT_SECRET:-staging-jwt-secret-change-this}
-      - HALOFE_URL=${HALOFE_URL:-http://localhost:3000}
+      - SABYFE_URL=${SABYFE_URL:-http://localhost:3000}
       # NodeSync configuration
       - NODE_SYNC_ENABLED=${NODE_SYNC_ENABLED:-true}
       - NODE_SYNC_BATCH_SIZE=${NODE_SYNC_BATCH_SIZE:-100}
@@ -135,7 +135,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-staging-redis-password}
       - JWT_SECRET=${JWT_SECRET:-staging-jwt-secret-change-this}
-      - HALOFE_URL=${HALOFE_URL:-http://localhost:3000}
+      - SABYFE_URL=${SABYFE_URL:-http://localhost:3000}
       # Email/SMTP configuration (required for OTP delivery)
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT:-587}

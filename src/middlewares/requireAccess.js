@@ -231,10 +231,12 @@ const checkOwnerAccess = (permissions) => {
   // eslint-disable-next-line no-console
   console.log('🔍 [checkOwnerAccess] Owner bundle:', ownerResourceBundle);
 
-  const regex = /^[a-zA-Z]+:([a-zA-Z]+)/;
   return permissions.every((perm) => {
-    const match = perm.match(regex);
-    const resource = match?.[1];
+    // Extract resource from permission string
+    // Format: "resource:action" (e.g., "user:read")
+    // We need the resource (first part), not the action (second part)
+    const parts = perm.split(':');
+    const resource = parts[0]; // First part is the resource
 
     // eslint-disable-next-line no-console
     console.log(

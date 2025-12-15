@@ -10,7 +10,7 @@ const envVarsSchema = Joi.object()
       .valid('production', 'development', 'test')
       .default('development'),
     PORT: Joi.number().default(4000),
-    HALOFE_URL: Joi.string().description(
+    SABYFE_URL: Joi.string().description(
       'Front-end Url_base that for communication'
     ),
     MONGODB_URL: Joi.string().required().description('Mongo DB url'),
@@ -177,7 +177,7 @@ if (error) {
 module.exports = {
   env: envVars.NODE_ENV,
   port: envVars.PORT,
-  clientUrl: envVars.HALOFE_URL,
+  clientUrl: envVars.SABYFE_URL,
   mongoose: {
     url: envVars.MONGODB_URL + (envVars.NODE_ENV === 'test' ? '-test' : ''),
     options: {
