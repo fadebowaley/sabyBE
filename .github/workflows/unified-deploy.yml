@@ -109,28 +109,28 @@ jobs:
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
             
             echo "📥 Pulling latest backend and WhatsApp images (no cache)..."
-            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml pull --no-parallel backend whatsapp
+            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml pull --no-parallel halobe whatsapp
             
             echo "🛑 Stopping old backend and WhatsApp containers..."
-            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml stop backend whatsapp || true
+            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml stop halobe whatsapp || true
             
             echo "🗑️ Removing old backend and WhatsApp containers..."
-            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml rm -f backend whatsapp || true
+            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml rm -f halobe whatsapp || true
             
             echo "🚀 Starting new backend container (project: saby-staging)..."
-            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml up -d --force-recreate backend
+            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml up -d --force-recreate halobe
             
             echo "⏳ Waiting for backend to be healthy..."
             sleep 20
             
             echo "🏥 Backend health check..."
-            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml ps backend
+            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml ps halobe
             
             echo "📊 Testing backend endpoint..."
             curl -f http://localhost:4000 || echo "⚠️ Backend not responding yet, may need more time"
             
             echo "📝 Recent backend logs:"
-            docker logs saby-backend-staging --tail 20
+            docker logs halo-staging-backend --tail 20
             
             echo "🚀 Starting WhatsApp service (project: saby-staging)..."
             COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml up -d --force-recreate whatsapp
