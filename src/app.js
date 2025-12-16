@@ -48,12 +48,10 @@ const corsOptions = {
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://0.0.0.0:3000',
-    'http://10.17.1.18:3000',
-    'http://40.71.204.212:3000', // Old staging frontend
-    'https://40.71.204.212:3000', // Old staging frontend HTTPS
-    'https://api-staging.saby.ai', // Old staging backend HTTPS
-    'https://dev.saby.ai', // Old unified staging frontend
-    'https://stg.saby.ai', // NEW: Unified staging frontend
+    'https://stg.saby.ai', // Unified staging frontend
+    'https://saby.ai', // Production frontend
+    'https://www.saby.ai', // Production frontend (www)
+    'https://app.saby.ai', // Production app frontend
     // Add production origins from environment variables if needed
     ...(config.cors?.allowedOrigins || []),
   ],
