@@ -54,6 +54,9 @@ const corsOptions = {
     'https://api-staging.saby.ai', // Old staging backend HTTPS
     'https://dev.saby.ai', // Old unified staging frontend
     'https://stg.saby.ai', // NEW: Unified staging frontend
+    'https://saby.ai', // Production frontend
+    'https://www.saby.ai', // Production frontend (www)
+    'https://app.saby.ai', // Production app frontend
     // Add production origins from environment variables if needed
     ...(config.cors?.allowedOrigins || []),
   ],
