@@ -117,6 +117,10 @@ jobs:
             echo "🗑️ Removing old containers..."
             COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml rm -f backend whatsapp telegram || true
             
+            echo "🧹 Force removing any existing containers by name (in case they exist outside docker-compose)..."
+            docker stop saby-backend-staging saby-staging-whatsapp saby-staging-telegram 2>/dev/null || true
+            docker rm -f saby-backend-staging saby-staging-whatsapp saby-staging-telegram 2>/dev/null || true
+            
             echo "🚀 Starting new backend container (project: saby-staging)..."
             COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml up -d --force-recreate backend
             
@@ -208,6 +212,10 @@ jobs:
             
             echo "🗑️ Removing old containers..."
             COMPOSE_PROJECT_NAME=saby-production docker-compose -f docker-compose.production.yml rm -f backend whatsapp telegram || true
+            
+            echo "🧹 Force removing any existing containers by name (in case they exist outside docker-compose)..."
+            docker stop saby-backend-production saby-production-whatsapp saby-production-telegram 2>/dev/null || true
+            docker rm -f saby-backend-production saby-production-whatsapp saby-production-telegram 2>/dev/null || true
             
             echo "🚀 Starting new backend container (project: saby-production)..."
             COMPOSE_PROJECT_NAME=saby-production docker-compose -f docker-compose.production.yml up -d --force-recreate backend
