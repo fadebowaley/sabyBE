@@ -6,6 +6,45 @@ const {
   ownerResourceBundle,
 } = require('../scripts/permissions/ownerResource.json');
 
+/**
+ * Normalize resource name to singular form for bundle matching
+ * Handles common plural forms: permissions -> permission, roles -> role, etc.
+ */
+const normalizeResourceToSingular = (resource) => {
+  if (!resource || typeof resource !== 'string') {
+    return resource;
+  }
+
+  // Common plural-to-singular mappings
+  const pluralToSingular = {
+    permissions: 'permission',
+    roles: 'role',
+    users: 'user',
+    nodes: 'node',
+    levels: 'level',
+    structures: 'structure',
+    submissions: 'submission',
+    storages: 'storage',
+    apikeys: 'apikey',
+  };
+
+  // Check if resource is plural and has a mapping
+  if (pluralToSingular[resource.toLowerCase()]) {
+    return pluralToSingular[resource.toLowerCase()];
+  }
+
+  // If ends with 's' and not in exceptions, try removing 's'
+  if (resource.endsWith('s') && resource.length > 1) {
+    const singular = resource.slice(0, -1);
+    // Only normalize if singular form exists in bundle
+    if (ownerResourceBundle.includes(singular)) {
+      return singular;
+    }
+  }
+
+  return resource;
+};
+
 // Debug: Log the owner resource bundle on startup
 // eslint-disable-next-line no-console
 console.log(
@@ -123,13 +162,16 @@ const verifyCallback =
           return false;
         }
 
+        // Normalize resource to singular form for bundle matching
+        const normalizedResource = normalizeResourceToSingular(matchedResource);
+
         // eslint-disable-next-line no-console
-        console.log(`🔍 Checking if "${matchedResource}" is in bundle...`);
+        console.log(`🔍 Checking if "${normalizedResource}" (normalized from "${matchedResource}") is in bundle...`);
         // eslint-disable-next-line no-console
         console.log(`🔍 Bundle contents:`, JSON.stringify(ownerResourceBundle));
 
-        // Check if the matched resource is in the owner's allowed resource bundle
-        const hasResourceAccess = ownerResourceBundle.includes(matchedResource);
+        // Check if the normalized resource is in the owner's allowed resource bundle
+        const hasResourceAccess = ownerResourceBundle.includes(normalizedResource);
 
         // eslint-disable-next-line no-console
         console.log(`🔍 includes() result: ${hasResourceAccess}`);

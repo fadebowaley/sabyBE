@@ -10,6 +10,45 @@ const {
 } = require('../scripts/permissions/ownerResource.json');
 
 /**
+ * Normalize resource name to singular form for bundle matching
+ * Handles common plural forms: permissions -> permission, roles -> role, etc.
+ */
+const normalizeResourceToSingular = (resource) => {
+  if (!resource || typeof resource !== 'string') {
+    return resource;
+  }
+
+  // Common plural-to-singular mappings
+  const pluralToSingular = {
+    permissions: 'permission',
+    roles: 'role',
+    users: 'user',
+    nodes: 'node',
+    levels: 'level',
+    structures: 'structure',
+    submissions: 'submission',
+    storages: 'storage',
+    apikeys: 'apikey',
+  };
+
+  // Check if resource is plural and has a mapping
+  if (pluralToSingular[resource.toLowerCase()]) {
+    return pluralToSingular[resource.toLowerCase()];
+  }
+
+  // If ends with 's' and not in exceptions, try removing 's'
+  if (resource.endsWith('s') && resource.length > 1) {
+    const singular = resource.slice(0, -1);
+    // Only normalize if singular form exists in bundle
+    if (ownerResourceBundle.includes(singular)) {
+      return singular;
+    }
+  }
+
+  return resource;
+};
+
+/**
  * Normalize permission format (support both old and new during migration)
  * Old format: "action:resource" (e.g., "view:user")
  * New format: "resource:action" (e.g., "user:read")
@@ -238,18 +277,21 @@ const checkOwnerAccess = (permissions) => {
     const parts = perm.split(':');
     const resource = parts[0]; // First part is the resource
 
+    // Normalize resource to singular form for bundle matching
+    const normalizedResource = normalizeResourceToSingular(resource);
+
     // eslint-disable-next-line no-console
     console.log(
-      `🔍 [checkOwnerAccess] Permission: "${perm}" → Resource: "${resource}"`
+      `🔍 [checkOwnerAccess] Permission: "${perm}" → Resource: "${resource}" → Normalized: "${normalizedResource}"`
     );
 
-    if (!resource) {
+    if (!normalizedResource) {
       // eslint-disable-next-line no-console
       console.log(`❌ [checkOwnerAccess] No resource extracted from "${perm}"`);
       return false;
     }
 
-    const hasAccess = ownerResourceBundle.includes(resource);
+    const hasAccess = ownerResourceBundle.includes(normalizedResource);
     // eslint-disable-next-line no-console
     console.log(`🔍 [checkOwnerAccess] "${resource}" in bundle? ${hasAccess}`);
 
