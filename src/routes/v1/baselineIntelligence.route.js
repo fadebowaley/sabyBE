@@ -14,21 +14,21 @@ const router = express.Router();
 // Health check endpoint
 router.get(
   '/health',
-  requireAccess('view:baselineintelligence'),
+  requireAccess('baselineintelligence:read'),
   baselineIntelligenceController.healthCheck
 );
 
 // Statistics endpoint
 router.get(
   '/stats',
-  requireAccess('view:baselineintelligence'),
+  requireAccess('baselineintelligence:read'),
   baselineIntelligenceController.getBaselineStats
 );
 
 // Summary endpoint (combined node and network data)
 router.get(
   '/summary',
-  requireAccess('view:baselineintelligence'),
+  requireAccess('baselineintelligence:read'),
   validate(baselineIntelligenceValidation.getBaselineSummary),
   baselineIntelligenceController.getBaselineSummary
 );
@@ -36,13 +36,13 @@ router.get(
 // Network-level endpoints
 router.get(
   '/network',
-  requireAccess('view:baselineintelligence'),
+  requireAccess('baselineintelligence:read'),
   baselineIntelligenceController.getNetworkBaseline
 );
 
 router.get(
   '/network/insights',
-  requireAccess('view:baselineintelligence'),
+  requireAccess('baselineintelligence:read'),
   validate(baselineIntelligenceValidation.getNetworkInsights),
   baselineIntelligenceController.getNetworkInsights
 );
@@ -56,38 +56,38 @@ router.post(
 
 router.get(
   '/network/top-nodes',
-  requireAccess('view:baselineintelligence'),
+  requireAccess('baselineintelligence:read'),
   baselineIntelligenceController.getTopNodes
 );
 router.get(
   '/network/geographic-distribution',
-  requireAccess('view:baselineintelligence'),
+  requireAccess('baselineintelligence:read'),
   baselineIntelligenceController.getGeographicDistribution
 );
 router.get(
   '/network/health-score',
-  requireAccess('view:baselineintelligence'),
+  requireAccess('baselineintelligence:read'),
   baselineIntelligenceController.getHealthScore
 );
 
 // User's scoped network baseline (hierarchical access)
 router.get(
   '/my-network',
-  requireAccess('view:baselineintelligence'),
+  requireAccess('baselineintelligence:read'),
   baselineIntelligenceController.getMyNetworkBaseline
 );
 
 // User's node family information
 router.get(
   '/my-family',
-  requireAccess('view:baselineintelligence'),
+  requireAccess('baselineintelligence:read'),
   baselineIntelligenceController.getMyNodeFamily
 );
 
 // Node-level endpoints (with hierarchical permission checks)
 router.get(
   '/node/:nodeId',
-  requireAccess('view:baselineintelligence'),
+  requireAccess('baselineintelligence:read'),
   canAccessNodeBaseline('nodeId'),
   validate(baselineIntelligenceValidation.getNodeBaseline),
   baselineIntelligenceController.getNodeBaseline
@@ -95,7 +95,7 @@ router.get(
 
 router.get(
   '/node/:nodeId/insights',
-  requireAccess('view:baselineintelligence'),
+  requireAccess('baselineintelligence:read'),
   canAccessNodeBaseline('nodeId'),
   validate(baselineIntelligenceValidation.getNodeInsights),
   baselineIntelligenceController.getNodeInsights

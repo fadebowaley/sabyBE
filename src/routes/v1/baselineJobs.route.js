@@ -13,25 +13,25 @@ const router = express.Router();
 // Job statistics and monitoring
 router.get(
   '/stats',
-  requireAccess('view:baselinejobs'),
+  requireAccess('baselinejobs:read'),
   baselineJobsController.getJobStats
 );
 
 router.get(
   '/metrics',
-  requireAccess('view:baselinejobs'),
+  requireAccess('baselinejobs:read'),
   baselineJobsController.getJobMetrics
 );
 
 router.get(
   '/history',
-  requireAccess('view:baselinejobs'),
+  requireAccess('baselinejobs:read'),
   baselineJobsController.getJobHistory
 );
 
 router.get(
   '/:queueType/:jobId',
-  requireAccess('view:baselinejobs'),
+  requireAccess('baselinejobs:read'),
   baselineJobsController.getJobDetails
 );
 
