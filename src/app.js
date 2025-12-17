@@ -51,8 +51,11 @@ const corsOptions = {
     // Production frontend domains (priority order)
     'https://saby.ai',
     'https://www.saby.ai',
+    'https://web.saby.ai',
     // Staging frontend (only if needed for cross-environment testing)
     ...(process.env.NODE_ENV === 'production' ? [] : ['https://stg.saby.ai']),
+    // External domains that need API access
+    'https://portal.sotsm.org',
     // Add production origins from environment variables if needed
     ...(config.cors?.allowedOrigins || []),
   ],
