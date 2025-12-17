@@ -174,6 +174,11 @@ if (error) {
   throw new Error(`Config validation error: ${error.message}`);
 }
 
+// Ensure at least one MongoDB connection string is provided
+if (!envVars.MONGO_URI && !envVars.MONGODB_URL) {
+  throw new Error('Either MONGO_URI or MONGODB_URL must be provided');
+}
+
 module.exports = {
   env: envVars.NODE_ENV,
   port: envVars.PORT,
@@ -190,6 +195,7 @@ module.exports = {
       bufferMaxEntries: 0,
       maxPoolSize: 10,
       minPoolSize: 1,
+      family: 4, // Force IPv4 to avoid ::1 connection issues
     },
   },
   postgres: {
