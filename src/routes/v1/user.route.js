@@ -345,37 +345,6 @@ router.post(
   userController.bulkCreate
 );
 
-// Update user
-// Test route: Using hybridAuth + requireAccess pattern for optimized API key handling
-router.patch(
-  '/:userId',
-  requireAccess('user:update'),
-  validate(userValidation.updateUser),
-  userController.updateUser
-);
-
-// Get user roles
-router.get(
-  '/:userId/roles',
-  requireAccess('user:read'),
-  userController.getUserRoles
-);
-
-// Get user nodes
-router.get(
-  '/:userId/nodes',
-  requireAccess('user:read'),
-  userController.getUserNodes
-);
-
-// Update profile update compliance
-router.patch(
-  '/:userId/profile-compliance',
-  requireAccess('user:update'),
-  validate(userValidation.updateProfileCompliance),
-  userController.updateProfileCompliance
-);
-
 // Change email (requires OTP verification)
 router.patch(
   '/change-email',
@@ -476,6 +445,38 @@ router.patch(
  *       "409":
  *         description: Phone number already in use
  */
+
+
+// Update user
+// Test route: Using hybridAuth + requireAccess pattern for optimized API key handling
+router.patch(
+  '/:userId',
+  requireAccess('user:update'),
+  validate(userValidation.updateUser),
+  userController.updateUser
+);
+
+// Get user roles
+router.get(
+  '/:userId/roles',
+  requireAccess('user:read'),
+  userController.getUserRoles
+);
+
+// Get user nodes
+router.get(
+  '/:userId/nodes',
+  requireAccess('user:read'),
+  userController.getUserNodes
+);
+
+// Update profile update compliance
+router.patch(
+  '/:userId/profile-compliance',
+  requireAccess('user:update'),
+  validate(userValidation.updateProfileCompliance),
+  userController.updateProfileCompliance
+);
 
 /**
  * @swagger
