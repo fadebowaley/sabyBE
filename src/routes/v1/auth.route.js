@@ -5,6 +5,7 @@ const authValidation = require('../../validations/auth.validation');
 const authController = require('../../controllers/auth.controller');
 const auth = require('../../middlewares/auth');
 const { apiKeyAuth } = require('../../middlewares/apiKeyAuth');
+const { loginLimiter } = require('../../middlewares/rateLimiter');
 
 // Create Express router instance
 const router = express.Router();
@@ -76,6 +77,7 @@ router.post(
 // Test route: Using optional API key auth for channel bypass support
 router.post(
   '/login',
+  loginLimiter, // User-based rate limiter (email-based)
   apiKeyAuth.optional(), // Optional API key authentication (for channel bypass)
   validate(authValidation.login),
   authController.login

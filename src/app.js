@@ -19,6 +19,9 @@ const logger = require('./config/logger');
 
 const app = express();
 
+// Trust proxy to get real client IPs from nginx
+app.set('trust proxy', 1); // Trust first proxy (nginx)
+
 if (config.env !== 'test') {
   app.use(morgan.successHandler);
   app.use(morgan.errorHandler);
@@ -99,7 +102,8 @@ app.use(passport.initialize());
 passport.use('jwt', jwtStrategy);
 
 // limit repeated failed requests to auth endpoints
-if (config.env === 'production') {
+// Enable in both production and staging
+if (config.env === 'production' || config.env === 'staging') {
   app.use('/v1/auth', authLimiter);
 }
 
@@ -114,12 +118,15 @@ app.get('/', (req, res) => {
 // Health check endpoint with detailed status
 app.get('/api/health', async (req, res) => {
   const mongoose = require('mongoose');
-  const { testConnection: testPostgresConnection } = require('./config/postgres');
+  const {
+    testConnection: testPostgresConnection,
+  } = require('./config/postgres');
   const { redisClient } = require('./config/redis');
 
   // Check database connections
-  const mongoStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-  
+  const mongoStatus =
+    mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+
   let postgresStatus = 'disconnected';
   try {
     const isConnected = await testPostgresConnection();
@@ -140,7 +147,8 @@ app.get('/api/health', async (req, res) => {
 
   res.status(200).json({
     status: 'OK',
-    message: '🛠️ "I will restore you to health and heal your wounds." – Jeremiah 30:17',
+    message:
+      '🛠️ "I will restore you to health and heal your wounds." – Jeremiah 30:17',
     timestamp: new Date().toISOString(),
     environment: config.env || 'development',
     version: '1.0.4',
