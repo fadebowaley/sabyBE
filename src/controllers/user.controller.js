@@ -459,7 +459,7 @@ const changePhone = catchAsync(async (req, res) => {
     message: 'Phone number updated successfully',
     user: userService.buildUserResponse(user),
   });
-};);
+});
 
 module.exports = {
   ownerCreate,

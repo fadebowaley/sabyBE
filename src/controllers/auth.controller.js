@@ -312,7 +312,7 @@ const resendOtp = catchAsync(async (req, res) => {
   const result = await authService.sendUserOtp(user);
   console.log(result);
   res.status(httpStatus.OK).send({ message: 'OTP resent successfully' });
-};);
+});
 
 /**
  * Change password for unverified user (requires OTP)
