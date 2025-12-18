@@ -411,7 +411,7 @@ const changeEmail = catchAsync(async (req, res) => {
     message: 'Email updated successfully',
     user: userService.buildUserResponse(user),
   });
-};);
+});
 
 /**
  * Change user phone number after OTP verification
