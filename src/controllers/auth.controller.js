@@ -1,6 +1,7 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const ApiError = require('../utils/ApiError');
+const moment = require('moment');
 const {
   authService,
   userService,
@@ -62,19 +63,12 @@ const register = catchAsync(async (req, res) => {
 const login = catchAsync(async (req, res) => {
   const { email, password } = req.body;
 
-  // Check if API key was successfully validated by middleware
-  // req.apiKey is set by apiKeyAuth.optional() middleware if validation succeeded
-  // API key is optional - not required for ordinary users to access web portal
-  const hasApiKey = !!req.apiKey;
-
   try {
-    // Login user - all users (including ordinary users) can access web portal
-    // API key is optional for enhanced security but not required
+    // Login user - all registered users can login without API key requirement
     const user = await authService.loginUserWithEmailAndPassword(
       email,
       password,
-      'web',
-      { hasApiKey }
+      'web'
     );
     const tokens = await tokenService.generateAuthTokens(user);
 
@@ -526,6 +520,105 @@ const requestPhoneChangeOtp = catchAsync(async (req, res) => {
   });
 });
 
+/**
+ * Check API key expiration status (notification only)
+ * Does not affect authentication - purely informational
+ * @param {Object} req - Express request object
+ * @param {Object} req.user - Authenticated user (from auth middleware)
+ * @returns {Object} {hasApiKey, isExpired, expiresAt, daysUntilExpiry, message}
+ * @example
+ * GET /auth/check-api-key-status
+ */
+const checkApiKeyStatus = catchAsync(async (req, res) => {
+  const { tenantId } = req.user;
+
+  // Get active web API keys for tenant (including inactive ones for status check)
+  const result = await apiKeyService.getApiKeysByTenant(
+    tenantId,
+    { category: 'web' },
+    { limit: 1, sortBy: 'createdAt:desc' }
+  );
+
+  const apiKey =
+    result.results && result.results.length > 0 ? result.results[0] : null;
+
+  if (!apiKey) {
+    return res.status(httpStatus.OK).send({
+      hasApiKey: false,
+      isExpired: null,
+      expiresAt: null,
+      daysUntilExpiry: null,
+      approvalStatus: null,
+      isActive: false,
+      needsApproval: false,
+      needsRegeneration: false,
+      message: 'No API key found',
+    });
+  }
+
+  // Check approval status
+  const approvalStatus = apiKey.approvalStatus || 'pending';
+  const needsApproval = approvalStatus === 'pending';
+  const isRejected = approvalStatus === 'rejected';
+  const needsRegeneration = isRejected || !apiKey.isActive;
+
+  // Check expiration
+  let isExpired = false;
+  let expiresAt = null;
+  let daysUntilExpiry = null;
+  let expirationMessage = null;
+
+  if (apiKey.expires) {
+    expiresAt = moment(apiKey.expires);
+    const now = moment();
+    isExpired = expiresAt.isBefore(now);
+    daysUntilExpiry = Math.floor(expiresAt.diff(now, 'days', true));
+
+    expirationMessage = isExpired
+      ? `API key expired ${Math.abs(Math.round(daysUntilExpiry))} days ago`
+      : daysUntilExpiry <= 0
+      ? 'API key expires today'
+      : daysUntilExpiry <= 7
+      ? `API key expires in ${Math.round(daysUntilExpiry)} days`
+      : `API key expires in ${Math.round(daysUntilExpiry)} days`;
+  } else {
+    expirationMessage = 'API key has no expiration date';
+  }
+
+  // Build comprehensive message
+  let message = '';
+  if (needsApproval) {
+    message = 'API key is pending approval. Please wait for SabyUser approval.';
+  } else if (isRejected) {
+    message = `API key was rejected${
+      apiKey.rejectionReason ? `: ${apiKey.rejectionReason}` : ''
+    }. Please regenerate your API key.`;
+  } else if (isExpired) {
+    message = `${expirationMessage}. Please regenerate your API key.`;
+  } else if (daysUntilExpiry !== null && daysUntilExpiry <= 7) {
+    message = `${expirationMessage}. Consider regenerating your API key soon.`;
+  } else if (!apiKey.isActive) {
+    message = 'API key is inactive. Please regenerate your API key.';
+  } else {
+    message = expirationMessage || 'API key is active and valid.';
+  }
+
+  res.status(httpStatus.OK).send({
+    hasApiKey: true,
+    isExpired,
+    expiresAt: expiresAt ? expiresAt.toISOString() : null,
+    daysUntilExpiry:
+      daysUntilExpiry !== null ? Math.round(daysUntilExpiry) : null,
+    approvalStatus,
+    isActive: apiKey.isActive,
+    needsApproval,
+    needsRegeneration,
+    environment: apiKey.environment,
+    label: apiKey.label,
+    message,
+  });
+});
+
 module.exports = {
   register,
   login,
@@ -542,4 +635,5 @@ module.exports = {
   changePasswordAuthenticated,
   requestEmailChangeOtp,
   requestPhoneChangeOtp,
+  checkApiKeyStatus,
 };
