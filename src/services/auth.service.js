@@ -214,7 +214,7 @@ const sendUserOtp = async (user, options = {}) => {
  * @returns {Promise<void>}
  */
 
-const verifyOtp = async (email, otp) => {
+const verifyOtp = async (email, otp, clearOtp = true) => {
   const user = await userService.getUserByEmail(email);
   if (!user) {
     return { success: false, user: null };
@@ -228,17 +228,20 @@ const verifyOtp = async (email, otp) => {
     return { success: false, user };
   }
 
-  await User.updateOne(
-    { _id: user._id },
-    {
-      $set: {
-        otpVerified: true,
-        otp: null,
-        otpExpires: null,
-        status: true,
-      },
-    }
-  );
+  const updateData = {
+    $set: {
+      otpVerified: true,
+      status: true,
+    },
+  };
+
+  // Only clear OTP if explicitly requested (default is true for backward compatibility)
+  if (clearOtp) {
+    updateData.$set.otp = null;
+    updateData.$set.otpExpires = null;
+  }
+
+  await User.updateOne({ _id: user._id }, updateData);
   return { success: true, user };
 };
 

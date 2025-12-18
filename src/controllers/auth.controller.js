@@ -8,7 +8,7 @@ const {
   emailService,
   apiKeyService,
 } = require('../services');
-const { Role } = require('../models');
+const { Role, User } = require('../models');
 const logger = require('../config/logger');
 
 /**
@@ -66,83 +66,102 @@ const login = catchAsync(async (req, res) => {
   // req.apiKey is set by apiKeyAuth.optional() middleware if validation succeeded
   const hasApiKey = !!req.apiKey;
 
-  // Pass API key context to login service for channel restrictions
-  const user = await authService.loginUserWithEmailAndPassword(
-    email,
-    password,
-    'web',
-    { hasApiKey }
-  );
-  const tokens = await tokenService.generateAuthTokens(user);
-
-  // Populate role permissions for isAdmin and Regular users
-  let permissions = [];
-  if (
-    (user.isAdmin || (!user.isOwner && !user.isSuper && !user.isSaby)) &&
-    user.roles &&
-    user.roles.length > 0
-  ) {
-    const userRoles = await Role.find({ _id: { $in: user.roles } }).populate(
-      'permissions'
+  try {
+    // Pass API key context to login service for channel restrictions
+    const user = await authService.loginUserWithEmailAndPassword(
+      email,
+      password,
+      'web',
+      { hasApiKey }
     );
+    const tokens = await tokenService.generateAuthTokens(user);
 
-    const allPermissions = new Set();
-    userRoles.forEach((role) => {
-      if (role.permissions && Array.isArray(role.permissions)) {
-        role.permissions.forEach((perm) => {
-          const permName =
-            typeof perm === 'string' ? perm : perm.name || perm._id?.toString();
-          if (permName) {
-            allPermissions.add(permName);
-          }
-        });
-      }
-    });
-
-    permissions = Array.from(allPermissions);
-
-    if (user.isAdmin) {
-      logger.info(
-        `[AuthController.login] isAdmin user permissions from roles: ${JSON.stringify(
-          permissions
-        )} (${permissions.length} permissions)`
+    // Populate role permissions for isAdmin and Regular users
+    let permissions = [];
+    if (
+      (user.isAdmin || (!user.isOwner && !user.isSuper && !user.isSaby)) &&
+      user.roles &&
+      user.roles.length > 0
+    ) {
+      const userRoles = await Role.find({ _id: { $in: user.roles } }).populate(
+        'permissions'
       );
-      if (permissions.length === 0) {
-        logger.warn(
-          `[AuthController.login] WARNING: isAdmin user has NO permissions! User roles: ${JSON.stringify(
-            user.roles
-          )}`
+
+      const allPermissions = new Set();
+      userRoles.forEach((role) => {
+        if (role.permissions && Array.isArray(role.permissions)) {
+          role.permissions.forEach((perm) => {
+            const permName =
+              typeof perm === 'string'
+                ? perm
+                : perm.name || perm._id?.toString();
+            if (permName) {
+              allPermissions.add(permName);
+            }
+          });
+        }
+      });
+
+      permissions = Array.from(allPermissions);
+
+      if (user.isAdmin) {
+        logger.info(
+          `[AuthController.login] isAdmin user permissions from roles: ${JSON.stringify(
+            permissions
+          )} (${permissions.length} permissions)`
         );
+        if (permissions.length === 0) {
+          logger.warn(
+            `[AuthController.login] WARNING: isAdmin user has NO permissions! User roles: ${JSON.stringify(
+              user.roles
+            )}`
+          );
+        }
       }
     }
+
+    // Send comprehensive user data for frontend
+    const userResponse = {
+      id: user.id,
+      userId: user.userId,
+      haloId: user.haloId,
+      tenantId: user.tenantId,
+      firstname: user.firstname,
+      lastname: user.lastname,
+      name: `${user.firstname} ${user.lastname}`.trim(),
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      avatar: user.avatar,
+      isOwner: user.isOwner,
+      isSuper: user.isSuper,
+      isSaby: user.isSaby,
+      isAdmin: user.isAdmin,
+      isAgreed: user.isAgreed,
+      isEmailVerified: user.isEmailVerified,
+      isPhoneVerified: user.isPhoneVerified,
+      status: user.status,
+      createdAt: user.createdAt,
+      roles: user.roles,
+      permissions: permissions.length > 0 ? permissions : undefined, // Only include if populated
+    };
+
+    res.send({ user: userResponse, tokens });
+  } catch (error) {
+    // If user exists but is unverified, return phone number for OTP flow
+    if (error.name === 'OtpNotVerified') {
+      const user = await userService.getUserByEmail(email);
+      if (user) {
+        return res.status(httpStatus.UNAUTHORIZED).send({
+          code: httpStatus.UNAUTHORIZED,
+          message: error.message,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+        });
+      }
+    }
+    // Re-throw other errors to be handled by error middleware
+    throw error;
   }
-
-  // Send comprehensive user data for frontend
-  const userResponse = {
-    id: user.id,
-    userId: user.userId,
-    haloId: user.haloId,
-    tenantId: user.tenantId,
-    firstname: user.firstname,
-    lastname: user.lastname,
-    name: `${user.firstname} ${user.lastname}`.trim(),
-    email: user.email,
-    phoneNumber: user.phoneNumber,
-    avatar: user.avatar,
-    isOwner: user.isOwner,
-    isSuper: user.isSuper,
-    isSaby: user.isSaby,
-    isAdmin: user.isAdmin,
-    isAgreed: user.isAgreed,
-    isEmailVerified: user.isEmailVerified,
-    isPhoneVerified: user.isPhoneVerified,
-    status: user.status,
-    createdAt: user.createdAt,
-    roles: user.roles,
-    permissions: permissions.length > 0 ? permissions : undefined, // Only include if populated
-  };
-
-  res.send({ user: userResponse, tokens });
 });
 
 /**
@@ -242,7 +261,8 @@ const verifyEmail = catchAsync(async (req, res) => {
 
 const verifyOtp = catchAsync(async (req, res) => {
   const { email, otp } = req.body;
-  const { success, user } = await authService.verifyOtp(email, otp);
+  // Don't clear OTP yet - keep it for password change step (clearOtp = false)
+  const { success, user } = await authService.verifyOtp(email, otp, false);
   if (success) {
     // Auto-generate web API keys for new user
     try {
@@ -289,6 +309,57 @@ const resendOtp = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).send({ message: 'OTP resent successfully' });
 });
 
+/**
+ * Change password for unverified user (requires OTP)
+ * @param {Object} req.body
+ * @param {string} req.body.email - User's email
+ * @param {string} req.body.newPassword - New password
+ * @param {string} req.body.otp - OTP code for verification
+ * @returns {Object} Success message
+ * @example
+ * POST /auth/change-password
+ * {
+ *   "email": "user@example.com",
+ *   "newPassword": "newPassword123",
+ *   "otp": "123456"
+ * }
+ */
+const changePassword = catchAsync(async (req, res) => {
+  const { email, newPassword, otp } = req.body;
+
+  // Verify OTP (don't clear it yet - we'll clear it after password is set)
+  const { success, user } = await authService.verifyOtp(email, otp, false);
+
+  if (!success) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Invalid or expired OTP. Please request a new OTP code.'
+    );
+  }
+
+  // Update password
+  await authService.updateUserPassword(user._id, newPassword);
+
+  // Now clear OTP and mark as fully verified
+  await User.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        otp: null,
+        otpExpires: null,
+        otpVerified: true,
+        status: true,
+        isEmailVerified: true,
+        isPhoneVerified: true,
+      },
+    }
+  );
+
+  res.status(httpStatus.OK).send({
+    message: 'Password updated successfully. You can now login.',
+  });
+});
+
 module.exports = {
   register,
   login,
@@ -300,4 +371,5 @@ module.exports = {
   verifyEmail,
   verifyOtp,
   resendOtp,
+  changePassword,
 };

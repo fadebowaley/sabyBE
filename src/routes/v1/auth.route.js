@@ -416,4 +416,60 @@ router.post(
  *               $ref: '#/components/schemas/Error'
  */
 
+// Change password for unverified users (requires OTP)
+router.post(
+  '/change-password',
+  validate(authValidation.changePassword),
+  authController.changePassword
+);
+
+/**
+ * @swagger
+ * /auth/change-password:
+ *   post:
+ *     summary: Change password for unverified user (requires OTP)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - newPassword
+ *               - otp
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: john.doe@example.com
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 8
+ *                 example: NewPassword123
+ *               otp:
+ *                 type: string
+ *                 length: 6
+ *                 example: "123456"
+ *     responses:
+ *       "200":
+ *         description: Password updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Password updated successfully. You can now login.
+ *       "400":
+ *         description: Invalid or expired OTP
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
 module.exports = router;

@@ -66,6 +66,14 @@ const resendOtp = {
   }),
 };
 
+const changePassword = {
+  body: Joi.object().keys({
+    email: Joi.string().required().email(),
+    newPassword: Joi.string().required().custom(password),
+    otp: Joi.string().required().length(6),
+  }),
+};
+
 module.exports = {
   register,
   login,
@@ -76,4 +84,5 @@ module.exports = {
   verifyEmail,
   verifyOtp,
   resendOtp,
+  changePassword,
 };
