@@ -130,7 +130,6 @@ const router = express.Router();
  *         - message
  */
 
-
 // Create a new user (owner only)
 // Test route: Using hybridAuth + requireAccess pattern for optimized API key handling
 router.post(
@@ -141,7 +140,12 @@ router.post(
 );
 
 // Create a SabyUser (global admin - only accessible via direct admin)
-router.post('/saby', auth(), validate(userValidation.sabyUserCreate), userController.createSabyUser);
+router.post(
+  '/saby',
+  auth(),
+  validate(userValidation.sabyUserCreate),
+  userController.createSabyUser
+);
 
 // Get profile update leaderboard (must be before /:userId route)
 router.get(
@@ -195,7 +199,6 @@ router.get(
  *         description: Forbidden
  */
 
-
 // Get all users
 // Test route: Using hybridAuth + requireAccess pattern for optimized API key handling
 router.get(
@@ -247,6 +250,22 @@ router.get(
  *           type: boolean
  *         description: Filter by super admin status
  *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [Active, Pending, Deactivated]
+ *         description: Filter by user status (Active, Pending, or Deactivated)
+ *       - in: query
+ *         name: roles
+ *         schema:
+ *           type: string
+ *         description: Filter by role name
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for firstname, lastname, email, or userId
+ *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
@@ -287,7 +306,6 @@ router.get(
   validate(userValidation.getUser),
   userController.getUser
 );
-
 
 /**
  * @swagger
@@ -357,6 +375,119 @@ router.patch(
   validate(userValidation.updateProfileCompliance),
   userController.updateProfileCompliance
 );
+
+// Change email (requires OTP verification)
+router.patch(
+  '/change-email',
+  auth(),
+  validate(userValidation.changeEmail),
+  userController.changeEmail
+);
+
+/**
+ * @swagger
+ * /users/change-email:
+ *   patch:
+ *     summary: Change user email address
+ *     description: Update user email after OTP verification. Requires authentication and OTP verification.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - otp
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: newemail@example.com
+ *               otp:
+ *                 type: string
+ *                 length: 6
+ *                 example: "123456"
+ *     responses:
+ *       "200":
+ *         description: Email updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Email updated successfully
+ *                 user:
+ *                   $ref: '#/components/schemas/UserResponse'
+ *       "400":
+ *         description: Invalid or expired OTP
+ *       "409":
+ *         description: Email already in use
+ */
+
+// Change phone number (requires OTP verification)
+router.patch(
+  '/change-phone',
+  auth(),
+  validate(userValidation.changePhone),
+  userController.changePhone
+);
+
+/**
+ * @swagger
+ * /users/change-phone:
+ *   patch:
+ *     summary: Change user phone number
+ *     description: Update user phone number after OTP verification. Requires authentication and OTP verification.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phone
+ *               - otp
+ *             properties:
+ *               phone:
+ *                 type: string
+ *                 example: "+1234567890"
+ *               otp:
+ *                 type: string
+ *                 length: 6
+ *                 example: "123456"
+ *     responses:
+ *       "200":
+ *         description: Phone number updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Phone number updated successfully
+ *                 user:
+ *                   $ref: '#/components/schemas/UserResponse'
+ *       "400":
+ *         description: Invalid or expired OTP
+ *       "409":
+ *         description: Phone number already in use
+ */
 
 /**
  * @swagger

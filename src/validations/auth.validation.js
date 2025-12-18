@@ -74,6 +74,31 @@ const changePassword = {
   }),
 };
 
+const verifyPassword = {
+  body: Joi.object().keys({
+    password: Joi.string().required(),
+  }),
+};
+
+const changePasswordAuthenticated = {
+  body: Joi.object().keys({
+    currentPassword: Joi.string().required(),
+    newPassword: Joi.string().required().custom(password),
+  }),
+};
+
+const requestEmailChangeOtp = {
+  body: Joi.object().keys({
+    currentValue: Joi.string().required().email(),
+  }),
+};
+
+const requestPhoneChangeOtp = {
+  body: Joi.object().keys({
+    currentValue: Joi.string().required(),
+  }),
+};
+
 module.exports = {
   register,
   login,
@@ -85,4 +110,8 @@ module.exports = {
   verifyOtp,
   resendOtp,
   changePassword,
+  verifyPassword,
+  changePasswordAuthenticated,
+  requestEmailChangeOtp,
+  requestPhoneChangeOtp,
 };

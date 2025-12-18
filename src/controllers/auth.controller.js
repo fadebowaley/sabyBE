@@ -64,10 +64,12 @@ const login = catchAsync(async (req, res) => {
 
   // Check if API key was successfully validated by middleware
   // req.apiKey is set by apiKeyAuth.optional() middleware if validation succeeded
+  // API key is optional - not required for ordinary users to access web portal
   const hasApiKey = !!req.apiKey;
 
   try {
-    // Pass API key context to login service for channel restrictions
+    // Login user - all users (including ordinary users) can access web portal
+    // API key is optional for enhanced security but not required
     const user = await authService.loginUserWithEmailAndPassword(
       email,
       password,
@@ -360,6 +362,170 @@ const changePassword = catchAsync(async (req, res) => {
   });
 });
 
+/**
+ * Verify current password for authenticated user
+ * @param {Object} req - Express request object
+ * @param {Object} req.user - Authenticated user (from auth middleware)
+ * @param {string} req.body.password - Current password to verify
+ * @returns {Object} {success: true, message: string}
+ * @example
+ * POST /auth/verify-password
+ * {
+ *   "password": "currentPassword123"
+ * }
+ */
+const verifyPassword = catchAsync(async (req, res) => {
+  const { password } = req.body;
+  const user = await User.findById(req.user._id);
+
+  if (!user || !(await user.isPasswordMatch(password))) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid password');
+  }
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    message: 'Password verified successfully',
+  });
+});
+
+/**
+ * Change password for authenticated user
+ * @param {Object} req - Express request object
+ * @param {Object} req.user - Authenticated user (from auth middleware)
+ * @param {string} req.body.currentPassword - Current password
+ * @param {string} req.body.newPassword - New password
+ * @returns {Object} {success: true, message: string}
+ * @example
+ * POST /auth/change-password-authenticated
+ * {
+ *   "currentPassword": "oldPassword123",
+ *   "newPassword": "newSecurePassword456"
+ * }
+ */
+const changePasswordAuthenticated = catchAsync(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  // Verify current password
+  if (!(await user.isPasswordMatch(currentPassword))) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid current password');
+  }
+
+  // Check if new password is different from current
+  if (await user.isPasswordMatch(newPassword)) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'New password must be different from current password'
+    );
+  }
+
+  // Update password
+  await authService.updateUserPassword(user._id, newPassword);
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    message: 'Password changed successfully',
+  });
+});
+
+/**
+ * Request OTP for email change
+ * @param {Object} req - Express request object
+ * @param {Object} req.user - Authenticated user (from auth middleware)
+ * @param {string} req.body.currentValue - Current email address
+ * @returns {Object} {success: true, message: string}
+ * @example
+ * POST /auth/request-email-change-otp
+ * {
+ *   "currentValue": "user@example.com"
+ * }
+ */
+const requestEmailChangeOtp = catchAsync(async (req, res) => {
+  const { currentValue } = req.body;
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  // Verify current email matches
+  if (user.email !== currentValue) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Current email does not match your account email'
+    );
+  }
+
+  // Generate and send OTP
+  await authService.sendUserOtp(user);
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    message: 'OTP sent to your email address',
+  });
+});
+
+/**
+ * Request OTP for phone change
+ * @param {Object} req - Express request object
+ * @param {Object} req.user - Authenticated user (from auth middleware)
+ * @param {string} req.body.currentValue - Current phone number
+ * @returns {Object} {success: true, message: string}
+ * @example
+ * POST /auth/request-phone-change-otp
+ * {
+ *   "currentValue": "+1234567890"
+ * }
+ */
+const requestPhoneChangeOtp = catchAsync(async (req, res) => {
+  const { currentValue } = req.body;
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  // Verify current phone matches
+  if (user.phoneNumber !== currentValue) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Current phone number does not match your account phone number'
+    );
+  }
+
+  // Generate OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const moment = require('moment');
+  const otpExpires = moment().add(10, 'minutes').toDate();
+
+  // Store OTP
+  await User.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        otp,
+        otpExpires,
+      },
+    }
+  );
+
+  // Send OTP via SMS
+  const smsService = require('../services/sms.service');
+  await smsService.sendOtpSms({
+    phoneNumber: user.phoneNumber,
+    otp,
+  });
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    message: 'OTP sent to your phone number',
+  });
+});
+
 module.exports = {
   register,
   login,
@@ -372,4 +538,8 @@ module.exports = {
   verifyOtp,
   resendOtp,
   changePassword,
+  verifyPassword,
+  changePasswordAuthenticated,
+  requestEmailChangeOtp,
+  requestPhoneChangeOtp,
 };

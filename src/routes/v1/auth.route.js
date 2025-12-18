@@ -472,4 +472,211 @@ router.post(
  *               $ref: '#/components/schemas/Error'
  */
 
+// Verify password for authenticated users
+router.post(
+  '/verify-password',
+  auth(),
+  validate(authValidation.verifyPassword),
+  authController.verifyPassword
+);
+
+/**
+ * @swagger
+ * /auth/verify-password:
+ *   post:
+ *     summary: Verify current password for authenticated user
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - password
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: currentPassword123
+ *     responses:
+ *       "200":
+ *         description: Password verified successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Password verified successfully
+ *       "401":
+ *         description: Invalid password or unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+// Change password for authenticated users
+router.post(
+  '/change-password-authenticated',
+  auth(),
+  validate(authValidation.changePasswordAuthenticated),
+  authController.changePasswordAuthenticated
+);
+
+/**
+ * @swagger
+ * /auth/change-password-authenticated:
+ *   post:
+ *     summary: Change password for authenticated user
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 format: password
+ *                 example: oldPassword123
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 8
+ *                 example: newSecurePassword456
+ *     responses:
+ *       "200":
+ *         description: Password changed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Password changed successfully
+ *       "400":
+ *         description: Invalid request (same password, weak password, etc.)
+ *       "401":
+ *         description: Invalid current password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+// Request OTP for email change
+router.post(
+  '/request-email-change-otp',
+  auth(),
+  validate(authValidation.requestEmailChangeOtp),
+  authController.requestEmailChangeOtp
+);
+
+/**
+ * @swagger
+ * /auth/request-email-change-otp:
+ *   post:
+ *     summary: Request OTP for email change
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentValue
+ *             properties:
+ *               currentValue:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *     responses:
+ *       "200":
+ *         description: OTP sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: OTP sent to your email address
+ *       "400":
+ *         description: Invalid email or email mismatch
+ *       "429":
+ *         description: Too many requests (rate limited)
+ */
+
+// Request OTP for phone change
+router.post(
+  '/request-phone-change-otp',
+  auth(),
+  validate(authValidation.requestPhoneChangeOtp),
+  authController.requestPhoneChangeOtp
+);
+
+/**
+ * @swagger
+ * /auth/request-phone-change-otp:
+ *   post:
+ *     summary: Request OTP for phone change
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentValue
+ *             properties:
+ *               currentValue:
+ *                 type: string
+ *                 example: "+1234567890"
+ *     responses:
+ *       "200":
+ *         description: OTP sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: OTP sent to your phone number
+ *       "400":
+ *         description: Invalid phone or phone mismatch
+ *       "429":
+ *         description: Too many requests (rate limited)
+ */
+
 module.exports = router;

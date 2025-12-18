@@ -1,24 +1,23 @@
 const httpStatus = require('http-status');
+const mongoose = require('mongoose');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { userService } = require('../services');
+const { User } = require('../models');
+const Role = mongoose.model('Role');
 
 // Function to create users by owner Profile
 const ownerCreate = catchAsync(async (req, res) => {
   req.body.createdBy = req.user._id; // 🔐 enforce ownership context
   const user = await userService.ownerCreate(req.body);
-  res
-    .status(httpStatus.CREATED)
-    .send(userService.buildUserResponse(user));
+  res.status(httpStatus.CREATED).send(userService.buildUserResponse(user));
 });
 
 // Function to create SabyUser (Global Admin)
 const createSabyUser = catchAsync(async (req, res) => {
   const user = await userService.createSabyUser(req.body);
-  res
-    .status(httpStatus.CREATED)
-    .send(userService.buildUserResponse(user));
+  res.status(httpStatus.CREATED).send(userService.buildUserResponse(user));
 });
 
 // Function to bulk create users
@@ -141,23 +140,49 @@ const restoreUser = catchAsync(async (req, res) => {
 
 // getting all users or users based on tenantid of owner
 const getUsers = catchAsync(async (req, res) => {
-  let filter = pick(req.query, [
-    'firstname',
-    'lastname',
-    'userId',
-    'email',
-    'avatar',
-  ]);
+  let filter = {};
   const searchTerm = (req.query.search || req.query.q || '').trim();
 
-  // If userId is passed (10-digit string), search by that field directly
-  if (filter.userId) {
-    filter.userId = filter.userId;
+  // Process status filter first (before search, so it's preserved)
+  const statusParam = req.query.status;
+  if (statusParam) {
+    if (statusParam === 'Active') {
+      filter.status = true;
+      filter.deletedAt = null; // Active users are not deleted
+    } else if (statusParam === 'Pending') {
+      filter.status = false;
+      filter.deletedAt = null; // Pending users are not deleted
+    } else if (statusParam === 'Deactivated') {
+      // Deactivated users are soft-deleted
+      filter.deletedAt = { $ne: null };
+    }
   }
-  // If 'q' is present, override filters with regex OR search
+
+  // Process role filter
+  const rolesParam = req.query.roles;
+  if (rolesParam) {
+    // Lookup role by name within the user's tenant
+    const tenantId = req.user?.tenantId;
+    const role = await Role.findOne({
+      name: rolesParam,
+      ...(tenantId && !req.user?.isSaby ? { tenantId } : {}), // Apply tenant filter unless SabyUser
+    });
+
+    if (role) {
+      // Users have roles as an array, so use $in operator to match
+      filter.roles = { $in: [role._id] };
+    } else {
+      // If role not found, set impossible condition to return empty results
+      filter._id = { $in: [] }; // This will match no users
+    }
+  }
+
+  // Handle search term - if present, use it for text search, otherwise use specific field filters
   if (searchTerm) {
+    // If search term exists, use regex OR search (original behavior)
     const regex = new RegExp(searchTerm, 'i'); // case-insensitive
     filter = {
+      ...filter, // Preserve status and role filters
       $or: [
         { firstname: regex },
         { lastname: regex },
@@ -165,7 +190,21 @@ const getUsers = catchAsync(async (req, res) => {
         { userId: regex },
       ],
     };
+  } else {
+    // If no search term, use specific field filters
+    const fieldFilters = pick(req.query, [
+      'firstname',
+      'lastname',
+      'userId',
+      'email',
+      'avatar',
+    ]);
+    filter = {
+      ...filter, // Preserve status and role filters
+      ...fieldFilters,
+    };
   }
+
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
   options.populate = 'roles';
   options.user = req.user; // Add the user object to options for tenant filtering and hierarchy
@@ -235,7 +274,7 @@ const getUserRoles = catchAsync(async (req, res) => {
  */
 const getUserNodes = catchAsync(async (req, res) => {
   const nodes = await userService.getUserNodes(req.params.userId);
-  
+
   // Return nodes directly (profile model doesn't exist yet)
   res.send(nodes);
 });
@@ -273,7 +312,9 @@ const updateProfileCompliance = catchAsync(async (req, res) => {
   // Update compliance fields
   user.profileUpdateCompliant = profileUpdateCompliant;
   user.profileUpdateCompliantAt = profileUpdateCompliant ? new Date() : null;
-  user.profileUpdateCompliantBy = profileUpdateCompliant ? currentUser._id : null;
+  user.profileUpdateCompliantBy = profileUpdateCompliant
+    ? currentUser._id
+    : null;
 
   await user.save();
 
@@ -324,6 +365,115 @@ const getProfileUpdateLeaderboard = catchAsync(async (req, res) => {
   });
 });
 
+/**
+ * Change user email after OTP verification
+ * @param {Object} req - Express request object
+ * @param {Object} req.user - Authenticated user (from auth middleware)
+ * @param {string} req.body.email - New email address
+ * @param {string} req.body.otp - OTP code for verification
+ * @returns {Object} {success: true, message: string, user: Object}
+ * @example
+ * PATCH /users/change-email
+ * {
+ *   "email": "newemail@example.com",
+ *   "otp": "123456"
+ * }
+ */
+const changeEmail = catchAsync(async (req, res) => {
+  const { email, otp } = req.body;
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  // Verify OTP using current email
+  const { authService } = require('../services');
+  const { success } = await authService.verifyOtp(user.email, otp, false);
+
+  if (!success) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid or expired OTP');
+  }
+
+  // Check if email already exists for another user
+  const existingUser = await User.findOne({
+    email,
+    _id: { $ne: user._id },
+  });
+  if (existingUser) {
+    throw new ApiError(httpStatus.CONFLICT, 'Email already in use');
+  }
+
+  // Update email
+  user.email = email;
+  user.isEmailVerified = false; // Require re-verification
+  user.otp = null;
+  user.otpExpires = null;
+  await user.save();
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    message: 'Email updated successfully',
+    user: userService.buildUserResponse(user),
+  });
+});
+
+/**
+ * Change user phone number after OTP verification
+ * @param {Object} req - Express request object
+ * @param {Object} req.user - Authenticated user (from auth middleware)
+ * @param {string} req.body.phone - New phone number
+ * @param {string} req.body.otp - OTP code for verification
+ * @returns {Object} {success: true, message: string, user: Object}
+ * @example
+ * PATCH /users/change-phone
+ * {
+ *   "phone": "+1234567890",
+ *   "otp": "123456"
+ * }
+ */
+const changePhone = catchAsync(async (req, res) => {
+  const { phone, otp } = req.body;
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  // Verify OTP - for phone change, we verify using the user's email
+  // (since OTP was sent to phone but stored in user model with email context)
+  // Note: This assumes OTP is stored in user model. If phone-specific OTP storage
+  // is needed, that would require model changes.
+  const { authService } = require('../services');
+  const { success } = await authService.verifyOtp(user.email, otp, false);
+
+  if (!success) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid or expired OTP');
+  }
+
+  // Check if phone already exists for another user
+  const existingUser = await User.findOne({
+    phoneNumber: phone,
+    _id: { $ne: user._id },
+  });
+  if (existingUser) {
+    throw new ApiError(httpStatus.CONFLICT, 'Phone number already in use');
+  }
+
+  // Update phone
+  user.phoneNumber = phone;
+  user.isPhoneVerified = false; // Require re-verification
+  user.otp = null;
+  user.otpExpires = null;
+  await user.save();
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    message: 'Phone number updated successfully',
+    user: userService.buildUserResponse(user),
+  });
+});
+
 module.exports = {
   ownerCreate,
   createSabyUser,
@@ -341,5 +491,7 @@ module.exports = {
   getUserNodes,
   updateProfileCompliance,
   getProfileUpdateLeaderboard,
+  changeEmail,
+  changePhone,
   // bulk create
 };

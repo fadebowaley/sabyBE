@@ -268,6 +268,20 @@ const updateProfileCompliance = {
   }),
 };
 
+const changeEmail = {
+  body: Joi.object().keys({
+    email: Joi.string().required().email(),
+    otp: Joi.string().required().length(6),
+  }),
+};
+
+const changePhone = {
+  body: Joi.object().keys({
+    phone: Joi.string().required(),
+    otp: Joi.string().required().length(6),
+  }),
+};
+
 module.exports = {
   createUser,
   getUsers,
@@ -283,4 +297,6 @@ module.exports = {
   softDeleteUser,
   assignRoles,
   updateProfileCompliance,
+  changeEmail,
+  changePhone,
 };
