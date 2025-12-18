@@ -3,14 +3,14 @@ const logger = require('../config/logger');
 
 // General auth limiter (IP-based, higher limit for shared networks)
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Increased from 20 to handle shared IPs
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 30, // 30 failed attempts per IP
   skipSuccessfulRequests: true, // Only count failed attempts
   message: {
     error: 'TOO_MANY_REQUESTS',
     message:
-      'Too many login attempts from this IP address. Please try again in 15 minutes.',
-    retryAfter: 900, // seconds
+      'Too many login attempts from this IP address. Please try again in 5 minutes.',
+    retryAfter: 300, // seconds (5 minutes)
   },
   standardHeaders: true, // Enable standard rate limit headers
   legacyHeaders: true, // Enable legacy X-RateLimit-* headers
@@ -31,8 +31,8 @@ const authLimiter = rateLimit({
 
 // User-based rate limiter for login (email-based, prevents shared IP issues)
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 failed attempts per email
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 30, // 30 failed attempts per email
   skipSuccessfulRequests: true, // Only count failed attempts
   keyGenerator: (req) => {
     // Use email from request body for login attempts, fallback to IP
@@ -42,8 +42,8 @@ const loginLimiter = rateLimit({
   message: {
     error: 'TOO_MANY_REQUESTS',
     message:
-      'Too many login attempts for this email address. Please try again in 15 minutes.',
-    retryAfter: 900, // seconds
+      'Too many login attempts for this email address. Please try again in 5 minutes.',
+    retryAfter: 300, // seconds (5 minutes)
   },
   standardHeaders: true,
   legacyHeaders: true,
