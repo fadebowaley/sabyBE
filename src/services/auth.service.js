@@ -13,10 +13,8 @@ const logger = require('../config/logger');
 const loginUserWithEmailAndPassword = async (
   email,
   password,
-  channel = 'web',
-  options = {}
+  channel = 'web'
 ) => {
-  const { hasApiKey = false } = options;
   const user = await User.findOne({ email });
   if (!user || !(await user.isPasswordMatch(password))) {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Incorrect email or password');

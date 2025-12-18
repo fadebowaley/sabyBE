@@ -4,7 +4,6 @@ const validate = require('../../middlewares/validate');
 const authValidation = require('../../validations/auth.validation');
 const authController = require('../../controllers/auth.controller');
 const auth = require('../../middlewares/auth');
-const { apiKeyAuth } = require('../../middlewares/apiKeyAuth');
 const { loginLimiter } = require('../../middlewares/rateLimiter');
 
 // Create Express router instance
@@ -74,11 +73,10 @@ router.post(
  */
 
 // Login user
-// Test route: Using optional API key auth for channel bypass support
+// All registered users can login without API key requirement
 router.post(
   '/login',
   loginLimiter, // User-based rate limiter (email-based)
-  apiKeyAuth.optional(), // Optional API key authentication (for channel bypass)
   validate(authValidation.login),
   authController.login
 );
@@ -677,6 +675,57 @@ router.post(
  *         description: Invalid phone or phone mismatch
  *       "429":
  *         description: Too many requests (rate limited)
+ */
+
+// Check API key expiration status (notification only)
+router.get(
+  '/check-api-key-status',
+  auth(),
+  authController.checkApiKeyStatus
+);
+
+/**
+ * @swagger
+ * /auth/check-api-key-status:
+ *   get:
+ *     summary: Check API key expiration status
+ *     description: Returns API key expiration status (notification only, does not affect authentication)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       "200":
+ *         description: API key status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 hasApiKey:
+ *                   type: boolean
+ *                   example: true
+ *                 isExpired:
+ *                   type: boolean
+ *                   nullable: true
+ *                   example: false
+ *                 expiresAt:
+ *                   type: string
+ *                   format: date-time
+ *                   nullable: true
+ *                   example: "2024-12-31T23:59:59Z"
+ *                 daysUntilExpiry:
+ *                   type: number
+ *                   nullable: true
+ *                   example: 30
+ *                 message:
+ *                   type: string
+ *                   example: "API key expires in 30 days"
+ *       "401":
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 
 module.exports = router;
