@@ -289,21 +289,30 @@ const verifyOtp = catchAsync(async (req, res) => {
 
 /**
  * Resend OTP controller
+ * Supports both unverified users (registration) and verified users (password reset)
  */
 const resendOtp = catchAsync(async (req, res) => {
-  const { email } = req.body;
+  const { email, purpose } = req.body; // purpose: 'registration' | 'password-reset'
   const user = await userService.getUserByEmail(email);
 
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
-  if (user.otpVerified) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'User is already verified');
+
+  // For registration flow, only allow unverified users
+  // For password reset flow, allow verified users
+  if (!purpose || purpose === 'registration') {
+    if (user.otpVerified) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'User is already verified');
+    }
   }
+
+  // For password reset, allow sending OTP even if user is verified
+  // This allows verified users to reset their password via OTP
   const result = await authService.sendUserOtp(user);
   console.log(result);
   res.status(httpStatus.OK).send({ message: 'OTP resent successfully' });
-});
+};);
 
 /**
  * Change password for unverified user (requires OTP)

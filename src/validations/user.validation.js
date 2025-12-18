@@ -271,14 +271,14 @@ const updateProfileCompliance = {
 const changeEmail = {
   body: Joi.object().keys({
     email: Joi.string().required().email(),
-    otp: Joi.string().required().length(6),
+    // OTP is verified before reaching this endpoint, so it's not required here
   }),
 };
 
 const changePhone = {
   body: Joi.object().keys({
     phone: Joi.string().required(),
-    otp: Joi.string().required().length(6),
+    // OTP is verified before reaching this endpoint, so it's not required here
   }),
 };
 

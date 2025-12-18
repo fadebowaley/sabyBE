@@ -63,6 +63,7 @@ const verifyOtp = {
 const resendOtp = {
   body: Joi.object().keys({
     email: Joi.string().required().email(),
+    purpose: Joi.string().valid('registration', 'password-reset').optional(),
   }),
 };
 

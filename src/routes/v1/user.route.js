@@ -389,7 +389,7 @@ router.patch(
  * /users/change-email:
  *   patch:
  *     summary: Change user email address
- *     description: Update user email after OTP verification. Requires authentication and OTP verification.
+ *     description: Update user email. OTP verification must be completed before calling this endpoint. Requires authentication.
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -401,16 +401,11 @@ router.patch(
  *             type: object
  *             required:
  *               - email
- *               - otp
  *             properties:
  *               email:
  *                 type: string
  *                 format: email
  *                 example: newemail@example.com
- *               otp:
- *                 type: string
- *                 length: 6
- *                 example: "123456"
  *     responses:
  *       "200":
  *         description: Email updated successfully
@@ -427,8 +422,6 @@ router.patch(
  *                   example: Email updated successfully
  *                 user:
  *                   $ref: '#/components/schemas/UserResponse'
- *       "400":
- *         description: Invalid or expired OTP
  *       "409":
  *         description: Email already in use
  */
@@ -446,7 +439,7 @@ router.patch(
  * /users/change-phone:
  *   patch:
  *     summary: Change user phone number
- *     description: Update user phone number after OTP verification. Requires authentication and OTP verification.
+ *     description: Update user phone number. OTP verification must be completed before calling this endpoint. Requires authentication.
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -458,15 +451,10 @@ router.patch(
  *             type: object
  *             required:
  *               - phone
- *               - otp
  *             properties:
  *               phone:
  *                 type: string
  *                 example: "+1234567890"
- *               otp:
- *                 type: string
- *                 length: 6
- *                 example: "123456"
  *     responses:
  *       "200":
  *         description: Phone number updated successfully

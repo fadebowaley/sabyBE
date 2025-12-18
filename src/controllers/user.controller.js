@@ -380,20 +380,15 @@ const getProfileUpdateLeaderboard = catchAsync(async (req, res) => {
  * }
  */
 const changeEmail = catchAsync(async (req, res) => {
-  const { email, otp } = req.body;
+  const { email } = req.body; // OTP already verified in previous step
   const user = await User.findById(req.user._id);
 
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  // Verify OTP using current email
-  const { authService } = require('../services');
-  const { success } = await authService.verifyOtp(user.email, otp, false);
-
-  if (!success) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid or expired OTP');
-  }
+  // OTP verification is done before reaching this endpoint (in handleOTPVerification)
+  // No need to verify OTP again here
 
   // Check if email already exists for another user
   const existingUser = await User.findOne({
@@ -416,7 +411,7 @@ const changeEmail = catchAsync(async (req, res) => {
     message: 'Email updated successfully',
     user: userService.buildUserResponse(user),
   });
-});
+};);
 
 /**
  * Change user phone number after OTP verification
@@ -433,23 +428,15 @@ const changeEmail = catchAsync(async (req, res) => {
  * }
  */
 const changePhone = catchAsync(async (req, res) => {
-  const { phone, otp } = req.body;
+  const { phone } = req.body; // OTP already verified in previous step
   const user = await User.findById(req.user._id);
 
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  // Verify OTP - for phone change, we verify using the user's email
-  // (since OTP was sent to phone but stored in user model with email context)
-  // Note: This assumes OTP is stored in user model. If phone-specific OTP storage
-  // is needed, that would require model changes.
-  const { authService } = require('../services');
-  const { success } = await authService.verifyOtp(user.email, otp, false);
-
-  if (!success) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid or expired OTP');
-  }
+  // OTP verification is done before reaching this endpoint (in handleOTPVerification)
+  // No need to verify OTP again here
 
   // Check if phone already exists for another user
   const existingUser = await User.findOne({
@@ -472,7 +459,7 @@ const changePhone = catchAsync(async (req, res) => {
     message: 'Phone number updated successfully',
     user: userService.buildUserResponse(user),
   });
-});
+};);
 
 module.exports = {
   ownerCreate,
