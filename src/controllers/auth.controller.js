@@ -155,6 +155,21 @@ const login = catchAsync(async (req, res) => {
         });
       }
     }
+
+    // Explicitly handle login authentication errors to ensure correct error message
+    if (error.statusCode === httpStatus.UNAUTHORIZED && error.message) {
+      // Check if this is a login authentication error (incorrect email/password)
+      if (
+        error.message.includes('Incorrect email or password') ||
+        error.message.includes('email or password')
+      ) {
+        return res.status(httpStatus.UNAUTHORIZED).send({
+          code: httpStatus.UNAUTHORIZED,
+          message: 'Incorrect email or password',
+        });
+      }
+    }
+
     // Re-throw other errors to be handled by error middleware
     throw error;
   }
