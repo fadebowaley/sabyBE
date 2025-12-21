@@ -3,6 +3,7 @@ const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { userService } = require('../services');
+const { User } = require('../models');
 
 // Function to create users by owner Profile
 const ownerCreate = catchAsync(async (req, res) => {
@@ -337,6 +338,55 @@ const getProfileEditStatistics = catchAsync(async (req, res) => {
   });
 });
 
+/**
+ * Change user email address
+ * Note: OTP verification must be completed before calling this endpoint
+ * @param {Object} req
+ * @param {Object} req.user - Authenticated user
+ * @param {string} req.body.email - New email address
+ * @returns {Object} Updated user
+ */
+const changeEmail = catchAsync(async (req, res) => {
+  const { email } = req.body;
+  const userId = req.user._id;
+
+  // Check if email is already taken by another user
+  if (await User.isEmailTaken(email, userId)) {
+    throw new ApiError(httpStatus.CONFLICT, 'Email already in use');
+  }
+
+  // Update user email
+  const user = await userService.updateUserById(userId, { email }, req.user);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: 'Email updated successfully',
+    user: userService.buildUserResponse(user),
+  });
+});
+
+/**
+ * Change user phone number
+ * Note: OTP verification must be completed before calling this endpoint
+ * @param {Object} req
+ * @param {Object} req.user - Authenticated user
+ * @param {string} req.body.phone - New phone number
+ * @returns {Object} Updated user
+ */
+const changePhone = catchAsync(async (req, res) => {
+  const { phone } = req.body;
+  const userId = req.user._id;
+
+  // Update user phone
+  const user = await userService.updateUserById(userId, { phone }, req.user);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: 'Phone number updated successfully',
+    user: userService.buildUserResponse(user),
+  });
+});
+
 module.exports = {
   ownerCreate,
   createSabyUser,
@@ -355,5 +405,7 @@ module.exports = {
   updateProfileCompliance,
   getProfileUpdateLeaderboard,
   getProfileEditStatistics,
+  changeEmail,
+  changePhone,
   // bulk create
 };
