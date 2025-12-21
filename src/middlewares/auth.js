@@ -314,8 +314,13 @@ const verifyCallback =
 
 const auth =
   (...requiredRights) =>
-  async (req, res, next) =>
-    new Promise((resolve, reject) => {
+  async (req, res, next) => {
+    // Skip authentication for OPTIONS requests (CORS preflight)
+    if (req.method === 'OPTIONS') {
+      return next();
+    }
+
+    return new Promise((resolve, reject) => {
       passport.authenticate(
         'jwt',
         { session: false },
@@ -324,5 +329,6 @@ const auth =
     })
       .then(() => next())
       .catch((err) => next(err));
+  };
 
 module.exports = auth;
