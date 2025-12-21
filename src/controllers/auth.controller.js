@@ -275,17 +275,26 @@ const verifyOtp = catchAsync(async (req, res) => {
   // Don't clear OTP yet - keep it for password change step (clearOtp = false)
   const { success, user } = await authService.verifyOtp(email, otp, false);
   if (success) {
-    // Auto-generate web API keys for new user
+    // Auto-generate web API keys only for isOwner users (tenant-scoped keys)
+    // Non-owner users skip auto-generation (registration still succeeds)
     try {
-      if (user.tenantId && user._id) {
+      if (user.tenantId && user._id && user.isOwner === true) {
         const keys = await apiKeyService.autoGenerateWebApiKeys(
           user.tenantId,
           user._id
         );
-        logger.info(`Auto-generated web API keys for user: ${user.email}`, {
-          staging: keys.staging.keyDoc._id,
-          production: keys.production.keyDoc._id,
-        });
+        logger.info(
+          `Auto-generated web API keys for owner user: ${user.email}`,
+          {
+            staging: keys.staging.keyDoc._id,
+            production: keys.production.keyDoc._id,
+          }
+        );
+      } else if (user.tenantId && user._id) {
+        // Log that auto-generation was skipped for non-owner users
+        logger.info(
+          `Skipped API key auto-generation for non-owner user: ${user.email} (isOwner=${user.isOwner})`
+        );
       }
     } catch (error) {
       logger.error('Failed to auto-generate web API keys:', error);

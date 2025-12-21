@@ -490,12 +490,29 @@ const deactivateExpiredKeys = async () => {
 };
 
 /**
- * Auto-generate web API keys on user registration
+ * Auto-generate web API keys for tenant owner on registration
+ * Note: This should only be called for users with isOwner === true
+ * API keys are tenant-scoped, so one key per tenant is appropriate
  * @param {string} tenantId
- * @param {ObjectId} userId
+ * @param {ObjectId} userId - Must be an isOwner user
  * @returns {Promise<{staging: object, production: object}>}
  */
 const autoGenerateWebApiKeys = async (tenantId, userId) => {
+  // Safety check: Only allow auto-generation for isOwner users
+  const { User } = require('../models');
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  if (!user.isOwner) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Auto-generation of API keys is only allowed for tenant owners (isOwner users)'
+    );
+  }
+
   const apiKeyApprovalService = require('./apiKeyApproval.service');
 
   // 1. Create Staging Web API Key (Active immediately)

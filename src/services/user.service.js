@@ -685,7 +685,6 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     'lastname',
     'email',
     'phone',
-    'phoneNumber', // phoneNumber is a user field, not a profile field
     'password',
     'userId',
     'isSaby',
@@ -699,12 +698,14 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     'profileUpdateCompliant',
     'profileUpdateCompliantAt',
     'profileUpdateCompliantBy',
+    'profileLastEditedAt',
+    'profileEditCount',
   ];
 
   const profileFields = [
     'title',
     'otherName',
-    // phoneNumber removed - it's a user field, not a profile field
+    'phoneNumber',
     'gender',
     'dateOfBirth',
     'highestQualification',
@@ -800,6 +801,15 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
       );
     }
 
+    // Track profile edits if profile fields were updated
+    if (Object.keys(profileUpdate).length > 0) {
+      user.profileLastEditedAt = new Date();
+      user.profileEditCount = (user.profileEditCount || 0) + 1;
+      console.log(
+        `📝 [UserService.updateUserById] Profile edit tracked: count=${user.profileEditCount}, lastEdited=${user.profileLastEditedAt}`
+      );
+    }
+
     await user.save();
     console.log(
       `✅ [UserService.updateUserById] User updated successfully: ${user.firstname} ${user.lastname}`
@@ -807,6 +817,31 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     console.log(
       `🎖️ [UserService.updateUserById] New privileges: isSaby=${user.isSaby}, isSuper=${user.isSuper}, isOwner=${user.isOwner}`
     );
+
+    // Trigger compliance recalculation if profile was updated
+    // This runs asynchronously to avoid blocking the response
+    if (Object.keys(profileUpdate).length > 0) {
+      setImmediate(async () => {
+        try {
+          const { complianceService } = require('./');
+          const complianceScore =
+            await complianceService.calculateComplianceScore(
+              user._id.toString(),
+              null,
+              user.tenantId
+            );
+          logger.info(
+            `✅ [UserService.updateUserById] Compliance recalculated for ${user.firstname} ${user.lastname}: overall=${complianceScore.overallCompliance}%, isCompliant=${complianceScore.isCompliant}`
+          );
+        } catch (error) {
+          logger.error(
+            `❌ [UserService.updateUserById] Error recalculating compliance for ${user._id}:`,
+            error
+          );
+          // Don't throw - compliance recalculation failure shouldn't break profile update
+        }
+      });
+    }
 
     return user;
   } catch (error) {
@@ -1064,6 +1099,85 @@ const getProfileUpdateLeaderboard = async (
   }
 };
 
+/**
+ * Get profile edit statistics
+ * @param {string} tenantId - Tenant ID
+ * @returns {Promise<Object>} Profile edit statistics
+ */
+const getProfileEditStatistics = async (tenantId) => {
+  try {
+    const users = await User.find({ tenantId }).lean();
+
+    const totalUsers = users.length;
+    const usersWithEdits = users.filter(
+      (u) => u.profileEditCount && u.profileEditCount > 0
+    ).length;
+    const usersWithoutEdits = totalUsers - usersWithEdits;
+
+    // Calculate average edit count
+    const totalEdits = users.reduce(
+      (sum, u) => sum + (u.profileEditCount || 0),
+      0
+    );
+    const averageEdits = usersWithEdits > 0 ? totalEdits / usersWithEdits : 0;
+
+    // Get recent edits (last 24 hours, 7 days, 30 days)
+    const now = new Date();
+    const last24h = users.filter(
+      (u) =>
+        u.profileLastEditedAt &&
+        new Date(u.profileLastEditedAt).getTime() >=
+          now.getTime() - 24 * 60 * 60 * 1000
+    ).length;
+    const last7d = users.filter(
+      (u) =>
+        u.profileLastEditedAt &&
+        new Date(u.profileLastEditedAt).getTime() >=
+          now.getTime() - 7 * 24 * 60 * 60 * 1000
+    ).length;
+    const last30d = users.filter(
+      (u) =>
+        u.profileLastEditedAt &&
+        new Date(u.profileLastEditedAt).getTime() >=
+          now.getTime() - 30 * 24 * 60 * 60 * 1000
+    ).length;
+
+    // Get users with most edits
+    const topEditors = users
+      .filter((u) => u.profileEditCount && u.profileEditCount > 0)
+      .sort((a, b) => (b.profileEditCount || 0) - (a.profileEditCount || 0))
+      .slice(0, 10)
+      .map((u) => ({
+        id: u._id.toString(),
+        name: `${u.firstname || ''} ${u.lastname || ''}`.trim(),
+        email: u.email,
+        editCount: u.profileEditCount || 0,
+        lastEditedAt: u.profileLastEditedAt || null,
+      }));
+
+    return {
+      totalUsers,
+      usersWithEdits,
+      usersWithoutEdits,
+      editRate: totalUsers > 0 ? (usersWithEdits / totalUsers) * 100 : 0,
+      totalEdits,
+      averageEdits: Math.round(averageEdits * 100) / 100,
+      recentEdits: {
+        last24Hours: last24h,
+        last7Days: last7d,
+        last30Days: last30d,
+      },
+      topEditors,
+    };
+  } catch (error) {
+    logger.error('Error getting profile edit statistics:', error);
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Failed to get profile edit statistics'
+    );
+  }
+};
+
 module.exports = {
   createUser,
   queryUsers,
@@ -1084,4 +1198,5 @@ module.exports = {
   getUserNodes,
   buildUserResponse,
   getProfileUpdateLeaderboard,
+  getProfileEditStatistics,
 };

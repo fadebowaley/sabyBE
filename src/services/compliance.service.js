@@ -89,8 +89,7 @@ const calculateComplianceScore = async (userId, nodeId, tenantId) => {
 /**
  * Calculate user compliance
  * User is compliant if:
- * 1. Profile has required fields filled
- * 2. profileUpdateCompliant is true
+ * 1. Profile has required fields filled (automatic - no manual approval needed)
  *
  * @param {Object} user - User document
  * @returns {Object} User compliance details
@@ -131,19 +130,18 @@ const calculateUserCompliance = (user) => {
   const hasProfileData =
     allRequiredFieldsFilled && (!hasCustomFieldsConfigured || hasCustomFields);
 
-  // Check if manually marked as compliant
-  const isManuallyCompliant = user.profileUpdateCompliant === true;
-
-  // User is compliant if profile is updated AND manually marked as compliant
-  const isCompliant = hasProfileData && isManuallyCompliant;
+  // User is compliant automatically if profile data is complete (no manual approval needed)
+  const isCompliant = hasProfileData;
 
   return {
     isCompliant,
     hasProfileData,
-    isManuallyCompliant,
-    profileUpdateCompliant: user.profileUpdateCompliant || false,
-    profileUpdateCompliantAt: user.profileUpdateCompliantAt || null,
-    profileUpdateCompliantBy: user.profileUpdateCompliantBy || null,
+    isManuallyCompliant: false, // Deprecated - kept for backward compatibility
+    profileUpdateCompliant: isCompliant, // Auto-set based on profile completeness
+    profileUpdateCompliantAt: hasProfileData
+      ? user.profileUpdateCompliantAt || new Date()
+      : null,
+    profileUpdateCompliantBy: null, // Auto-compliance doesn't track approver
     missingFields: allRequiredFieldsFilled
       ? []
       : Object.keys(requiredFields).filter(
@@ -155,8 +153,7 @@ const calculateUserCompliance = (user) => {
 /**
  * Calculate node compliance
  * Node is compliant if:
- * 1. Profile has required fields filled
- * 2. profileUpdateCompliant is true
+ * 1. Profile has required fields filled (automatic - no manual approval needed)
  *
  * @param {Object} node - Node document
  * @returns {Object} Node compliance details
@@ -209,19 +206,18 @@ const calculateNodeCompliance = (node) => {
       !node.customFields ||
       Object.keys(node.customFields).length === 0);
 
-  // Check if manually marked as compliant
-  const isManuallyCompliant = node.profileUpdateCompliant === true;
-
-  // Node is compliant if profile is updated AND manually marked as compliant
-  const isCompliant = hasProfileData && isManuallyCompliant;
+  // Node is compliant automatically if profile data is complete (no manual approval needed)
+  const isCompliant = hasProfileData;
 
   return {
     isCompliant,
     hasProfileData,
-    isManuallyCompliant,
-    profileUpdateCompliant: node.profileUpdateCompliant || false,
-    profileUpdateCompliantAt: node.profileUpdateCompliantAt || null,
-    profileUpdateCompliantBy: node.profileUpdateCompliantBy || null,
+    isManuallyCompliant: false, // Deprecated - kept for backward compatibility
+    profileUpdateCompliant: isCompliant, // Auto-set based on profile completeness
+    profileUpdateCompliantAt: hasProfileData
+      ? node.profileUpdateCompliantAt || new Date()
+      : null,
+    profileUpdateCompliantBy: null, // Auto-compliance doesn't track approver
     missingFields: allRequiredFieldsFilled
       ? []
       : Object.keys(requiredFields).filter((key) => {

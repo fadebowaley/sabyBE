@@ -166,6 +166,8 @@ const updateNodeById = async (nodeId, updateBody) => {
     'estimatedValue',
     'buildingType',
     'status',
+    'averageAttendance',
+    'averageIncome',
   ];
 
   // Extract node-specific fields and profile fields
@@ -243,6 +245,32 @@ const updateNodeById = async (nodeId, updateBody) => {
     shouldSave = true;
   }
 
+  // Update profile if profile fields exist (BEFORE saving)
+  if (Object.keys(profileUpdate).length > 0) {
+    console.log(
+      `📝 [NodeService.updateNodeById] Updating profile fields:`,
+      Object.keys(profileUpdate)
+    );
+    // Initialize profile object if it doesn't exist
+    if (!node.profile) {
+      node.profile = {};
+    }
+    // Update profile fields
+    Object.keys(profileUpdate).forEach((key) => {
+      if (key === 'dateOfEstablishment') {
+        node.dateOfEstablishment = profileUpdate[key];
+      } else {
+        node.profile[key] = profileUpdate[key];
+      }
+    });
+    // Mark profile as modified for Mongoose to save it
+    node.markModified('profile');
+    shouldSave = true;
+    console.log(
+      `✅ [NodeService.updateNodeById] Profile fields updated successfully`
+    );
+  }
+
   if (shouldSave) {
     await node.save();
     console.log(`✅ [NodeService.updateNodeById] Node updated successfully`);
@@ -253,18 +281,28 @@ const updateNodeById = async (nodeId, updateBody) => {
     node = await getNodeById(node._id);
   }
 
-  // Update profile if profile fields exist
+  // Trigger compliance recalculation if profile was updated
+  // This runs asynchronously to avoid blocking the response
+  // Note: Compliance is automatically calculated based on profile completeness
+  // We just log that compliance will be recalculated when queried
   if (Object.keys(profileUpdate).length > 0) {
-    console.log(
-      `⚠️ [NodeService.updateNodeById] Profile fields detected but nodeprofile model doesn't exist - skipping profile update`
-    );
-    console.log(
-      `📋 [NodeService.updateNodeById] Profile fields that were skipped:`,
-      Object.keys(profileUpdate)
-    );
-    // TODO: Implement nodeprofile.model if profile functionality is needed
-    // const ChurchProfile = require('../models/nodeprofile');
-    // await ChurchProfile.findOneAndUpdate(...)
+    setImmediate(async () => {
+      try {
+        const logger = require('../config/logger');
+        // Calculate node compliance directly (compliance service will recalculate when queried)
+        // We log here for visibility, but compliance is calculated on-demand
+        logger.info(
+          `✅ [NodeService.updateNodeById] Node profile updated for ${node.name} (${node.nodeId}) - compliance will be recalculated automatically on next query`
+        );
+      } catch (error) {
+        const logger = require('../config/logger');
+        logger.error(
+          `❌ [NodeService.updateNodeById] Error logging compliance update for node ${node._id}:`,
+          error
+        );
+        // Don't throw - logging failure shouldn't break node update
+      }
+    });
   }
 
   return node;

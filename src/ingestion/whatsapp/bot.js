@@ -28,7 +28,35 @@ const VERIFY_TOKEN = config.whatsapp.verifyToken;
  * Verify WhatsApp Business API connection
  */
 async function verifyWhatsAppConnection() {
+  // Validate required credentials are set
+  if (!PHONE_NUMBER_ID || PHONE_NUMBER_ID.trim() === '') {
+    const errorMsg =
+      'PHONE_NUMBER_ID is not set or is empty. Please set PHONE_NUMBER_ID environment variable.';
+    logger.error(`❌ ${errorMsg}`);
+    throw new Error(errorMsg);
+  }
+
+  if (!ACCESS_TOKEN || ACCESS_TOKEN.trim() === '') {
+    const errorMsg =
+      'WHATSAPP_TOKEN is not set or is empty. Please set WHATSAPP_TOKEN environment variable.';
+    logger.error(`❌ ${errorMsg}`);
+    throw new Error(errorMsg);
+  }
+
+  if (!VERIFY_TOKEN || VERIFY_TOKEN.trim() === '') {
+    logger.warn(
+      '⚠️ VERIFY_TOKEN is not set or is empty. Webhook verification may fail.'
+    );
+  }
+
   try {
+    logger.info(
+      `🔍 Verifying WhatsApp connection with Phone Number ID: ${PHONE_NUMBER_ID.substring(
+        0,
+        10
+      )}...`
+    );
+
     const response = await axios.get(`${WHATSAPP_API_URL}/${PHONE_NUMBER_ID}`, {
       headers: {
         Authorization: `Bearer ${ACCESS_TOKEN}`,
@@ -48,8 +76,48 @@ async function verifyWhatsAppConnection() {
       return true;
     }
   } catch (error) {
-    logger.error('❌ Failed to verify WhatsApp connection:', error.message);
-    throw error;
+    // Enhanced error logging
+    let errorDetails = {
+      message: error.message || 'Unknown error',
+      code: error.code,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+    };
+
+    logger.error('❌ Failed to verify WhatsApp connection');
+    logger.error(`   Error Message: ${errorDetails.message}`);
+
+    if (errorDetails.code) {
+      logger.error(`   Error Code: ${errorDetails.code}`);
+    }
+
+    if (errorDetails.status) {
+      logger.error(
+        `   HTTP Status: ${errorDetails.status} ${errorDetails.statusText}`
+      );
+    }
+
+    if (errorDetails.data) {
+      logger.error(
+        `   Error Response: ${JSON.stringify(errorDetails.data, null, 2)}`
+      );
+    }
+
+    if (error.response) {
+      // API error response
+      const errorMsg = `WhatsApp API Error: ${errorDetails.status} - ${
+        errorDetails.statusText || errorDetails.message
+      }`;
+      throw new Error(errorMsg);
+    } else if (error.request) {
+      // Network error - no response received
+      const errorMsg = `Network Error: Unable to reach WhatsApp API. Check internet connection and API endpoint.`;
+      throw new Error(errorMsg);
+    } else {
+      // Other error
+      throw error;
+    }
   }
 }
 
@@ -70,7 +138,11 @@ async function initializeWhatsAppBot() {
 
     logger.info('✅ WhatsApp bot initialized successfully');
   } catch (error) {
-    logger.error('❌ Failed to initialize WhatsApp bot:', error.message);
+    logger.error('❌ Failed to initialize WhatsApp bot');
+    logger.error(`   Error: ${error.message || 'Unknown error'}`);
+    if (error.stack) {
+      logger.error(`   Stack: ${error.stack}`);
+    }
     throw error;
   }
 }

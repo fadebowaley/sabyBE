@@ -154,6 +154,12 @@ router.get(
   userController.getProfileUpdateLeaderboard
 );
 
+router.get(
+  '/profile-edit-statistics',
+  auth(),
+  userController.getProfileEditStatistics
+);
+
 /**
  * @swagger
  * /users:

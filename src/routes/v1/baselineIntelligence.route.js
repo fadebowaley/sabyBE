@@ -49,7 +49,7 @@ router.get(
 
 router.post(
   '/network/recompute',
-  requireAccess('create:baselineintelligence'),
+  requireAccess('baselineintelligence:create'),
   canRecomputeBaseline,
   baselineIntelligenceController.recomputeNetworkBaseline
 );
@@ -103,7 +103,7 @@ router.get(
 
 router.post(
   '/node/:nodeId/recompute',
-  requireAccess('create:baselineintelligence'),
+  requireAccess('baselineintelligence:create'),
   canRecomputeBaseline,
   canAccessNodeBaseline('nodeId'),
   validate(baselineIntelligenceValidation.recomputeNodeBaseline),
@@ -113,7 +113,7 @@ router.post(
 // Bulk operations (requires elevated permissions)
 router.post(
   '/recompute/all',
-  requireAccess('create:baselineintelligence'),
+  requireAccess('baselineintelligence:create'),
   canRecomputeBaseline,
   baselineIntelligenceController.recomputeAllBaselines
 );

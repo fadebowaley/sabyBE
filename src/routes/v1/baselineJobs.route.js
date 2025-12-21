@@ -38,13 +38,13 @@ router.get(
 // Job management (Owner/Super only)
 router.post(
   '/clear',
-  requireAccess('create:baselinejobs'),
+  requireAccess('baselinejobs:create'),
   baselineJobsController.clearJobs
 );
 
 router.post(
   '/queue',
-  requireAccess('create:baselinejobs'),
+  requireAccess('baselinejobs:create'),
   baselineJobsController.queueManualJob
 );
 

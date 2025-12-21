@@ -124,6 +124,15 @@ const userSchema = mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    // Profile Edit Tracking
+    profileLastEditedAt: {
+      type: Date,
+      default: null,
+    },
+    profileEditCount: {
+      type: Number,
+      default: 0,
+    },
 
     // ========== MERGED PROFILE FIELDS FROM USERPROFILE ==========
     /**
@@ -392,7 +401,16 @@ userSchema.post('save', async function(doc) {
             await baselineIntelligenceService.handleUserChange(doc);
           }
         } catch (error) {
-          console.error('Error updating baseline intelligence after user change:', error);
+          const logger = require('../config/logger');
+          logger.error(
+            'Error updating baseline intelligence after user change:',
+            {
+              userId: doc._id,
+              tenantId: doc.tenantId,
+              error: error.message,
+              stack: error.stack,
+            }
+          );
         }
       });
     }

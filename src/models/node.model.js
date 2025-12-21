@@ -234,7 +234,16 @@ nodeSchema.post('save', async function(doc) {
             await baselineIntelligenceService.handleNodeChange(doc);
           }
         } catch (error) {
-          console.error('Error updating baseline intelligence after node change:', error);
+          const logger = require('../config/logger');
+          logger.error(
+            'Error updating baseline intelligence after node change:',
+            {
+              nodeId: doc._id || doc.nodeId,
+              tenantId: doc.tenantId,
+              error: error.message,
+              stack: error.stack,
+            }
+          );
         }
       });
     }
