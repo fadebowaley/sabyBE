@@ -4,6 +4,7 @@ const { User, Role } = require('../models');
 const ApiError = require('../utils/ApiError');
 const { validateCustomFields } = require('./customField.service');
 const { USER_ESSENTIAL_FIELDS } = require('../config/essentials');
+const { getUsersInAdminNodeDescendants } = require('./nodeAccess.service');
 
 const buildUserResponse = (userDoc) => {
   if (!userDoc) {
@@ -340,9 +341,39 @@ const queryUsers = async (filter, options) => {
     // SuperUser and Owner can only see users within their tenant
     if (user.tenantId) {
       filter.tenantId = user.tenantId;
+      const userType = user.isSuper ? 'SuperUser' : 'Owner';
       console.log(
-        `[queryUsers] SuperUser/Owner - filtering by tenantId: ${user.tenantId}`
+        `[queryUsers] ${userType} - filtering by tenantId: ${user.tenantId}`
       );
+    }
+  } else if (user?.isAdmin) {
+    // Admin users can only see users assigned to descendant nodes (children) of their assigned nodes
+    // Note: requireAccess middleware already validated user:read permission for isAdmin users
+    if (user.tenantId) {
+      filter.tenantId = user.tenantId;
+      console.log(
+        `[queryUsers] Admin - filtering by users in descendant nodes for tenantId: ${user.tenantId}`
+      );
+
+      // Get user IDs assigned to descendant nodes
+      const descendantUserIds = await getUsersInAdminNodeDescendants(
+        user,
+        user.tenantId
+      );
+
+      if (descendantUserIds.length === 0) {
+        // No users found in descendant nodes - return empty result
+        console.log(
+          '[queryUsers] Admin user has no users in descendant nodes - returning empty result'
+        );
+        filter._id = { $in: [] }; // Impossible filter - no results
+      } else {
+        // Filter to only users assigned to descendant nodes
+        filter._id = { $in: descendantUserIds };
+        console.log(
+          `[queryUsers] Admin - filtering to ${descendantUserIds.length} users in descendant nodes`
+        );
+      }
     }
   } else {
     // Ordinary users should not have access to user listing

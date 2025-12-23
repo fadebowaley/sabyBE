@@ -564,7 +564,6 @@ const requestPhoneChangeOtp = catchAsync(async (req, res) => {
  */
 const checkApiKeyStatus = catchAsync(async (req, res) => {
   const { tenantId } = req.user;
-
   // Get active web API keys for tenant (including inactive ones for status check)
   const result = await apiKeyService.getApiKeysByTenant(
     tenantId,

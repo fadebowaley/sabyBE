@@ -3,6 +3,7 @@
  * Handles hierarchical node access control based on user assignments
  */
 
+const mongoose = require('mongoose');
 const { Nodes, User } = require('../models');
 const logger = require('../config/logger');
 
@@ -173,9 +174,104 @@ const applyNodeAccessFilter = async (filter, user, tenantId) => {
   return filter;
 };
 
+/**
+ * Get user IDs assigned to descendant nodes of an isAdmin user
+ * This returns users assigned to child nodes under nodes assigned to the admin user
+ * @param {Object} user - User document (should be isAdmin)
+ * @param {string} tenantId - Tenant ID
+ * @returns {Promise<Array<ObjectId>>} Array of user IDs assigned to descendant nodes
+ */
+const getUsersInAdminNodeDescendants = async (user, tenantId) => {
+  try {
+    // 1. Find nodes where isAdmin user is assigned
+    const assignedNodes = await Nodes.find({
+      tenantId,
+      deletedAt: null,
+      users: user._id,
+    })
+      .select('_id path')
+      .lean();
+
+    if (assignedNodes.length === 0) {
+      logger.info(
+        `[getUsersInAdminNodeDescendants] Admin user ${user._id} has no node assignments`
+      );
+      return [];
+    }
+
+    logger.info(
+      `[getUsersInAdminNodeDescendants] Admin user ${user._id} assigned to ${assignedNodes.length} nodes`
+    );
+
+    // 2. Build path regex patterns for all descendant nodes (children only, excluding assigned nodes)
+    // For each assigned node, get all nodes where path starts with assignedNode.path + '/'
+    // This gets children/grandchildren but excludes the assigned node itself
+    const descendantPathPatterns = assignedNodes
+      .filter((node) => node.path) // Only nodes with paths
+      .map((node) => new RegExp(`^${node.path}/`)); // Children only (path must continue)
+
+    if (descendantPathPatterns.length === 0) {
+      logger.info(
+        `[getUsersInAdminNodeDescendants] No valid paths found for assigned nodes`
+      );
+      return [];
+    }
+
+    // 3. Find all descendant nodes (children) using optimized query
+    // Use $or with multiple regex patterns for better performance
+    const descendantNodes = await Nodes.find({
+      tenantId,
+      deletedAt: null,
+      $or: descendantPathPatterns.map((pattern) => ({ path: pattern })),
+    })
+      .select('_id users')
+      .lean();
+
+    if (descendantNodes.length === 0) {
+      logger.info(
+        `[getUsersInAdminNodeDescendants] No descendant nodes found for admin user ${user._id}`
+      );
+      return [];
+    }
+
+    logger.info(
+      `[getUsersInAdminNodeDescendants] Found ${descendantNodes.length} descendant nodes`
+    );
+
+    // 4. Extract all unique user IDs from descendant nodes
+    const userIdSet = new Set();
+    descendantNodes.forEach((node) => {
+      if (node.users && Array.isArray(node.users)) {
+        node.users.forEach((userId) => {
+          if (userId) {
+            userIdSet.add(userId.toString());
+          }
+        });
+      }
+    });
+
+    const userIds = Array.from(userIdSet).map(
+      (id) => mongoose.Types.ObjectId(id)
+    );
+
+    logger.info(
+      `[getUsersInAdminNodeDescendants] Found ${userIds.length} unique users in descendant nodes`
+    );
+
+    return userIds;
+  } catch (error) {
+    logger.error(
+      `Error getting users in admin node descendants for user ${user._id}:`,
+      error
+    );
+    throw error;
+  }
+};
+
 module.exports = {
   getUserAccessibleNodeIds,
   getUserNodeFamily,
   canUserAccessNode,
   applyNodeAccessFilter,
+  getUsersInAdminNodeDescendants,
 };
