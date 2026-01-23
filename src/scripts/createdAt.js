@@ -23,7 +23,8 @@ const connectToDB = async () => {
     const now = new Date();
     const start = new Date(now.getFullYear(), 0, 1); // January 1st of this year
     const end = now;
-    const randomTime = start.getTime() + Math.random() * (end.getTime() - start.getTime());
+    const randomTime =
+      start.getTime() + Math.random() * (end.getTime() - start.getTime());
     return new Date(randomTime);
   }
 

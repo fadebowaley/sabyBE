@@ -7,10 +7,10 @@ dotenv.config({ path: path.join(__dirname, '../../.env') });
 const envVarsSchema = Joi.object()
   .keys({
     NODE_ENV: Joi.string()
-      .valid('production', 'development', 'test')
+      .valid('production', 'development', 'staging')
       .default('development'),
     PORT: Joi.number().default(4000),
-    HALOFE_URL: Joi.string().description(
+    SABYFE_URL: Joi.string().description(
       'Front-end Url_base that for communication'
     ),
     MONGODB_URL: Joi.string().required().description('Mongo DB url'),
@@ -44,12 +44,6 @@ const envVarsSchema = Joi.object()
     SMTP_HOST: Joi.string()
       .allow('')
       .description('server that will send the emails'),
-    SMS_API_KEY: Joi.string()
-      .allow('')
-      .description('sendar.io sms api keys for transactional message'),
-    SENDAR_API_URL: Joi.string()
-      .allow('')
-      .description('sendar.io sms api keys for transactional message'),
     SMTP_PORT: Joi.number()
       .optional()
       .description('port to connect to the email server'),
@@ -59,10 +53,15 @@ const envVarsSchema = Joi.object()
     SMTP_PASSWORD: Joi.string()
       .allow('')
       .description('password for email server'),
+    SMTP_SECURE: Joi.string()
+      .valid('true', 'false', '')
+      .default('false')
+      .description('use SSL/TLS for email server'),
     EMAIL_FROM: Joi.string()
       .allow('')
       .description('the from field in the emails sent by the app'),
-
+    SMS_BASE_URL: Joi.string().allow('').description('Termii API base URL'),
+    SMS_API_KEY: Joi.string().allow('').description('Termii API key'),
     REDIS_HOST: Joi.string().default('127.0.0.1').description('Redis host'),
     REDIS_PORT: Joi.number().default(6379).description('Redis port'),
     REDIS_PASSWORD: Joi.string()
@@ -81,7 +80,6 @@ const envVarsSchema = Joi.object()
     SOCKET_PING_INTERVAL: Joi.number()
       .default(25000)
       .description('Socket.IO ping interval'),
-
     // Email Ingestion Configuration
     DEMO_IMAP_USER: Joi.string()
       .allow('')
@@ -104,7 +102,6 @@ const envVarsSchema = Joi.object()
     SMTP_HOST_EMAIL_INGESTION: Joi.string()
       .allow('')
       .description('server that will send the emails'),
-
     // Telegram Bot Configuration
     TELEGRAM_BOT_TOKEN: Joi.string()
       .allow('')
@@ -119,6 +116,18 @@ const envVarsSchema = Joi.object()
       .default(3600)
       .description('Telegram session TTL in seconds'),
 
+    // Node Sync Configuration
+    NODE_SYNC_ENABLED: Joi.boolean()
+      .truthy('true')
+      .truthy('1')
+      .falsy('false')
+      .falsy('0')
+      .default(false)
+      .description('Enable Mongo -> Postgres node dimension sync'),
+    NODE_SYNC_BATCH_SIZE: Joi.number()
+      .default(250)
+      .description('Batch size for node dimension backfill'),
+
     // WhatsApp Business API Configuration
     PHONE_NUMBER_ID: Joi.string()
       .allow('')
@@ -129,6 +138,9 @@ const envVarsSchema = Joi.object()
     WHATSAPP_TOKEN: Joi.string()
       .allow('')
       .description('WhatsApp Business API access token'),
+    WHATSAPP_PORT: Joi.number()
+      .default(4001)
+      .description('Port for the standalone WhatsApp ingestion service'),
 
     // API Configuration
     EMAIL_INGESTION_API_KEY: Joi.string()
@@ -162,10 +174,15 @@ if (error) {
   throw new Error(`Config validation error: ${error.message}`);
 }
 
+// Ensure at least one MongoDB connection string is provided
+if (!envVars.MONGO_URI && !envVars.MONGODB_URL) {
+  throw new Error('Either MONGO_URI or MONGODB_URL must be provided');
+}
+
 module.exports = {
   env: envVars.NODE_ENV,
   port: envVars.PORT,
-  clientUrl: envVars.HALOFE_URL,
+  clientUrl: envVars.SABYFE_URL,
   mongoose: {
     url: envVars.MONGODB_URL + (envVars.NODE_ENV === 'test' ? '-test' : ''),
     options: {
@@ -178,6 +195,7 @@ module.exports = {
       bufferMaxEntries: 0,
       maxPoolSize: 10,
       minPoolSize: 1,
+      family: 4, // Force IPv4 to avoid ::1 connection issues
     },
   },
   postgres: {
@@ -213,6 +231,7 @@ module.exports = {
     smtp: {
       host: envVars.SMTP_HOST,
       port: envVars.SMTP_PORT,
+      secure: envVars.SMTP_SECURE || false,
       auth: {
         user: envVars.SMTP_USERNAME,
         pass: envVars.SMTP_PASSWORD,
@@ -227,7 +246,7 @@ module.exports = {
   },
   sms: {
     sms_api_key: envVars.SMS_API_KEY,
-    sendar_api_url: envVars.SENDAR_API_URL,
+    sms_base_url: envVars.SMS_BASE_URL,
   },
 
   socket: {
@@ -278,5 +297,9 @@ module.exports = {
     verifyToken: envVars.VERIFY_TOKEN,
     accessToken: envVars.WHATSAPP_TOKEN,
     port: Number(envVars.WHATSAPP_PORT) || 4001,
+  },
+  nodeSync: {
+    enabled: envVars.NODE_SYNC_ENABLED,
+    batchSize: Number(envVars.NODE_SYNC_BATCH_SIZE),
   },
 };

@@ -13,7 +13,9 @@ const createReport = {
     filters: Joi.object().default({}),
     output: Joi.any().default(null),
     generatedAt: Joi.date().allow(null).default(null),
-    status: Joi.string().valid('draft', 'generated', 'archived').default('draft'),
+    status: Joi.string()
+      .valid('draft', 'generated', 'archived')
+      .default('draft'),
   }),
 };
 
@@ -30,7 +32,9 @@ const bulkImportReports = {
       filters: Joi.object().default({}),
       output: Joi.any().default(null),
       generatedAt: Joi.date().allow(null).default(null),
-      status: Joi.string().valid('draft', 'generated', 'archived').default('draft'),
+      status: Joi.string()
+        .valid('draft', 'generated', 'archived')
+        .default('draft'),
     })
   ),
 };

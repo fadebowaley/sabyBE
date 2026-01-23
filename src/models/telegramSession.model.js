@@ -30,7 +30,14 @@ const telegramSessionSchema = mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['authenticating', 'selecting_project', 'filling_form', 'ready_to_submit', 'submitted', 'completed'],
+      enum: [
+        'authenticating',
+        'selecting_project',
+        'filling_form',
+        'ready_to_submit',
+        'submitted',
+        'completed',
+      ],
       default: 'authenticating',
     },
     currentStep: {
@@ -51,6 +58,11 @@ const telegramSessionSchema = mongoose.Schema(
       lastActivity: Date,
       sessionStartTime: Date,
     },
+    lastActivity: {
+      type: Date,
+      default: Date.now,
+      index: true,
+    },
     validationResult: {
       valid: Boolean,
       errors: [String],
@@ -70,8 +82,11 @@ telegramSessionSchema.index({ userId: 1, projectId: 1 });
 telegramSessionSchema.index({ status: 1, lastActivity: 1 });
 
 // Methods
-telegramSessionSchema.methods.updateActivity = function () {
-  this.metadata.lastActivity = new Date();
+telegramSessionSchema.methods.updateActivity = function (
+  timestamp = new Date()
+) {
+  this.metadata.lastActivity = timestamp;
+  this.lastActivity = timestamp;
   return this.save();
 };
 
@@ -103,7 +118,10 @@ telegramSessionSchema.statics.findByChatId = function (chatId) {
   return this.findOne({ chatId });
 };
 
-telegramSessionSchema.statics.findActiveByUserId = function (userId, projectId) {
+telegramSessionSchema.statics.findActiveByUserId = function (
+  userId,
+  projectId
+) {
   return this.findOne({
     userId,
     projectId,
@@ -111,14 +129,19 @@ telegramSessionSchema.statics.findActiveByUserId = function (userId, projectId) 
   });
 };
 
-telegramSessionSchema.statics.cleanupExpiredSessions = function (ttlHours = 24) {
-  const cutoffTime = new Date(Date.now() - ttlHours * 60 * 60 * 1000);
+telegramSessionSchema.statics.cleanupExpiredSessions = function (
+  ttlMinutes = 15
+) {
+  const cutoffTime = new Date(Date.now() - ttlMinutes * 60 * 1000);
   return this.deleteMany({
     lastActivity: { $lt: cutoffTime },
     status: { $in: ['authenticating', 'filling_form'] },
   });
 };
 
-const TelegramSession = mongoose.model('TelegramSession', telegramSessionSchema);
+const TelegramSession = mongoose.model(
+  'TelegramSession',
+  telegramSessionSchema
+);
 
 module.exports = TelegramSession;

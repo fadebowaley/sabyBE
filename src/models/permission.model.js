@@ -1,11 +1,53 @@
 const mongoose = require('mongoose');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
-const ACTIONS = ['view', 'create', 'update', 'delete', 'manage', 'assign', 'approve', 'export', 'import','all'];
+const ACTIONS = [
+  'view',
+  'read', // New format: same as view
+  'create',
+  'update',
+  'delete',
+  'manage',
+  'assign',
+  'approve',
+  'export',
+  'import',
+  'restore',
+  'activate',
+  'deactivate',
+  'move',
+  'permissions',
+  'upload',
+  'download',
+  'share',
+  'copy',
+  'publish',
+  'archive',
+  'submit',
+  'process',
+  'complete',
+  'cancel',
+  'refund',
+  'regenerate',
+  'toggleStatus',
+  'assignRole',
+  'sendMessage',
+  'forgotPassword',
+  'resetPassword',
+  'verify',
+  'refresh',
+  'send',
+  'draft',
+  'retry',
+  'public',
+  'private',
+  'status',
+  'auth',
+  'all',
+];
 
 const permissionSchema = mongoose.Schema(
   {
-
     name: {
       type: String,
       required: true,
@@ -33,13 +75,13 @@ const permissionSchema = mongoose.Schema(
 
     method: {
       type: String,
-      required: true
+      required: true,
     },
 
     description: {
       type: String,
       default: '',
-      required : true
+      required: true,
     },
 
     isWildcard: {
@@ -61,7 +103,6 @@ permissionSchema.plugin(toJSON);
 permissionSchema.plugin(paginate);
 permissionSchema.plugin(tenantPlugin);
 
-
 // Auto-generate `name` like "view:users"
 permissionSchema.pre('validate', function (next) {
   if (!this.name && this.action && this.resource) {
@@ -73,23 +114,26 @@ permissionSchema.pre('validate', function (next) {
 // Normalize `path` to start with a slash
 permissionSchema.pre('save', function (next) {
   if (this.path && !this.path.startsWith('/')) {
-    this.path = '/' + this.path;
+    this.path = `/${this.path}`;
   }
   next();
 });
 
-permissionSchema.statics.isPermissionTaken = async function (name, method, path, excludePermissionId) {
+permissionSchema.statics.isPermissionTaken = async function (
+  name,
+  method,
+  path,
+  excludePermissionId
+) {
   const permission = await this.findOne({
     name,
     method,
     path,
     _id: { $ne: excludePermissionId },
   });
-  console.log(name, method, path, 'these are lists of issues')
+  console.log(name, method, path, 'these are lists of issues');
   return !!permission; // return true if the permission exists, false otherwise
 };
-
-
 
 permissionSchema.statics.createPermission = async function (permissionBody) {
   const { name, method, path } = permissionBody;
@@ -108,30 +152,31 @@ permissionSchema.statics.createPermission = async function (permissionBody) {
   return permission;
 };
 
-
 // Static: Find by name
 permissionSchema.statics.findByName = async function (name) {
   return this.findOne({ name });
 };
-
-
 
 // Static: Get all permissions for a resource
 permissionSchema.statics.findByResource = async function (resource) {
   return this.find({ resource });
 };
 
-
 // Static: Bulk create permissions (e.g., seeding or scaffolding)
-permissionSchema.statics.bulkCreatePermissions = async function (permissionsArray, { skipDuplicates = true } = {}) {
+permissionSchema.statics.bulkCreatePermissions = async function (
+  permissionsArray,
+  { skipDuplicates = true } = {}
+) {
   if (skipDuplicates) {
-    const existingNames = await this.find({ name: { $in: permissionsArray.map(p => p.name) } }).distinct('name');
-    permissionsArray = permissionsArray.filter(p => !existingNames.includes(p.name));
+    const existingNames = await this.find({
+      name: { $in: permissionsArray.map((p) => p.name) },
+    }).distinct('name');
+    permissionsArray = permissionsArray.filter(
+      (p) => !existingNames.includes(p.name)
+    );
   }
   return this.insertMany(permissionsArray);
 };
-
-
 
 /**
  * @typedef Permission
@@ -140,4 +185,3 @@ permissionSchema.statics.bulkCreatePermissions = async function (permissionsArra
 const Permission = mongoose.model('Permission', permissionSchema);
 
 module.exports = Permission;
-

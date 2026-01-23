@@ -18,7 +18,9 @@ const createEventConfig = {
       }),
     }),
     recurrenceOverride: Joi.object().keys({
-      frequency: Joi.string().valid('none', 'daily', 'weekly', 'monthly', 'yearly').default('none'),
+      frequency: Joi.string()
+        .valid('none', 'daily', 'weekly', 'monthly', 'yearly')
+        .default('none'),
       interval: Joi.number().min(1).default(1),
       endAfterOccurrences: Joi.number().min(1),
     }),
@@ -71,7 +73,13 @@ const updateEventConfigById = {
         }),
       }),
       recurrenceOverride: Joi.object().keys({
-        frequency: Joi.string().valid('none', 'daily', 'weekly', 'monthly', 'yearly'),
+        frequency: Joi.string().valid(
+          'none',
+          'daily',
+          'weekly',
+          'monthly',
+          'yearly'
+        ),
         interval: Joi.number().min(1),
         endAfterOccurrences: Joi.number().min(1),
       }),

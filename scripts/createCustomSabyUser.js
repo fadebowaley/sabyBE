@@ -145,4 +145,3 @@ const createCustomSabyUser = async () => {
 
 // Run the script
 createCustomSabyUser();
-

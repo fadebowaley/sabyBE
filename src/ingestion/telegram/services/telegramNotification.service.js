@@ -50,7 +50,9 @@ I'm your personal form assistant that helps you complete forms quickly and easil
           {
             text: '🌐 Use Web App',
             web_app: {
-              url: `${process.env.BASE_URL || 'http://localhost:3000'}/telegram-webapp`,
+              url: `${
+                process.env.BASE_URL || 'http://localhost:3000'
+              }/telegram-webapp`,
             },
           },
         ],
@@ -115,7 +117,9 @@ I'm your personal form assistant that helps you complete forms quickly and easil
           {
             text: '🌐 Open Web App',
             web_app: {
-              url: `${process.env.BASE_URL || 'http://localhost:3000'}/telegram-webapp`,
+              url: `${
+                process.env.BASE_URL || 'http://localhost:3000'
+              }/telegram-webapp`,
             },
           },
         ],
@@ -163,7 +167,11 @@ Emergency Support:
 For urgent issues, please call: +234 814 504 5108`;
 
       const keyboard = {
-        keyboard: [[{ text: '📧 Email Support' }], [{ text: '📱 WhatsApp Support' }], [{ text: '🏠 Back to Menu' }]],
+        keyboard: [
+          [{ text: '📧 Email Support' }],
+          [{ text: '📱 WhatsApp Support' }],
+          [{ text: '🏠 Back to Menu' }],
+        ],
         resize_keyboard: true,
       };
 
@@ -174,7 +182,10 @@ For urgent issues, please call: +234 814 504 5108`;
       logger.info(`✅ Support message sent to chat ${chatId}`);
       return { success: true, messageId: result.message_id };
     } catch (error) {
-      logger.error(`❌ Failed to send support message to chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Failed to send support message to chat ${chatId}:`,
+        error.message
+      );
       return { success: false, error: error.message };
     }
   }
@@ -208,10 +219,18 @@ To get started, use /start to authenticate and begin a new form.`,
 📱 Status: ${session.status}
 📍 Step: ${session.currentStep || 'Not started'}
 📝 Answers: ${session.answers ? Object.keys(session.answers).length : 0}
-🕒 Last Activity: ${session.metadata.lastActivity ? new Date(session.metadata.lastActivity).toLocaleString() : 'N/A'}
+🕒 Last Activity: ${
+        session.metadata.lastActivity
+          ? new Date(session.metadata.lastActivity).toLocaleString()
+          : 'N/A'
+      }
 
 *Current Project:*
-${session.projectId ? `📋 Project: ${session.projectId}` : '❌ No project selected'}
+${
+  session.projectId
+    ? `📋 Project: ${session.projectId}`
+    : '❌ No project selected'
+}
 
 *Actions:*
 Use /menu to see available options or /reset to start fresh.`;
@@ -237,7 +256,10 @@ Use /menu to see available options or /reset to start fresh.`;
       });
     } catch (error) {
       logger.error(`Error sending status message to ${chatId}:`, error);
-      await this.sendErrorMessage(chatId, 'Failed to get status. Please try again.');
+      await this.sendErrorMessage(
+        chatId,
+        'Failed to get status. Please try again.'
+      );
     }
   }
 
@@ -260,12 +282,17 @@ Use /menu to see available options or /reset to start fresh.`;
 
       // Get available projects for the user
       const projectFormService = require('../../../services/projectForm.service');
-      const availableProjects = await projectFormService.getProjectFormsByTenant(session.tenantId, {
-        status: 'active',
-        'metadata.deploymentStatus': 'published',
-      });
+      const availableProjects =
+        await projectFormService.getProjectFormsByTenant(session.tenantId, {
+          status: 'active',
+          'metadata.deploymentStatus': 'published',
+        });
 
-      if (!availableProjects || !availableProjects.results || availableProjects.results.length === 0) {
+      if (
+        !availableProjects ||
+        !availableProjects.results ||
+        availableProjects.results.length === 0
+      ) {
         const noProjectsMessage = `🏠 Main Menu - ${userName}
 
 ❌ No projects available for your account.
@@ -273,7 +300,10 @@ Use /menu to see available options or /reset to start fresh.`;
 Please contact your administrator to get access to forms.`;
 
         const keyboard = {
-          keyboard: [[{ text: '🔄 Try Again' }], [{ text: '📞 Contact Support' }]],
+          keyboard: [
+            [{ text: '🔄 Try Again' }],
+            [{ text: '📞 Contact Support' }],
+          ],
           resize_keyboard: true,
         };
 
@@ -289,7 +319,9 @@ Please contact your administrator to get access to forms.`;
       const projectList = availableProjects.results
         .map((project, index) => {
           const emoji = ['📋', '📝', '📊', '📈', '📉', '📋'][index % 6];
-          return `${emoji} ${project.configuration?.projectName || project.projectId}`;
+          return `${emoji} ${
+            project.configuration?.projectName || project.projectId
+          }`;
         })
         .join('\n');
 
@@ -307,12 +339,16 @@ Select a project to start filling out forms, or use the options below.`;
       for (let i = 0; i < availableProjects.results.length; i += 2) {
         const row = [];
         row.push({
-          text: availableProjects.results[i].configuration?.projectName || availableProjects.results[i].projectId,
+          text:
+            availableProjects.results[i].configuration?.projectName ||
+            availableProjects.results[i].projectId,
         });
 
         if (i + 1 < availableProjects.results.length) {
           row.push({
-            text: availableProjects.results[i + 1].configuration?.projectName || availableProjects.results[i + 1].projectId,
+            text:
+              availableProjects.results[i + 1].configuration?.projectName ||
+              availableProjects.results[i + 1].projectId,
           });
         }
         keyboardRows.push(row);
@@ -337,10 +373,15 @@ Select a project to start filling out forms, or use the options below.`;
         reply_markup: keyboard,
       });
 
-      logger.info(`✅ Main menu sent with ${availableProjects.results.length} projects to chat ${chatId}`);
+      logger.info(
+        `✅ Main menu sent with ${availableProjects.results.length} projects to chat ${chatId}`
+      );
       return { success: true, messageId: result.message_id };
     } catch (error) {
-      logger.error(`❌ Failed to send main menu to chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Failed to send main menu to chat ${chatId}:`,
+        error.message
+      );
 
       // Fallback to simple menu
       const fallbackMessage = `🏠 Main Menu - ${userName}
@@ -350,7 +391,10 @@ Select a project to start filling out forms, or use the options below.`;
 Please try again or contact support.`;
 
       const fallbackKeyboard = {
-        keyboard: [[{ text: '🔄 Try Again' }], [{ text: '📞 Contact Support' }]],
+        keyboard: [
+          [{ text: '🔄 Try Again' }],
+          [{ text: '📞 Contact Support' }],
+        ],
         resize_keyboard: true,
       };
 
@@ -360,7 +404,10 @@ Please try again or contact support.`;
         });
         return { success: true, message: 'Fallback menu sent' };
       } catch (fallbackError) {
-        logger.error(`❌ Failed to send fallback menu to chat ${chatId}:`, fallbackError.message);
+        logger.error(
+          `❌ Failed to send fallback menu to chat ${chatId}:`,
+          fallbackError.message
+        );
         return { success: false, error: fallbackError.message };
       }
     }
@@ -495,7 +542,9 @@ Halo Forms System`;
       ]);
 
       console.log(`🔍 [DEBUG] Both emails sent successfully`);
-      logger.info(`✅ Dual email notifications sent for submission ${submissionData.jobId}`);
+      logger.info(
+        `✅ Dual email notifications sent for submission ${submissionData.jobId}`
+      );
     } catch (error) {
       console.log(`🔍 [DEBUG] Error in sendDualEmailNotifications:`, error);
       console.log(`🔍 [DEBUG] Error stack:`, error.stack);
@@ -547,7 +596,9 @@ Let's begin! Please share your phone number.`;
 
       const result = await this.bot.sendMessage(chatId, message, {
         reply_markup: {
-          keyboard: [[{ text: '📱 Share Phone Number', request_contact: true }]],
+          keyboard: [
+            [{ text: '📱 Share Phone Number', request_contact: true }],
+          ],
           one_time_keyboard: true,
           resize_keyboard: true,
         },
@@ -556,7 +607,10 @@ Let's begin! Please share your phone number.`;
       logger.info(`✅ Welcome message sent to chat ${chatId}`);
       return { success: true, messageId: result.message_id };
     } catch (error) {
-      logger.error(`❌ Failed to send welcome message to chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Failed to send welcome message to chat ${chatId}:`,
+        error.message
+      );
       return { success: false, error: error.message };
     }
   }
@@ -572,9 +626,13 @@ Let's begin! Please share your phone number.`;
     try {
       logger.info(`🔍 Sending authentication success to chat ${chatId}`);
       logger.info(`🔍 User: ${user.firstname || user.name || 'User'}`);
-      logger.info(`🔍 Available projects: ${availableProjects ? availableProjects.length : 'undefined'}`);
+      logger.info(
+        `🔍 Available projects: ${
+          availableProjects ? availableProjects.length : 'undefined'
+        }`
+      );
 
-      let message = `✅ Authentication successful!
+      const message = `✅ Authentication successful!
 
 Hello ${user.firstname || user.name || 'User'}! You're now verified.
 
@@ -588,7 +646,11 @@ Available projects:`;
 
       // Log project details for debugging
       availableProjects.forEach((project, index) => {
-        logger.info(`🔍 Project ${index + 1}: ${project.configuration?.projectName || project.projectId}`);
+        logger.info(
+          `🔍 Project ${index + 1}: ${
+            project.configuration?.projectName || project.projectId
+          }`
+        );
       });
 
       const keyboard = availableProjects.map((project) => [
@@ -601,7 +663,7 @@ Available projects:`;
 
       const result = await this.bot.sendMessage(chatId, message, {
         reply_markup: {
-          keyboard: keyboard,
+          keyboard,
           resize_keyboard: true,
         },
       });
@@ -609,7 +671,10 @@ Available projects:`;
       logger.info(`✅ Authentication success message sent to chat ${chatId}`);
       return { success: true, messageId: result.message_id };
     } catch (error) {
-      logger.error(`❌ Failed to send authentication success to chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Failed to send authentication success to chat ${chatId}:`,
+        error.message
+      );
       logger.error(`❌ Full error details:`, error);
       return { success: false, error: error.message };
     }
@@ -640,7 +705,10 @@ Please contact your administrator to get access to this system.`;
       logger.info(`✅ Authentication failure message sent to chat ${chatId}`);
       return { success: true, messageId: result.message_id };
     } catch (error) {
-      logger.error(`❌ Failed to send authentication failure to chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Failed to send authentication failure to chat ${chatId}:`,
+        error.message
+      );
       return { success: false, error: error.message };
     }
   }
@@ -668,7 +736,7 @@ ${question.properties?.description || ''}`;
         const options = question.properties?.options || [];
         const keyboard = options.map((option) => [{ text: option }]);
         replyMarkup = {
-          keyboard: keyboard,
+          keyboard,
           resize_keyboard: true,
           one_time_keyboard: true,
         };
@@ -677,7 +745,7 @@ ${question.properties?.description || ''}`;
         const keyboard = options.map((option) => [{ text: `☐ ${option}` }]);
         keyboard.push([{ text: '✅ Done' }]);
         replyMarkup = {
-          keyboard: keyboard,
+          keyboard,
           resize_keyboard: true,
         };
       } else if (question.type === 'date') {
@@ -698,12 +766,21 @@ ${question.properties?.description || ''}`;
         };
       }
 
-      const result = await this.bot.sendMessage(chatId, message, { reply_markup: replyMarkup });
+      const result = await this.bot.sendMessage(chatId, message, {
+        reply_markup: replyMarkup,
+      });
 
-      logger.info(`✅ Form question sent to chat ${chatId} (step ${step + 1}/${totalSteps})`);
+      logger.info(
+        `✅ Form question sent to chat ${chatId} (step ${
+          step + 1
+        }/${totalSteps})`
+      );
       return { success: true, messageId: result.message_id };
     } catch (error) {
-      logger.error(`❌ Failed to send form question to chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Failed to send form question to chat ${chatId}:`,
+        error.message
+      );
       return { success: false, error: error.message };
     }
   }
@@ -732,7 +809,10 @@ Please provide a valid answer and try again.`;
       logger.info(`✅ Validation error sent to chat ${chatId}`);
       return { success: true, messageId: result.message_id };
     } catch (error) {
-      logger.error(`❌ Failed to send validation error to chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Failed to send validation error to chat ${chatId}:`,
+        error.message
+      );
       return { success: false, error: error.message };
     }
   }
@@ -754,7 +834,11 @@ Please review your answers and submit when ready.`;
 
       const result = await this.bot.sendMessage(chatId, message, {
         reply_markup: {
-          keyboard: [[{ text: '📋 Review Answers' }], [{ text: '✅ Submit Form' }], [{ text: '🔄 Start Over' }]],
+          keyboard: [
+            [{ text: '📋 Review Answers' }],
+            [{ text: '✅ Submit Form' }],
+            [{ text: '🔄 Start Over' }],
+          ],
           resize_keyboard: true,
         },
       });
@@ -762,7 +846,10 @@ Please review your answers and submit when ready.`;
       logger.info(`✅ Form completion message sent to chat ${chatId}`);
       return { success: true, messageId: result.message_id };
     } catch (error) {
-      logger.error(`❌ Failed to send form completion to chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Failed to send form completion to chat ${chatId}:`,
+        error.message
+      );
       return { success: false, error: error.message };
     }
   }
@@ -776,7 +863,8 @@ Please review your answers and submit when ready.`;
    */
   async sendSubmissionSuccess(chatId, jobId, projectForm = null) {
     try {
-      const projectName = projectForm?.configuration?.projectName || 'Unknown Project';
+      const projectName =
+        projectForm?.configuration?.projectName || 'Unknown Project';
 
       const message = `✅ Submission Successful!
 
@@ -791,7 +879,10 @@ Thank you for using our service!`;
 
       const result = await this.bot.sendMessage(chatId, message, {
         reply_markup: {
-          keyboard: [[{ text: '📋 Submit Another' }], [{ text: '🏠 Main Menu' }]],
+          keyboard: [
+            [{ text: '📋 Submit Another' }],
+            [{ text: '🏠 Main Menu' }],
+          ],
           resize_keyboard: true,
         },
       });
@@ -799,7 +890,10 @@ Thank you for using our service!`;
       logger.info(`✅ Submission success message sent to chat ${chatId}`);
       return { success: true, messageId: result.message_id };
     } catch (error) {
-      logger.error(`❌ Failed to send submission success to chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Failed to send submission success to chat ${chatId}:`,
+        error.message
+      );
       return { success: false, error: error.message };
     }
   }
@@ -822,7 +916,10 @@ Please try again or contact support if the problem persists.`;
 
       const result = await this.bot.sendMessage(chatId, message, {
         reply_markup: {
-          keyboard: [[{ text: '🔄 Try Again' }], [{ text: '📞 Contact Support' }]],
+          keyboard: [
+            [{ text: '🔄 Try Again' }],
+            [{ text: '📞 Contact Support' }],
+          ],
           resize_keyboard: true,
         },
       });
@@ -830,7 +927,10 @@ Please try again or contact support if the problem persists.`;
       logger.info(`✅ Submission failure message sent to chat ${chatId}`);
       return { success: true, messageId: result.message_id };
     } catch (error) {
-      logger.error(`❌ Failed to send submission failure to chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Failed to send submission failure to chat ${chatId}:`,
+        error.message
+      );
       return { success: false, error: error.message };
     }
   }
@@ -851,7 +951,10 @@ Please try again or contact support.`;
 
       const result = await this.bot.sendMessage(chatId, message, {
         reply_markup: {
-          keyboard: [[{ text: '🔄 Try Again' }], [{ text: '📞 Contact Support' }]],
+          keyboard: [
+            [{ text: '🔄 Try Again' }],
+            [{ text: '📞 Contact Support' }],
+          ],
           resize_keyboard: true,
         },
       });
@@ -859,7 +962,10 @@ Please try again or contact support.`;
       logger.info(`✅ Error message sent to chat ${chatId}`);
       return { success: true, messageId: result.message_id };
     } catch (error) {
-      logger.error(`❌ Failed to send error message to chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Failed to send error message to chat ${chatId}:`,
+        error.message
+      );
       return { success: false, error: error.message };
     }
   }
@@ -881,7 +987,10 @@ Please try again or contact support.`;
       logger.info(`✅ Message with clear keyboard sent to chat ${chatId}`);
       return { success: true, messageId: result.message_id };
     } catch (error) {
-      logger.error(`❌ Failed to send message with clear keyboard to chat ${chatId}:`, error.message);
+      logger.error(
+        `❌ Failed to send message with clear keyboard to chat ${chatId}:`,
+        error.message
+      );
       return { success: false, error: error.message };
     }
   }

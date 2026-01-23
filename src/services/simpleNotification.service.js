@@ -11,9 +11,17 @@ class SimpleNotificationService {
    */
   async sendSubmissionConfirmation(submission, userData, projectData) {
     try {
-      const emailTemplate = this.createConfirmationTemplate(submission, userData, projectData);
+      const emailTemplate = this.createConfirmationTemplate(
+        submission,
+        userData,
+        projectData
+      );
 
-      await sendEmail(userData.email, emailTemplate.subject, emailTemplate.text);
+      await sendEmail(
+        userData.email,
+        emailTemplate.subject,
+        emailTemplate.text
+      );
 
       logger.info(`✅ Submission confirmation sent to ${userData.email}`);
       return {
@@ -22,7 +30,10 @@ class SimpleNotificationService {
         type: 'submission_confirmation',
       };
     } catch (error) {
-      logger.error(`❌ Failed to send submission confirmation to ${userData.email}:`, error.message);
+      logger.error(
+        `❌ Failed to send submission confirmation to ${userData.email}:`,
+        error.message
+      );
       return {
         success: false,
         error: error.message,
@@ -39,20 +50,37 @@ class SimpleNotificationService {
    * @param {Object} projectData - Project data (projectName)
    * @returns {Promise<Object>} Email sending result
    */
-  async sendValidationFailureNotification(validationData, userData, projectData) {
+  async sendValidationFailureNotification(
+    validationData,
+    userData,
+    projectData
+  ) {
     try {
-      const emailTemplate = this.createValidationFailureTemplate(validationData, userData, projectData);
+      const emailTemplate = this.createValidationFailureTemplate(
+        validationData,
+        userData,
+        projectData
+      );
 
-      await sendEmail(userData.email, emailTemplate.subject, emailTemplate.text);
+      await sendEmail(
+        userData.email,
+        emailTemplate.subject,
+        emailTemplate.text
+      );
 
-      logger.info(`✅ Validation failure notification sent to ${userData.email}`);
+      logger.info(
+        `✅ Validation failure notification sent to ${userData.email}`
+      );
       return {
         success: true,
         recipient: userData.email,
         type: 'validation_failure',
       };
     } catch (error) {
-      logger.error(`❌ Failed to send validation failure notification to ${userData.email}:`, error.message);
+      logger.error(
+        `❌ Failed to send validation failure notification to ${userData.email}:`,
+        error.message
+      );
       return {
         success: false,
         error: error.message,
@@ -70,13 +98,29 @@ class SimpleNotificationService {
    * @param {string} status - Processing status
    * @returns {Promise<Object>} Email sending result
    */
-  async sendProcessingNotification(submission, userData, projectData, status = 'processing') {
+  async sendProcessingNotification(
+    submission,
+    userData,
+    projectData,
+    status = 'processing'
+  ) {
     try {
-      const emailTemplate = this.createProcessingTemplate(submission, userData, projectData, status);
+      const emailTemplate = this.createProcessingTemplate(
+        submission,
+        userData,
+        projectData,
+        status
+      );
 
-      await sendEmail(userData.email, emailTemplate.subject, emailTemplate.text);
+      await sendEmail(
+        userData.email,
+        emailTemplate.subject,
+        emailTemplate.text
+      );
 
-      logger.info(`✅ Processing notification sent to ${userData.email} (status: ${status})`);
+      logger.info(
+        `✅ Processing notification sent to ${userData.email} (status: ${status})`
+      );
       return {
         success: true,
         recipient: userData.email,
@@ -84,7 +128,10 @@ class SimpleNotificationService {
         status,
       };
     } catch (error) {
-      logger.error(`❌ Failed to send processing notification to ${userData.email}:`, error.message);
+      logger.error(
+        `❌ Failed to send processing notification to ${userData.email}:`,
+        error.message
+      );
       return {
         success: false,
         error: error.message,
@@ -103,7 +150,8 @@ class SimpleNotificationService {
    * @returns {Object} Email template
    */
   createConfirmationTemplate(submission, userData, projectData) {
-    const projectName = (projectData && projectData.projectName) || 'Your Project';
+    const projectName =
+      (projectData && projectData.projectName) || 'Your Project';
     const userName = (userData && userData.firstname) || 'User';
 
     return {
@@ -134,17 +182,22 @@ The ${projectName} Team`,
    * @returns {Object} Email template
    */
   createValidationFailureTemplate(validationData, userData, projectData) {
-    const projectName = (projectData && projectData.projectName) || 'Your Project';
+    const projectName =
+      (projectData && projectData.projectName) || 'Your Project';
     const userName = (userData && userData.firstname) || 'User';
     const { errors, warnings, step } = validationData;
 
     let errorDetails = '';
     if (errors && errors.length > 0) {
-      errorDetails = '\n\nValidation Errors:\n' + errors.map((err) => `- ${err.field || err.step}: ${err.error}`).join('\n');
+      errorDetails = `\n\nValidation Errors:\n${errors
+        .map((err) => `- ${err.field || err.step}: ${err.error}`)
+        .join('\n')}`;
     }
 
     if (warnings && warnings.length > 0) {
-      errorDetails += '\n\nWarnings:\n' + warnings.map((warn) => `- ${warn.field}: ${warn.warning}`).join('\n');
+      errorDetails += `\n\nWarnings:\n${warnings
+        .map((warn) => `- ${warn.field}: ${warn.warning}`)
+        .join('\n')}`;
     }
 
     const stepDescription = this.getStepDescription(step);
@@ -186,7 +239,7 @@ The ${projectName} Team`,
       unknown: 'Unknown validation issue',
     };
 
-    return stepDescriptions[step] || stepDescriptions['unknown'];
+    return stepDescriptions[step] || stepDescriptions.unknown;
   }
 
   /**
@@ -198,7 +251,8 @@ The ${projectName} Team`,
    * @returns {Object} Email template
    */
   createProcessingTemplate(submission, userData, projectData, status) {
-    const projectName = (projectData && projectData.projectName) || 'Your Project';
+    const projectName =
+      (projectData && projectData.projectName) || 'Your Project';
     const userName = (userData && userData.firstname) || 'User';
 
     const statusMessages = {
@@ -207,7 +261,7 @@ The ${projectName} Team`,
       failed: 'There was an issue processing your submission.',
     };
 
-    const statusMessage = statusMessages[status] || statusMessages['processing'];
+    const statusMessage = statusMessages[status] || statusMessages.processing;
 
     return {
       subject: `📋 Processing Update - ${projectName}`,

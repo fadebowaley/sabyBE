@@ -23,7 +23,7 @@ class ValidationLoggerService {
         errorMessage,
         validationErrors,
         emailMetadata,
-        timestamp = new Date()
+        timestamp = new Date(),
       } = errorData;
 
       const query = `
@@ -47,12 +47,14 @@ class ValidationLoggerService {
         errorMessage,
         JSON.stringify(validationErrors || []),
         JSON.stringify(emailMetadata || {}),
-        timestamp
+        timestamp,
       ];
 
       await postgresPool.query(query, values);
 
-      logger.info(`📝 Validation error logged for ${senderEmail} to project ${projectId}`);
+      logger.info(
+        `📝 Validation error logged for ${senderEmail} to project ${projectId}`
+      );
     } catch (error) {
       logger.error('❌ Failed to log validation error:', error.message);
     }
@@ -71,7 +73,7 @@ class ValidationLoggerService {
         reason,
         validationResult,
         emailContent,
-        timestamp = new Date()
+        timestamp = new Date(),
       } = rejectionData;
 
       const query = `
@@ -93,12 +95,14 @@ class ValidationLoggerService {
         reason,
         JSON.stringify(validationResult || {}),
         emailContent,
-        timestamp
+        timestamp,
       ];
 
       await postgresPool.query(query, values);
 
-      logger.info(`📝 Rejected submission logged for ${senderEmail} to project ${projectId}`);
+      logger.info(
+        `📝 Rejected submission logged for ${senderEmail} to project ${projectId}`
+      );
     } catch (error) {
       logger.error('❌ Failed to log rejected submission:', error.message);
     }
@@ -127,12 +131,19 @@ class ValidationLoggerService {
         ORDER BY count DESC
       `;
 
-      const result = await postgresPool.query(query, [tenantId, startDate, endDate]);
+      const result = await postgresPool.query(query, [
+        tenantId,
+        startDate,
+        endDate,
+      ]);
 
       return {
-        totalErrors: result.rows.reduce((sum, row) => sum + parseInt(row.count), 0),
+        totalErrors: result.rows.reduce(
+          (sum, row) => sum + parseInt(row.count),
+          0
+        ),
         errorTypes: result.rows,
-        period: { startDate, endDate }
+        period: { startDate, endDate },
       };
     } catch (error) {
       logger.error('❌ Failed to get validation statistics:', error.message);
@@ -182,7 +193,7 @@ class ValidationLoggerService {
         userId,
         projectFormId,
         warnings,
-        timestamp = new Date()
+        timestamp = new Date(),
       } = successData;
 
       const query = `
@@ -204,12 +215,14 @@ class ValidationLoggerService {
         userId,
         projectFormId,
         JSON.stringify(warnings || []),
-        timestamp
+        timestamp,
       ];
 
       await postgresPool.query(query, values);
 
-      logger.info(`📝 Successful validation logged for ${senderEmail} to project ${projectId}`);
+      logger.info(
+        `📝 Successful validation logged for ${senderEmail} to project ${projectId}`
+      );
     } catch (error) {
       logger.error('❌ Failed to log successful validation:', error.message);
     }

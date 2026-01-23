@@ -15,7 +15,9 @@ const connectRedis = () => {
       db: config.redis.db || 0,
       retryStrategy(times) {
         const delay = Math.min(times * 50, 2000);
-        logger.warn(`🔁 Redis reconnect attempt #${times}, retrying in ${delay}ms`);
+        logger.warn(
+          `🔁 Redis reconnect attempt #${times}, retrying in ${delay}ms`
+        );
         return delay;
       },
       reconnectOnError(err) {
@@ -37,7 +39,9 @@ const connectRedis = () => {
     redisClient.on('error', (err) => {
       // Only log connection refused errors once to avoid spam
       if (err.code === 'ECONNREFUSED' && err.address === '127.0.0.1') {
-        logger.warn('⚠️ Redis connection refused to localhost - this may be a BullMQ internal connection issue');
+        logger.warn(
+          '⚠️ Redis connection refused to localhost - this may be a BullMQ internal connection issue'
+        );
       } else {
         logger.error('❌ Redis error:', err);
       }
@@ -80,10 +84,15 @@ const getRedisConnectionOptions = () => ({
     return delay;
   },
   maxRetriesPerRequest: null,
-  enableReadyCheck: true,
+  enableReadyCheck: false, // Disable ready check for BullMQ
   lazyConnect: false,
-  connectTimeout: 10000,
-  commandTimeout: 5000,
+  connectTimeout: 30000, // Increased from 10s to 30s
+  // Remove commandTimeout to prevent timeout errors in workers
+  // commandTimeout: 5000,
+  // Add keepAlive to prevent connection drops
+  keepAlive: 30000,
+  // Allow BullMQ to retry commands during brief disconnects
+  enableOfflineQueue: true,
 });
 
 module.exports = {

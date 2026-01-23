@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
-/***
+/** *
  *Features Recap:
 Fields: tenantId, userId, appName, isActive, config, icon, launchCount
 Static Methods:
@@ -13,10 +13,6 @@ Built-in protection against duplicate app registration for the same tenant.
  *
  *
  */
-
-
-
-
 
 const allowedApps = [
   'HaloAi',

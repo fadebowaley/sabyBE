@@ -17,14 +17,18 @@ notificationQueueEvents.on('completed', ({ jobId }) => {
 });
 
 notificationQueueEvents.on('failed', ({ jobId, failedReason }) => {
-  logger.error(`❌ Notification job failed - ID: ${jobId}, Reason: ${failedReason}`);
+  logger.error(
+    `❌ Notification job failed - ID: ${jobId}, Reason: ${failedReason}`
+  );
 });
 
 // Notification worker
 const notificationWorker = new Worker(
   NOTIFICATION_QUEUE_NAME,
   async (job) => {
-    logger.info(`📧 Processing notification job: ${job.id} - Type: ${job.data.type}`);
+    logger.info(
+      `📧 Processing notification job: ${job.id} - Type: ${job.data.type}`
+    );
 
     try {
       const result = await notificationQueueService.processNotificationJob(job);

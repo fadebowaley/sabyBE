@@ -7,18 +7,15 @@ const ApiError = require('../utils/ApiError');
  * @param {Object} departmentBody
  * @returns {Promise<Department>}
  */
-const createDepartment = async (departmentBody) => {
-  return Department.create(departmentBody);
-};
+const createDepartment = async (departmentBody) =>
+  Department.create(departmentBody);
 
 /**
  * Get department by ID
  * @param {ObjectId} id
  * @returns {Promise<Department>}
  */
-const getDepartmentById = async (id) => {
-  return Department.findById(id);
-};
+const getDepartmentById = async (id) => Department.findById(id);
 
 /**
  * Query departments by tenant
@@ -26,9 +23,8 @@ const getDepartmentById = async (id) => {
  * @param {Object} options
  * @returns {Promise<QueryResult>}
  */
-const queryDepartments = async (filter, options) => {
-  return Department.paginate(filter, options);
-};
+const queryDepartments = async (filter, options) =>
+  Department.paginate(filter, options);
 
 /**
  * Update department by ID

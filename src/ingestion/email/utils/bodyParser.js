@@ -1,5 +1,5 @@
 // utils/bodyParser.js
-const htmlToText = require('html-to-text').htmlToText;
+const { htmlToText } = require('html-to-text');
 
 /**
  * Very simple heuristic body parser that attempts to extract structured
@@ -19,7 +19,10 @@ module.exports = (parsedEmail) => {
 
   // If no plain text but html exists, convert html to text for parsing
   if (!text && html) {
-    text = htmlToText(html, { wordwrap: false, selectors: [{ selector: 'img', format: 'skip' }] });
+    text = htmlToText(html, {
+      wordwrap: false,
+      selectors: [{ selector: 'img', format: 'skip' }],
+    });
   }
 
   const structured = {};
@@ -32,7 +35,9 @@ module.exports = (parsedEmail) => {
         const value = line.substring(idx + 1).trim();
         if (key && value) {
           // Normalise key to camelCase
-          const camelKey = key.toLowerCase().replace(/[^a-z0-9]+([a-z0-9])/g, (_, chr) => chr.toUpperCase());
+          const camelKey = key
+            .toLowerCase()
+            .replace(/[^a-z0-9]+([a-z0-9])/g, (_, chr) => chr.toUpperCase());
           structured[camelKey] = value;
         }
       }

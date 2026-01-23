@@ -14,15 +14,17 @@ const createPermission = async (permissionBody, user) => {
 
   // Check if the user has permission to create a permission
   if (!isSuper && !hasPermissionToCreatePermission) {
-    throw new ApiError(httpStatus.FORBIDDEN, 'You are not authorized to create permissions');
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'You are not authorized to create permissions'
+    );
   }
 
-  console.log('look-up',name, method, path);
+  console.log('look-up', name, method, path);
 
   // Create the permission (the model will check if it's taken)
   return Permission.createPermission(permissionBody);
 };
-
 
 /**
  * Query permissions with filters and pagination
@@ -30,9 +32,8 @@ const createPermission = async (permissionBody, user) => {
  * @param {Object} options - Pagination and sort options
  * @returns {Promise<QueryResult>}
  */
-const queryPermissions = async (filter, options) => {
-  return Permission.paginate(filter, options);
-};
+const queryPermissions = async (filter, options) =>
+  Permission.paginate(filter, options);
 
 /**
  * Get permission by name
@@ -52,9 +53,8 @@ const getPermissionByName = async (name) => {
  * @param {Array} permissionsArray - List of permissions to be created
  * @returns {Promise<Permission[]>}
  */
-const bulkCreatePermissions = async (permissionsArray) => {
-  return Permission.bulkCreatePermissions(permissionsArray);
-};
+const bulkCreatePermissions = async (permissionsArray) =>
+  Permission.bulkCreatePermissions(permissionsArray);
 
 /**
  * Update permission by name

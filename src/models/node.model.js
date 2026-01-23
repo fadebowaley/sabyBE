@@ -43,6 +43,63 @@ const nodeSchema = mongoose.Schema(
     path: { type: String },
     deletedAt: { type: Date, default: null },
     isActive: { type: Boolean, default: true },
+    customFields: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    customFieldsVersion: {
+      type: Number,
+      default: 0,
+    },
+
+    // Profile Update Compliance Tracking
+    profileUpdateCompliant: {
+      type: Boolean,
+      default: false,
+    },
+    profileUpdateCompliantAt: {
+      type: Date,
+      default: null,
+    },
+    profileUpdateCompliantBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+
+    /**
+     * NOTE: The profile fields below are handled through tenant-managed custom fields.
+     * Legacy properties kept for backward compatibility:
+     * - propertyStatus
+     * - estimatedValue
+     * - buildingType
+     * - facilityStatus
+     */
+    profile: {
+      // Property/Facility information
+      propertyStatus: {
+        type: String,
+        enum: ['Owned', 'Rented', 'Leased', 'Other'],
+        default: 'Owned',
+      },
+      estimatedValue: { type: mongoose.Schema.Types.Decimal128 },
+      buildingType: { type: String }, // Auditorium, Hall, Tent, Office, etc.
+      facilityStatus: {
+        type: String,
+        enum: ['Active', 'Inactive', 'Under Construction'],
+        default: 'Active',
+      },
+      // Attendance and Financial metrics
+      averageAttendance: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      averageIncome: {
+        type: mongoose.Schema.Types.Decimal128,
+        default: 0,
+      },
+    },
   },
   { timestamps: true }
 );
@@ -85,7 +142,9 @@ async function buildHierarchy(node) {
   let current = node.parent;
 
   while (current) {
-    const parentNode = await node.constructor.findById(current).populate('level');
+    const parentNode = await node.constructor
+      .findById(current)
+      .populate('level');
     if (!parentNode) throw new Error('Invalid parent reference.');
 
     identity.unshift(parentNode._id);
@@ -123,7 +182,10 @@ nodeSchema.pre('save', async function (next) {
       console.log('Structure level:', structure.level);
       console.log('Structure level toString():', structure.level.toString());
       console.log('Node level toString():', this.level.toString());
-      console.log('Levels match?', structure.level.toString() === this.level.toString());
+      console.log(
+        'Levels match?',
+        structure.level.toString() === this.level.toString()
+      );
 
       if (structure.level.toString() !== this.level.toString()) {
         throw new Error('Node level must match structure level');
@@ -142,10 +204,77 @@ nodeSchema.pre('save', async function (next) {
   }
 });
 
+// Post-save hook for baseline intelligence updates
+nodeSchema.post('save', async function(doc) {
+  try {
+    // Only trigger baseline updates for meaningful changes
+    const relevantFields = [
+      'profile', 'users', 'dateOfEstablishment', 'isActive', 
+      'customFields', 'level', 'structure', 'parent'
+    ];
+    
+    const hasRelevantChanges = this.isNew || relevantFields.some(field => this.isModified(field));
+    
+    if (hasRelevantChanges) {
+      // Import here to avoid circular dependency
+      const { baselineIntelligenceService } = require('../services');
+      const { batchChangeProcessor } = require('../services');
+      
+      // Handle baseline updates asynchronously to avoid blocking node operations
+      setImmediate(async () => {
+        try {
+          // Check if this is part of a bulk operation
+          const isBulkOperation = process.env.BULK_OPERATION === 'true' || this.isBulkOperation;
+          
+          if (isBulkOperation && batchChangeProcessor) {
+            // Use batch processing for bulk operations
+            await batchChangeProcessor.addNodeChange(doc);
+          } else {
+            // Use immediate processing for single changes
+            await baselineIntelligenceService.handleNodeChange(doc);
+          }
+        } catch (error) {
+          const logger = require('../config/logger');
+          logger.error(
+            'Error updating baseline intelligence after node change:',
+            {
+              nodeId: doc._id || doc.nodeId,
+              tenantId: doc.tenantId,
+              error: error.message,
+              stack: error.stack,
+            }
+          );
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error in node post-save hook:', error);
+  }
+});
+
+// Post-remove hook for baseline intelligence updates
+nodeSchema.post('remove', async function(doc) {
+  try {
+    const { baselineIntelligenceService } = require('../services');
+    
+    setImmediate(async () => {
+      try {
+        await baselineIntelligenceService.handleNodeChange(doc);
+      } catch (error) {
+        console.error('Error updating baseline intelligence after node removal:', error);
+      }
+    });
+  } catch (error) {
+    console.error('Error in node post-remove hook:', error);
+  }
+});
+
 // Static method to update parent and re-calculate hierarchy
 nodeSchema.statics.updateNodeParent = async function (nodeId, newParentId) {
   const node = await this.findById(nodeId);
-  const newParent = newParentId ? await this.findById(newParentId).populate('level') : null;
+  const newParent = newParentId
+    ? await this.findById(newParentId).populate('level')
+    : null;
   if (!node) throw new Error('Node not found');
   if (newParentId && !newParent) throw new Error('New parent not found');
 

@@ -1,12 +1,10 @@
 const mongoose = require('mongoose');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
-
-
-/****
+/** **
  *
  *
- * 
+ *
  */
 const reportSchema = mongoose.Schema(
   {

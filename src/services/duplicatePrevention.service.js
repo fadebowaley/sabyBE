@@ -11,18 +11,20 @@ class DuplicatePreventionService {
    */
   async checkDuplicateSubmission(submissionData, user, projectForm) {
     try {
-      const projectId = submissionData.projectId;
+      const { projectId } = submissionData;
       const userId = user._id;
 
       // Check if form allows multiple submissions
       const allowsMultiple = this.checkIfFormAllowsMultiple(projectForm);
 
       if (allowsMultiple) {
-        logger.info(`✅ Form ${projectId} allows multiple submissions for user ${user.email}`);
+        logger.info(
+          `✅ Form ${projectId} allows multiple submissions for user ${user.email}`
+        );
         return {
           isDuplicate: false,
           allowsMultiple: true,
-          reason: 'Form allows multiple submissions'
+          reason: 'Form allows multiple submissions',
         };
       }
 
@@ -30,34 +32,37 @@ class DuplicatePreventionService {
       const existingSubmission = await ProjectFormSubmission.findOne({
         projectId,
         submittedBy: userId,
-        deletedAt: null
+        deletedAt: null,
       });
 
       if (existingSubmission) {
-        logger.warn(`❌ Duplicate submission detected for user ${user.email} to project ${projectId}`);
+        logger.warn(
+          `❌ Duplicate submission detected for user ${user.email} to project ${projectId}`
+        );
         return {
           isDuplicate: true,
           allowsMultiple: false,
           reason: 'User has already submitted to this form',
           existingSubmissionId: existingSubmission._id,
-          existingSubmissionDate: existingSubmission.createdAt
+          existingSubmissionDate: existingSubmission.createdAt,
         };
       }
 
-      logger.info(`✅ No duplicate submission found for user ${user.email} to project ${projectId}`);
+      logger.info(
+        `✅ No duplicate submission found for user ${user.email} to project ${projectId}`
+      );
       return {
         isDuplicate: false,
         allowsMultiple: false,
-        reason: 'No existing submission found'
+        reason: 'No existing submission found',
       };
-
     } catch (error) {
       logger.error(`❌ Error checking duplicate submission:`, error.message);
       return {
         isDuplicate: false,
         allowsMultiple: false,
         reason: 'Error checking duplicates - allowing submission',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -84,15 +89,20 @@ class DuplicatePreventionService {
       }
 
       // Check if form is configured for repeated submissions
-      if (settings.formType === 'recurring' || settings.formType === 'periodic') {
+      if (
+        settings.formType === 'recurring' ||
+        settings.formType === 'periodic'
+      ) {
         return true;
       }
 
       // Default: single submission only
       return false;
-
     } catch (error) {
-      logger.error(`❌ Error checking form multiple submission settings:`, error.message);
+      logger.error(
+        `❌ Error checking form multiple submission settings:`,
+        error.message
+      );
       return false; // Default to single submission on error
     }
   }
@@ -106,7 +116,7 @@ class DuplicatePreventionService {
    */
   async checkSubmissionCooldown(submissionData, user, projectForm) {
     try {
-      const projectId = submissionData.projectId;
+      const { projectId } = submissionData;
       const userId = user._id;
 
       // Get cooldown settings from form
@@ -117,7 +127,7 @@ class DuplicatePreventionService {
       if (cooldownMinutes <= 0) {
         return {
           inCooldown: false,
-          reason: 'No cooldown period configured'
+          reason: 'No cooldown period configured',
         };
       }
 
@@ -125,13 +135,13 @@ class DuplicatePreventionService {
       const lastSubmission = await ProjectFormSubmission.findOne({
         projectId,
         submittedBy: userId,
-        deletedAt: null
+        deletedAt: null,
       }).sort({ createdAt: -1 });
 
       if (!lastSubmission) {
         return {
           inCooldown: false,
-          reason: 'No previous submissions found'
+          reason: 'No previous submissions found',
         };
       }
 
@@ -141,29 +151,32 @@ class DuplicatePreventionService {
       const minutesSinceLastSubmission = timeDifference / (1000 * 60);
 
       if (minutesSinceLastSubmission < cooldownMinutes) {
-        const remainingMinutes = Math.ceil(cooldownMinutes - minutesSinceLastSubmission);
-        logger.warn(`❌ Submission cooldown active for user ${user.email} to project ${projectId}. ${remainingMinutes} minutes remaining.`);
+        const remainingMinutes = Math.ceil(
+          cooldownMinutes - minutesSinceLastSubmission
+        );
+        logger.warn(
+          `❌ Submission cooldown active for user ${user.email} to project ${projectId}. ${remainingMinutes} minutes remaining.`
+        );
 
         return {
           inCooldown: true,
           reason: `Cooldown period active. ${remainingMinutes} minutes remaining.`,
           remainingMinutes,
           lastSubmissionTime: lastSubmission.createdAt,
-          cooldownMinutes
+          cooldownMinutes,
         };
       }
 
       return {
         inCooldown: false,
-        reason: 'Cooldown period has passed'
+        reason: 'Cooldown period has passed',
       };
-
     } catch (error) {
       logger.error(`❌ Error checking submission cooldown:`, error.message);
       return {
         inCooldown: false,
         reason: 'Error checking cooldown - allowing submission',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -178,27 +191,35 @@ class DuplicatePreventionService {
   async validateSubmission(submissionData, user, projectForm) {
     try {
       // Check for duplicates
-      const duplicateCheck = await this.checkDuplicateSubmission(submissionData, user, projectForm);
+      const duplicateCheck = await this.checkDuplicateSubmission(
+        submissionData,
+        user,
+        projectForm
+      );
 
       if (duplicateCheck.isDuplicate) {
         return {
           valid: false,
           reason: duplicateCheck.reason,
           type: 'duplicate',
-          details: duplicateCheck
+          details: duplicateCheck,
         };
       }
 
       // Check cooldown if multiple submissions are allowed
       if (duplicateCheck.allowsMultiple) {
-        const cooldownCheck = await this.checkSubmissionCooldown(submissionData, user, projectForm);
+        const cooldownCheck = await this.checkSubmissionCooldown(
+          submissionData,
+          user,
+          projectForm
+        );
 
         if (cooldownCheck.inCooldown) {
           return {
             valid: false,
             reason: cooldownCheck.reason,
             type: 'cooldown',
-            details: cooldownCheck
+            details: cooldownCheck,
           };
         }
       }
@@ -209,17 +230,19 @@ class DuplicatePreventionService {
         type: 'valid',
         details: {
           duplicateCheck,
-          allowsMultiple: duplicateCheck.allowsMultiple
-        }
+          allowsMultiple: duplicateCheck.allowsMultiple,
+        },
       };
-
     } catch (error) {
-      logger.error(`❌ Error in comprehensive submission validation:`, error.message);
+      logger.error(
+        `❌ Error in comprehensive submission validation:`,
+        error.message
+      );
       return {
         valid: false,
         reason: 'Error during validation',
         type: 'error',
-        details: { error: error.message }
+        details: { error: error.message },
       };
     }
   }

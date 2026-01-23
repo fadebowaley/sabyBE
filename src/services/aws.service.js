@@ -19,7 +19,7 @@ const uploadToS3 = async (buffer, key, contentType) => {
     ContentType: contentType,
     ServerSideEncryption: 'AES256',
   };
-  
+
   return s3.upload(params).promise();
 };
 
@@ -28,7 +28,7 @@ const deleteFromS3 = async (key) => {
     Bucket: BUCKET_NAME,
     Key: key,
   };
-  
+
   return s3.deleteObject(params).promise();
 };
 
@@ -38,7 +38,7 @@ const generatePresignedUrl = async (key, expiresIn = 3600) => {
     Key: key,
     Expires: expiresIn,
   };
-  
+
   return s3.getSignedUrl('getObject', params);
 };
 
@@ -48,7 +48,7 @@ const copyObject = async (sourceKey, destinationKey) => {
     CopySource: `${BUCKET_NAME}/${sourceKey}`,
     Key: destinationKey,
   };
-  
+
   return s3.copyObject(params).promise();
 };
 
@@ -57,7 +57,7 @@ const getObjectMetadata = async (key) => {
     Bucket: BUCKET_NAME,
     Key: key,
   };
-  
+
   return s3.headObject(params).promise();
 };
 

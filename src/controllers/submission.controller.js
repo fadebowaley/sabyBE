@@ -42,7 +42,12 @@ const submitData = catchAsync(async (req, res) => {
     source: userInfo.source,
   };
 
-  if (!submissionBody.projectId || !submissionBody.payload || !submissionBody.tenantId || !submissionBody.formId) {
+  if (
+    !submissionBody.projectId ||
+    !submissionBody.payload ||
+    !submissionBody.tenantId ||
+    !submissionBody.formId
+  ) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Missing required fields');
   }
 
@@ -95,7 +100,15 @@ const submitData = catchAsync(async (req, res) => {
  * @route GET /v1/submit-api
  */
 const listSubmissions = catchAsync(async (req, res) => {
-  const filters = pick(req.query, ['tenant_id', 'project_id', 'form_id', 'node_id', 'user_id', 'status', 'source']);
+  const filters = pick(req.query, [
+    'tenant_id',
+    'project_id',
+    'form_id',
+    'node_id',
+    'user_id',
+    'status',
+    'source',
+  ]);
   const submissions = await listSubmissions(filters);
   res.send({ results: submissions });
 });
@@ -135,7 +148,16 @@ const retrySubmission = catchAsync(async (req, res) => {
  * @route GET /v1/submitData/activity-log
  */
 const getActivityLogs = catchAsync(async (req, res) => {
-  const filters = pick(req.query, ['tenantId', 'projectId', 'formId', 'userId', 'status', 'search', 'limit', 'offset']);
+  const filters = pick(req.query, [
+    'tenantId',
+    'projectId',
+    'formId',
+    'userId',
+    'status',
+    'search',
+    'limit',
+    'offset',
+  ]);
   if (filters.limit) filters.limit = parseInt(filters.limit, 10);
   if (filters.offset) filters.offset = parseInt(filters.offset, 10);
   console.log('[Backend] Activity log request:', filters);
@@ -152,6 +174,85 @@ const getActivityLogSummary = catchAsync(async (req, res) => {
   res.send(summary);
 });
 
+/**
+ * Clean up test submissions (for test bed simulator)
+ * @route DELETE /v1/submissions/cleanup-test-data
+ */
+const cleanupTestData = catchAsync(async (req, res) => {
+  const { tenantId, source, projectId } = req.body;
+
+  // Validate required fields
+  if (!tenantId || !source) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId and source required');
+  }
+
+  // Security: Only allow cleanup of test data
+  if (!source.startsWith('test-') && !source.startsWith('saby-simulator')) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Can only cleanup test data (source must start with test- or saby-simulator)'
+    );
+  }
+
+  // Build where clauses
+  const conditions = [];
+  const values = [];
+  let idx = 1;
+
+  conditions.push(`tenant_id = $${idx++}`);
+  values.push(tenantId);
+
+  conditions.push(`source = $${idx++}`);
+  values.push(source);
+
+  if (projectId) {
+    conditions.push(`project_id = $${idx++}`);
+    values.push(projectId);
+  }
+
+  const whereClause = conditions.join(' AND ');
+
+  // Delete from form_submissions
+  const submissionsDeleted = await postgresPool.query(
+    `DELETE FROM form_submissions WHERE ${whereClause} RETURNING id`,
+    values
+  );
+
+  // Delete from activity log
+  const activityDeleted = await postgresPool.query(
+    `DELETE FROM submission_activity_log WHERE ${whereClause}`,
+    values
+  );
+
+  // Delete from DLQ (if any test submissions ended up there)
+  // Note: DLQ stores job_data as JSONB, so we need to query the source from within it
+  const dlqQuery = `
+    DELETE FROM dead_letter_queue 
+    WHERE tenant_id = $1 
+      AND job_data->>'source' = $2
+      ${projectId ? 'AND project_id = $' + values.length : ''}
+  `;
+  const dlqDeleted = await postgresPool.query(
+    dlqQuery,
+    projectId ? values : [tenantId, source]
+  );
+
+  res.send({
+    message: 'Test data cleaned successfully',
+    deleted: {
+      submissions: submissionsDeleted.rowCount,
+      activityLogs: activityDeleted.rowCount,
+      dlq: dlqDeleted.rowCount,
+      total: submissionsDeleted.rowCount + activityDeleted.rowCount + dlqDeleted.rowCount,
+    },
+    filters: {
+      tenantId,
+      source,
+      projectId: projectId || 'all',
+    },
+  });
+});
+
 module.exports = {
   submitData,
   listSubmissions,
@@ -159,5 +260,6 @@ module.exports = {
   deleteSubmission,
   retrySubmission,
   getActivityLogs,
-  getActivityLogSummary, // <-- add this export
+  getActivityLogSummary,
+  cleanupTestData,
 };

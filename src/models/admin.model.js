@@ -1,8 +1,7 @@
 const mongoose = require('mongoose');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
-
-/***
+/** *
  *Fields: tenantId, userId, role, permissions, assignedModules, isActive
 Static Methods:
 upsertAdmin(body)
@@ -69,7 +68,10 @@ adminSchema.plugin(tenantPlugin);
  * @returns {Promise<Admin>}
  */
 adminSchema.statics.upsertAdmin = async function (body) {
-  const existing = await this.findOne({ userId: body.userId, tenantId: body.tenantId });
+  const existing = await this.findOne({
+    userId: body.userId,
+    tenantId: body.tenantId,
+  });
   if (existing) {
     Object.assign(existing, body);
     await existing.save();

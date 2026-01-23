@@ -8,25 +8,57 @@ const router = express.Router();
 
 router
   .route('/')
-  .post(auth('create:admins'), validate(adminValidation.createAdmin), adminController.createAdmin)
-  .get(auth('view:admins'), validate(adminValidation.queryAdmins), adminController.queryAdmins);
+  .post(
+    auth('admin:create'),
+    validate(adminValidation.createAdmin),
+    adminController.createAdmin
+  )
+  .get(
+    auth('admin:read'),
+    validate(adminValidation.queryAdmins),
+    adminController.queryAdmins
+  );
 
 router
   .route('/:adminId')
-  .get(auth('view:admins'), validate(adminValidation.getAdminById), adminController.getAdminById)
-  .patch(auth('update:admins'), validate(adminValidation.updateAdmin), adminController.updateAdminById)
-  .delete(auth('delete:admins'), validate(adminValidation.deleteAdmin), adminController.deleteAdminById);
+  .get(
+    auth('admin:read'),
+    validate(adminValidation.getAdminById),
+    adminController.getAdminById
+  )
+  .patch(
+    auth('admin:update'),
+    validate(adminValidation.updateAdmin),
+    adminController.updateAdminById
+  )
+  .delete(
+    auth('admin:delete'),
+    validate(adminValidation.deleteAdmin),
+    adminController.deleteAdminById
+  );
 
 router
   .route('/tenant/:tenantId')
-  .get(auth('view:admins'), validate(adminValidation.getAdminsByTenant), adminController.getAdminsByTenant);
+  .get(
+    auth('admin:read'),
+    validate(adminValidation.getAdminsByTenant),
+    adminController.getAdminsByTenant
+  );
 
 router
   .route('/assign-role/:adminId')
-  .patch(auth('update:admins'), validate(adminValidation.assignRole), adminController.assignRole);
+  .patch(
+    auth('admin:assignRole'),
+    validate(adminValidation.assignRole),
+    adminController.assignRole
+  );
 
 router
   .route('/tenant/:tenantId/all')
-  .delete(auth('delete:admins'), validate(adminValidation.deleteAdminsByTenant), adminController.deleteAdminsByTenant);
+  .delete(
+    auth('admin:delete'),
+    validate(adminValidation.deleteAdminsByTenant),
+    adminController.deleteAdminsByTenant
+  );
 
 module.exports = router;

@@ -7,18 +7,14 @@ const ApiError = require('../utils/ApiError');
  * @param {Object} reportBody
  * @returns {Promise<Report>}
  */
-const createReport = async (reportBody) => {
-  return Report.create(reportBody);
-};
+const createReport = async (reportBody) => Report.create(reportBody);
 
 /**
  * Bulk create reports
  * @param {Array} reportArray
  * @returns {Promise<Array<Report>>}
  */
-const bulkImportReports = async (reportArray) => {
-  return Report.insertMany(reportArray);
-};
+const bulkImportReports = async (reportArray) => Report.insertMany(reportArray);
 
 /**
  * Query for reports
@@ -36,9 +32,7 @@ const queryReports = async (filter, options) => {
  * @param {ObjectId} id
  * @returns {Promise<Report>}
  */
-const getReportById = async (id) => {
-  return Report.findById(id);
-};
+const getReportById = async (id) => Report.findById(id);
 
 /**
  * Update report by ID
@@ -74,9 +68,7 @@ const deleteReportById = async (reportId) => {
  * Delete all reports (use with caution)
  * @returns {Promise<{ deletedCount: number }>}
  */
-const deleteAllReports = async () => {
-  return Report.deleteMany({});
-};
+const deleteAllReports = async () => Report.deleteMany({});
 
 module.exports = {
   createReport,

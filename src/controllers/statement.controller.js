@@ -12,7 +12,9 @@ const createStatement = catchAsync(async (req, res) => {
 
 // Bulk import statements
 const bulkImportStatements = catchAsync(async (req, res) => {
-  const statements = await statementService.bulkImportStatements(req.body.statementsArray);
+  const statements = await statementService.bulkImportStatements(
+    req.body.statementsArray
+  );
   res.status(httpStatus.CREATED).json({
     message: `${statements.length} statements successfully imported.`,
     data: statements,
@@ -29,7 +31,9 @@ const getStatements = catchAsync(async (req, res) => {
 
 // Get a single statement by ID
 const getStatement = catchAsync(async (req, res) => {
-  const statement = await statementService.getStatementById(req.params.statementId);
+  const statement = await statementService.getStatementById(
+    req.params.statementId
+  );
   if (!statement) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Statement not found');
   }
@@ -38,7 +42,10 @@ const getStatement = catchAsync(async (req, res) => {
 
 // Update a statement
 const updateStatement = catchAsync(async (req, res) => {
-  const updated = await statementService.updateStatementById(req.params.statementId, req.body);
+  const updated = await statementService.updateStatementById(
+    req.params.statementId,
+    req.body
+  );
   res.send(updated);
 });
 
@@ -50,13 +57,17 @@ const deleteStatement = catchAsync(async (req, res) => {
 
 // Get total payments for a specific node
 const getTotalPaymentsForNode = catchAsync(async (req, res) => {
-  const total = await statementService.getTotalPaymentsForNode(req.params.nodeId);
+  const total = await statementService.getTotalPaymentsForNode(
+    req.params.nodeId
+  );
   res.send({ total });
 });
 
 // Get total payments for a specific collection
 const getTotalPaymentsForCollection = catchAsync(async (req, res) => {
-  const total = await statementService.getTotalPaymentsForCollection(req.params.collectionId);
+  const total = await statementService.getTotalPaymentsForCollection(
+    req.params.collectionId
+  );
   res.send({ total });
 });
 

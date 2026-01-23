@@ -1,8 +1,7 @@
 const mongoose = require('mongoose');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
-
-/****
+/** **
  *✅ Features Recap:
 Stores data in flexible Mixed format.
 Linked to: Datapoint, DatapointConfig, userId, node, tenantId.
@@ -93,7 +92,10 @@ captureSchema.statics.createCapture = async function (body) {
  * @param {Object} filter
  * @returns {Promise<Array>}
  */
-captureSchema.statics.getCapturesByDatapoint = async function (datapointId, filter = {}) {
+captureSchema.statics.getCapturesByDatapoint = async function (
+  datapointId,
+  filter = {}
+) {
   return this.find({ datapoint: datapointId, ...filter });
 };
 

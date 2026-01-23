@@ -10,7 +10,9 @@ async function cleanOldTrashedMessages() {
     folder: 'trash',
     deletedAt: { $lte: THIRTY_DAYS_AGO },
   });
-  console.log(`[InMailJob] Deleted ${result.deletedCount} old trashed messages.`);
+  console.log(
+    `[InMailJob] Deleted ${result.deletedCount} old trashed messages.`
+  );
   return result;
 }
 

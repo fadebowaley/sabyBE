@@ -1,0 +1,5383 @@
+{
+  "timestamp": "2025-12-08T10:02:57.076Z",
+  "permissions": [
+    {
+      "name": "create:admin",
+      "resource": "admin",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:admin",
+      "resource": "admin",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:admin::adminid",
+      "resource": "admin",
+      "action": "view",
+      "path": "/:adminid",
+      "method": "GET"
+    },
+    {
+      "name": "update:admin::adminid",
+      "resource": "admin",
+      "action": "update",
+      "path": "/:adminid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:admin::adminid",
+      "resource": "admin",
+      "action": "delete",
+      "path": "/:adminid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:admin::tenantid",
+      "resource": "admin",
+      "action": "view",
+      "path": "/tenant/:tenantid",
+      "method": "GET"
+    },
+    {
+      "name": "update:admin::adminid",
+      "resource": "admin",
+      "action": "update",
+      "path": "/assign-role/:adminid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:admin:all",
+      "resource": "admin",
+      "action": "delete",
+      "path": "/tenant/:tenantid/all",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:apikey",
+      "resource": "apikey",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "create:apikey",
+      "resource": "apikey",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:apikey::keyid",
+      "resource": "apikey",
+      "action": "view",
+      "path": "/:keyid",
+      "method": "GET"
+    },
+    {
+      "name": "update:apikey::keyid",
+      "resource": "apikey",
+      "action": "update",
+      "path": "/:keyid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:apikey::keyid",
+      "resource": "apikey",
+      "action": "delete",
+      "path": "/:keyid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:apikey:analytics",
+      "resource": "apikey",
+      "action": "view",
+      "path": "/:keyid/analytics",
+      "method": "GET"
+    },
+    {
+      "name": "create:apikey:regenerate",
+      "resource": "apikey",
+      "action": "create",
+      "path": "/:keyid/regenerate",
+      "method": "POST"
+    },
+    {
+      "name": "create:app",
+      "resource": "app",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:app",
+      "resource": "app",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "create:app:bulk-create",
+      "resource": "app",
+      "action": "create",
+      "path": "/bulk-create",
+      "method": "POST"
+    },
+    {
+      "name": "view:app::appid",
+      "resource": "app",
+      "action": "view",
+      "path": "/:appid",
+      "method": "GET"
+    },
+    {
+      "name": "update:app::appid",
+      "resource": "app",
+      "action": "update",
+      "path": "/:appid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:app::appid",
+      "resource": "app",
+      "action": "delete",
+      "path": "/:appid",
+      "method": "DELETE"
+    },
+    {
+      "name": "update:app::appid",
+      "resource": "app",
+      "action": "update",
+      "path": "/assign/:appid",
+      "method": "PATCH"
+    },
+    {
+      "name": "view:app::userid",
+      "resource": "app",
+      "action": "view",
+      "path": "/tenant-or-user/:tenantid/:userid",
+      "method": "GET"
+    },
+    {
+      "name": "update:app::appid",
+      "resource": "app",
+      "action": "update",
+      "path": "/toggle-status/:appid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:app::tenantid",
+      "resource": "app",
+      "action": "delete",
+      "path": "/tenant/:tenantid",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:auth:register",
+      "resource": "auth",
+      "action": "create",
+      "path": "/register",
+      "method": "POST"
+    },
+    {
+      "name": "create:auth:login",
+      "resource": "auth",
+      "action": "create",
+      "path": "/login",
+      "method": "POST"
+    },
+    {
+      "name": "create:auth:logout",
+      "resource": "auth",
+      "action": "create",
+      "path": "/logout",
+      "method": "POST"
+    },
+    {
+      "name": "create:auth:refresh-tokens",
+      "resource": "auth",
+      "action": "create",
+      "path": "/refresh-tokens",
+      "method": "POST"
+    },
+    {
+      "name": "create:auth:forgot-password",
+      "resource": "auth",
+      "action": "create",
+      "path": "/forgot-password",
+      "method": "POST"
+    },
+    {
+      "name": "create:auth:reset-password",
+      "resource": "auth",
+      "action": "create",
+      "path": "/reset-password",
+      "method": "POST"
+    },
+    {
+      "name": "create:auth:send-verification-email",
+      "resource": "auth",
+      "action": "create",
+      "path": "/send-verification-email",
+      "method": "POST"
+    },
+    {
+      "name": "create:auth:verify-email",
+      "resource": "auth",
+      "action": "create",
+      "path": "/verify-email",
+      "method": "POST"
+    },
+    {
+      "name": "create:auth:verify-otp",
+      "resource": "auth",
+      "action": "create",
+      "path": "/verify-otp",
+      "method": "POST"
+    },
+    {
+      "name": "create:auth:resend-otp",
+      "resource": "auth",
+      "action": "create",
+      "path": "/resend-otp",
+      "method": "POST"
+    },
+    {
+      "name": "create:capture",
+      "resource": "capture",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:capture",
+      "resource": "capture",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "create:capture:bulk-create",
+      "resource": "capture",
+      "action": "create",
+      "path": "/bulk-create",
+      "method": "POST"
+    },
+    {
+      "name": "view:capture::captureid",
+      "resource": "capture",
+      "action": "view",
+      "path": "/:captureid",
+      "method": "GET"
+    },
+    {
+      "name": "update:capture::captureid",
+      "resource": "capture",
+      "action": "update",
+      "path": "/:captureid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:capture::captureid",
+      "resource": "capture",
+      "action": "delete",
+      "path": "/:captureid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:capture::datapointid",
+      "resource": "capture",
+      "action": "view",
+      "path": "/datapoint/:datapointid",
+      "method": "GET"
+    },
+    {
+      "name": "delete:capture::tenantid",
+      "resource": "capture",
+      "action": "delete",
+      "path": "/tenant/:tenantid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:capture::datapointid",
+      "resource": "capture",
+      "action": "view",
+      "path": "/export/datapoint/:datapointid",
+      "method": "GET"
+    },
+    {
+      "name": "create:collection",
+      "resource": "collection",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:collection",
+      "resource": "collection",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:collection::collectionid",
+      "resource": "collection",
+      "action": "view",
+      "path": "/:collectionid",
+      "method": "GET"
+    },
+    {
+      "name": "update:collection::collectionid",
+      "resource": "collection",
+      "action": "update",
+      "path": "/:collectionid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:collection::collectionid",
+      "resource": "collection",
+      "action": "delete",
+      "path": "/:collectionid",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:data",
+      "resource": "data",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:data::dataid",
+      "resource": "data",
+      "action": "view",
+      "path": "/:dataid",
+      "method": "GET"
+    },
+    {
+      "name": "update:data::dataid",
+      "resource": "data",
+      "action": "update",
+      "path": "/:dataid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:data::dataid",
+      "resource": "data",
+      "action": "delete",
+      "path": "/:dataid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:data",
+      "resource": "data",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "create:data:import",
+      "resource": "data",
+      "action": "create",
+      "path": "/import",
+      "method": "POST"
+    },
+    {
+      "name": "view:data:export",
+      "resource": "data",
+      "action": "view",
+      "path": "/export",
+      "method": "GET"
+    },
+    {
+      "name": "update:data:public",
+      "resource": "data",
+      "action": "update",
+      "path": "/:dataid/public",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:data:private",
+      "resource": "data",
+      "action": "update",
+      "path": "/:dataid/private",
+      "method": "PATCH"
+    },
+    {
+      "name": "create:department",
+      "resource": "department",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:department",
+      "resource": "department",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:department::departmentid",
+      "resource": "department",
+      "action": "view",
+      "path": "/:departmentid",
+      "method": "GET"
+    },
+    {
+      "name": "update:department::departmentid",
+      "resource": "department",
+      "action": "update",
+      "path": "/:departmentid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:department::departmentid",
+      "resource": "department",
+      "action": "delete",
+      "path": "/:departmentid",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:department:import",
+      "resource": "department",
+      "action": "create",
+      "path": "/import",
+      "method": "POST"
+    },
+    {
+      "name": "view:department:export",
+      "resource": "department",
+      "action": "view",
+      "path": "/export",
+      "method": "GET"
+    },
+    {
+      "name": "view:docs",
+      "resource": "docs",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "create:event",
+      "resource": "event",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:event",
+      "resource": "event",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:event::eventid",
+      "resource": "event",
+      "action": "view",
+      "path": "/:eventid",
+      "method": "GET"
+    },
+    {
+      "name": "update:event::eventid",
+      "resource": "event",
+      "action": "update",
+      "path": "/:eventid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:event::eventid",
+      "resource": "event",
+      "action": "delete",
+      "path": "/:eventid",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:event:import",
+      "resource": "event",
+      "action": "create",
+      "path": "/import",
+      "method": "POST"
+    },
+    {
+      "name": "delete:event:deleteall",
+      "resource": "event",
+      "action": "delete",
+      "path": "/deleteall",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:event:daterange",
+      "resource": "event",
+      "action": "view",
+      "path": "/daterange",
+      "method": "GET"
+    },
+    {
+      "name": "view:event::programid",
+      "resource": "event",
+      "action": "view",
+      "path": "/program/:programid",
+      "method": "GET"
+    },
+    {
+      "name": "create:eventconfig",
+      "resource": "eventconfig",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:eventconfig",
+      "resource": "eventconfig",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:eventconfig::eventconfigid",
+      "resource": "eventconfig",
+      "action": "view",
+      "path": "/:eventconfigid",
+      "method": "GET"
+    },
+    {
+      "name": "update:eventconfig::eventconfigid",
+      "resource": "eventconfig",
+      "action": "update",
+      "path": "/:eventconfigid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:eventconfig::eventconfigid",
+      "resource": "eventconfig",
+      "action": "delete",
+      "path": "/:eventconfigid",
+      "method": "DELETE"
+    },
+    {
+      "name": "delete:eventconfig:deleteall",
+      "resource": "eventconfig",
+      "action": "delete",
+      "path": "/deleteall",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:eventconfig::eventid",
+      "resource": "eventconfig",
+      "action": "view",
+      "path": "/event/:eventid",
+      "method": "GET"
+    },
+    {
+      "name": "create:inmail",
+      "resource": "inmail",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:inmail",
+      "resource": "inmail",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:inmail::inmailid",
+      "resource": "inmail",
+      "action": "view",
+      "path": "/:inmailid",
+      "method": "GET"
+    },
+    {
+      "name": "update:inmail::inmailid",
+      "resource": "inmail",
+      "action": "update",
+      "path": "/:inmailid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:inmail::inmailid",
+      "resource": "inmail",
+      "action": "delete",
+      "path": "/:inmailid",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:inmail:send",
+      "resource": "inmail",
+      "action": "create",
+      "path": "/send",
+      "method": "POST"
+    },
+    {
+      "name": "create:inmail:draft",
+      "resource": "inmail",
+      "action": "create",
+      "path": "/draft",
+      "method": "POST"
+    },
+    {
+      "name": "create:level",
+      "resource": "level",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:level",
+      "resource": "level",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:level:next",
+      "resource": "level",
+      "action": "view",
+      "path": "/next",
+      "method": "GET"
+    },
+    {
+      "name": "view:level:previous",
+      "resource": "level",
+      "action": "view",
+      "path": "/previous",
+      "method": "GET"
+    },
+    {
+      "name": "view:level:hierarchy",
+      "resource": "level",
+      "action": "view",
+      "path": "/hierarchy",
+      "method": "GET"
+    },
+    {
+      "name": "view:level::levelid",
+      "resource": "level",
+      "action": "view",
+      "path": "/:levelid",
+      "method": "GET"
+    },
+    {
+      "name": "update:level::levelid",
+      "resource": "level",
+      "action": "update",
+      "path": "/:levelid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:level::levelid",
+      "resource": "level",
+      "action": "delete",
+      "path": "/:levelid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:level:parent",
+      "resource": "level",
+      "action": "view",
+      "path": "/:levelid/parent",
+      "method": "GET"
+    },
+    {
+      "name": "view:level:children",
+      "resource": "level",
+      "action": "view",
+      "path": "/:levelid/children",
+      "method": "GET"
+    },
+    {
+      "name": "update:level:activate",
+      "resource": "level",
+      "action": "update",
+      "path": "/:levelid/activate",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:level:deactivate",
+      "resource": "level",
+      "action": "update",
+      "path": "/:levelid/deactivate",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:level:move",
+      "resource": "level",
+      "action": "update",
+      "path": "/:levelid/move",
+      "method": "PATCH"
+    },
+    {
+      "name": "create:node",
+      "resource": "node",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:node",
+      "resource": "node",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "create:node:bulk-import",
+      "resource": "node",
+      "action": "create",
+      "path": "/bulk-import",
+      "method": "POST"
+    },
+    {
+      "name": "view:node::nodeid",
+      "resource": "node",
+      "action": "view",
+      "path": "/:nodeid",
+      "method": "GET"
+    },
+    {
+      "name": "update:node::nodeid",
+      "resource": "node",
+      "action": "update",
+      "path": "/:nodeid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:node::nodeid",
+      "resource": "node",
+      "action": "delete",
+      "path": "/:nodeid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:node:type",
+      "resource": "node",
+      "action": "view",
+      "path": "/type",
+      "method": "GET"
+    },
+    {
+      "name": "view:node:parent",
+      "resource": "node",
+      "action": "view",
+      "path": "/:nodeid/parent",
+      "method": "GET"
+    },
+    {
+      "name": "view:node:children",
+      "resource": "node",
+      "action": "view",
+      "path": "/:nodeid/children",
+      "method": "GET"
+    },
+    {
+      "name": "update:node:move",
+      "resource": "node",
+      "action": "update",
+      "path": "/:nodeid/move",
+      "method": "PATCH"
+    },
+    {
+      "name": "view:node:path",
+      "resource": "node",
+      "action": "view",
+      "path": "/:nodeid/path",
+      "method": "GET"
+    },
+    {
+      "name": "update:node:activate",
+      "resource": "node",
+      "action": "update",
+      "path": "/:nodeid/activate",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:node:deactivate",
+      "resource": "node",
+      "action": "update",
+      "path": "/:nodeid/deactivate",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:node:assign-users",
+      "resource": "node",
+      "action": "update",
+      "path": "/:nodeid/assign-users",
+      "method": "PATCH"
+    },
+    {
+      "name": "create:payment",
+      "resource": "payment",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:payment",
+      "resource": "payment",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:payment::paymentid",
+      "resource": "payment",
+      "action": "view",
+      "path": "/:paymentid",
+      "method": "GET"
+    },
+    {
+      "name": "update:payment::paymentid",
+      "resource": "payment",
+      "action": "update",
+      "path": "/:paymentid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:payment::paymentid",
+      "resource": "payment",
+      "action": "delete",
+      "path": "/:paymentid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:payment::reference",
+      "resource": "payment",
+      "action": "view",
+      "path": "/reference/:reference",
+      "method": "GET"
+    },
+    {
+      "name": "view:payment:status",
+      "resource": "payment",
+      "action": "view",
+      "path": "/status",
+      "method": "GET"
+    },
+    {
+      "name": "view:payment::userid",
+      "resource": "payment",
+      "action": "view",
+      "path": "/user/:userid",
+      "method": "GET"
+    },
+    {
+      "name": "update:payment:process",
+      "resource": "payment",
+      "action": "update",
+      "path": "/:paymentid/process",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:payment:complete",
+      "resource": "payment",
+      "action": "update",
+      "path": "/:paymentid/complete",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:payment:cancel",
+      "resource": "payment",
+      "action": "update",
+      "path": "/:paymentid/cancel",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:payment:refund",
+      "resource": "payment",
+      "action": "update",
+      "path": "/:paymentid/refund",
+      "method": "PATCH"
+    },
+    {
+      "name": "view:payment:receipt",
+      "resource": "payment",
+      "action": "view",
+      "path": "/:paymentid/receipt",
+      "method": "GET"
+    },
+    {
+      "name": "create:permission",
+      "resource": "permission",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:permission",
+      "resource": "permission",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:permission::permissionname",
+      "resource": "permission",
+      "action": "view",
+      "path": "/:permissionname",
+      "method": "GET"
+    },
+    {
+      "name": "update:permission::permissionname",
+      "resource": "permission",
+      "action": "update",
+      "path": "/:permissionname",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:permission::permissionname",
+      "resource": "permission",
+      "action": "delete",
+      "path": "/:permissionname",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:permission:bulk",
+      "resource": "permission",
+      "action": "create",
+      "path": "/bulk",
+      "method": "POST"
+    },
+    {
+      "name": "view:postgres:status",
+      "resource": "postgres",
+      "action": "view",
+      "path": "/status",
+      "method": "GET"
+    },
+    {
+      "name": "create:postgres:test-table",
+      "resource": "postgres",
+      "action": "create",
+      "path": "/test-table",
+      "method": "POST"
+    },
+    {
+      "name": "view:postgres:test-data",
+      "resource": "postgres",
+      "action": "view",
+      "path": "/test-data",
+      "method": "GET"
+    },
+    {
+      "name": "delete:postgres:cleanup",
+      "resource": "postgres",
+      "action": "delete",
+      "path": "/cleanup",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:program",
+      "resource": "program",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:program",
+      "resource": "program",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "create:program:bulk-import",
+      "resource": "program",
+      "action": "create",
+      "path": "/bulk-import",
+      "method": "POST"
+    },
+    {
+      "name": "view:program::programid",
+      "resource": "program",
+      "action": "view",
+      "path": "/:programid",
+      "method": "GET"
+    },
+    {
+      "name": "update:program::programid",
+      "resource": "program",
+      "action": "update",
+      "path": "/:programid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:program::programid",
+      "resource": "program",
+      "action": "delete",
+      "path": "/:programid",
+      "method": "DELETE"
+    },
+    {
+      "name": "delete:program:delete-all",
+      "resource": "program",
+      "action": "delete",
+      "path": "/delete-all",
+      "method": "DELETE"
+    },
+    {
+      "name": "update:program:assign",
+      "resource": "program",
+      "action": "update",
+      "path": "/:programid/assign",
+      "method": "PATCH"
+    },
+    {
+      "name": "create:projectform",
+      "resource": "projectform",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:projectform",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectform::tenantid",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/tenant/:tenantid",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectform::userid",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/user/:userid",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectform:search",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/search",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectform:stats",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/stats",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectform::projectid",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/project/:projectid",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectform::projectid",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/public/:projectid",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectform:analytics",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/project/:projectid/analytics",
+      "method": "GET"
+    },
+    {
+      "name": "create:projectform:submit",
+      "resource": "projectform",
+      "action": "create",
+      "path": "/project/:projectid/submit",
+      "method": "POST"
+    },
+    {
+      "name": "view:projectform::projectformid",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/:projectformid",
+      "method": "GET"
+    },
+    {
+      "name": "update:projectform::projectformid",
+      "resource": "projectform",
+      "action": "update",
+      "path": "/:projectformid",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:projectform::projectid",
+      "resource": "projectform",
+      "action": "update",
+      "path": "/project/:projectid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:projectform::projectformid",
+      "resource": "projectform",
+      "action": "delete",
+      "path": "/:projectformid",
+      "method": "DELETE"
+    },
+    {
+      "name": "update:projectform:delete",
+      "resource": "projectform",
+      "action": "update",
+      "path": "/:projectformid/delete",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:projectform:restore",
+      "resource": "projectform",
+      "action": "update",
+      "path": "/:projectformid/restore",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:projectform:publish",
+      "resource": "projectform",
+      "action": "update",
+      "path": "/:projectformid/publish",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:projectform:archive",
+      "resource": "projectform",
+      "action": "update",
+      "path": "/:projectformid/archive",
+      "method": "PATCH"
+    },
+    {
+      "name": "create:projectform:bulk",
+      "resource": "projectform",
+      "action": "create",
+      "path": "/bulk",
+      "method": "POST"
+    },
+    {
+      "name": "create:projectformsubmission",
+      "resource": "projectformsubmission",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:projectformsubmission",
+      "resource": "projectformsubmission",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectformsubmission::projectid",
+      "resource": "projectformsubmission",
+      "action": "view",
+      "path": "/project/:projectid",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectformsubmission::tenantid",
+      "resource": "projectformsubmission",
+      "action": "view",
+      "path": "/tenant/:tenantid",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectformsubmission:stats",
+      "resource": "projectformsubmission",
+      "action": "view",
+      "path": "/project/:projectid/stats",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectformsubmission:export",
+      "resource": "projectformsubmission",
+      "action": "view",
+      "path": "/project/:projectid/export",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectformsubmission::submissionid",
+      "resource": "projectformsubmission",
+      "action": "view",
+      "path": "/:submissionid",
+      "method": "GET"
+    },
+    {
+      "name": "update:projectformsubmission:status",
+      "resource": "projectformsubmission",
+      "action": "update",
+      "path": "/:submissionid/status",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:projectformsubmission::submissionid",
+      "resource": "projectformsubmission",
+      "action": "delete",
+      "path": "/:submissionid",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:report",
+      "resource": "report",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:report",
+      "resource": "report",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "create:report:bulk-import",
+      "resource": "report",
+      "action": "create",
+      "path": "/bulk-import",
+      "method": "POST"
+    },
+    {
+      "name": "view:report::reportid",
+      "resource": "report",
+      "action": "view",
+      "path": "/:reportid",
+      "method": "GET"
+    },
+    {
+      "name": "update:report::reportid",
+      "resource": "report",
+      "action": "update",
+      "path": "/:reportid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:report::reportid",
+      "resource": "report",
+      "action": "delete",
+      "path": "/:reportid",
+      "method": "DELETE"
+    },
+    {
+      "name": "delete:report:delete-all",
+      "resource": "report",
+      "action": "delete",
+      "path": "/delete-all",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:role:templates",
+      "resource": "role",
+      "action": "view",
+      "path": "/templates",
+      "method": "GET"
+    },
+    {
+      "name": "create:role",
+      "resource": "role",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:role",
+      "resource": "role",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "delete:role",
+      "resource": "role",
+      "action": "delete",
+      "path": "/",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:role::roleid",
+      "resource": "role",
+      "action": "view",
+      "path": "/:roleid",
+      "method": "GET"
+    },
+    {
+      "name": "update:role::roleid",
+      "resource": "role",
+      "action": "update",
+      "path": "/:roleid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:role::roleid",
+      "resource": "role",
+      "action": "delete",
+      "path": "/:roleid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:role:permissions",
+      "resource": "role",
+      "action": "view",
+      "path": "/:roleid/permissions",
+      "method": "GET"
+    },
+    {
+      "name": "update:role:permissions",
+      "resource": "role",
+      "action": "update",
+      "path": "/:roleid/permissions",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:role:permissions",
+      "resource": "role",
+      "action": "delete",
+      "path": "/:roleid/permissions",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:role:bulk",
+      "resource": "role",
+      "action": "create",
+      "path": "/bulk",
+      "method": "POST"
+    },
+    {
+      "name": "create:settings",
+      "resource": "settings",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:settings",
+      "resource": "settings",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:settings::settingid",
+      "resource": "settings",
+      "action": "view",
+      "path": "/:settingid",
+      "method": "GET"
+    },
+    {
+      "name": "update:settings::settingid",
+      "resource": "settings",
+      "action": "update",
+      "path": "/:settingid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:settings::settingid",
+      "resource": "settings",
+      "action": "delete",
+      "path": "/:settingid",
+      "method": "DELETE"
+    },
+    {
+      "name": "delete:settings::nodeid",
+      "resource": "settings",
+      "action": "delete",
+      "path": "/node/:nodeid",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:settings:assign",
+      "resource": "settings",
+      "action": "create",
+      "path": "/assign",
+      "method": "POST"
+    },
+    {
+      "name": "create:statement",
+      "resource": "statement",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:statement",
+      "resource": "statement",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:statement::statementid",
+      "resource": "statement",
+      "action": "view",
+      "path": "/:statementid",
+      "method": "GET"
+    },
+    {
+      "name": "update:statement::statementid",
+      "resource": "statement",
+      "action": "update",
+      "path": "/:statementid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:statement::statementid",
+      "resource": "statement",
+      "action": "delete",
+      "path": "/:statementid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:statement::nodeid",
+      "resource": "statement",
+      "action": "view",
+      "path": "/total-payments/node/:nodeid",
+      "method": "GET"
+    },
+    {
+      "name": "view:statement::collectionid",
+      "resource": "statement",
+      "action": "view",
+      "path": "/total-payments/collection/:collectionid",
+      "method": "GET"
+    },
+    {
+      "name": "create:storage:upload",
+      "resource": "storage",
+      "action": "create",
+      "path": "/upload",
+      "method": "POST"
+    },
+    {
+      "name": "create:storage:upload-multiple",
+      "resource": "storage",
+      "action": "create",
+      "path": "/upload-multiple",
+      "method": "POST"
+    },
+    {
+      "name": "view:storage",
+      "resource": "storage",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:storage:search",
+      "resource": "storage",
+      "action": "view",
+      "path": "/search",
+      "method": "GET"
+    },
+    {
+      "name": "view:storage:stats",
+      "resource": "storage",
+      "action": "view",
+      "path": "/stats",
+      "method": "GET"
+    },
+    {
+      "name": "view:storage::fileid",
+      "resource": "storage",
+      "action": "view",
+      "path": "/:fileid",
+      "method": "GET"
+    },
+    {
+      "name": "delete:storage::fileid",
+      "resource": "storage",
+      "action": "delete",
+      "path": "/:fileid",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:storage:share",
+      "resource": "storage",
+      "action": "create",
+      "path": "/:fileid/share",
+      "method": "POST"
+    },
+    {
+      "name": "create:storage:move",
+      "resource": "storage",
+      "action": "create",
+      "path": "/:fileid/move",
+      "method": "POST"
+    },
+    {
+      "name": "create:storage:copy",
+      "resource": "storage",
+      "action": "create",
+      "path": "/:fileid/copy",
+      "method": "POST"
+    },
+    {
+      "name": "view:storage::sharetoken",
+      "resource": "storage",
+      "action": "view",
+      "path": "/shared/:sharetoken",
+      "method": "GET"
+    },
+    {
+      "name": "view:storage:download",
+      "resource": "storage",
+      "action": "view",
+      "path": "/shared/:sharetoken/download",
+      "method": "GET"
+    },
+    {
+      "name": "create:storagefolder",
+      "resource": "storagefolder",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:storagefolder",
+      "resource": "storagefolder",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:storagefolder:root",
+      "resource": "storagefolder",
+      "action": "view",
+      "path": "/root",
+      "method": "GET"
+    },
+    {
+      "name": "view:storagefolder::folderid",
+      "resource": "storagefolder",
+      "action": "view",
+      "path": "/:folderid",
+      "method": "GET"
+    },
+    {
+      "name": "view:storagefolder:contents",
+      "resource": "storagefolder",
+      "action": "view",
+      "path": "/:folderid/contents",
+      "method": "GET"
+    },
+    {
+      "name": "view:storagefolder:hierarchy",
+      "resource": "storagefolder",
+      "action": "view",
+      "path": "/:folderid/hierarchy",
+      "method": "GET"
+    },
+    {
+      "name": "update:storagefolder::folderid",
+      "resource": "storagefolder",
+      "action": "update",
+      "path": "/:folderid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:storagefolder::folderid",
+      "resource": "storagefolder",
+      "action": "delete",
+      "path": "/:folderid",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:storagefolder:move",
+      "resource": "storagefolder",
+      "action": "create",
+      "path": "/:folderid/move",
+      "method": "POST"
+    },
+    {
+      "name": "create:storagefolder:share",
+      "resource": "storagefolder",
+      "action": "create",
+      "path": "/:folderid/share",
+      "method": "POST"
+    },
+    {
+      "name": "view:storagefolder::sharetoken",
+      "resource": "storagefolder",
+      "action": "view",
+      "path": "/shared/:sharetoken",
+      "method": "GET"
+    },
+    {
+      "name": "create:structure",
+      "resource": "structure",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:structure",
+      "resource": "structure",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:structure::structureid",
+      "resource": "structure",
+      "action": "view",
+      "path": "/:structureid",
+      "method": "GET"
+    },
+    {
+      "name": "update:structure::structureid",
+      "resource": "structure",
+      "action": "update",
+      "path": "/:structureid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:structure::structureid",
+      "resource": "structure",
+      "action": "delete",
+      "path": "/:structureid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:submission:activity-log",
+      "resource": "submission",
+      "action": "view",
+      "path": "/activity-log",
+      "method": "GET"
+    },
+    {
+      "name": "view:submission:summary",
+      "resource": "submission",
+      "action": "view",
+      "path": "/activity-log/summary",
+      "method": "GET"
+    },
+    {
+      "name": "create:submission",
+      "resource": "submission",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:submission",
+      "resource": "submission",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:submission::form_id",
+      "resource": "submission",
+      "action": "view",
+      "path": "/:form_id",
+      "method": "GET"
+    },
+    {
+      "name": "delete:submission::form_id",
+      "resource": "submission",
+      "action": "delete",
+      "path": "/:form_id",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:submission:retry",
+      "resource": "submission",
+      "action": "create",
+      "path": "/:id/retry",
+      "method": "POST"
+    },
+    {
+      "name": "create:telegramwebapp:auth",
+      "resource": "telegramwebapp",
+      "action": "create",
+      "path": "/auth",
+      "method": "POST"
+    },
+    {
+      "name": "view:telegramwebapp:projects",
+      "resource": "telegramwebapp",
+      "action": "view",
+      "path": "/projects",
+      "method": "GET"
+    },
+    {
+      "name": "view:telegramwebapp::projectid",
+      "resource": "telegramwebapp",
+      "action": "view",
+      "path": "/form/:projectid",
+      "method": "GET"
+    },
+    {
+      "name": "create:telegramwebapp:submit",
+      "resource": "telegramwebapp",
+      "action": "create",
+      "path": "/submit",
+      "method": "POST"
+    },
+    {
+      "name": "view:telegramwebapp:status",
+      "resource": "telegramwebapp",
+      "action": "view",
+      "path": "/status",
+      "method": "GET"
+    },
+    {
+      "name": "create:user",
+      "resource": "user",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:user",
+      "resource": "user",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:user::userid",
+      "resource": "user",
+      "action": "view",
+      "path": "/:userid",
+      "method": "GET"
+    },
+    {
+      "name": "create:user:bulk-create",
+      "resource": "user",
+      "action": "create",
+      "path": "/bulk-create",
+      "method": "POST"
+    },
+    {
+      "name": "update:user::userid",
+      "resource": "user",
+      "action": "update",
+      "path": "/:userid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:user::userid",
+      "resource": "user",
+      "action": "delete",
+      "path": "/:userid",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:user:restore",
+      "resource": "user",
+      "action": "create",
+      "path": "/restore",
+      "method": "POST"
+    },
+    {
+      "name": "create:user::userid",
+      "resource": "user",
+      "action": "create",
+      "path": "/restore/:userid",
+      "method": "POST"
+    },
+    {
+      "name": "create:user::userid",
+      "resource": "user",
+      "action": "create",
+      "path": "/soft-delete/:userid",
+      "method": "POST"
+    },
+    {
+      "name": "update:user:assign-roles",
+      "resource": "user",
+      "action": "update",
+      "path": "/:id/assign-roles",
+      "method": "PATCH"
+    },
+    {
+      "name": "create:userformsettings",
+      "resource": "userformsettings",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:userformsettings",
+      "resource": "userformsettings",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:userformsettings::settingsid",
+      "resource": "userformsettings",
+      "action": "view",
+      "path": "/:settingsid",
+      "method": "GET"
+    },
+    {
+      "name": "view:userformsettings::userid",
+      "resource": "userformsettings",
+      "action": "view",
+      "path": "/user/:userid",
+      "method": "GET"
+    },
+    {
+      "name": "update:userformsettings::settingsid",
+      "resource": "userformsettings",
+      "action": "update",
+      "path": "/:settingsid",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:userformsettings::userid",
+      "resource": "userformsettings",
+      "action": "update",
+      "path": "/user/:userid",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:userformsettings::userid",
+      "resource": "userformsettings",
+      "action": "update",
+      "path": "/user/:userid",
+      "method": "PUT"
+    },
+    {
+      "name": "delete:userformsettings::settingsid",
+      "resource": "userformsettings",
+      "action": "delete",
+      "path": "/:settingsid",
+      "method": "DELETE"
+    },
+    {
+      "name": "delete:userformsettings::userid",
+      "resource": "userformsettings",
+      "action": "delete",
+      "path": "/user/:userid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:whatsapp:webhook",
+      "resource": "whatsapp",
+      "action": "view",
+      "path": "/webhook",
+      "method": "GET"
+    },
+    {
+      "name": "create:whatsapp:webhook",
+      "resource": "whatsapp",
+      "action": "create",
+      "path": "/webhook",
+      "method": "POST"
+    },
+    {
+      "name": "create:whatsapp:send-message",
+      "resource": "whatsapp",
+      "action": "create",
+      "path": "/send-message",
+      "method": "POST"
+    },
+    {
+      "name": "view:whatsapp:status",
+      "resource": "whatsapp",
+      "action": "view",
+      "path": "/status",
+      "method": "GET"
+    },
+    {
+      "name": "create:whatsapp:restart",
+      "resource": "whatsapp",
+      "action": "create",
+      "path": "/restart",
+      "method": "POST"
+    },
+    {
+      "name": "view:whatsapp:sessions",
+      "resource": "whatsapp",
+      "action": "view",
+      "path": "/sessions",
+      "method": "GET"
+    },
+    {
+      "name": "delete:whatsapp::phonenumber",
+      "resource": "whatsapp",
+      "action": "delete",
+      "path": "/sessions/:phonenumber",
+      "method": "DELETE"
+    },
+    {
+      "name": "all:*",
+      "resource": "*",
+      "action": "all",
+      "path": "/*",
+      "method": "ALL"
+    },
+    {
+      "name": "system:health",
+      "resource": "system",
+      "action": "view",
+      "path": "/health",
+      "method": "GET"
+    },
+    {
+      "name": "view:admin::adminid",
+      "resource": "admin",
+      "action": "view",
+      "path": "/:adminid",
+      "method": "GET"
+    },
+    {
+      "name": "update:admin::adminid",
+      "resource": "admin",
+      "action": "update",
+      "path": "/:adminid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:admin::adminid",
+      "resource": "admin",
+      "action": "delete",
+      "path": "/:adminid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:admin::tenantid",
+      "resource": "admin",
+      "action": "view",
+      "path": "/tenant/:tenantid",
+      "method": "GET"
+    },
+    {
+      "name": "update:admin::adminid",
+      "resource": "admin",
+      "action": "update",
+      "path": "/assign-role/:adminid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:admin:all",
+      "resource": "admin",
+      "action": "delete",
+      "path": "/tenant/:tenantid/all",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:analyticsreport:summary",
+      "resource": "analyticsreport",
+      "action": "view",
+      "path": "/submissions/summary",
+      "method": "GET"
+    },
+    {
+      "name": "view:analyticsreport:by-status",
+      "resource": "analyticsreport",
+      "action": "view",
+      "path": "/submissions/by-status",
+      "method": "GET"
+    },
+    {
+      "name": "view:analyticsreport:by-month",
+      "resource": "analyticsreport",
+      "action": "view",
+      "path": "/submissions/by-month",
+      "method": "GET"
+    },
+    {
+      "name": "view:analyticsreport:rates",
+      "resource": "analyticsreport",
+      "action": "view",
+      "path": "/compliance/rates",
+      "method": "GET"
+    },
+    {
+      "name": "view:analyticsreport:by-node",
+      "resource": "analyticsreport",
+      "action": "view",
+      "path": "/compliance/by-node",
+      "method": "GET"
+    },
+    {
+      "name": "view:analyticsreport:failures",
+      "resource": "analyticsreport",
+      "action": "view",
+      "path": "/validations/failures",
+      "method": "GET"
+    },
+    {
+      "name": "view:analyticsreport:delivery",
+      "resource": "analyticsreport",
+      "action": "view",
+      "path": "/notifications/delivery",
+      "method": "GET"
+    },
+    {
+      "name": "view:analyticsreport:trends",
+      "resource": "analyticsreport",
+      "action": "view",
+      "path": "/activity/trends",
+      "method": "GET"
+    },
+    {
+      "name": "view:analyticsreport:top-nodes",
+      "resource": "analyticsreport",
+      "action": "view",
+      "path": "/performance/top-nodes",
+      "method": "GET"
+    },
+    {
+      "name": "view:analyticsreport:metrics",
+      "resource": "analyticsreport",
+      "action": "view",
+      "path": "/quality/metrics",
+      "method": "GET"
+    },
+    {
+      "name": "view:analyticsreport:overview",
+      "resource": "analyticsreport",
+      "action": "view",
+      "path": "/dashboard/overview",
+      "method": "GET"
+    },
+    {
+      "name": "view:apikey",
+      "resource": "apikey",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "create:apikey",
+      "resource": "apikey",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:apikey::keyid",
+      "resource": "apikey",
+      "action": "view",
+      "path": "/:keyid",
+      "method": "GET"
+    },
+    {
+      "name": "update:apikey::keyid",
+      "resource": "apikey",
+      "action": "update",
+      "path": "/:keyid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:apikey::keyid",
+      "resource": "apikey",
+      "action": "delete",
+      "path": "/:keyid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:apikey:analytics",
+      "resource": "apikey",
+      "action": "view",
+      "path": "/:keyid/analytics",
+      "method": "GET"
+    },
+    {
+      "name": "create:apikey:regenerate",
+      "resource": "apikey",
+      "action": "create",
+      "path": "/:keyid/regenerate",
+      "method": "POST"
+    },
+    {
+      "name": "view:apikeyapproval:pending",
+      "resource": "apikeyapproval",
+      "action": "view",
+      "path": "/pending",
+      "method": "GET"
+    },
+    {
+      "name": "view:apikeyapproval",
+      "resource": "apikeyapproval",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "create:apikeyapproval:approve",
+      "resource": "apikeyapproval",
+      "action": "create",
+      "path": "/:approvalid/approve",
+      "method": "POST"
+    },
+    {
+      "name": "create:apikeyapproval:reject",
+      "resource": "apikeyapproval",
+      "action": "create",
+      "path": "/:approvalid/reject",
+      "method": "POST"
+    },
+    {
+      "name": "view:apikeyapproval:live",
+      "resource": "apikeyapproval",
+      "action": "view",
+      "path": "/production/live",
+      "method": "GET"
+    },
+    {
+      "name": "view:app::appid",
+      "resource": "app",
+      "action": "view",
+      "path": "/:appid",
+      "method": "GET"
+    },
+    {
+      "name": "update:app::appid",
+      "resource": "app",
+      "action": "update",
+      "path": "/:appid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:app::appid",
+      "resource": "app",
+      "action": "delete",
+      "path": "/:appid",
+      "method": "DELETE"
+    },
+    {
+      "name": "update:app::appid",
+      "resource": "app",
+      "action": "update",
+      "path": "/assign/:appid",
+      "method": "PATCH"
+    },
+    {
+      "name": "view:app::userid",
+      "resource": "app",
+      "action": "view",
+      "path": "/tenant-or-user/:tenantid/:userid",
+      "method": "GET"
+    },
+    {
+      "name": "update:app::appid",
+      "resource": "app",
+      "action": "update",
+      "path": "/toggle-status/:appid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:app::tenantid",
+      "resource": "app",
+      "action": "delete",
+      "path": "/tenant/:tenantid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:capture::captureid",
+      "resource": "capture",
+      "action": "view",
+      "path": "/:captureid",
+      "method": "GET"
+    },
+    {
+      "name": "update:capture::captureid",
+      "resource": "capture",
+      "action": "update",
+      "path": "/:captureid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:capture::captureid",
+      "resource": "capture",
+      "action": "delete",
+      "path": "/:captureid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:capture::datapointid",
+      "resource": "capture",
+      "action": "view",
+      "path": "/datapoint/:datapointid",
+      "method": "GET"
+    },
+    {
+      "name": "delete:capture::tenantid",
+      "resource": "capture",
+      "action": "delete",
+      "path": "/tenant/:tenantid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:capture::datapointid",
+      "resource": "capture",
+      "action": "view",
+      "path": "/export/datapoint/:datapointid",
+      "method": "GET"
+    },
+    {
+      "name": "view:collection::collectionid",
+      "resource": "collection",
+      "action": "view",
+      "path": "/:collectionid",
+      "method": "GET"
+    },
+    {
+      "name": "update:collection::collectionid",
+      "resource": "collection",
+      "action": "update",
+      "path": "/:collectionid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:collection::collectionid",
+      "resource": "collection",
+      "action": "delete",
+      "path": "/:collectionid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:compliancereport",
+      "resource": "compliancereport",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:compliancereport:trends",
+      "resource": "compliancereport",
+      "action": "view",
+      "path": "/trends",
+      "method": "GET"
+    },
+    {
+      "name": "view:compliancereport::nodeid",
+      "resource": "compliancereport",
+      "action": "view",
+      "path": "/node/:nodeid",
+      "method": "GET"
+    },
+    {
+      "name": "view:compliancereport::projectid",
+      "resource": "compliancereport",
+      "action": "view",
+      "path": "/project/:projectid",
+      "method": "GET"
+    },
+    {
+      "name": "view:compliancereport::month",
+      "resource": "compliancereport",
+      "action": "view",
+      "path": "/weekly/:month",
+      "method": "GET"
+    },
+    {
+      "name": "view:compliancereport::status",
+      "resource": "compliancereport",
+      "action": "view",
+      "path": "/status/:status",
+      "method": "GET"
+    },
+    {
+      "name": "view:compliancereport::id",
+      "resource": "compliancereport",
+      "action": "view",
+      "path": "/:id",
+      "method": "GET"
+    },
+    {
+      "name": "update:compliancereport::id",
+      "resource": "compliancereport",
+      "action": "update",
+      "path": "/:id",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:compliancereport::id",
+      "resource": "compliancereport",
+      "action": "delete",
+      "path": "/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:compliancereport:mark-event",
+      "resource": "compliancereport",
+      "action": "create",
+      "path": "/:id/mark-event",
+      "method": "POST"
+    },
+    {
+      "name": "create:compliancereport:reset",
+      "resource": "compliancereport",
+      "action": "create",
+      "path": "/:id/reset",
+      "method": "POST"
+    },
+    {
+      "name": "view:data::dataid",
+      "resource": "data",
+      "action": "view",
+      "path": "/:dataid",
+      "method": "GET"
+    },
+    {
+      "name": "update:data::dataid",
+      "resource": "data",
+      "action": "update",
+      "path": "/:dataid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:data::dataid",
+      "resource": "data",
+      "action": "delete",
+      "path": "/:dataid",
+      "method": "DELETE"
+    },
+    {
+      "name": "update:data:public",
+      "resource": "data",
+      "action": "update",
+      "path": "/:dataid/public",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:data:private",
+      "resource": "data",
+      "action": "update",
+      "path": "/:dataid/private",
+      "method": "PATCH"
+    },
+    {
+      "name": "view:department::departmentid",
+      "resource": "department",
+      "action": "view",
+      "path": "/:departmentid",
+      "method": "GET"
+    },
+    {
+      "name": "update:department::departmentid",
+      "resource": "department",
+      "action": "update",
+      "path": "/:departmentid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:department::departmentid",
+      "resource": "department",
+      "action": "delete",
+      "path": "/:departmentid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:event::eventid",
+      "resource": "event",
+      "action": "view",
+      "path": "/:eventid",
+      "method": "GET"
+    },
+    {
+      "name": "update:event::eventid",
+      "resource": "event",
+      "action": "update",
+      "path": "/:eventid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:event::eventid",
+      "resource": "event",
+      "action": "delete",
+      "path": "/:eventid",
+      "method": "DELETE"
+    },
+    {
+      "name": "delete:event:deleteall",
+      "resource": "event",
+      "action": "delete",
+      "path": "/deleteall",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:event:daterange",
+      "resource": "event",
+      "action": "view",
+      "path": "/daterange",
+      "method": "GET"
+    },
+    {
+      "name": "view:event::programid",
+      "resource": "event",
+      "action": "view",
+      "path": "/program/:programid",
+      "method": "GET"
+    },
+    {
+      "name": "create:eventcalendar:generate",
+      "resource": "eventcalendar",
+      "action": "create",
+      "path": "/generate",
+      "method": "POST"
+    },
+    {
+      "name": "create:eventcalendar:validate",
+      "resource": "eventcalendar",
+      "action": "create",
+      "path": "/validate",
+      "method": "POST"
+    },
+    {
+      "name": "view:eventcalendar",
+      "resource": "eventcalendar",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:eventcalendar::month",
+      "resource": "eventcalendar",
+      "action": "view",
+      "path": "/:month",
+      "method": "GET"
+    },
+    {
+      "name": "create:eventcalendar",
+      "resource": "eventcalendar",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "update:eventcalendar::id",
+      "resource": "eventcalendar",
+      "action": "update",
+      "path": "/:id",
+      "method": "PUT"
+    },
+    {
+      "name": "delete:eventcalendar::id",
+      "resource": "eventcalendar",
+      "action": "delete",
+      "path": "/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:eventcompliance:summary",
+      "resource": "eventcompliance",
+      "action": "view",
+      "path": "/summary",
+      "method": "GET"
+    },
+    {
+      "name": "view:eventcompliance:dashboard",
+      "resource": "eventcompliance",
+      "action": "view",
+      "path": "/dashboard",
+      "method": "GET"
+    },
+    {
+      "name": "create:eventcompliance::submissionid",
+      "resource": "eventcompliance",
+      "action": "create",
+      "path": "/recalculate/:submissionid",
+      "method": "POST"
+    },
+    {
+      "name": "create:eventcompliance::submissionid",
+      "resource": "eventcompliance",
+      "action": "create",
+      "path": "/lock/:submissionid",
+      "method": "POST"
+    },
+    {
+      "name": "create:eventcompliance::submissionid",
+      "resource": "eventcompliance",
+      "action": "create",
+      "path": "/unlock/:submissionid",
+      "method": "POST"
+    },
+    {
+      "name": "view:eventcompliance::month",
+      "resource": "eventcompliance",
+      "action": "view",
+      "path": "/report/:nodeid/:month",
+      "method": "GET"
+    },
+    {
+      "name": "view:eventcompliance::nodeid",
+      "resource": "eventcompliance",
+      "action": "view",
+      "path": "/history/:nodeid",
+      "method": "GET"
+    },
+    {
+      "name": "view:eventcompliance::month",
+      "resource": "eventcompliance",
+      "action": "view",
+      "path": "/:nodeid/:month",
+      "method": "GET"
+    },
+    {
+      "name": "create:eventconfig",
+      "resource": "eventconfig",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:eventconfig",
+      "resource": "eventconfig",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:eventconfig::eventconfigid",
+      "resource": "eventconfig",
+      "action": "view",
+      "path": "/:eventconfigid",
+      "method": "GET"
+    },
+    {
+      "name": "update:eventconfig::eventconfigid",
+      "resource": "eventconfig",
+      "action": "update",
+      "path": "/:eventconfigid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:eventconfig::eventconfigid",
+      "resource": "eventconfig",
+      "action": "delete",
+      "path": "/:eventconfigid",
+      "method": "DELETE"
+    },
+    {
+      "name": "delete:eventconfig:deleteall",
+      "resource": "eventconfig",
+      "action": "delete",
+      "path": "/deleteall",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:eventconfig::eventid",
+      "resource": "eventconfig",
+      "action": "view",
+      "path": "/event/:eventid",
+      "method": "GET"
+    },
+    {
+      "name": "view:exportreport:csv",
+      "resource": "exportreport",
+      "action": "view",
+      "path": "/submissions/csv",
+      "method": "GET"
+    },
+    {
+      "name": "view:exportreport:json",
+      "resource": "exportreport",
+      "action": "view",
+      "path": "/submissions/json",
+      "method": "GET"
+    },
+    {
+      "name": "view:exportreport:csv",
+      "resource": "exportreport",
+      "action": "view",
+      "path": "/compliance/csv",
+      "method": "GET"
+    },
+    {
+      "name": "view:exportreport:json",
+      "resource": "exportreport",
+      "action": "view",
+      "path": "/compliance/json",
+      "method": "GET"
+    },
+    {
+      "name": "view:exportreport:csv",
+      "resource": "exportreport",
+      "action": "view",
+      "path": "/validations/csv",
+      "method": "GET"
+    },
+    {
+      "name": "view:exportreport:json",
+      "resource": "exportreport",
+      "action": "view",
+      "path": "/validations/json",
+      "method": "GET"
+    },
+    {
+      "name": "view:exportreport:csv",
+      "resource": "exportreport",
+      "action": "view",
+      "path": "/notifications/csv",
+      "method": "GET"
+    },
+    {
+      "name": "view:exportreport:json",
+      "resource": "exportreport",
+      "action": "view",
+      "path": "/notifications/json",
+      "method": "GET"
+    },
+    {
+      "name": "view:exportreport:csv",
+      "resource": "exportreport",
+      "action": "view",
+      "path": "/activity-logs/csv",
+      "method": "GET"
+    },
+    {
+      "name": "view:exportreport:json",
+      "resource": "exportreport",
+      "action": "view",
+      "path": "/activity-logs/json",
+      "method": "GET"
+    },
+    {
+      "name": "view:exportreport:csv",
+      "resource": "exportreport",
+      "action": "view",
+      "path": "/combined/csv",
+      "method": "GET"
+    },
+    {
+      "name": "view:exportreport:json",
+      "resource": "exportreport",
+      "action": "view",
+      "path": "/combined/json",
+      "method": "GET"
+    },
+    {
+      "name": "view:exportreport:stats",
+      "resource": "exportreport",
+      "action": "view",
+      "path": "/stats",
+      "method": "GET"
+    },
+    {
+      "name": "view:inmail:count",
+      "resource": "inmail",
+      "action": "view",
+      "path": "/count",
+      "method": "GET"
+    },
+    {
+      "name": "update:inmail:read",
+      "resource": "inmail",
+      "action": "update",
+      "path": "/:inmailid/read",
+      "method": "PATCH"
+    },
+    {
+      "name": "view:inmail::inmailid",
+      "resource": "inmail",
+      "action": "view",
+      "path": "/:inmailid",
+      "method": "GET"
+    },
+    {
+      "name": "update:inmail::inmailid",
+      "resource": "inmail",
+      "action": "update",
+      "path": "/:inmailid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:inmail::inmailid",
+      "resource": "inmail",
+      "action": "delete",
+      "path": "/:inmailid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:level::levelid",
+      "resource": "level",
+      "action": "view",
+      "path": "/:levelid",
+      "method": "GET"
+    },
+    {
+      "name": "update:level::levelid",
+      "resource": "level",
+      "action": "update",
+      "path": "/:levelid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:level::levelid",
+      "resource": "level",
+      "action": "delete",
+      "path": "/:levelid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:level:parent",
+      "resource": "level",
+      "action": "view",
+      "path": "/:levelid/parent",
+      "method": "GET"
+    },
+    {
+      "name": "view:level:children",
+      "resource": "level",
+      "action": "view",
+      "path": "/:levelid/children",
+      "method": "GET"
+    },
+    {
+      "name": "update:level:activate",
+      "resource": "level",
+      "action": "update",
+      "path": "/:levelid/activate",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:level:deactivate",
+      "resource": "level",
+      "action": "update",
+      "path": "/:levelid/deactivate",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:level:move",
+      "resource": "level",
+      "action": "update",
+      "path": "/:levelid/move",
+      "method": "PATCH"
+    },
+    {
+      "name": "view:node::nodeid",
+      "resource": "node",
+      "action": "view",
+      "path": "/:nodeid",
+      "method": "GET"
+    },
+    {
+      "name": "update:node::nodeid",
+      "resource": "node",
+      "action": "update",
+      "path": "/:nodeid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:node::nodeid",
+      "resource": "node",
+      "action": "delete",
+      "path": "/:nodeid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:node:parent",
+      "resource": "node",
+      "action": "view",
+      "path": "/:nodeid/parent",
+      "method": "GET"
+    },
+    {
+      "name": "view:node:children",
+      "resource": "node",
+      "action": "view",
+      "path": "/:nodeid/children",
+      "method": "GET"
+    },
+    {
+      "name": "update:node:move",
+      "resource": "node",
+      "action": "update",
+      "path": "/:nodeid/move",
+      "method": "PATCH"
+    },
+    {
+      "name": "view:node:path",
+      "resource": "node",
+      "action": "view",
+      "path": "/:nodeid/path",
+      "method": "GET"
+    },
+    {
+      "name": "update:node:activate",
+      "resource": "node",
+      "action": "update",
+      "path": "/:nodeid/activate",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:node:deactivate",
+      "resource": "node",
+      "action": "update",
+      "path": "/:nodeid/deactivate",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:node:assign-users",
+      "resource": "node",
+      "action": "update",
+      "path": "/:nodeid/assign-users",
+      "method": "PATCH"
+    },
+    {
+      "name": "create:nodeprofile:upsert",
+      "resource": "nodeprofile",
+      "action": "create",
+      "path": "/upsert",
+      "method": "POST"
+    },
+    {
+      "name": "create:nodeprofile",
+      "resource": "nodeprofile",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:nodeprofile::nodeid",
+      "resource": "nodeprofile",
+      "action": "view",
+      "path": "/node/:nodeid",
+      "method": "GET"
+    },
+    {
+      "name": "view:nodeprofile::profileid",
+      "resource": "nodeprofile",
+      "action": "view",
+      "path": "/:profileid",
+      "method": "GET"
+    },
+    {
+      "name": "update:nodeprofile::profileid",
+      "resource": "nodeprofile",
+      "action": "update",
+      "path": "/:profileid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:nodeprofile::profileid",
+      "resource": "nodeprofile",
+      "action": "delete",
+      "path": "/:profileid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:notificationreport",
+      "resource": "notificationreport",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:notificationreport:pending",
+      "resource": "notificationreport",
+      "action": "view",
+      "path": "/pending",
+      "method": "GET"
+    },
+    {
+      "name": "view:notificationreport:failed",
+      "resource": "notificationreport",
+      "action": "view",
+      "path": "/failed",
+      "method": "GET"
+    },
+    {
+      "name": "view:notificationreport:stats",
+      "resource": "notificationreport",
+      "action": "view",
+      "path": "/stats",
+      "method": "GET"
+    },
+    {
+      "name": "view:notificationreport::node_id",
+      "resource": "notificationreport",
+      "action": "view",
+      "path": "/history/:node_id",
+      "method": "GET"
+    },
+    {
+      "name": "view:notificationreport::type",
+      "resource": "notificationreport",
+      "action": "view",
+      "path": "/by-type/:type",
+      "method": "GET"
+    },
+    {
+      "name": "create:notificationreport:bulk-retry",
+      "resource": "notificationreport",
+      "action": "create",
+      "path": "/bulk-retry",
+      "method": "POST"
+    },
+    {
+      "name": "create:notificationreport:cleanup",
+      "resource": "notificationreport",
+      "action": "create",
+      "path": "/cleanup",
+      "method": "POST"
+    },
+    {
+      "name": "view:notificationreport::id",
+      "resource": "notificationreport",
+      "action": "view",
+      "path": "/:id",
+      "method": "GET"
+    },
+    {
+      "name": "delete:notificationreport::id",
+      "resource": "notificationreport",
+      "action": "delete",
+      "path": "/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:notificationreport:retry",
+      "resource": "notificationreport",
+      "action": "create",
+      "path": "/:id/retry",
+      "method": "POST"
+    },
+    {
+      "name": "create:notificationreport:cancel",
+      "resource": "notificationreport",
+      "action": "create",
+      "path": "/:id/cancel",
+      "method": "POST"
+    },
+    {
+      "name": "view:payment::paymentid",
+      "resource": "payment",
+      "action": "view",
+      "path": "/:paymentid",
+      "method": "GET"
+    },
+    {
+      "name": "update:payment::paymentid",
+      "resource": "payment",
+      "action": "update",
+      "path": "/:paymentid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:payment::paymentid",
+      "resource": "payment",
+      "action": "delete",
+      "path": "/:paymentid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:payment::userid",
+      "resource": "payment",
+      "action": "view",
+      "path": "/user/:userid",
+      "method": "GET"
+    },
+    {
+      "name": "update:payment:process",
+      "resource": "payment",
+      "action": "update",
+      "path": "/:paymentid/process",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:payment:complete",
+      "resource": "payment",
+      "action": "update",
+      "path": "/:paymentid/complete",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:payment:cancel",
+      "resource": "payment",
+      "action": "update",
+      "path": "/:paymentid/cancel",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:payment:refund",
+      "resource": "payment",
+      "action": "update",
+      "path": "/:paymentid/refund",
+      "method": "PATCH"
+    },
+    {
+      "name": "view:payment:receipt",
+      "resource": "payment",
+      "action": "view",
+      "path": "/:paymentid/receipt",
+      "method": "GET"
+    },
+    {
+      "name": "view:permission::permissionname",
+      "resource": "permission",
+      "action": "view",
+      "path": "/:permissionname",
+      "method": "GET"
+    },
+    {
+      "name": "update:permission::permissionname",
+      "resource": "permission",
+      "action": "update",
+      "path": "/:permissionname",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:permission::permissionname",
+      "resource": "permission",
+      "action": "delete",
+      "path": "/:permissionname",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:permsubmission:validate",
+      "resource": "permsubmission",
+      "action": "create",
+      "path": "/validate",
+      "method": "POST"
+    },
+    {
+      "name": "view:permsubmission:summary",
+      "resource": "permsubmission",
+      "action": "view",
+      "path": "/compliance/summary",
+      "method": "GET"
+    },
+    {
+      "name": "create:permsubmission",
+      "resource": "permsubmission",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:permsubmission",
+      "resource": "permsubmission",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "create:permsubmission:lock",
+      "resource": "permsubmission",
+      "action": "create",
+      "path": "/:id/lock",
+      "method": "POST"
+    },
+    {
+      "name": "create:permsubmission:unlock",
+      "resource": "permsubmission",
+      "action": "create",
+      "path": "/:id/unlock",
+      "method": "POST"
+    },
+    {
+      "name": "delete:permsubmission::id",
+      "resource": "permsubmission",
+      "action": "delete",
+      "path": "/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:permsubmission::month",
+      "resource": "permsubmission",
+      "action": "view",
+      "path": "/:nodeid/:month",
+      "method": "GET"
+    },
+    {
+      "name": "view:program::programid",
+      "resource": "program",
+      "action": "view",
+      "path": "/:programid",
+      "method": "GET"
+    },
+    {
+      "name": "update:program::programid",
+      "resource": "program",
+      "action": "update",
+      "path": "/:programid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:program::programid",
+      "resource": "program",
+      "action": "delete",
+      "path": "/:programid",
+      "method": "DELETE"
+    },
+    {
+      "name": "update:program:assign",
+      "resource": "program",
+      "action": "update",
+      "path": "/:programid/assign",
+      "method": "PATCH"
+    },
+    {
+      "name": "create:projectform",
+      "resource": "projectform",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:projectform",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectform::tenantid",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/tenant/:tenantid",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectform::userid",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/user/:userid",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectform:search",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/search",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectform:stats",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/stats",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectform::projectid",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/project/:projectid",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectform::projectid",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/public/:projectid",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectform:analytics",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/project/:projectid/analytics",
+      "method": "GET"
+    },
+    {
+      "name": "create:projectform:submit",
+      "resource": "projectform",
+      "action": "create",
+      "path": "/project/:projectid/submit",
+      "method": "POST"
+    },
+    {
+      "name": "view:projectform::projectformid",
+      "resource": "projectform",
+      "action": "view",
+      "path": "/:projectformid",
+      "method": "GET"
+    },
+    {
+      "name": "update:projectform::projectformid",
+      "resource": "projectform",
+      "action": "update",
+      "path": "/:projectformid",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:projectform::projectid",
+      "resource": "projectform",
+      "action": "update",
+      "path": "/project/:projectid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:projectform::projectformid",
+      "resource": "projectform",
+      "action": "delete",
+      "path": "/:projectformid",
+      "method": "DELETE"
+    },
+    {
+      "name": "update:projectform:delete",
+      "resource": "projectform",
+      "action": "update",
+      "path": "/:projectformid/delete",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:projectform:restore",
+      "resource": "projectform",
+      "action": "update",
+      "path": "/:projectformid/restore",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:projectform:publish",
+      "resource": "projectform",
+      "action": "update",
+      "path": "/:projectformid/publish",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:projectform:archive",
+      "resource": "projectform",
+      "action": "update",
+      "path": "/:projectformid/archive",
+      "method": "PATCH"
+    },
+    {
+      "name": "create:projectform:bulk",
+      "resource": "projectform",
+      "action": "create",
+      "path": "/bulk",
+      "method": "POST"
+    },
+    {
+      "name": "create:projectformsubmission",
+      "resource": "projectformsubmission",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:projectformsubmission",
+      "resource": "projectformsubmission",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectformsubmission::projectid",
+      "resource": "projectformsubmission",
+      "action": "view",
+      "path": "/project/:projectid",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectformsubmission::tenantid",
+      "resource": "projectformsubmission",
+      "action": "view",
+      "path": "/tenant/:tenantid",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectformsubmission:stats",
+      "resource": "projectformsubmission",
+      "action": "view",
+      "path": "/project/:projectid/stats",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectformsubmission:export",
+      "resource": "projectformsubmission",
+      "action": "view",
+      "path": "/project/:projectid/export",
+      "method": "GET"
+    },
+    {
+      "name": "view:projectformsubmission::submissionid",
+      "resource": "projectformsubmission",
+      "action": "view",
+      "path": "/:submissionid",
+      "method": "GET"
+    },
+    {
+      "name": "update:projectformsubmission:status",
+      "resource": "projectformsubmission",
+      "action": "update",
+      "path": "/:submissionid/status",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:projectformsubmission::submissionid",
+      "resource": "projectformsubmission",
+      "action": "delete",
+      "path": "/:submissionid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:report::reportid",
+      "resource": "report",
+      "action": "view",
+      "path": "/:reportid",
+      "method": "GET"
+    },
+    {
+      "name": "update:report::reportid",
+      "resource": "report",
+      "action": "update",
+      "path": "/:reportid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:report::reportid",
+      "resource": "report",
+      "action": "delete",
+      "path": "/:reportid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:role::roleid",
+      "resource": "role",
+      "action": "view",
+      "path": "/:roleid",
+      "method": "GET"
+    },
+    {
+      "name": "update:role::roleid",
+      "resource": "role",
+      "action": "update",
+      "path": "/:roleid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:role::roleid",
+      "resource": "role",
+      "action": "delete",
+      "path": "/:roleid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:role:permissions",
+      "resource": "role",
+      "action": "view",
+      "path": "/:roleid/permissions",
+      "method": "GET"
+    },
+    {
+      "name": "update:role:permissions",
+      "resource": "role",
+      "action": "update",
+      "path": "/:roleid/permissions",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:role:permissions",
+      "resource": "role",
+      "action": "delete",
+      "path": "/:roleid/permissions",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:settings::settingid",
+      "resource": "settings",
+      "action": "view",
+      "path": "/:settingid",
+      "method": "GET"
+    },
+    {
+      "name": "update:settings::settingid",
+      "resource": "settings",
+      "action": "update",
+      "path": "/:settingid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:settings::settingid",
+      "resource": "settings",
+      "action": "delete",
+      "path": "/:settingid",
+      "method": "DELETE"
+    },
+    {
+      "name": "delete:settings::nodeid",
+      "resource": "settings",
+      "action": "delete",
+      "path": "/node/:nodeid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:statement::statementid",
+      "resource": "statement",
+      "action": "view",
+      "path": "/:statementid",
+      "method": "GET"
+    },
+    {
+      "name": "update:statement::statementid",
+      "resource": "statement",
+      "action": "update",
+      "path": "/:statementid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:statement::statementid",
+      "resource": "statement",
+      "action": "delete",
+      "path": "/:statementid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:statement::nodeid",
+      "resource": "statement",
+      "action": "view",
+      "path": "/total-payments/node/:nodeid",
+      "method": "GET"
+    },
+    {
+      "name": "view:statement::collectionid",
+      "resource": "statement",
+      "action": "view",
+      "path": "/total-payments/collection/:collectionid",
+      "method": "GET"
+    },
+    {
+      "name": "view:storage::fileid",
+      "resource": "storage",
+      "action": "view",
+      "path": "/:fileid",
+      "method": "GET"
+    },
+    {
+      "name": "delete:storage::fileid",
+      "resource": "storage",
+      "action": "delete",
+      "path": "/:fileid",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:storage:share",
+      "resource": "storage",
+      "action": "create",
+      "path": "/:fileid/share",
+      "method": "POST"
+    },
+    {
+      "name": "create:storage:move",
+      "resource": "storage",
+      "action": "create",
+      "path": "/:fileid/move",
+      "method": "POST"
+    },
+    {
+      "name": "create:storage:copy",
+      "resource": "storage",
+      "action": "create",
+      "path": "/:fileid/copy",
+      "method": "POST"
+    },
+    {
+      "name": "view:storage::sharetoken",
+      "resource": "storage",
+      "action": "view",
+      "path": "/shared/:sharetoken",
+      "method": "GET"
+    },
+    {
+      "name": "view:storage:download",
+      "resource": "storage",
+      "action": "view",
+      "path": "/shared/:sharetoken/download",
+      "method": "GET"
+    },
+    {
+      "name": "create:storagefolder",
+      "resource": "storagefolder",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:storagefolder",
+      "resource": "storagefolder",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:storagefolder:root",
+      "resource": "storagefolder",
+      "action": "view",
+      "path": "/root",
+      "method": "GET"
+    },
+    {
+      "name": "view:storagefolder::folderid",
+      "resource": "storagefolder",
+      "action": "view",
+      "path": "/:folderid",
+      "method": "GET"
+    },
+    {
+      "name": "view:storagefolder:contents",
+      "resource": "storagefolder",
+      "action": "view",
+      "path": "/:folderid/contents",
+      "method": "GET"
+    },
+    {
+      "name": "view:storagefolder:hierarchy",
+      "resource": "storagefolder",
+      "action": "view",
+      "path": "/:folderid/hierarchy",
+      "method": "GET"
+    },
+    {
+      "name": "update:storagefolder::folderid",
+      "resource": "storagefolder",
+      "action": "update",
+      "path": "/:folderid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:storagefolder::folderid",
+      "resource": "storagefolder",
+      "action": "delete",
+      "path": "/:folderid",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:storagefolder:move",
+      "resource": "storagefolder",
+      "action": "create",
+      "path": "/:folderid/move",
+      "method": "POST"
+    },
+    {
+      "name": "create:storagefolder:share",
+      "resource": "storagefolder",
+      "action": "create",
+      "path": "/:folderid/share",
+      "method": "POST"
+    },
+    {
+      "name": "view:storagefolder::sharetoken",
+      "resource": "storagefolder",
+      "action": "view",
+      "path": "/shared/:sharetoken",
+      "method": "GET"
+    },
+    {
+      "name": "view:structure::structureid",
+      "resource": "structure",
+      "action": "view",
+      "path": "/:structureid",
+      "method": "GET"
+    },
+    {
+      "name": "update:structure::structureid",
+      "resource": "structure",
+      "action": "update",
+      "path": "/:structureid",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:structure::structureid",
+      "resource": "structure",
+      "action": "delete",
+      "path": "/:structureid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:submissionreport",
+      "resource": "submissionreport",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:submissionreport:stats",
+      "resource": "submissionreport",
+      "action": "view",
+      "path": "/stats",
+      "method": "GET"
+    },
+    {
+      "name": "view:submissionreport:locked",
+      "resource": "submissionreport",
+      "action": "view",
+      "path": "/locked",
+      "method": "GET"
+    },
+    {
+      "name": "view:submissionreport::month",
+      "resource": "submissionreport",
+      "action": "view",
+      "path": "/compliance/:month",
+      "method": "GET"
+    },
+    {
+      "name": "view:submissionreport::nodeid",
+      "resource": "submissionreport",
+      "action": "view",
+      "path": "/node/:nodeid",
+      "method": "GET"
+    },
+    {
+      "name": "view:submissionreport::month",
+      "resource": "submissionreport",
+      "action": "view",
+      "path": "/monthly/:month",
+      "method": "GET"
+    },
+    {
+      "name": "view:submissionreport::month",
+      "resource": "submissionreport",
+      "action": "view",
+      "path": "/incomplete/:month",
+      "method": "GET"
+    },
+    {
+      "name": "view:submissionreport::id",
+      "resource": "submissionreport",
+      "action": "view",
+      "path": "/:id",
+      "method": "GET"
+    },
+    {
+      "name": "update:submissionreport::id",
+      "resource": "submissionreport",
+      "action": "update",
+      "path": "/:id",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:submissionreport::id",
+      "resource": "submissionreport",
+      "action": "delete",
+      "path": "/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "update:submissionreport:status",
+      "resource": "submissionreport",
+      "action": "update",
+      "path": "/:id/status",
+      "method": "PATCH"
+    },
+    {
+      "name": "create:submissionreport:lock",
+      "resource": "submissionreport",
+      "action": "create",
+      "path": "/:id/lock",
+      "method": "POST"
+    },
+    {
+      "name": "create:submissionreport:unlock",
+      "resource": "submissionreport",
+      "action": "create",
+      "path": "/:id/unlock",
+      "method": "POST"
+    },
+    {
+      "name": "create:submissionreport:bulk-delete",
+      "resource": "submissionreport",
+      "action": "create",
+      "path": "/bulk-delete",
+      "method": "POST"
+    },
+    {
+      "name": "create:submissionreport:bulk-update-status",
+      "resource": "submissionreport",
+      "action": "create",
+      "path": "/bulk-update-status",
+      "method": "POST"
+    },
+    {
+      "name": "create:submissionreport:bulk-lock",
+      "resource": "submissionreport",
+      "action": "create",
+      "path": "/bulk-lock",
+      "method": "POST"
+    },
+    {
+      "name": "create:submissionreport:bulk-update-compliance",
+      "resource": "submissionreport",
+      "action": "create",
+      "path": "/bulk-update-compliance",
+      "method": "POST"
+    },
+    {
+      "name": "create:submissionreport:bulk-archive",
+      "resource": "submissionreport",
+      "action": "create",
+      "path": "/bulk-archive",
+      "method": "POST"
+    },
+    {
+      "name": "create:submissionreport:bulk-delete-advanced",
+      "resource": "submissionreport",
+      "action": "create",
+      "path": "/bulk-delete-advanced",
+      "method": "POST"
+    },
+    {
+      "name": "create:submissionreport:bulk-update-metadata",
+      "resource": "submissionreport",
+      "action": "create",
+      "path": "/bulk-update-metadata",
+      "method": "POST"
+    },
+    {
+      "name": "create:telegramwebapp:auth",
+      "resource": "telegramwebapp",
+      "action": "create",
+      "path": "/auth",
+      "method": "POST"
+    },
+    {
+      "name": "view:telegramwebapp:projects",
+      "resource": "telegramwebapp",
+      "action": "view",
+      "path": "/projects",
+      "method": "GET"
+    },
+    {
+      "name": "view:telegramwebapp::projectid",
+      "resource": "telegramwebapp",
+      "action": "view",
+      "path": "/form/:projectid",
+      "method": "GET"
+    },
+    {
+      "name": "create:telegramwebapp:submit",
+      "resource": "telegramwebapp",
+      "action": "create",
+      "path": "/submit",
+      "method": "POST"
+    },
+    {
+      "name": "view:telegramwebapp:status",
+      "resource": "telegramwebapp",
+      "action": "view",
+      "path": "/status",
+      "method": "GET"
+    },
+    {
+      "name": "view:trendanalysis:timeline",
+      "resource": "trendanalysis",
+      "action": "view",
+      "path": "/submissions/timeline",
+      "method": "GET"
+    },
+    {
+      "name": "view:trendanalysis:timeline",
+      "resource": "trendanalysis",
+      "action": "view",
+      "path": "/compliance/timeline",
+      "method": "GET"
+    },
+    {
+      "name": "view:trendanalysis:timeline",
+      "resource": "trendanalysis",
+      "action": "view",
+      "path": "/validations/timeline",
+      "method": "GET"
+    },
+    {
+      "name": "view:trendanalysis:patterns",
+      "resource": "trendanalysis",
+      "action": "view",
+      "path": "/seasonal/patterns",
+      "method": "GET"
+    },
+    {
+      "name": "view:trendanalysis:metrics",
+      "resource": "trendanalysis",
+      "action": "view",
+      "path": "/growth/metrics",
+      "method": "GET"
+    },
+    {
+      "name": "view:trendanalysis:insights",
+      "resource": "trendanalysis",
+      "action": "view",
+      "path": "/predictive/insights",
+      "method": "GET"
+    },
+    {
+      "name": "view:unifiedsubmission:activity-log",
+      "resource": "unifiedsubmission",
+      "action": "view",
+      "path": "/activity-log",
+      "method": "GET"
+    },
+    {
+      "name": "view:unifiedsubmission:summary",
+      "resource": "unifiedsubmission",
+      "action": "view",
+      "path": "/activity-log/summary",
+      "method": "GET"
+    },
+    {
+      "name": "view:unifiedsubmission:recent",
+      "resource": "unifiedsubmission",
+      "action": "view",
+      "path": "/activity-log/recent",
+      "method": "GET"
+    },
+    {
+      "name": "view:unifiedsubmission::user_id",
+      "resource": "unifiedsubmission",
+      "action": "view",
+      "path": "/activity-log/user/:user_id",
+      "method": "GET"
+    },
+    {
+      "name": "view:unifiedsubmission::action",
+      "resource": "unifiedsubmission",
+      "action": "view",
+      "path": "/activity-log/action/:action",
+      "method": "GET"
+    },
+    {
+      "name": "view:unifiedsubmission::job_id",
+      "resource": "unifiedsubmission",
+      "action": "view",
+      "path": "/activity-log/job/:job_id",
+      "method": "GET"
+    },
+    {
+      "name": "update:unifiedsubmission::id",
+      "resource": "unifiedsubmission",
+      "action": "update",
+      "path": "/activity-log/:id",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:unifiedsubmission::id",
+      "resource": "unifiedsubmission",
+      "action": "delete",
+      "path": "/activity-log/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:unifiedsubmission:bulk-delete",
+      "resource": "unifiedsubmission",
+      "action": "create",
+      "path": "/activity-log/bulk-delete",
+      "method": "POST"
+    },
+    {
+      "name": "create:unifiedsubmission",
+      "resource": "unifiedsubmission",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:unifiedsubmission",
+      "resource": "unifiedsubmission",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "create:unifiedsubmission:retry",
+      "resource": "unifiedsubmission",
+      "action": "create",
+      "path": "/:id/retry",
+      "method": "POST"
+    },
+    {
+      "name": "view:unifiedsubmission::id",
+      "resource": "unifiedsubmission",
+      "action": "view",
+      "path": "/:id",
+      "method": "GET"
+    },
+    {
+      "name": "create:user:saby",
+      "resource": "user",
+      "action": "create",
+      "path": "/saby",
+      "method": "POST"
+    },
+    {
+      "name": "view:user::userid",
+      "resource": "user",
+      "action": "view",
+      "path": "/:userid",
+      "method": "GET"
+    },
+    {
+      "name": "update:user::userid",
+      "resource": "user",
+      "action": "update",
+      "path": "/:userid",
+      "method": "PATCH"
+    },
+    {
+      "name": "view:user:roles",
+      "resource": "user",
+      "action": "view",
+      "path": "/:userid/roles",
+      "method": "GET"
+    },
+    {
+      "name": "view:user:nodes",
+      "resource": "user",
+      "action": "view",
+      "path": "/:userid/nodes",
+      "method": "GET"
+    },
+    {
+      "name": "delete:user::userid",
+      "resource": "user",
+      "action": "delete",
+      "path": "/:userid",
+      "method": "DELETE"
+    },
+    {
+      "name": "create:user::userid",
+      "resource": "user",
+      "action": "create",
+      "path": "/restore/:userid",
+      "method": "POST"
+    },
+    {
+      "name": "create:user::userid",
+      "resource": "user",
+      "action": "create",
+      "path": "/soft-delete/:userid",
+      "method": "POST"
+    },
+    {
+      "name": "create:userformsettings",
+      "resource": "userformsettings",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:userformsettings",
+      "resource": "userformsettings",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:userformsettings::settingsid",
+      "resource": "userformsettings",
+      "action": "view",
+      "path": "/:settingsid",
+      "method": "GET"
+    },
+    {
+      "name": "view:userformsettings::userid",
+      "resource": "userformsettings",
+      "action": "view",
+      "path": "/user/:userid",
+      "method": "GET"
+    },
+    {
+      "name": "update:userformsettings::settingsid",
+      "resource": "userformsettings",
+      "action": "update",
+      "path": "/:settingsid",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:userformsettings::userid",
+      "resource": "userformsettings",
+      "action": "update",
+      "path": "/user/:userid",
+      "method": "PATCH"
+    },
+    {
+      "name": "update:userformsettings::userid",
+      "resource": "userformsettings",
+      "action": "update",
+      "path": "/user/:userid",
+      "method": "PUT"
+    },
+    {
+      "name": "delete:userformsettings::settingsid",
+      "resource": "userformsettings",
+      "action": "delete",
+      "path": "/:settingsid",
+      "method": "DELETE"
+    },
+    {
+      "name": "delete:userformsettings::userid",
+      "resource": "userformsettings",
+      "action": "delete",
+      "path": "/user/:userid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:userprofile::userid",
+      "resource": "userprofile",
+      "action": "view",
+      "path": "/:userid",
+      "method": "GET"
+    },
+    {
+      "name": "update:userprofile::userid",
+      "resource": "userprofile",
+      "action": "update",
+      "path": "/:userid",
+      "method": "PUT"
+    },
+    {
+      "name": "delete:userprofile::userid",
+      "resource": "userprofile",
+      "action": "delete",
+      "path": "/:userid",
+      "method": "DELETE"
+    },
+    {
+      "name": "view:validationreport",
+      "resource": "validationreport",
+      "action": "view",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "view:validationreport:stats",
+      "resource": "validationreport",
+      "action": "view",
+      "path": "/stats",
+      "method": "GET"
+    },
+    {
+      "name": "view:validationreport:failed",
+      "resource": "validationreport",
+      "action": "view",
+      "path": "/failed",
+      "method": "GET"
+    },
+    {
+      "name": "view:validationreport:errors",
+      "resource": "validationreport",
+      "action": "view",
+      "path": "/errors",
+      "method": "GET"
+    },
+    {
+      "name": "view:validationreport::id",
+      "resource": "validationreport",
+      "action": "view",
+      "path": "/submission/:id",
+      "method": "GET"
+    },
+    {
+      "name": "view:validationreport::id",
+      "resource": "validationreport",
+      "action": "view",
+      "path": "/:id",
+      "method": "GET"
+    },
+    {
+      "name": "delete:validationreport::id",
+      "resource": "validationreport",
+      "action": "delete",
+      "path": "/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "update:validationreport:resolve",
+      "resource": "validationreport",
+      "action": "update",
+      "path": "/:id/resolve",
+      "method": "PATCH"
+    },
+    {
+      "name": "create:validationreport:bulk-resolve",
+      "resource": "validationreport",
+      "action": "create",
+      "path": "/bulk-resolve",
+      "method": "POST"
+    },
+    {
+      "name": "create:waitlist",
+      "resource": "waitlist",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "view:waitlist:admin",
+      "resource": "waitlist",
+      "action": "view",
+      "path": "/admin",
+      "method": "GET"
+    },
+    {
+      "name": "view:waitlist:stats",
+      "resource": "waitlist",
+      "action": "view",
+      "path": "/admin/stats",
+      "method": "GET"
+    },
+    {
+      "name": "view:waitlist:export",
+      "resource": "waitlist",
+      "action": "view",
+      "path": "/admin/export",
+      "method": "GET"
+    },
+    {
+      "name": "update:waitlist::id",
+      "resource": "waitlist",
+      "action": "update",
+      "path": "/admin/:id",
+      "method": "PATCH"
+    },
+    {
+      "name": "delete:waitlist::id",
+      "resource": "waitlist",
+      "action": "delete",
+      "path": "/admin/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "delete:whatsapp::phonenumber",
+      "resource": "whatsapp",
+      "action": "delete",
+      "path": "/sessions/:phonenumber",
+      "method": "DELETE"
+    },
+    {
+      "name": "admin:create",
+      "resource": "admin",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "admin:delete",
+      "resource": "admin",
+      "action": "delete",
+      "path": "/:adminid",
+      "method": "DELETE"
+    },
+    {
+      "name": "admin:manage",
+      "resource": "admin",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "admin:update",
+      "resource": "admin",
+      "action": "update",
+      "path": "/:adminid",
+      "method": "PATCH"
+    },
+    {
+      "name": "apikey:create",
+      "resource": "apikey",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "apikey:delete",
+      "resource": "apikey",
+      "action": "delete",
+      "path": "/:keyid",
+      "method": "DELETE"
+    },
+    {
+      "name": "apikey:manage",
+      "resource": "apikey",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "apikey:update",
+      "resource": "apikey",
+      "action": "update",
+      "path": "/:keyid",
+      "method": "PATCH"
+    },
+    {
+      "name": "apikeyapproval:create",
+      "resource": "apikeyapproval",
+      "action": "create",
+      "path": "/:approvalid/approve",
+      "method": "POST"
+    },
+    {
+      "name": "app:assign",
+      "resource": "app",
+      "action": "assign",
+      "path": "/assign/:appid",
+      "method": "PATCH"
+    },
+    {
+      "name": "app:create",
+      "resource": "app",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "app:delete",
+      "resource": "app",
+      "action": "delete",
+      "path": "/:appid",
+      "method": "DELETE"
+    },
+    {
+      "name": "app:manage",
+      "resource": "app",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "app:update",
+      "resource": "app",
+      "action": "update",
+      "path": "/:appid",
+      "method": "PATCH"
+    },
+    {
+      "name": "auth:create",
+      "resource": "auth",
+      "action": "create",
+      "path": "/send-verification-email",
+      "method": "POST"
+    },
+    {
+      "name": "baselineanalysisconfig:create",
+      "resource": "baselineanalysisconfig",
+      "action": "create",
+      "path": "/:entitytype/sync",
+      "method": "POST"
+    },
+    {
+      "name": "baselineanalysisconfig:update",
+      "resource": "baselineanalysisconfig",
+      "action": "update",
+      "path": "/:entitytype/essential-metrics",
+      "method": "PUT"
+    },
+    {
+      "name": "baselineintelligence:create",
+      "resource": "baselineintelligence",
+      "action": "create",
+      "path": "/network/recompute",
+      "method": "POST"
+    },
+    {
+      "name": "baselinejobs:create",
+      "resource": "baselinejobs",
+      "action": "create",
+      "path": "/clear",
+      "method": "POST"
+    },
+    {
+      "name": "capture:create",
+      "resource": "capture",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "capture:delete",
+      "resource": "capture",
+      "action": "delete",
+      "path": "/:captureid",
+      "method": "DELETE"
+    },
+    {
+      "name": "capture:export",
+      "resource": "capture",
+      "action": "export",
+      "path": "/export/datapoint/:datapointid",
+      "method": "GET"
+    },
+    {
+      "name": "capture:manage",
+      "resource": "capture",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "capture:update",
+      "resource": "capture",
+      "action": "update",
+      "path": "/:captureid",
+      "method": "PATCH"
+    },
+    {
+      "name": "collection:create",
+      "resource": "collection",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "collection:delete",
+      "resource": "collection",
+      "action": "delete",
+      "path": "/:collectionid",
+      "method": "DELETE"
+    },
+    {
+      "name": "collection:manage",
+      "resource": "collection",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "collection:update",
+      "resource": "collection",
+      "action": "update",
+      "path": "/:collectionid",
+      "method": "PATCH"
+    },
+    {
+      "name": "compliance:update",
+      "resource": "compliance",
+      "action": "update",
+      "path": "/user/:userid",
+      "method": "PATCH"
+    },
+    {
+      "name": "compliancereport:create",
+      "resource": "compliancereport",
+      "action": "create",
+      "path": "/:id/mark-event",
+      "method": "POST"
+    },
+    {
+      "name": "compliancereport:delete",
+      "resource": "compliancereport",
+      "action": "delete",
+      "path": "/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "compliancereport:manage",
+      "resource": "compliancereport",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "compliancereport:update",
+      "resource": "compliancereport",
+      "action": "update",
+      "path": "/:id",
+      "method": "PATCH"
+    },
+    {
+      "name": "customfieldconfig:update",
+      "resource": "customfieldconfig",
+      "action": "update",
+      "path": "/:entitytype",
+      "method": "PUT"
+    },
+    {
+      "name": "data:create",
+      "resource": "data",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "data:delete",
+      "resource": "data",
+      "action": "delete",
+      "path": "/:dataid",
+      "method": "DELETE"
+    },
+    {
+      "name": "data:export",
+      "resource": "data",
+      "action": "export",
+      "path": "/export",
+      "method": "GET"
+    },
+    {
+      "name": "data:import",
+      "resource": "data",
+      "action": "import",
+      "path": "/import",
+      "method": "POST"
+    },
+    {
+      "name": "data:manage",
+      "resource": "data",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "data:update",
+      "resource": "data",
+      "action": "update",
+      "path": "/:dataid",
+      "method": "PATCH"
+    },
+    {
+      "name": "department:create",
+      "resource": "department",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "department:delete",
+      "resource": "department",
+      "action": "delete",
+      "path": "/:departmentid",
+      "method": "DELETE"
+    },
+    {
+      "name": "department:export",
+      "resource": "department",
+      "action": "export",
+      "path": "/export",
+      "method": "GET"
+    },
+    {
+      "name": "department:import",
+      "resource": "department",
+      "action": "import",
+      "path": "/import",
+      "method": "POST"
+    },
+    {
+      "name": "department:manage",
+      "resource": "department",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "department:update",
+      "resource": "department",
+      "action": "update",
+      "path": "/:departmentid",
+      "method": "PATCH"
+    },
+    {
+      "name": "event:create",
+      "resource": "event",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "event:delete",
+      "resource": "event",
+      "action": "delete",
+      "path": "/:eventid",
+      "method": "DELETE"
+    },
+    {
+      "name": "event:import",
+      "resource": "event",
+      "action": "import",
+      "path": "/import",
+      "method": "POST"
+    },
+    {
+      "name": "event:manage",
+      "resource": "event",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "event:update",
+      "resource": "event",
+      "action": "update",
+      "path": "/:eventid",
+      "method": "PATCH"
+    },
+    {
+      "name": "eventcalendar:create",
+      "resource": "eventcalendar",
+      "action": "create",
+      "path": "/preview",
+      "method": "POST"
+    },
+    {
+      "name": "eventcalendar:delete",
+      "resource": "eventcalendar",
+      "action": "delete",
+      "path": "/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "eventcalendar:manage",
+      "resource": "eventcalendar",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "eventcalendar:update",
+      "resource": "eventcalendar",
+      "action": "update",
+      "path": "/:id",
+      "method": "PUT"
+    },
+    {
+      "name": "eventcompliance:create",
+      "resource": "eventcompliance",
+      "action": "create",
+      "path": "/recalculate/:submissionid",
+      "method": "POST"
+    },
+    {
+      "name": "eventconfig:create",
+      "resource": "eventconfig",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "eventconfig:delete",
+      "resource": "eventconfig",
+      "action": "delete",
+      "path": "/:eventconfigid",
+      "method": "DELETE"
+    },
+    {
+      "name": "eventconfig:manage",
+      "resource": "eventconfig",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "eventconfig:update",
+      "resource": "eventconfig",
+      "action": "update",
+      "path": "/:eventconfigid",
+      "method": "PATCH"
+    },
+    {
+      "name": "inmail:create",
+      "resource": "inmail",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "inmail:delete",
+      "resource": "inmail",
+      "action": "delete",
+      "path": "/:inmailid",
+      "method": "DELETE"
+    },
+    {
+      "name": "inmail:manage",
+      "resource": "inmail",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "inmail:update",
+      "resource": "inmail",
+      "action": "update",
+      "path": "/:inmailid/read",
+      "method": "PATCH"
+    },
+    {
+      "name": "level:create",
+      "resource": "level",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "level:delete",
+      "resource": "level",
+      "action": "delete",
+      "path": "/:levelid",
+      "method": "DELETE"
+    },
+    {
+      "name": "level:manage",
+      "resource": "level",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "level:update",
+      "resource": "level",
+      "action": "update",
+      "path": "/:levelid",
+      "method": "PATCH"
+    },
+    {
+      "name": "node:assign",
+      "resource": "node",
+      "action": "assign",
+      "path": "/:nodeid/assign-users",
+      "method": "PATCH"
+    },
+    {
+      "name": "node:create",
+      "resource": "node",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "node:delete",
+      "resource": "node",
+      "action": "delete",
+      "path": "/:nodeid",
+      "method": "DELETE"
+    },
+    {
+      "name": "node:import",
+      "resource": "node",
+      "action": "import",
+      "path": "/bulk-import",
+      "method": "POST"
+    },
+    {
+      "name": "node:manage",
+      "resource": "node",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "node:update",
+      "resource": "node",
+      "action": "update",
+      "path": "/:nodeid",
+      "method": "PATCH"
+    },
+    {
+      "name": "notificationreport:create",
+      "resource": "notificationreport",
+      "action": "create",
+      "path": "/cleanup",
+      "method": "POST"
+    },
+    {
+      "name": "notificationreport:delete",
+      "resource": "notificationreport",
+      "action": "delete",
+      "path": "/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "notificationreport:import",
+      "resource": "notificationreport",
+      "action": "import",
+      "path": "/bulk-retry",
+      "method": "POST"
+    },
+    {
+      "name": "payment:create",
+      "resource": "payment",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "payment:delete",
+      "resource": "payment",
+      "action": "delete",
+      "path": "/:paymentid",
+      "method": "DELETE"
+    },
+    {
+      "name": "payment:manage",
+      "resource": "payment",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "payment:update",
+      "resource": "payment",
+      "action": "update",
+      "path": "/:paymentid",
+      "method": "PATCH"
+    },
+    {
+      "name": "permission:create",
+      "resource": "permission",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "permission:delete",
+      "resource": "permission",
+      "action": "delete",
+      "path": "/:permissionname",
+      "method": "DELETE"
+    },
+    {
+      "name": "permission:import",
+      "resource": "permission",
+      "action": "import",
+      "path": "/bulk",
+      "method": "POST"
+    },
+    {
+      "name": "permission:manage",
+      "resource": "permission",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "permission:update",
+      "resource": "permission",
+      "action": "update",
+      "path": "/:permissionname",
+      "method": "PATCH"
+    },
+    {
+      "name": "permsubmission:create",
+      "resource": "permsubmission",
+      "action": "create",
+      "path": "/validate",
+      "method": "POST"
+    },
+    {
+      "name": "permsubmission:delete",
+      "resource": "permsubmission",
+      "action": "delete",
+      "path": "/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "postgres:create",
+      "resource": "postgres",
+      "action": "create",
+      "path": "/test-table",
+      "method": "POST"
+    },
+    {
+      "name": "postgres:delete",
+      "resource": "postgres",
+      "action": "delete",
+      "path": "/cleanup",
+      "method": "DELETE"
+    },
+    {
+      "name": "program:assign",
+      "resource": "program",
+      "action": "assign",
+      "path": "/:programid/assign",
+      "method": "PATCH"
+    },
+    {
+      "name": "program:create",
+      "resource": "program",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "program:delete",
+      "resource": "program",
+      "action": "delete",
+      "path": "/:programid",
+      "method": "DELETE"
+    },
+    {
+      "name": "program:import",
+      "resource": "program",
+      "action": "import",
+      "path": "/bulk-import",
+      "method": "POST"
+    },
+    {
+      "name": "program:manage",
+      "resource": "program",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "program:update",
+      "resource": "program",
+      "action": "update",
+      "path": "/:programid",
+      "method": "PATCH"
+    },
+    {
+      "name": "projectform:create",
+      "resource": "projectform",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "projectform:delete",
+      "resource": "projectform",
+      "action": "delete",
+      "path": "/:projectformid",
+      "method": "DELETE"
+    },
+    {
+      "name": "projectform:import",
+      "resource": "projectform",
+      "action": "import",
+      "path": "/bulk",
+      "method": "POST"
+    },
+    {
+      "name": "projectform:manage",
+      "resource": "projectform",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "projectform:update",
+      "resource": "projectform",
+      "action": "update",
+      "path": "/project/:projectid/payment-config",
+      "method": "PATCH"
+    },
+    {
+      "name": "projectformsubmission:create",
+      "resource": "projectformsubmission",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "projectformsubmission:delete",
+      "resource": "projectformsubmission",
+      "action": "delete",
+      "path": "/:submissionid",
+      "method": "DELETE"
+    },
+    {
+      "name": "projectformsubmission:export",
+      "resource": "projectformsubmission",
+      "action": "export",
+      "path": "/project/:projectid/export",
+      "method": "GET"
+    },
+    {
+      "name": "report:create",
+      "resource": "report",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "report:delete",
+      "resource": "report",
+      "action": "delete",
+      "path": "/:reportid",
+      "method": "DELETE"
+    },
+    {
+      "name": "report:import",
+      "resource": "report",
+      "action": "import",
+      "path": "/bulk-import",
+      "method": "POST"
+    },
+    {
+      "name": "report:manage",
+      "resource": "report",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "report:update",
+      "resource": "report",
+      "action": "update",
+      "path": "/:reportid",
+      "method": "PATCH"
+    },
+    {
+      "name": "role:create",
+      "resource": "role",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "role:delete",
+      "resource": "role",
+      "action": "delete",
+      "path": "/",
+      "method": "DELETE"
+    },
+    {
+      "name": "role:import",
+      "resource": "role",
+      "action": "import",
+      "path": "/bulk",
+      "method": "POST"
+    },
+    {
+      "name": "role:manage",
+      "resource": "role",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "role:update",
+      "resource": "role",
+      "action": "update",
+      "path": "/:roleid",
+      "method": "PATCH"
+    },
+    {
+      "name": "settings:assign",
+      "resource": "settings",
+      "action": "assign",
+      "path": "/assign",
+      "method": "POST"
+    },
+    {
+      "name": "settings:create",
+      "resource": "settings",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "settings:delete",
+      "resource": "settings",
+      "action": "delete",
+      "path": "/:settingid",
+      "method": "DELETE"
+    },
+    {
+      "name": "settings:manage",
+      "resource": "settings",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "settings:update",
+      "resource": "settings",
+      "action": "update",
+      "path": "/:settingid",
+      "method": "PATCH"
+    },
+    {
+      "name": "statement:create",
+      "resource": "statement",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "statement:delete",
+      "resource": "statement",
+      "action": "delete",
+      "path": "/:statementid",
+      "method": "DELETE"
+    },
+    {
+      "name": "statement:manage",
+      "resource": "statement",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "statement:update",
+      "resource": "statement",
+      "action": "update",
+      "path": "/:statementid",
+      "method": "PATCH"
+    },
+    {
+      "name": "storage:delete",
+      "resource": "storage",
+      "action": "delete",
+      "path": "/:fileid",
+      "method": "DELETE"
+    },
+    {
+      "name": "storagefolder:create",
+      "resource": "storagefolder",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "storagefolder:delete",
+      "resource": "storagefolder",
+      "action": "delete",
+      "path": "/:folderid",
+      "method": "DELETE"
+    },
+    {
+      "name": "storagefolder:manage",
+      "resource": "storagefolder",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "storagefolder:update",
+      "resource": "storagefolder",
+      "action": "update",
+      "path": "/:folderid",
+      "method": "PATCH"
+    },
+    {
+      "name": "structure:create",
+      "resource": "structure",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "structure:delete",
+      "resource": "structure",
+      "action": "delete",
+      "path": "/:structureid",
+      "method": "DELETE"
+    },
+    {
+      "name": "structure:manage",
+      "resource": "structure",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "structure:update",
+      "resource": "structure",
+      "action": "update",
+      "path": "/:structureid",
+      "method": "PATCH"
+    },
+    {
+      "name": "submission:create",
+      "resource": "submission",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "submission:delete",
+      "resource": "submission",
+      "action": "delete",
+      "path": "/:form_id",
+      "method": "DELETE"
+    },
+    {
+      "name": "submissionreport:create",
+      "resource": "submissionreport",
+      "action": "create",
+      "path": "/:id/lock",
+      "method": "POST"
+    },
+    {
+      "name": "submissionreport:delete",
+      "resource": "submissionreport",
+      "action": "delete",
+      "path": "/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "submissionreport:import",
+      "resource": "submissionreport",
+      "action": "import",
+      "path": "/bulk-delete",
+      "method": "POST"
+    },
+    {
+      "name": "submissionreport:manage",
+      "resource": "submissionreport",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "submissionreport:update",
+      "resource": "submissionreport",
+      "action": "update",
+      "path": "/:id",
+      "method": "PATCH"
+    },
+    {
+      "name": "tenantconfig:update",
+      "resource": "tenantconfig",
+      "action": "update",
+      "path": "/user",
+      "method": "PUT"
+    },
+    {
+      "name": "unifiedsubmission:create",
+      "resource": "unifiedsubmission",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "unifiedsubmission:delete",
+      "resource": "unifiedsubmission",
+      "action": "delete",
+      "path": "/activity-log/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "unifiedsubmission:import",
+      "resource": "unifiedsubmission",
+      "action": "import",
+      "path": "/activity-log/bulk-delete",
+      "method": "POST"
+    },
+    {
+      "name": "unifiedsubmission:manage",
+      "resource": "unifiedsubmission",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "unifiedsubmission:update",
+      "resource": "unifiedsubmission",
+      "action": "update",
+      "path": "/activity-log/:id",
+      "method": "PATCH"
+    },
+    {
+      "name": "user:assign",
+      "resource": "user",
+      "action": "assign",
+      "path": "/:id/assign-roles",
+      "method": "PATCH"
+    },
+    {
+      "name": "user:create",
+      "resource": "user",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "user:delete",
+      "resource": "user",
+      "action": "delete",
+      "path": "/:userid",
+      "method": "DELETE"
+    },
+    {
+      "name": "user:import",
+      "resource": "user",
+      "action": "import",
+      "path": "/bulk-create",
+      "method": "POST"
+    },
+    {
+      "name": "user:manage",
+      "resource": "user",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "user:update",
+      "resource": "user",
+      "action": "update",
+      "path": "/:userid",
+      "method": "PATCH"
+    },
+    {
+      "name": "userformsettings:create",
+      "resource": "userformsettings",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "userformsettings:delete",
+      "resource": "userformsettings",
+      "action": "delete",
+      "path": "/:settingsid",
+      "method": "DELETE"
+    },
+    {
+      "name": "userformsettings:manage",
+      "resource": "userformsettings",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "userformsettings:update",
+      "resource": "userformsettings",
+      "action": "update",
+      "path": "/:settingsid",
+      "method": "PATCH"
+    },
+    {
+      "name": "validationreport:delete",
+      "resource": "validationreport",
+      "action": "delete",
+      "path": "/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "validationreport:import",
+      "resource": "validationreport",
+      "action": "import",
+      "path": "/bulk-resolve",
+      "method": "POST"
+    },
+    {
+      "name": "validationreport:update",
+      "resource": "validationreport",
+      "action": "update",
+      "path": "/:id/resolve",
+      "method": "PATCH"
+    },
+    {
+      "name": "waitlist:create",
+      "resource": "waitlist",
+      "action": "create",
+      "path": "/",
+      "method": "POST"
+    },
+    {
+      "name": "waitlist:delete",
+      "resource": "waitlist",
+      "action": "delete",
+      "path": "/admin/:id",
+      "method": "DELETE"
+    },
+    {
+      "name": "waitlist:export",
+      "resource": "waitlist",
+      "action": "export",
+      "path": "/admin/export",
+      "method": "GET"
+    },
+    {
+      "name": "waitlist:manage",
+      "resource": "waitlist",
+      "action": "manage",
+      "path": "/",
+      "method": "ALL"
+    },
+    {
+      "name": "waitlist:update",
+      "resource": "waitlist",
+      "action": "update",
+      "path": "/admin/:id",
+      "method": "PATCH"
+    },
+    {
+      "name": "whatsapp:create",
+      "resource": "whatsapp",
+      "action": "create",
+      "path": "/webhook",
+      "method": "POST"
+    },
+    {
+      "name": "whatsapp:delete",
+      "resource": "whatsapp",
+      "action": "delete",
+      "path": "/sessions/:phonenumber",
+      "method": "DELETE"
+    },
+    {
+      "name": "user:read",
+      "resource": "user",
+      "action": "read",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "role:read",
+      "resource": "role",
+      "action": "read",
+      "path": "/",
+      "method": "GET"
+    },
+    {
+      "name": "role:permissions",
+      "resource": "role",
+      "action": "permissions",
+      "path": "/:roleid/permissions",
+      "method": "PATCH"
+    }
+  ],
+  "roles": [
+    {
+      "name": "Support Agent",
+      "permissionNames": []
+    },
+    {
+      "name": "Sales Manager",
+      "permissionNames": []
+    },
+    {
+      "name": "Attendant",
+      "permissionNames": []
+    },
+    {
+      "name": "Owner Role",
+      "permissionNames": []
+    },
+    {
+      "name": "Senior Pastor",
+      "permissionNames": []
+    },
+    {
+      "name": "Pastor",
+      "permissionNames": []
+    },
+    {
+      "name": "Brother",
+      "permissionNames": []
+    },
+    {
+      "name": "Elder",
+      "permissionNames": []
+    },
+    {
+      "name": "Minister",
+      "permissionNames": []
+    },
+    {
+      "name": "Deacon",
+      "permissionNames": []
+    },
+    {
+      "name": "Deaconess",
+      "permissionNames": []
+    },
+    {
+      "name": "Sister",
+      "permissionNames": []
+    },
+    {
+      "name": "Missionary",
+      "permissionNames": []
+    },
+    {
+      "name": "Bishop",
+      "permissionNames": []
+    }
+  ]
+}

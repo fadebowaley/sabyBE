@@ -163,8 +163,8 @@ const router = express.Router();
 // Route for creating a new statement
 router
   .route('/')
-  .post(auth('create:statement'), validate(statementValidation.createStatement), statementController.createStatement)
-  .get(auth('view:statement'), validate(statementValidation.getStatements), statementController.getStatements);
+  .post(auth('statement:create'), validate(statementValidation.createStatement), statementController.createStatement)
+  .get(auth('statement:read'), validate(statementValidation.getStatements), statementController.getStatements);
 
 /**
  * @swagger
@@ -263,9 +263,9 @@ router
 // Route for fetching a single statement by ID
 router
   .route('/:statementId')
-  .get(auth('view:statement'), validate(statementValidation.getStatement), statementController.getStatement)
-  .patch(auth('update:statement'), validate(statementValidation.updateStatement), statementController.updateStatement)
-  .delete(auth('delete:statement'), validate(statementValidation.deleteStatement), statementController.deleteStatement);
+  .get(auth('statement:read'), validate(statementValidation.getStatement), statementController.getStatement)
+  .patch(auth('statement:update'), validate(statementValidation.updateStatement), statementController.updateStatement)
+  .delete(auth('statement:delete'), validate(statementValidation.deleteStatement), statementController.deleteStatement);
 
 /**
  * @swagger
@@ -302,7 +302,7 @@ router
 router
   .route('/total-payments/node/:nodeId')
   .get(
-    auth('view:statement'),
+    auth('statement:read'),
     validate(statementValidation.getTotalPaymentsForNode),
     statementController.getTotalPaymentsForNode
   );
@@ -342,7 +342,7 @@ router
 router
   .route('/total-payments/collection/:collectionId')
   .get(
-    auth('view:statement'),
+    auth('statement:read'),
     validate(statementValidation.getTotalPaymentsForCollection),
     statementController.getTotalPaymentsForCollection
   );

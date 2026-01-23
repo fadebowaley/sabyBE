@@ -89,4 +89,3 @@ const upgradeToSabyUser = async () => {
 
 // Run the script
 upgradeToSabyUser();
-

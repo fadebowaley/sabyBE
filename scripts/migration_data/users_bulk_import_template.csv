@@ -1,0 +1,28 @@
+# User Bulk Import Template
+# 
+# REQUIRED FIELDS:
+#   - firstname: User's first name (required)
+#   - lastname: User's last name (required)
+#   - email: User's email address (required, must be unique, valid email format)
+#   - password: User's password (required, min 8 characters, must contain at least one letter and one number)
+#
+# OPTIONAL FIELDS:
+#   - phoneNumber: User's phone number (optional, format: +1234567890 or 1234567890)
+#   - roles: Comma-separated role names or ObjectIds (optional, e.g., "Admin,Manager" or leave empty)
+#   - status: User status (optional, values: true/false/Active/Inactive, default: false)
+#   - isEmailVerified: Email verification status (optional, values: true/false, default: false)
+#   - isPhoneVerified: Phone verification status (optional, values: true/false, default: false)
+#
+# NOTES:
+#   - Roles can be specified as role names (e.g., "Admin,Manager") or ObjectIds
+#   - If role names are used, they must exist in your tenant's role list
+#   - System flags (isOwner, isSuper, isSaby) cannot be set via bulk import for security reasons
+#   - Phone numbers should include country code (e.g., +1234567890)
+#   - Status accepts: true, false, "true", "false", "Active", "Inactive"
+#
+# EXAMPLE ROW:
+# firstname,lastname,email,password,phoneNumber,roles,status,isEmailVerified,isPhoneVerified
+# John,Doe,john.doe@example.com,Password123!,+1234567890,Admin Manager,Active,true,true
+
+firstname,lastname,email,password,phoneNumber,roles,status,isEmailVerified,isPhoneVerified
+

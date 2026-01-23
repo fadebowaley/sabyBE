@@ -5,6 +5,7 @@ const Role = require('../src/models/role.model');
 const Level = require('../src/models/level.model');
 const Structures = require('../src/models/structure.model');
 const Nodes = require('../src/models/node.model');
+const nodeService = require('../src/services/node.service');
 
 /**
  * Cleanup Demo Data Script
@@ -18,7 +19,7 @@ class DatabaseCleanup {
       roles: { deleted: 0, errors: 0, details: [] },
       levels: { deleted: 0, errors: 0, details: [] },
       structures: { deleted: 0, errors: 0, details: [] },
-      nodes: { deleted: 0, errors: 0, details: [] }
+      nodes: { deleted: 0, errors: 0, details: [] },
     };
   }
 
@@ -42,7 +43,6 @@ class DatabaseCleanup {
       this.tenantId = fadebowale.tenantId;
       console.log(`   ✅ Tenant ID: ${this.tenantId}`);
       console.log('');
-
     } catch (error) {
       console.error('❌ Initialization failed:', error.message);
       throw error;
@@ -75,21 +75,23 @@ class DatabaseCleanup {
    */
   async cleanupNodes() {
     console.log('1️⃣ Cleaning up Nodes...');
-    
+
     try {
       // Find all nodes for this tenant
       const nodes = await Nodes.find({ tenantId: this.tenantId });
-      
+
       for (const node of nodes) {
         try {
-          // Soft delete the node
-          await Nodes.deleteNodeById(node._id, this.tenantId);
-          
+          // Hard delete the node via service to ensure references are cleaned
+          await nodeService.deleteNodeById(node._id, true, {
+            includeDeleted: true,
+          });
+
           this.cleanupResults.nodes.deleted++;
           this.cleanupResults.nodes.details.push({
             name: node.name,
             id: node._id,
-            status: 'deleted'
+            status: 'deleted',
           });
 
           console.log(`   ✅ Deleted node: ${node.name}`);
@@ -98,13 +100,17 @@ class DatabaseCleanup {
           this.cleanupResults.nodes.details.push({
             name: node.name,
             error: error.message,
-            status: 'failed'
+            status: 'failed',
           });
-          console.log(`   ❌ Failed to delete node "${node.name}": ${error.message}`);
+          console.log(
+            `   ❌ Failed to delete node "${node.name}": ${error.message}`
+          );
         }
       }
 
-      console.log(`   📊 Nodes: ${this.cleanupResults.nodes.deleted} deleted, ${this.cleanupResults.nodes.errors} errors\n`);
+      console.log(
+        `   📊 Nodes: ${this.cleanupResults.nodes.deleted} deleted, ${this.cleanupResults.nodes.errors} errors\n`
+      );
     } catch (error) {
       console.log(`   ❌ Nodes cleanup failed: ${error.message}`);
     }
@@ -115,21 +121,21 @@ class DatabaseCleanup {
    */
   async cleanupStructures() {
     console.log('2️⃣ Cleaning up Structures...');
-    
+
     try {
       // Find all structures for this tenant
       const structures = await Structures.find({ tenantId: this.tenantId });
-      
+
       for (const structure of structures) {
         try {
           // Delete the structure
           await Structures.deleteStructure(structure._id);
-          
+
           this.cleanupResults.structures.deleted++;
           this.cleanupResults.structures.details.push({
             name: structure.name,
             id: structure._id,
-            status: 'deleted'
+            status: 'deleted',
           });
 
           console.log(`   ✅ Deleted structure: ${structure.name}`);
@@ -138,13 +144,17 @@ class DatabaseCleanup {
           this.cleanupResults.structures.details.push({
             name: structure.name,
             error: error.message,
-            status: 'failed'
+            status: 'failed',
           });
-          console.log(`   ❌ Failed to delete structure "${structure.name}": ${error.message}`);
+          console.log(
+            `   ❌ Failed to delete structure "${structure.name}": ${error.message}`
+          );
         }
       }
 
-      console.log(`   📊 Structures: ${this.cleanupResults.structures.deleted} deleted, ${this.cleanupResults.structures.errors} errors\n`);
+      console.log(
+        `   📊 Structures: ${this.cleanupResults.structures.deleted} deleted, ${this.cleanupResults.structures.errors} errors\n`
+      );
     } catch (error) {
       console.log(`   ❌ Structures cleanup failed: ${error.message}`);
     }
@@ -155,21 +165,21 @@ class DatabaseCleanup {
    */
   async cleanupLevels() {
     console.log('3️⃣ Cleaning up Levels...');
-    
+
     try {
       // Find all levels for this tenant
       const levels = await Level.find({ tenantId: this.tenantId });
-      
+
       for (const level of levels) {
         try {
           // Delete the level
           await Level.findByIdAndDelete(level._id);
-          
+
           this.cleanupResults.levels.deleted++;
           this.cleanupResults.levels.details.push({
             name: level.name,
             id: level._id,
-            status: 'deleted'
+            status: 'deleted',
           });
 
           console.log(`   ✅ Deleted level: ${level.name}`);
@@ -178,13 +188,17 @@ class DatabaseCleanup {
           this.cleanupResults.levels.details.push({
             name: level.name,
             error: error.message,
-            status: 'failed'
+            status: 'failed',
           });
-          console.log(`   ❌ Failed to delete level "${level.name}": ${error.message}`);
+          console.log(
+            `   ❌ Failed to delete level "${level.name}": ${error.message}`
+          );
         }
       }
 
-      console.log(`   📊 Levels: ${this.cleanupResults.levels.deleted} deleted, ${this.cleanupResults.levels.errors} errors\n`);
+      console.log(
+        `   📊 Levels: ${this.cleanupResults.levels.deleted} deleted, ${this.cleanupResults.levels.errors} errors\n`
+      );
     } catch (error) {
       console.log(`   ❌ Levels cleanup failed: ${error.message}`);
     }
@@ -195,25 +209,25 @@ class DatabaseCleanup {
    */
   async cleanupUsers() {
     console.log('4️⃣ Cleaning up Users...');
-    
+
     try {
       // Find all users for this tenant except the main user
-      const users = await User.find({ 
+      const users = await User.find({
         tenantId: this.tenantId,
-        email: { $ne: 'fadebowaley@gmail.com' }
+        email: { $ne: 'fadebowaley@gmail.com' },
       });
-      
+
       for (const user of users) {
         try {
           // Soft delete the user
           user.deletedAt = new Date();
           await user.save();
-          
+
           this.cleanupResults.users.deleted++;
           this.cleanupResults.users.details.push({
             email: user.email,
             id: user._id,
-            status: 'deleted'
+            status: 'deleted',
           });
 
           console.log(`   ✅ Deleted user: ${user.email}`);
@@ -222,13 +236,17 @@ class DatabaseCleanup {
           this.cleanupResults.users.details.push({
             email: user.email,
             error: error.message,
-            status: 'failed'
+            status: 'failed',
           });
-          console.log(`   ❌ Failed to delete user "${user.email}": ${error.message}`);
+          console.log(
+            `   ❌ Failed to delete user "${user.email}": ${error.message}`
+          );
         }
       }
 
-      console.log(`   📊 Users: ${this.cleanupResults.users.deleted} deleted, ${this.cleanupResults.users.errors} errors\n`);
+      console.log(
+        `   📊 Users: ${this.cleanupResults.users.deleted} deleted, ${this.cleanupResults.users.errors} errors\n`
+      );
     } catch (error) {
       console.log(`   ❌ Users cleanup failed: ${error.message}`);
     }
@@ -239,24 +257,24 @@ class DatabaseCleanup {
    */
   async cleanupRoles() {
     console.log('5️⃣ Cleaning up Roles...');
-    
+
     try {
       // Find all roles for this tenant except Support Agent
-      const roles = await Role.find({ 
+      const roles = await Role.find({
         tenantId: this.tenantId,
-        name: { $ne: 'Support Agent' }
+        name: { $ne: 'Support Agent' },
       });
-      
+
       for (const role of roles) {
         try {
           // Delete the role
           await Role.findByIdAndDelete(role._id);
-          
+
           this.cleanupResults.roles.deleted++;
           this.cleanupResults.roles.details.push({
             name: role.name,
             id: role._id,
-            status: 'deleted'
+            status: 'deleted',
           });
 
           console.log(`   ✅ Deleted role: ${role.name}`);
@@ -265,13 +283,17 @@ class DatabaseCleanup {
           this.cleanupResults.roles.details.push({
             name: role.name,
             error: error.message,
-            status: 'failed'
+            status: 'failed',
           });
-          console.log(`   ❌ Failed to delete role "${role.name}": ${error.message}`);
+          console.log(
+            `   ❌ Failed to delete role "${role.name}": ${error.message}`
+          );
         }
       }
 
-      console.log(`   📊 Roles: ${this.cleanupResults.roles.deleted} deleted, ${this.cleanupResults.roles.errors} errors\n`);
+      console.log(
+        `   📊 Roles: ${this.cleanupResults.roles.deleted} deleted, ${this.cleanupResults.roles.errors} errors\n`
+      );
     } catch (error) {
       console.log(`   ❌ Roles cleanup failed: ${error.message}`);
     }
@@ -282,8 +304,8 @@ class DatabaseCleanup {
    */
   generateReport() {
     console.log('📊 CLEANUP SUMMARY REPORT\n');
-    console.log('=' .repeat(50));
-    
+    console.log('='.repeat(50));
+
     Object.entries(this.cleanupResults).forEach(([entity, result]) => {
       console.log(`${entity.toUpperCase()}:`);
       console.log(`  🗑️  Deleted: ${result.deleted}`);
@@ -292,13 +314,19 @@ class DatabaseCleanup {
       console.log('');
     });
 
-    const totalDeleted = Object.values(this.cleanupResults).reduce((sum, r) => sum + r.deleted, 0);
-    const totalErrors = Object.values(this.cleanupResults).reduce((sum, r) => sum + r.errors, 0);
-    
-    console.log('=' .repeat(50));
+    const totalDeleted = Object.values(this.cleanupResults).reduce(
+      (sum, r) => sum + r.deleted,
+      0
+    );
+    const totalErrors = Object.values(this.cleanupResults).reduce(
+      (sum, r) => sum + r.errors,
+      0
+    );
+
+    console.log('='.repeat(50));
     console.log(`TOTAL: ${totalDeleted} deleted, ${totalErrors} errors`);
-    console.log('=' .repeat(50));
-    
+    console.log('='.repeat(50));
+
     if (totalErrors === 0) {
       console.log('🎉 Database is now clean and ready for real data!');
     } else {
@@ -320,13 +348,15 @@ class DatabaseCleanup {
  */
 async function runCleanup() {
   const cleanup = new DatabaseCleanup();
-  
+
   try {
     // Initialize
     await cleanup.initialize();
 
     // Confirm cleanup
-    console.log('⚠️  WARNING: This will delete ALL demo data from the database!');
+    console.log(
+      '⚠️  WARNING: This will delete ALL demo data from the database!'
+    );
     console.log('   This includes:');
     console.log('   - All demo users (except fadebowaley@gmail.com)');
     console.log('   - All demo roles (except Support Agent)');
@@ -342,7 +372,6 @@ async function runCleanup() {
 
     // Generate report
     cleanup.generateReport();
-
   } catch (error) {
     console.error('❌ Cleanup failed:', error.message);
   } finally {

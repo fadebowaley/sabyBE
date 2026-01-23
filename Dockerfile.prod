@@ -3,6 +3,11 @@
 # ---------------------------------------------------
 FROM node:18-alpine AS builder
 
+# Ensure npm uses official registry and longer timeouts during build
+ENV NPM_CONFIG_REGISTRY=https://registry.npmjs.org/ \
+    NPM_CONFIG_FETCH_TIMEOUT=600000 \
+    NPM_CONFIG_FETCH_RETRIES=5
+
 # Set working directory
 WORKDIR /app
 
@@ -10,7 +15,12 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (dev + prod)
-RUN npm ci
+RUN npm config set registry https://registry.npmjs.org/ \
+ && npm config set fetch-retries 5 \
+ && npm config set fetch-retry-mintimeout 20000 \
+ && npm config set fetch-retry-maxtimeout 120000 \
+ && npm config set fetch-timeout 600000 \
+ && npm ci
 
 # Copy the rest of the source code
 COPY . .
@@ -23,6 +33,11 @@ COPY . .
 # Stage 2: Production
 # ---------------------------------------------------
 FROM node:18-alpine AS production
+
+# Mirror npm config in runtime image for any post-start installs/debugging
+ENV NPM_CONFIG_REGISTRY=https://registry.npmjs.org/ \
+    NPM_CONFIG_FETCH_TIMEOUT=600000 \
+    NPM_CONFIG_FETCH_RETRIES=5
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs \

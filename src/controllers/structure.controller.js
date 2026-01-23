@@ -4,22 +4,22 @@ const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { structureService } = require('../services');
 
-
 // Create a new structure
 const createStructure = catchAsync(async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    const { tenantId } = req.user;
     const createdBy = req.user._id;
-    const result = await structureService.saveStructuresAndLevels(req.body.structures, tenantId, createdBy);
+    const result = await structureService.saveStructuresAndLevels(
+      req.body.structures,
+      tenantId,
+      createdBy
+    );
     res.status(httpStatus.CREATED).send(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server Error' });
   }
 });
-
-
-
 
 // Get structure by ID
 const getStructure = catchAsync(async (req, res) => {
@@ -152,29 +152,36 @@ const getStructures = catchAsync(async (req, res) => {
   res.send(result);
 });
 
-
-
 // Get structures by type
 const getStructuresByType = catchAsync(async (req, res) => {
-  const structures = await structureService.getStructuresByType(req.params.type);
+  const structures = await structureService.getStructuresByType(
+    req.params.type
+  );
   res.send(structures);
 });
 
 // Get parent structure
 const getParentStructure = catchAsync(async (req, res) => {
-  const parent = await structureService.getParentStructure(req.params.structureId);
+  const parent = await structureService.getParentStructure(
+    req.params.structureId
+  );
   res.send(parent);
 });
 
 // Get child structures
 const getChildStructures = catchAsync(async (req, res) => {
-  const children = await structureService.getChildStructures(req.params.structureId);
+  const children = await structureService.getChildStructures(
+    req.params.structureId
+  );
   res.send(children);
 });
 
 // Move structure to a new parent
 const moveStructureToParent = catchAsync(async (req, res) => {
-  const result = await structureService.moveStructureToParent(req.params.structureId, req.body.parentId);
+  const result = await structureService.moveStructureToParent(
+    req.params.structureId,
+    req.body.parentId
+  );
   res.send(result);
 });
 
@@ -186,19 +193,25 @@ const getStructurePath = catchAsync(async (req, res) => {
 
 // Get hierarchy
 const getStructureHierarchy = catchAsync(async (req, res) => {
-  const hierarchy = await structureService.getStructureHierarchy(req.params.structureId);
+  const hierarchy = await structureService.getStructureHierarchy(
+    req.params.structureId
+  );
   res.send(hierarchy);
 });
 
 // Activate a structure
 const activateStructure = catchAsync(async (req, res) => {
-  const result = await structureService.activateStructure(req.params.structureId);
+  const result = await structureService.activateStructure(
+    req.params.structureId
+  );
   res.send(result);
 });
 
 // Deactivate a structure
 const deactivateStructure = catchAsync(async (req, res) => {
-  const result = await structureService.deactivateStructure(req.params.structureId);
+  const result = await structureService.deactivateStructure(
+    req.params.structureId
+  );
   res.send(result);
 });
 

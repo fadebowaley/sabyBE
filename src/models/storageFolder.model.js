@@ -50,10 +50,16 @@ const storageFolderSchema = mongoose.Schema(
       color: { type: String, default: '#1976d2' },
       icon: String,
     },
-    permissions: [{
-      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      permission: { type: String, enum: ['read', 'write', 'admin'], default: 'read' },
-    }],
+    permissions: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        permission: {
+          type: String,
+          enum: ['read', 'write', 'admin'],
+          default: 'read',
+        },
+      },
+    ],
     status: {
       type: String,
       enum: ['active', 'archived', 'deleted'],
@@ -85,12 +91,18 @@ storageFolderSchema.pre('save', function (next) {
   if (!this.folderId) {
     this.folderId = this.constructor.generateFolderId();
   }
-  
+
   // Generate path - set default if not provided
-  if (!this.path || this.isModified('name') || this.isModified('parentFolder')) {
-    this.path = this.parentFolder ? `${this.parentFolder.path}/${this.name}` : `/${this.name}`;
+  if (
+    !this.path ||
+    this.isModified('name') ||
+    this.isModified('parentFolder')
+  ) {
+    this.path = this.parentFolder
+      ? `${this.parentFolder.path}/${this.name}`
+      : `/${this.name}`;
   }
-  
+
   next();
 });
 

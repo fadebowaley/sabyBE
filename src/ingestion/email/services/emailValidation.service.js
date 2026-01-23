@@ -23,32 +23,52 @@ class EmailValidationService {
    */
   async validateSender(senderEmail, tenantId) {
     try {
-      logger.info(`🔍 Validating sender: ${senderEmail} for tenant: ${tenantId}`);
+      logger.info(
+        `🔍 Validating sender: ${senderEmail} for tenant: ${tenantId}`
+      );
       // Find user by email
       const user = await userService.getUserByEmail(senderEmail);
       if (!user) {
         logger.warn(`❌ Sender not found: ${senderEmail}`);
-        return { valid: false, error: 'Sender is not a registered user', code: 'SENDER_NOT_FOUND' };
+        return {
+          valid: false,
+          error: 'Sender is not a registered user',
+          code: 'SENDER_NOT_FOUND',
+        };
       }
       console.log('this is a user,', user);
       // Check if user belongs to the tenant
       if (user.tenantId !== tenantId) {
-        logger.warn(`❌ Sender ${senderEmail} does not belong to tenant ${tenantId}`);
-        return { valid: false, error: 'Sender does not belong to this tenant', code: 'TENANT_MISMATCH' };
+        logger.warn(
+          `❌ Sender ${senderEmail} does not belong to tenant ${tenantId}`
+        );
+        return {
+          valid: false,
+          error: 'Sender does not belong to this tenant',
+          code: 'TENANT_MISMATCH',
+        };
       }
       console.log('this is tenantId', user.tenantId);
 
       // Check if user is active (not soft deleted)
       if (user.deletedAt) {
         logger.warn(`❌ Sender ${senderEmail} is deleted`);
-        return { valid: false, error: 'Sender account is inactive', code: 'USER_DELETED' };
+        return {
+          valid: false,
+          error: 'Sender account is inactive',
+          code: 'USER_DELETED',
+        };
       }
       console.log('this user is not deleted', user.deletedAt);
       logger.info(`✅ Sender validated: ${senderEmail} (User ID: ${user._id})`);
       return { valid: true, user };
     } catch (error) {
       logger.error(`❌ Error validating sender ${senderEmail}:`, error.message);
-      return { valid: false, error: 'Error validating sender', code: 'VALIDATION_ERROR' };
+      return {
+        valid: false,
+        error: 'Error validating sender',
+        code: 'VALIDATION_ERROR',
+      };
     }
   }
 
@@ -60,39 +80,71 @@ class EmailValidationService {
    */
   async validateProjectForm(projectId, user) {
     try {
-      logger.info(`🔍 Validating project form: ${projectId} for user: ${user.email}`);
+      logger.info(
+        `🔍 Validating project form: ${projectId} for user: ${user.email}`
+      );
 
       // Find project form by project ID
-      const projectForm = await projectFormService.getProjectFormByProjectId(projectId);
+      const projectForm = await projectFormService.getProjectFormByProjectId(
+        projectId
+      );
 
       if (!projectForm) {
         logger.warn(`❌ Project form not found: ${projectId}`);
-        return { valid: false, error: 'Project form not found', code: 'PROJECT_NOT_FOUND' };
+        return {
+          valid: false,
+          error: 'Project form not found',
+          code: 'PROJECT_NOT_FOUND',
+        };
       }
 
       // Check if project belongs to the same tenant as user
       if (projectForm.tenantId !== user.tenantId) {
-        logger.warn(`❌ Project ${projectId} does not belong to user's tenant ${user.tenantId}`);
-        return { valid: false, error: 'Project does not belong to your tenant', code: 'PROJECT_TENANT_MISMATCH' };
+        logger.warn(
+          `❌ Project ${projectId} does not belong to user's tenant ${user.tenantId}`
+        );
+        return {
+          valid: false,
+          error: 'Project does not belong to your tenant',
+          code: 'PROJECT_TENANT_MISMATCH',
+        };
       }
 
       // Check if project is active and published
-      if (projectForm.status !== 'active' || projectForm.metadata.deploymentStatus !== 'published') {
+      if (
+        projectForm.status !== 'active' ||
+        projectForm.metadata.deploymentStatus !== 'published'
+      ) {
         logger.warn(`❌ Project ${projectId} is not active or published`);
-        return { valid: false, error: 'Project is not active or published', code: 'PROJECT_NOT_ACTIVE' };
+        return {
+          valid: false,
+          error: 'Project is not active or published',
+          code: 'PROJECT_NOT_ACTIVE',
+        };
       }
 
       // Check if project is not deleted
       if (projectForm.deletedAt) {
         logger.warn(`❌ Project ${projectId} is deleted`);
-        return { valid: false, error: 'Project has been deleted', code: 'PROJECT_DELETED' };
+        return {
+          valid: false,
+          error: 'Project has been deleted',
+          code: 'PROJECT_DELETED',
+        };
       }
 
       logger.info(`✅ Project form validated: ${projectId}`);
       return { valid: true, projectForm };
     } catch (error) {
-      logger.error(`❌ Error validating project form ${projectId}:`, error.message);
-      return { valid: false, error: 'Error validating project form', code: 'VALIDATION_ERROR' };
+      logger.error(
+        `❌ Error validating project form ${projectId}:`,
+        error.message
+      );
+      return {
+        valid: false,
+        error: 'Error validating project form',
+        code: 'VALIDATION_ERROR',
+      };
     }
   }
 
@@ -104,7 +156,9 @@ class EmailValidationService {
    */
   async validateFormFields(submittedData, projectForm) {
     try {
-      logger.info(`🔍 Validating form fields for project: ${projectForm.projectId}`);
+      logger.info(
+        `🔍 Validating form fields for project: ${projectForm.projectId}`
+      );
 
       const validationResult = {
         valid: true,
@@ -123,19 +177,32 @@ class EmailValidationService {
 
       // Validate each form element
       for (const element of formElements) {
-        const fieldName = element.properties && element.properties.label ? element.properties.label : element.id;
+        const fieldName =
+          element.properties && element.properties.label
+            ? element.properties.label
+            : element.id;
         const fieldKey = this.normalizeFieldName(fieldName);
-        const isRequired = element.properties && element.properties.required ? element.properties.required : false;
+        const isRequired =
+          element.properties && element.properties.required
+            ? element.properties.required
+            : false;
         const fieldType = element.type;
 
         // Check if field is present in submission
-        const submittedValue = this.findFieldValue(submittedFields, fieldKey, fieldName);
+        const submittedValue = this.findFieldValue(
+          submittedFields,
+          fieldKey,
+          fieldName
+        );
 
         if (submittedValue !== undefined) {
           foundFormFields.add(fieldKey);
 
           // Validate field value based on type
-          const fieldValidation = this.validateFieldValue(submittedValue, element);
+          const fieldValidation = this.validateFieldValue(
+            submittedValue,
+            element
+          );
           if (!fieldValidation.valid) {
             validationResult.errors.push({
               field: fieldName,
@@ -170,13 +237,18 @@ class EmailValidationService {
       }
 
       if (validationResult.valid) {
-        logger.info(`✅ Form fields validated successfully for project: ${projectForm.projectId}`);
+        logger.info(
+          `✅ Form fields validated successfully for project: ${projectForm.projectId}`
+        );
       } else {
-        logger.warn(`⚠️ Form validation failed for project: ${projectForm.projectId}`, {
-          errors: validationResult.errors.length,
-          missing: validationResult.missingFields.length,
-          extra: validationResult.extraFields.length,
-        });
+        logger.warn(
+          `⚠️ Form validation failed for project: ${projectForm.projectId}`,
+          {
+            errors: validationResult.errors.length,
+            missing: validationResult.missingFields.length,
+            extra: validationResult.extraFields.length,
+          }
+        );
       }
 
       return validationResult;
@@ -184,7 +256,9 @@ class EmailValidationService {
       logger.error(`❌ Error validating form fields:`, error.message);
       return {
         valid: false,
-        errors: [{ field: 'validation', error: 'Error validating form fields' }],
+        errors: [
+          { field: 'validation', error: 'Error validating form fields' },
+        ],
         validatedData: {},
         missingFields: [],
         extraFields: [],
@@ -223,7 +297,9 @@ class EmailValidationService {
     }
 
     // Try camelCase version
-    const camelCaseKey = originalFieldName.toLowerCase().replace(/[^a-z0-9]+([a-z0-9])/g, (_, chr) => chr.toUpperCase());
+    const camelCaseKey = originalFieldName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+([a-z0-9])/g, (_, chr) => chr.toUpperCase());
     if (submittedFields[camelCaseKey] !== undefined) {
       return submittedFields[camelCaseKey];
     }
@@ -312,7 +388,10 @@ class EmailValidationService {
     }
 
     if (properties.min !== undefined && num < properties.min) {
-      return { valid: false, error: `Value must be at least ${properties.min}` };
+      return {
+        valid: false,
+        error: `Value must be at least ${properties.min}`,
+      };
     }
 
     if (properties.max !== undefined && num > properties.max) {
@@ -339,7 +418,10 @@ class EmailValidationService {
   validateSelect(value, properties) {
     const options = properties.options || [];
     if (options.length > 0 && !options.includes(value)) {
-      return { valid: false, error: `Value must be one of: ${options.join(', ')}` };
+      return {
+        valid: false,
+        error: `Value must be one of: ${options.join(', ')}`,
+      };
     }
     return { valid: true, value };
   }
@@ -358,10 +440,9 @@ class EmailValidationService {
         }
       }
       return { valid: true, value: values };
-    } else {
-      // Single selection
-      return this.validateSelect(value, properties);
     }
+    // Single selection
+    return this.validateSelect(value, properties);
   }
 
   /**
@@ -385,11 +466,17 @@ class EmailValidationService {
     }
 
     if (properties.minLength && value.length < properties.minLength) {
-      return { valid: false, error: `Text must be at least ${properties.minLength} characters` };
+      return {
+        valid: false,
+        error: `Text must be at least ${properties.minLength} characters`,
+      };
     }
 
     if (properties.maxLength && value.length > properties.maxLength) {
-      return { valid: false, error: `Text must be at most ${properties.maxLength} characters` };
+      return {
+        valid: false,
+        error: `Text must be at most ${properties.maxLength} characters`,
+      };
     }
 
     return { valid: true, value };
@@ -402,18 +489,26 @@ class EmailValidationService {
    * @param {Object} projectForm - Project form object
    * @returns {Promise<void>}
    */
-  async sendValidationFailureNotification(validationResult, verifiedEmail, projectForm) {
+  async sendValidationFailureNotification(
+    validationResult,
+    verifiedEmail,
+    projectForm
+  ) {
     try {
       // Verify that we have a valid email from a registered user
       if (!verifiedEmail) {
-        logger.info(`📧 Skipping validation failure notification - no verified email provided`);
+        logger.info(
+          `📧 Skipping validation failure notification - no verified email provided`
+        );
         return;
       }
 
       // Get user data from the verified email
       const user = await userService.getUserByEmail(verifiedEmail);
       if (!user) {
-        logger.warn(`📧 Skipping validation failure notification - verified email not found in database: ${verifiedEmail}`);
+        logger.warn(
+          `📧 Skipping validation failure notification - verified email not found in database: ${verifiedEmail}`
+        );
         return;
       }
 
@@ -424,30 +519,45 @@ class EmailValidationService {
       };
 
       const projectData = {
-        projectName: (projectForm && projectForm.configuration && projectForm.configuration.projectName) || 'Your Project',
+        projectName:
+          (projectForm &&
+            projectForm.configuration &&
+            projectForm.configuration.projectName) ||
+          'Your Project',
       };
 
       // Get the first error step for notification
-      const firstError = validationResult.errors && validationResult.errors.length > 0 ? validationResult.errors[0] : null;
+      const firstError =
+        validationResult.errors && validationResult.errors.length > 0
+          ? validationResult.errors[0]
+          : null;
       const validationData = {
         errors: validationResult.errors || [],
         warnings: validationResult.warnings || [],
         step: firstError ? firstError.step : 'unknown',
       };
 
-      const notificationResult = await notificationQueueService.queueValidationFailureNotification(
-        validationData,
-        userData,
-        projectData
-      );
+      const notificationResult =
+        await notificationQueueService.queueValidationFailureNotification(
+          validationData,
+          userData,
+          projectData
+        );
 
       if (notificationResult.success) {
-        logger.info(`📧 Validation failure notification queued for ${verifiedEmail} - Job ID: ${notificationResult.jobId}`);
+        logger.info(
+          `📧 Validation failure notification queued for ${verifiedEmail} - Job ID: ${notificationResult.jobId}`
+        );
       } else {
-        logger.warn(`⚠️ Failed to queue validation failure notification for ${verifiedEmail}: ${notificationResult.error}`);
+        logger.warn(
+          `⚠️ Failed to queue validation failure notification for ${verifiedEmail}: ${notificationResult.error}`
+        );
       }
     } catch (error) {
-      logger.error(`❌ Error sending validation failure notification to ${verifiedEmail}:`, error.message);
+      logger.error(
+        `❌ Error sending validation failure notification to ${verifiedEmail}:`,
+        error.message
+      );
     }
   }
 
@@ -459,10 +569,14 @@ class EmailValidationService {
    */
   async validateEmailSubmission(parsedEmail, submissionData) {
     const senderEmail =
-      parsedEmail.from && parsedEmail.from.value && parsedEmail.from.value[0] ? parsedEmail.from.value[0].address : null;
-    const projectId = submissionData.projectId;
+      parsedEmail.from && parsedEmail.from.value && parsedEmail.from.value[0]
+        ? parsedEmail.from.value[0].address
+        : null;
+    const { projectId } = submissionData;
 
-    logger.info(`🔍 Starting comprehensive validation for email from ${senderEmail} to project ${projectId}`);
+    logger.info(
+      `🔍 Starting comprehensive validation for email from ${senderEmail} to project ${projectId}`
+    );
 
     const validationResult = {
       valid: false,
@@ -481,12 +595,21 @@ class EmailValidationService {
       try {
         // Use direct mongoose query to bypass TenantPlugin for user lookup
         const { User } = require('../../../models');
-        console.log('🔍 [DEBUG] About to query User.findOne for email:', senderEmail);
+        console.log(
+          '🔍 [DEBUG] About to query User.findOne for email:',
+          senderEmail
+        );
         console.log('🔍 [DEBUG] User model:', User);
-        console.log('🔍 [DEBUG] Mongoose connection state:', require('mongoose').connection.readyState);
+        console.log(
+          '🔍 [DEBUG] Mongoose connection state:',
+          require('mongoose').connection.readyState
+        );
 
         user = await User.findOne({ email: senderEmail });
-        console.log('🔍 [DEBUG] User query result:', user ? 'User found' : 'User not found');
+        console.log(
+          '🔍 [DEBUG] User query result:',
+          user ? 'User found' : 'User not found'
+        );
         if (user) {
           console.log('🔍 [DEBUG] User details:', {
             id: user._id,
@@ -528,11 +651,17 @@ class EmailValidationService {
           code: 'USER_DELETED',
         });
         // Send notification for deleted user accounts
-        await this.sendValidationFailureNotification(validationResult, validationResult.verifiedEmail, null);
+        await this.sendValidationFailureNotification(
+          validationResult,
+          validationResult.verifiedEmail,
+          null
+        );
         return validationResult;
       }
 
-      logger.info(`✅ Sender validated: ${senderEmail} (User ID: ${user._id}, Tenant: ${user.tenantId})`);
+      logger.info(
+        `✅ Sender validated: ${senderEmail} (User ID: ${user._id}, Tenant: ${user.tenantId})`
+      );
       validationResult.sender = user;
 
       // Step 2: Look up project form by project ID (without tenant filtering)
@@ -541,16 +670,25 @@ class EmailValidationService {
       try {
         // Use direct mongoose query to bypass TenantPlugin
         const { ProjectForm } = require('../../../models');
-        console.log('🔍 [DEBUG] About to query ProjectForm.findOne for projectId:', projectId);
+        console.log(
+          '🔍 [DEBUG] About to query ProjectForm.findOne for projectId:',
+          projectId
+        );
         console.log('🔍 [DEBUG] ProjectForm model:', ProjectForm);
-        console.log('🔍 [DEBUG] Mongoose connection state:', require('mongoose').connection.readyState);
+        console.log(
+          '🔍 [DEBUG] Mongoose connection state:',
+          require('mongoose').connection.readyState
+        );
 
         projectForm = await ProjectForm.findOne({
           projectId,
           deletedAt: null,
         }).populate('createdBy');
 
-        console.log('🔍 [DEBUG] ProjectForm query result:', projectForm ? 'ProjectForm found' : 'ProjectForm not found');
+        console.log(
+          '🔍 [DEBUG] ProjectForm query result:',
+          projectForm ? 'ProjectForm found' : 'ProjectForm not found'
+        );
         if (projectForm) {
           console.log('🔍 [DEBUG] ProjectForm details:', {
             id: projectForm._id,
@@ -558,7 +696,9 @@ class EmailValidationService {
             tenantId: projectForm.tenantId,
             status: projectForm.status,
             deploymentStatus:
-              projectForm.metadata && projectForm.metadata.deploymentStatus ? projectForm.metadata.deploymentStatus : null,
+              projectForm.metadata && projectForm.metadata.deploymentStatus
+                ? projectForm.metadata.deploymentStatus
+                : null,
           });
         }
       } catch (error) {
@@ -580,11 +720,17 @@ class EmailValidationService {
           code: 'PROJECT_NOT_FOUND',
         });
         // Send notification for project not found
-        await this.sendValidationFailureNotification(validationResult, validationResult.verifiedEmail, null);
+        await this.sendValidationFailureNotification(
+          validationResult,
+          validationResult.verifiedEmail,
+          null
+        );
         return validationResult;
       }
 
-      logger.info(`✅ Found project form: ${projectId} (Tenant: ${projectForm.tenantId})`);
+      logger.info(
+        `✅ Found project form: ${projectId} (Tenant: ${projectForm.tenantId})`
+      );
 
       // Step 3: Validate tenant access (user must belong to same tenant as project)
       if (projectForm.tenantId !== user.tenantId) {
@@ -597,14 +743,21 @@ class EmailValidationService {
           code: 'TENANT_ACCESS_DENIED',
         });
         // Send notification for tenant access denied
-        await this.sendValidationFailureNotification(validationResult, validationResult.verifiedEmail, projectForm);
+        await this.sendValidationFailureNotification(
+          validationResult,
+          validationResult.verifiedEmail,
+          projectForm
+        );
         return validationResult;
       }
 
       logger.info(`✅ Tenant access validated for user ${senderEmail}`);
 
       // Step 4: Validate project form status
-      if (projectForm.status !== 'active' || projectForm.metadata.deploymentStatus !== 'published') {
+      if (
+        projectForm.status !== 'active' ||
+        projectForm.metadata.deploymentStatus !== 'published'
+      ) {
         logger.warn(`❌ Project ${projectId} is not active or published`);
         validationResult.errors.push({
           step: 'project_validation',
@@ -612,7 +765,11 @@ class EmailValidationService {
           code: 'PROJECT_NOT_ACTIVE',
         });
         // Send notification for inactive project
-        await this.sendValidationFailureNotification(validationResult, validationResult.verifiedEmail, projectForm);
+        await this.sendValidationFailureNotification(
+          validationResult,
+          validationResult.verifiedEmail,
+          projectForm
+        );
         return validationResult;
       }
 
@@ -620,7 +777,10 @@ class EmailValidationService {
       validationResult.projectForm = projectForm;
 
       // Step 5: Validate form fields
-      const formValidation = await this.validateFormFields(submissionData, projectForm);
+      const formValidation = await this.validateFormFields(
+        submissionData,
+        projectForm
+      );
       validationResult.formValidation = formValidation;
 
       if (!formValidation.valid) {
@@ -630,7 +790,11 @@ class EmailValidationService {
           missingFields: formValidation.missingFields,
         });
         // Send notification for form validation failures
-        await this.sendValidationFailureNotification(validationResult, validationResult.verifiedEmail, projectForm);
+        await this.sendValidationFailureNotification(
+          validationResult,
+          validationResult.verifiedEmail,
+          projectForm
+        );
         return validationResult;
       }
 
@@ -661,7 +825,10 @@ class EmailValidationService {
       );
       return validationResult;
     } catch (error) {
-      logger.error(`❌ Error during email submission validation:`, error.message);
+      logger.error(
+        `❌ Error during email submission validation:`,
+        error.message
+      );
       validationResult.errors.push({
         step: 'validation_error',
         error: 'Unexpected error during validation',

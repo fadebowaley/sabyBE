@@ -4,8 +4,6 @@ const config = require('../config/config'); // Adjust the path as necessary
 const logger = require('../config/logger'); // Adjust the path as necessary
 const User = require('../models/user.model'); // Adjust path as needed
 
-
-
 // MongoDB connection
 const connectToDB = async () => {
   try {
@@ -17,9 +15,7 @@ const connectToDB = async () => {
   }
 };
 
-
 (async () => {
-
   await connectToDB();
 
   const usersWithoutHaloId = await User.find({ haloId: { $exists: false } });

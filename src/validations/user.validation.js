@@ -18,8 +18,10 @@ const ownerCreate = {
       .items(Joi.string().regex(/^[0-9a-fA-F]{24}$/))
       .default([]),
     email: Joi.string().required().email(),
+    phoneNumber: Joi.string().required(),
     password: Joi.string().required().custom(password),
     isOwner: Joi.boolean().valid(false).default(false),
+    isAdmin: Joi.boolean().valid(false).default(false),
     isSuper: Joi.boolean().valid(false).default(false),
     isSaby: Joi.boolean().valid(false).default(false),
     status: Joi.boolean().default(false),
@@ -41,14 +43,48 @@ const sabyUserCreate = {
 const bulkCreate = {
   body: Joi.array()
     .items(
-      Joi.object().keys({
+      Joi.object({
         firstname: Joi.string().required(),
         lastname: Joi.string().required(),
         email: Joi.string().required().email(),
         password: Joi.string().required().custom(password),
+        phoneNumber: Joi.string()
+          .pattern(/^[+]?[1-9][\d]{0,15}$/)
+          .allow('', null)
+          .optional(),
+        roles: Joi.alternatives()
+          .try(
+            Joi.array().items(
+              Joi.alternatives().try(
+                Joi.string().regex(/^[0-9a-fA-F]{24}$/), // ObjectId
+                Joi.string() // Role name
+              )
+            ),
+            Joi.string().allow('') // Comma-separated role names or single role name
+          )
+          .optional()
+          .allow(null, ''),
         isOwner: Joi.boolean().valid(false).default(false),
-        status: Joi.boolean().default(false),
-      })
+        isSuper: Joi.boolean().valid(false).default(false),
+        isSaby: Joi.boolean().valid(false).default(false),
+        isAdmin: Joi.boolean().valid(false).default(false),
+        status: Joi.alternatives()
+          .try(
+            Joi.boolean(),
+            Joi.string().valid('true', 'false', 'Active', 'Inactive', '')
+          )
+          .optional()
+          .allow(null, '')
+          .default(false),
+        isEmailVerified: Joi.alternatives()
+          .try(Joi.boolean(), Joi.string().valid('true', 'false', ''))
+          .optional()
+          .allow(null, ''),
+        isPhoneVerified: Joi.alternatives()
+          .try(Joi.boolean(), Joi.string().valid('true', 'false', ''))
+          .optional()
+          .allow(null, ''),
+      }).unknown(false) // Don't allow unknown fields
     )
     .required(),
 };
@@ -88,14 +124,99 @@ const updateUser = {
   }),
   body: Joi.object()
     .keys({
+      // User table fields
       email: Joi.string().email(),
       password: Joi.string().custom(password),
       firstname: Joi.string(),
       lastname: Joi.string(),
-      phoneNumber: Joi.string().pattern(/^[+]?[1-9][\d]{0,15}$/),
+      phoneNumber: Joi.string()
+        .pattern(/^[+]?[1-9][\d]{0,15}$/)
+        .allow(''),
       isSuper: Joi.boolean(),
       isOwner: Joi.boolean(),
       isSaby: Joi.boolean(),
+      isAdmin: Joi.boolean(),
+      isActive: Joi.boolean(),
+      isEmailVerified: Joi.boolean(),
+      roles: Joi.array(),
+      // UserProfile table fields (auto-routed to profile)
+      title: Joi.string(),
+      otherName: Joi.string(),
+      gender: Joi.string().valid('Male', 'Female', 'Other'),
+      dateOfBirth: Joi.date(),
+      highestQualification: Joi.string(),
+      professional: Joi.string(),
+      maritalStatus: Joi.string().valid(
+        'Single',
+        'Married',
+        'Divorced',
+        'Widowed'
+      ),
+      stateOfOrigin: Joi.string(),
+      lgaOfOrigin: Joi.string(),
+      homeTown: Joi.string(),
+      spouseName: Joi.string().allow(''),
+      spousePhoneNumber: Joi.string().allow(''),
+      spouseDateOfBirth: Joi.date().allow(null),
+      nextOfKinName: Joi.string().allow(''),
+      nextOfKinPhoneNumber: Joi.string().allow(''),
+      nextOfKinRelationship: Joi.string().allow(''),
+      residentialAddress: Joi.string(),
+      stateOfResidence: Joi.string(),
+      lgaOfResidence: Joi.string(),
+      employmentCategory: Joi.string(),
+      occupation: Joi.string(),
+      employeeId: Joi.string(),
+      officeTitle: Joi.string(),
+
+      // ✨ NEW: Support nested profile object structure
+      profile: Joi.object().keys({
+        title: Joi.string(),
+        otherName: Joi.string().allow(''),
+        gender: Joi.string().valid('Male', 'Female', 'Other'),
+        dateOfBirth: Joi.date(),
+        highestQualification: Joi.string(),
+        professional: Joi.string(),
+        employmentCategory: Joi.string(),
+        occupation: Joi.string(),
+        employeeId: Joi.string().allow(''),
+        officeTitle: Joi.string().allow(''),
+        maritalStatus: Joi.string().valid(
+          'Single',
+          'Married',
+          'Divorced',
+          'Widowed'
+        ),
+        // Support both nested and flat structures for spouse
+        spouse: Joi.object().keys({
+          name: Joi.string().allow(''),
+          phoneNumber: Joi.string().allow(''),
+          dateOfBirth: Joi.date().allow(null),
+        }),
+        spouseName: Joi.string().allow(''),
+        spousePhoneNumber: Joi.string().allow(''),
+        spouseDateOfBirth: Joi.date().allow(null),
+        // Support both nested and flat structures for nextOfKin
+        nextOfKin: Joi.object().keys({
+          name: Joi.string(),
+          phoneNumber: Joi.string(),
+          relationship: Joi.string(),
+        }),
+        nextOfKinName: Joi.string().allow(''),
+        nextOfKinPhoneNumber: Joi.string().allow(''),
+        nextOfKinRelationship: Joi.string().allow(''),
+        // Allow phoneNumber in profile object (for profile-specific phone)
+        phoneNumber: Joi.string()
+          .pattern(/^[+]?[1-9][\d]{0,15}$/)
+          .allow(''),
+        stateOfOrigin: Joi.string(),
+        lgaOfOrigin: Joi.string(),
+        homeTown: Joi.string(),
+        residentialAddress: Joi.string(),
+        stateOfResidence: Joi.string(),
+        lgaOfResidence: Joi.string(),
+      }),
+      customFields: Joi.object(),
     })
     .min(1),
 };
@@ -138,6 +259,29 @@ const assignRoles = {
   }),
 };
 
+const updateProfileCompliance = {
+  params: Joi.object().keys({
+    userId: Joi.string().required().custom(objectId),
+  }),
+  body: Joi.object().keys({
+    profileUpdateCompliant: Joi.boolean().required(),
+  }),
+};
+
+const changeEmail = {
+  body: Joi.object().keys({
+    email: Joi.string().required().email(),
+    // OTP is verified before reaching this endpoint, so it's not required here
+  }),
+};
+
+const changePhone = {
+  body: Joi.object().keys({
+    phone: Joi.string().required(),
+    // OTP is verified before reaching this endpoint, so it's not required here
+  }),
+};
+
 module.exports = {
   createUser,
   getUsers,
@@ -152,4 +296,7 @@ module.exports = {
   restoreUsers,
   softDeleteUser,
   assignRoles,
+  updateProfileCompliance,
+  changeEmail,
+  changePhone,
 };

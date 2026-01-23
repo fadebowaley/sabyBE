@@ -3,8 +3,9 @@ const axios = require('axios');
 const { logAudit } = require('./auditLogger');
 
 // Constants & ENV
-const EMAIL_INGESTION_API_KEY = process.env.EMAIL_INGESTION_API_KEY;
-const BASE_URL = process.env.SUBMISSION_API_BASE_URL || 'http://127.0.0.1:4000/v1';
+const { EMAIL_INGESTION_API_KEY } = process.env;
+const BASE_URL =
+  process.env.SUBMISSION_API_BASE_URL || 'http://127.0.0.1:4000/v1';
 const TIMEOUT_MS = process.env.SUBMISSION_API_TIMEOUT_MS || 10000; // 10s default
 const MAX_RETRIES = process.env.SUBMISSION_API_MAX_RETRIES || 3;
 

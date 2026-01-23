@@ -1,0 +1,6 @@
+name,description,rank
+Root,Root level,0
+Division,Division level,1
+Diocese,Diocese level,2
+Zone,Zone level,3
+Parish,Parish level,4

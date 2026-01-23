@@ -11,26 +11,32 @@ mongoose.connect('mongodb://localhost:27017/sodzo', {
 });
 
 // User Schema (simplified for testing)
-const UserSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  tenantId: { type: String, required: true },
-  deletedAt: { type: Date, default: null },
-}, { timestamps: true });
+const UserSchema = new mongoose.Schema(
+  {
+    email: { type: String, required: true, unique: true },
+    tenantId: { type: String, required: true },
+    deletedAt: { type: Date, default: null },
+  },
+  { timestamps: true }
+);
 
 // Project Form Schema (simplified for testing)
-const ProjectFormSchema = new mongoose.Schema({
-  projectId: { type: String, unique: true, required: true },
-  tenantId: { type: String, required: true },
-  configuration: {
-    projectName: { type: String, required: true },
+const ProjectFormSchema = new mongoose.Schema(
+  {
+    projectId: { type: String, unique: true, required: true },
+    tenantId: { type: String, required: true },
+    configuration: {
+      projectName: { type: String, required: true },
+    },
+    elements: [{ type: mongoose.Schema.Types.Mixed }],
+    status: { type: String, default: 'active' },
+    metadata: {
+      deploymentStatus: { type: String, default: 'published' },
+    },
+    deletedAt: { type: Date, default: null },
   },
-  elements: [{ type: mongoose.Schema.Types.Mixed }],
-  status: { type: String, default: 'active' },
-  metadata: {
-    deploymentStatus: { type: String, default: 'published' },
-  },
-  deletedAt: { type: Date, default: null },
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 const User = mongoose.model('User', UserSchema);
 const ProjectForm = mongoose.model('ProjectForm', ProjectFormSchema);
@@ -45,7 +51,7 @@ async function createTestData() {
       {
         email: 'fadebowaley@gmail.com',
         tenantId: 'demo-tenant',
-        deletedAt: null
+        deletedAt: null,
       },
       { upsert: true, new: true }
     );
@@ -59,7 +65,7 @@ async function createTestData() {
         projectId: 'demo-project',
         tenantId: 'demo-tenant',
         configuration: {
-          projectName: 'Demo Property Form'
+          projectName: 'Demo Property Form',
         },
         elements: [
           {
@@ -68,8 +74,8 @@ async function createTestData() {
             properties: {
               label: 'Name',
               required: true,
-              validation: { required: true }
-            }
+              validation: { required: true },
+            },
           },
           {
             id: 'email',
@@ -77,8 +83,8 @@ async function createTestData() {
             properties: {
               label: 'Email',
               required: true,
-              validation: { required: true }
-            }
+              validation: { required: true },
+            },
           },
           {
             id: 'phone',
@@ -86,8 +92,8 @@ async function createTestData() {
             properties: {
               label: 'Phone',
               required: true,
-              validation: { required: true }
-            }
+              validation: { required: true },
+            },
           },
           {
             id: 'propertyType',
@@ -96,8 +102,8 @@ async function createTestData() {
               label: 'Property Type',
               required: true,
               options: ['Residential', 'Commercial', 'Industrial'],
-              validation: { required: true }
-            }
+              validation: { required: true },
+            },
           },
           {
             id: 'address',
@@ -105,8 +111,8 @@ async function createTestData() {
             properties: {
               label: 'Address',
               required: true,
-              validation: { required: true }
-            }
+              validation: { required: true },
+            },
           },
           {
             id: 'price',
@@ -114,8 +120,8 @@ async function createTestData() {
             properties: {
               label: 'Price',
               required: true,
-              validation: { required: true, min: 0 }
-            }
+              validation: { required: true, min: 0 },
+            },
           },
           {
             id: 'bedrooms',
@@ -123,8 +129,8 @@ async function createTestData() {
             properties: {
               label: 'Bedrooms',
               required: false,
-              validation: { min: 0 }
-            }
+              validation: { min: 0 },
+            },
           },
           {
             id: 'bathrooms',
@@ -132,8 +138,8 @@ async function createTestData() {
             properties: {
               label: 'Bathrooms',
               required: false,
-              validation: { min: 0 }
-            }
+              validation: { min: 0 },
+            },
           },
           {
             id: 'squareFeet',
@@ -141,8 +147,8 @@ async function createTestData() {
             properties: {
               label: 'Square Feet',
               required: false,
-              validation: { min: 0 }
-            }
+              validation: { min: 0 },
+            },
           },
           {
             id: 'yearBuilt',
@@ -150,8 +156,8 @@ async function createTestData() {
             properties: {
               label: 'Year Built',
               required: false,
-              validation: { min: 1900, max: new Date().getFullYear() }
-            }
+              validation: { min: 1900, max: new Date().getFullYear() },
+            },
           },
           {
             id: 'description',
@@ -159,35 +165,43 @@ async function createTestData() {
             properties: {
               label: 'Description',
               required: false,
-              validation: { maxLength: 1000 }
-            }
-          }
+              validation: { maxLength: 1000 },
+            },
+          },
         ],
         status: 'active',
         metadata: {
-          deploymentStatus: 'published'
+          deploymentStatus: 'published',
         },
-        deletedAt: null
+        deletedAt: null,
       },
       { upsert: true, new: true }
     );
 
-    console.log('✅ Test project form created/updated:', testProjectForm.projectId);
+    console.log(
+      '✅ Test project form created/updated:',
+      testProjectForm.projectId
+    );
     console.log('📋 Form elements:', testProjectForm.elements.length);
 
     // Verify the data
     const userCount = await User.countDocuments({ tenantId: 'demo-tenant' });
-    const projectCount = await ProjectForm.countDocuments({ tenantId: 'demo-tenant' });
+    const projectCount = await ProjectForm.countDocuments({
+      tenantId: 'demo-tenant',
+    });
 
     console.log('\n📊 Test Data Summary:');
     console.log(`- Users in demo-tenant: ${userCount}`);
     console.log(`- Projects in demo-tenant: ${projectCount}`);
     console.log(`- Test user: ${testUser.email} (${testUser.tenantId})`);
-    console.log(`- Test project: ${testProjectForm.projectId} (${testProjectForm.tenantId})`);
+    console.log(
+      `- Test project: ${testProjectForm.projectId} (${testProjectForm.tenantId})`
+    );
 
     console.log('\n🎯 Email validation test data is ready!');
-    console.log('You can now send emails from fadebowaley@gmail.com to sendo@jmsfagribusiness.com');
-
+    console.log(
+      'You can now send emails from fadebowaley@gmail.com to sendo@jmsfagribusiness.com'
+    );
   } catch (error) {
     console.error('❌ Error creating test data:', error.message);
   } finally {

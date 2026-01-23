@@ -8,13 +8,15 @@ const roleSchema = mongoose.Schema({
     type: String,
     index: true,
   },
-  name: { type: String, unique: true, required: true },
+  name: { type: String, required: true, trim: true },
   description: {
     type: String,
     trim: true,
     maxlength: [200, 'Description cannot exceed 200 characters'],
   },
-  permissions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Permission', default: [] }], // Linked to Permission
+  permissions: [
+    { type: mongoose.Schema.Types.ObjectId, ref: 'Permission', default: [] },
+  ], // Linked to Permission
   isActive: {
     type: Boolean,
     default: true,
@@ -30,14 +32,12 @@ const roleSchema = mongoose.Schema({
   },
 });
 
-
 // add plugin that converts mongoose to json
 roleSchema.plugin(toJSON);
 roleSchema.plugin(paginate);
 roleSchema.plugin(tenantPlugin);
 roleSchema.index({ userId: 1 }, { unique: false });
-
-
+roleSchema.index({ tenantId: 1, name: 1 }, { unique: true });
 
 /**
  * Create a role (with tenant support)
@@ -61,10 +61,12 @@ roleSchema.statics.createRole = async function (roleData, currentUser) {
   return role;
 };
 
-
 roleSchema.statics.bulkCreateRoles = async function (rolesArray, user) {
   if (!user?.isOwner && !user?.hasPermissionToCreateRoles) {
-    throw new ApiError(httpStatus.FORBIDDEN, 'You are not authorized to create roles');
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'You are not authorized to create roles'
+    );
   }
 
   if (!Array.isArray(rolesArray) || rolesArray.length === 0) {
@@ -79,7 +81,9 @@ roleSchema.statics.bulkCreateRoles = async function (rolesArray, user) {
   const rolesToCreate = rolesArray
     .map((role) => {
       if (existingNames.includes(role.name)) {
-        logger.info(`Role name "${role.name}" already exists for this tenant, skipping...`);
+        logger.info(
+          `Role name "${role.name}" already exists for this tenant, skipping...`
+        );
         return null;
       }
       return {
@@ -91,23 +95,31 @@ roleSchema.statics.bulkCreateRoles = async function (rolesArray, user) {
     .filter((role) => role !== null);
 
   if (rolesToCreate.length === 0) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'All role names already exist for this tenant');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'All role names already exist for this tenant'
+    );
   }
 
   return await this.insertMany(rolesToCreate);
 };
 
-
 roleSchema.statics.deleteAllRoles = async function (tenantId) {
   if (!tenantId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Tenant ID is required to delete all roles');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Tenant ID is required to delete all roles'
+    );
   }
   try {
     // Perform the deletion
     const result = await this.deleteMany({ tenantId });
     // Check if any roles were deleted
     if (result.deletedCount === 0) {
-      throw new ApiError(httpStatus.NOT_FOUND, 'No roles found for this tenant');
+      throw new ApiError(
+        httpStatus.NOT_FOUND,
+        'No roles found for this tenant'
+      );
     }
     // Return the result with the number of deleted roles
     return {
@@ -116,10 +128,13 @@ roleSchema.statics.deleteAllRoles = async function (tenantId) {
     };
   } catch (error) {
     // Catching unexpected errors and rethrowing as API error
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error deleting roles', error);
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Error deleting roles',
+      error
+    );
   }
 };
-
 
 const Role = mongoose.model('Role', roleSchema);
 module.exports = Role;

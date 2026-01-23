@@ -40,14 +40,20 @@ const getEventById = catchAsync(async (req, res) => {
 const getEventsByProgram = catchAsync(async (req, res) => {
   const events = await eventService.getEventsByProgram(req.params.programId);
   if (!events || events.length === 0) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'No events found for this program');
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'No events found for this program'
+    );
   }
   res.send(events);
 });
 
 // Update event by ID
 const updateEventById = catchAsync(async (req, res) => {
-  const updatedEvent = await eventService.updateEventById(req.params.eventId, req.body);
+  const updatedEvent = await eventService.updateEventById(
+    req.params.eventId,
+    req.body
+  );
   res.send(updatedEvent);
 });
 

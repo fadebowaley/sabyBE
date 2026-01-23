@@ -13,7 +13,9 @@ const createStatement = {
     type: Joi.string().valid('credit', 'debit').required(),
     balanceAfter: Joi.number().required(),
     reference: Joi.string().required().trim(),
-    status: Joi.string().valid('pending', 'confirmed', 'failed').default('pending'),
+    status: Joi.string()
+      .valid('pending', 'confirmed', 'failed')
+      .default('pending'),
     metadata: Joi.object().default({}),
   }),
 };

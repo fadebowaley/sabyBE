@@ -8,10 +8,14 @@ const { projectFormService } = require('../services');
  * Create a project form
  */
 const createProjectForm = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
+  const { tenantId } = req.user;
   const createdBy = req.user._id;
 
-  const projectForm = await projectFormService.createProjectForm(req.body, tenantId, createdBy);
+  const projectForm = await projectFormService.createProjectForm(
+    req.body,
+    tenantId,
+    createdBy
+  );
   console.log('🔍 [SERVER DATA] Project Form Created:', req.body);
   res.status(httpStatus.CREATED).send({
     message: 'Project form created successfully',
@@ -36,9 +40,15 @@ const getProjectForms = catchAsync(async (req, res) => {
 
   // If search query is provided, use search functionality
   if (q) {
-    const searchFilter = tenantId ? { tenantId } : { tenantId: req.user.tenantId };
+    const searchFilter = tenantId
+      ? { tenantId }
+      : { tenantId: req.user.tenantId };
     const options = pick(req.query, ['sortBy', 'limit', 'page']);
-    const result = await projectFormService.searchProjectForms(q, searchFilter, options);
+    const result = await projectFormService.searchProjectForms(
+      q,
+      searchFilter,
+      options
+    );
     return res.send(result);
   }
 
@@ -58,9 +68,18 @@ const getProjectForms = catchAsync(async (req, res) => {
  */
 const getProjectFormsByTenant = catchAsync(async (req, res) => {
   const { tenantId } = req.params;
-  const filter = pick(req.query, ['status', 'configuration.projectName', 'configuration.tags', 'metadata.deploymentStatus']);
+  const filter = pick(req.query, [
+    'status',
+    'configuration.projectName',
+    'configuration.tags',
+    'metadata.deploymentStatus',
+  ]);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
-  const result = await projectFormService.getProjectFormsByTenant(tenantId, filter, options);
+  const result = await projectFormService.getProjectFormsByTenant(
+    tenantId,
+    filter,
+    options
+  );
 
   res.send(result);
 });
@@ -70,10 +89,19 @@ const getProjectFormsByTenant = catchAsync(async (req, res) => {
  */
 const getProjectFormsByUser = catchAsync(async (req, res) => {
   const { userId } = req.params;
-  const filter = pick(req.query, ['status', 'configuration.projectName', 'configuration.tags', 'metadata.deploymentStatus']);
+  const filter = pick(req.query, [
+    'status',
+    'configuration.projectName',
+    'configuration.tags',
+    'metadata.deploymentStatus',
+  ]);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
 
-  const result = await projectFormService.getProjectFormsByUser(userId, filter, options);
+  const result = await projectFormService.getProjectFormsByUser(
+    userId,
+    filter,
+    options
+  );
 
   res.send(result);
 });
@@ -85,7 +113,10 @@ const getProjectForm = catchAsync(async (req, res) => {
   const { projectFormId } = req.params;
   const options = pick(req.query, ['populate']);
 
-  const projectForm = await projectFormService.getProjectFormById(projectFormId, options);
+  const projectForm = await projectFormService.getProjectFormById(
+    projectFormId,
+    options
+  );
 
   res.send(projectForm);
 });
@@ -97,10 +128,17 @@ const getProjectFormByProjectId = catchAsync(async (req, res) => {
   const { projectId } = req.params;
   const options = pick(req.query, ['populate']);
 
-  const projectForm = await projectFormService.getProjectFormByProjectId(projectId, options);
+  const projectForm = await projectFormService.getProjectFormByProjectId(
+    projectId,
+    options
+  );
 
   // Increment views if not the owner viewing (only for authenticated users)
-  if (req.user && projectForm.createdBy && req.user._id.toString() !== projectForm.createdBy._id.toString()) {
+  if (
+    req.user &&
+    projectForm.createdBy &&
+    req.user._id.toString() !== projectForm.createdBy._id.toString()
+  ) {
     await projectFormService.incrementProjectViews(projectId);
   } else if (!req.user) {
     // For anonymous/public access, always increment views
@@ -117,7 +155,11 @@ const updateProjectForm = catchAsync(async (req, res) => {
   const { projectFormId } = req.params;
   const options = pick(req.query, ['populate']);
 
-  const projectForm = await projectFormService.updateProjectFormById(projectFormId, req.body, options);
+  const projectForm = await projectFormService.updateProjectFormById(
+    projectFormId,
+    req.body,
+    options
+  );
 
   res.send({
     message: 'Project form updated successfully',
@@ -132,7 +174,11 @@ const updateProjectFormByProjectId = catchAsync(async (req, res) => {
   const { projectId } = req.params;
   const options = pick(req.query, ['populate']);
 
-  const projectForm = await projectFormService.updateProjectFormByProjectId(projectId, req.body, options);
+  const projectForm = await projectFormService.updateProjectFormByProjectId(
+    projectId,
+    req.body,
+    options
+  );
 
   res.send({
     message: 'Project form updated successfully',
@@ -140,16 +186,7 @@ const updateProjectFormByProjectId = catchAsync(async (req, res) => {
   });
 });
 
-/**
- * Delete a project form (hard delete)
- */
-const deleteProjectForm = catchAsync(async (req, res) => {
-  const { projectFormId } = req.params;
 
-  await projectFormService.deleteProjectFormById(projectFormId);
-
-  res.status(httpStatus.NO_CONTENT).send();
-});
 
 /**
  * Soft delete a project form
@@ -157,24 +194,12 @@ const deleteProjectForm = catchAsync(async (req, res) => {
 const softDeleteProjectForm = catchAsync(async (req, res) => {
   const { projectFormId } = req.params;
 
-  const projectForm = await projectFormService.softDeleteProjectFormById(projectFormId);
+  const projectForm = await projectFormService.softDeleteProjectFormById(
+    projectFormId
+  );
 
   res.send({
     message: 'Project form deleted successfully',
-    projectForm,
-  });
-});
-
-/**
- * Restore a soft deleted project form
- */
-const restoreProjectForm = catchAsync(async (req, res) => {
-  const { projectFormId } = req.params;
-
-  const projectForm = await projectFormService.restoreProjectFormById(projectFormId);
-
-  res.send({
-    message: 'Project form restored successfully',
     projectForm,
   });
 });
@@ -184,12 +209,26 @@ const restoreProjectForm = catchAsync(async (req, res) => {
  */
 const publishProjectForm = catchAsync(async (req, res) => {
   const { projectFormId } = req.params;
+  const { calendarGeneration } = req.body;
 
-  const projectForm = await projectFormService.publishProjectForm(projectFormId);
+  // Extract calendar options if provided
+  const publishOptions = {};
+  if (calendarGeneration) {
+    publishOptions.startDate = calendarGeneration.startDate;
+    publishOptions.endDate = calendarGeneration.endDate;
+    publishOptions.monthsToGenerate = calendarGeneration.monthsToGenerate;
+    publishOptions.allowBackdating = calendarGeneration.allowBackdating;
+  }
+
+  const projectForm = await projectFormService.publishProjectForm(
+    projectFormId,
+    publishOptions
+  );
 
   res.send({
     message: 'Project form published successfully',
     projectForm,
+    calendarGenerated: calendarGeneration ? true : false,
   });
 });
 
@@ -199,11 +238,106 @@ const publishProjectForm = catchAsync(async (req, res) => {
 const archiveProjectForm = catchAsync(async (req, res) => {
   const { projectFormId } = req.params;
 
-  const projectForm = await projectFormService.archiveProjectForm(projectFormId);
+  const projectForm = await projectFormService.archiveProjectForm(
+    projectFormId
+  );
 
   res.send({
     message: 'Project form archived successfully',
     projectForm,
+  });
+});
+
+/**
+ * Delete a project form (soft-delete or permanent based on role)
+ */
+const deleteProjectForm = catchAsync(async (req, res) => {
+  const { projectId } = req.params;
+  const { permanent } = req.body;
+  const userId = req.user._id;
+  const userRole = req.user.role;
+
+  // Only sabyUser can do permanent deletion
+  if (permanent && userRole !== 'sabyUser') {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Permanent deletion requires sabyUser role'
+    );
+  }
+
+  const result = await projectFormService.deleteProjectForm(
+    projectId,
+    userId,
+    permanent
+  );
+  res.send(result);
+});
+
+/**
+ * Restore a soft-deleted project form
+ */
+const restoreProjectForm = catchAsync(async (req, res) => {
+  const { projectFormId } = req.params;
+
+  const projectForm = await projectFormService.restoreProjectFormById(projectFormId);
+
+  res.send({
+    message: 'Form restored successfully',
+    projectForm,
+  });
+});
+
+/**
+ * Get all soft-deleted project forms (within 14-day grace period)
+ */
+const getDeletedProjectForms = catchAsync(async (req, res) => {
+  const tenantId = req.user.tenantId;
+
+  const deletedForms = await projectFormService.getDeletedProjectForms(tenantId);
+
+  res.send({
+    results: deletedForms,
+    count: deletedForms.length,
+  });
+});
+
+/**
+ * Update payment configuration for a project form
+ */
+const updatePaymentConfig = catchAsync(async (req, res) => {
+  const { projectId } = req.params;
+  const { enabledChannels, channelConfigs } = req.body;
+
+  const projectForm = await projectFormService.getProjectFormByProjectId(projectId);
+
+  if (!projectForm) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Form not found');
+  }
+
+  // Check if form has financial tag
+  const hasFinancial =
+    projectForm.configuration?.tags?.includes('financial') ||
+    projectForm.configuration?.tags?.includes('payment');
+
+  if (!hasFinancial) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Payment channels only available for forms with financial tag'
+    );
+  }
+
+  projectForm.paymentConfig = {
+    enabled: true,
+    enabledChannels,
+    channelConfigs,
+    defaultChannel: enabledChannels[0] || 'sabypipe',
+  };
+
+  await projectForm.save();
+
+  res.send({
+    message: 'Payment configuration updated',
+    paymentConfig: projectForm.paymentConfig,
   });
 });
 
@@ -262,7 +396,11 @@ const searchProjectForms = catchAsync(async (req, res) => {
   const filter = { tenantId: req.user.tenantId };
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
 
-  const result = await projectFormService.searchProjectForms(q, filter, options);
+  const result = await projectFormService.searchProjectForms(
+    q,
+    filter,
+    options
+  );
 
   res.send(result);
 });
@@ -271,10 +409,13 @@ const searchProjectForms = catchAsync(async (req, res) => {
  * Get project form statistics
  */
 const getProjectFormStats = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
+  const { tenantId } = req.user;
 
   // Get basic statistics
-  const totalProjects = await projectFormService.queryProjectForms({ tenantId }, { limit: 0 });
+  const totalProjects = await projectFormService.queryProjectForms(
+    { tenantId },
+    { limit: 0 }
+  );
 
   const publishedProjects = await projectFormService.queryProjectForms(
     { tenantId, 'metadata.deploymentStatus': 'published' },
@@ -311,8 +452,10 @@ module.exports = {
   deleteProjectForm,
   softDeleteProjectForm,
   restoreProjectForm,
+  getDeletedProjectForms,
   publishProjectForm,
   archiveProjectForm,
+  updatePaymentConfig,
   getProjectAnalytics,
   incrementSubmissions,
   bulkOperations,

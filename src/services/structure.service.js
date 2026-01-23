@@ -1,153 +1,205 @@
 const mongoose = require('mongoose');
 const httpStatus = require('http-status');
-const { Structures, Level } = require('../models');
+const { Structures, Level, Nodes } = require('../models');
 const ApiError = require('../utils/ApiError');
 
-
 const saveStructuresAndLevels = async (structures, tenantId, createdBy) => {
+  if (!Array.isArray(structures)) {
+    structures = [structures]; // wrap single object in array
+  }
   const session = await mongoose.startSession();
-  let useTransaction = false;
+  const useTransaction = !!session.supports?.transactions;
+
+  console.log('[STRUCTURE SERVICE] saveStructuresAndLevels requested', {
+    tenantId,
+    createdBy,
+    totalStructures: structures?.length || 0,
+    useTransaction,
+  });
+
   try {
-    console.log(
-      'Starting session and checking transaction support...',
-      structures
-    );
-    // Check if transactions are supported (replica set or mongos)
-    useTransaction = session.supports && session.supports.transactions;
     if (useTransaction) {
-      console.log('Transaction supported, starting transaction...');
-      session.startTransaction();
-    }
-    const levelMap = new Map();
-    const tempIdToStructureId = new Map();
-    console.log('Processing unique ranks...');
-    const uniqueRanks = [
-      ...new Set(
-        structures.filter((s) => !s.isSpecial).map((s) => s.levelRank)
-      ),
-    ];
-    for (const rank of uniqueRanks) {
-      console.log(`Processing rank: ${rank}`);
-      let level = await Level.findOne({ tenantId, rank }).session(
-        useTransaction ? session : null
+      console.log('[STRUCTURE SERVICE] Starting Mongo transaction');
+      await session.startTransaction();
+    } else {
+      console.warn(
+        '[STRUCTURE SERVICE] Transactions not supported in current Mongo topology. Continuing without transaction.'
       );
-      if (!level) {
-        console.log(`Level not found for rank ${rank}, creating new level...`);
-        const levels = await Level.create(
-          [{ tenantId, name: `Level ${rank}`, rank }],
-          {
-            session: useTransaction ? session : null,
-          }
-        );
-        level = levels[0];
-      }
-      levelMap.set(rank, level._id);
     }
-    console.log('Processing structures...');
 
-    // CRITICAL FIX: Sort structures by level rank to process parents before children
-    // This ensures parent IDs are in the map when children are processed
-    const sortedStructures = structures.sort(
-      (a, b) => a.levelRank - b.levelRank
-    );
-    console.log(
-      'Sorted structures by level rank:',
-      sortedStructures.map((s) => ({
-        name: s.name,
-        levelRank: s.levelRank,
-        parentTempId: s.parentTempId,
-      }))
-    );
+    const tempIdToDbId = new Map();
+    const levelCache = new Map();
+    const sorted = [...structures].sort((a, b) => a.levelRank - b.levelRank);
 
-    for (const item of sortedStructures) {
-      console.log(`Processing structure: ${item.name}`);
-      let levelId;
+    console.log('[STRUCTURE SERVICE] Structures sorted by levelRank', {
+      order: sorted.map((item) => ({
+        tempId: item.tempId,
+        name: item.name,
+        levelRank: item.levelRank,
+        isSpecial: !!item.isSpecial,
+      })),
+    });
+
+    const getOrCreateLevel = async (item) => {
+      const cacheKey = `${item.levelRank}::${
+        item.isSpecial ? 'special' : 'normal'
+      }`;
+      if (levelCache.has(cacheKey)) {
+        console.log('[STRUCTURE SERVICE] Level cache hit', {
+          cacheKey,
+          levelId: levelCache.get(cacheKey),
+        });
+        return levelCache.get(cacheKey);
+      }
+
       if (item.isSpecial) {
-        console.log(
-          `Structure ${item.name} is special, creating special level...`
+        console.log('[STRUCTURE SERVICE] Creating special level', {
+          name: item.name,
+          levelRank: item.levelRank,
+        });
+
+        const specialLevelDocs = await Level.create(
+          [
+            {
+              tenantId,
+              name: item.name,
+              rank: item.levelRank,
+              isSpecial: true,
+              isActive: true,
+            },
+          ],
+          { session: useTransaction ? session : null }
         );
-        const levels = await Level.create(
-          [{ tenantId, name: `Special-${item.name}`, rank: item.levelRank }],
-          {
-            session: useTransaction ? session : null,
-          }
-        );
-        levelId = levels[0]._id;
-      } else {
-        levelId = levelMap.get(item.levelRank);
-      }
-      // CRITICAL FIX: Handle both temp IDs (for new nodes) and database IDs (for existing nodes)
-      let parentId = null;
-      if (item.parentTempId) {
-        // Check if it's a temp ID in our map (new parent node)
-        if (tempIdToStructureId.has(item.parentTempId)) {
-          parentId = tempIdToStructureId.get(item.parentTempId);
-          console.log(
-            `  - Parent is NEW node (temp ID): ${item.parentTempId} → ${parentId}`
-          );
-        } else {
-          // It's already a database ID (existing parent node)
-          parentId = item.parentTempId;
-          console.log(`  - Parent is EXISTING node (database ID): ${parentId}`);
-        }
+
+        const specialLevelId = specialLevelDocs[0]._id;
+        levelCache.set(cacheKey, specialLevelId);
+        return specialLevelId;
       }
 
-      console.log(`Creating structure: ${item.name}`);
-      console.log(`  - Temp ID: ${item.tempId}`);
-      console.log(`  - Parent Temp ID from frontend: ${item.parentTempId}`);
-      console.log(`  - Resolved Parent ID for database: ${parentId}`);
+      console.log('[STRUCTURE SERVICE] Looking up normal level', {
+        tenantId,
+        levelRank: item.levelRank,
+      });
+
+      let level = await Level.findOne({
+        tenantId,
+        rank: item.levelRank,
+      }).session(useTransaction ? session : null);
+
+      if (!level) {
+        const levelName =
+          sorted.find((s) => s.levelRank === item.levelRank && !s.isSpecial)
+            ?.name || `Level ${item.levelRank}`;
+
+        console.log('[STRUCTURE SERVICE] Creating level because none exists', {
+          tenantId,
+          levelRank: item.levelRank,
+          levelName,
+        });
+
+        const newLevelDocs = await Level.create(
+          [
+            {
+              tenantId,
+              name: levelName,
+              rank: item.levelRank,
+              isSpecial: false,
+              isActive: true,
+            },
+          ],
+          { session: useTransaction ? session : null }
+        );
+        level = newLevelDocs[0];
+      }
+
+      levelCache.set(cacheKey, level._id);
+      return level._id;
+    };
+
+    const resolveParent = (item) => {
+      if (!item.parentTempId) {
+        return null;
+      }
+      const parentId = tempIdToDbId.get(item.parentTempId) || item.parentTempId;
+      console.log('[STRUCTURE SERVICE] Resolved parent', {
+        tempId: item.tempId,
+        parentTempId: item.parentTempId,
+        resolvedParentId: parentId,
+      });
+      return parentId;
+    };
+
+    for (const item of sorted) {
+      console.log('[STRUCTURE SERVICE] Processing structure', {
+        tempId: item.tempId,
+        name: item.name,
+        levelRank: item.levelRank,
+        isSpecial: !!item.isSpecial,
+        isSpecialRaw: item.isSpecial, // Log raw value
+        isActive: item.isActive !== undefined ? item.isActive : true,
+        isActiveRaw: item.isActive, // Log raw value
+        allItemKeys: Object.keys(item), // Log all keys to debug
+      });
+
+      const levelId = await getOrCreateLevel(item);
+      console.log('[STRUCTURE SERVICE] Level ID resolved for structure', {
+        tempId: item.tempId,
+        levelId,
+      });
+
+      const structureData = {
+        tenantId,
+        name: item.name,
+        code: item.code || '',
+        description: item.description || '',
+        level: levelId,
+        parent: resolveParent(item),
+        isSpecial: !!item.isSpecial,
+        isActive: item.isActive !== undefined ? item.isActive : true,
+        type: item.type || 'administrative',
+        position: item.position || { x: 0, y: 0 },
+        createdBy,
+      };
+
       console.log(
-        `  - Current temp ID map:`,
-        Array.from(tempIdToStructureId.entries())
-      );
-      const [structure] = await Structures.create(
-        [
-          {
-            tenantId,
-            name: item.name,
-            code: item.code || '',
-            description: item.description || '',
-            level: levelId,
-            parent: parentId,
-            isSpecial: !!item.isSpecial,
-            isActive: item.isActive !== undefined ? item.isActive : true,
-            type: item.type || 'administrative',
-            position: item.position || { x: 0, y: 0 },
-            createdBy,
-          },
-        ],
-        { session: useTransaction ? session : null }
+        '[STRUCTURE SERVICE] Creating structure document',
+        structureData
       );
 
-      tempIdToStructureId.set(item.tempId, structure._id);
-      console.log(`  ✅ Created structure with DB ID: ${structure._id}`);
-      console.log(
-        `  ✅ Saved with parent: ${structure.parent || 'null (root node)'}`
-      );
+      const [structure] = await Structures.create([structureData], {
+        session: useTransaction ? session : null,
+      });
+
+      tempIdToDbId.set(item.tempId, structure._id);
+      console.log('[STRUCTURE SERVICE] Structure created', {
+        tempId: item.tempId,
+        structureId: structure._id,
+      });
     }
 
     if (useTransaction) {
-      console.log('Committing transaction...');
       await session.commitTransaction();
+      console.log('[STRUCTURE SERVICE] Transaction committed');
     }
-    session.endSession();
-    console.log('Session ended successfully.');
 
-    return Array.from(tempIdToStructureId.values());
-  } catch (error) {
-    console.error('Error occurred, aborting transaction if applicable...');
+    console.log('[STRUCTURE SERVICE] Completed saveStructuresAndLevels');
+    return [...tempIdToDbId.values()];
+  } catch (err) {
+    console.error('[STRUCTURE SERVICE] Error saving structures/levels', err);
     if (useTransaction) {
       await session.abortTransaction();
+      console.log('[STRUCTURE SERVICE] Transaction aborted due to error');
     }
+    throw err;
+  } finally {
     session.endSession();
-    console.error('Session ended with error:', error);
-    throw error;
+    console.log('[STRUCTURE SERVICE] Mongo session closed');
   }
 };
 
-const createStructure = async (structureBody) => {
-  return Structures.createStructure(structureBody);
-};
+// Keep your helper
+const createStructure = async (structureBody) =>
+  Structures.createStructure(structureBody);
 
 /**
  * Get structure by id
@@ -197,15 +249,98 @@ const updateStructureById = async (structureId, updateBody) => {
 
 /**
  * Delete structure by id
+ * Also deletes the associated level if no other structures or nodes reference it
  * @param {ObjectId} structureId
  * @returns {Promise<Structure>}
  */
 const deleteStructureById = async (structureId) => {
   console.log('[STRUCTURE SERVICE - DELETE] Deleting structure:', structureId);
-  const structure = await getStructureById(structureId);
-  await structure.remove();
-  console.log('[STRUCTURE SERVICE - DELETE] Structure deleted successfully');
-  return structure;
+  const session = await mongoose.startSession();
+  const useTransaction = !!session.supports?.transactions;
+
+  try {
+    if (useTransaction) {
+      console.log('[STRUCTURE SERVICE - DELETE] Starting Mongo transaction');
+      await session.startTransaction();
+    } else {
+      console.warn(
+        '[STRUCTURE SERVICE - DELETE] Transactions not supported in current Mongo topology. Continuing without transaction.'
+      );
+    }
+
+    // Get the structure and its level ID before deletion (within transaction)
+    const structure = await Structures.findById(structureId).session(
+      useTransaction ? session : null
+    );
+    if (!structure) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Structure not found');
+    }
+    const levelId = structure.level;
+
+    console.log('[STRUCTURE SERVICE - DELETE] Structure level ID:', levelId);
+
+    // Delete the structure
+    await Structures.deleteOne(
+      { _id: structureId },
+      { session: useTransaction ? session : null }
+    );
+    console.log('[STRUCTURE SERVICE - DELETE] Structure deleted successfully');
+
+    // Check if any other structures or nodes reference this level
+    const otherStructures = await Structures.countDocuments({
+      level: levelId,
+      _id: { $ne: structureId },
+    }).session(useTransaction ? session : null);
+
+    const nodesUsingLevel = await Nodes.countDocuments({
+      level: levelId,
+    }).session(useTransaction ? session : null);
+
+    console.log('[STRUCTURE SERVICE - DELETE] Level usage check:', {
+      levelId,
+      otherStructures,
+      nodesUsingLevel,
+    });
+
+    // If no other structures or nodes use this level, delete it
+    if (otherStructures === 0 && nodesUsingLevel === 0) {
+      await Level.deleteOne(
+        { _id: levelId },
+        { session: useTransaction ? session : null }
+      );
+      console.log(
+        '[STRUCTURE SERVICE - DELETE] Orphaned level deleted:',
+        levelId
+      );
+    } else {
+      console.log(
+        '[STRUCTURE SERVICE - DELETE] Level kept (still in use):',
+        levelId
+      );
+    }
+
+    if (useTransaction) {
+      await session.commitTransaction();
+      console.log('[STRUCTURE SERVICE - DELETE] Transaction committed');
+    }
+
+    return structure;
+  } catch (err) {
+    console.error(
+      '[STRUCTURE SERVICE - DELETE] Error deleting structure:',
+      err
+    );
+    if (useTransaction) {
+      await session.abortTransaction();
+      console.log(
+        '[STRUCTURE SERVICE - DELETE] Transaction aborted due to error'
+      );
+    }
+    throw err;
+  } finally {
+    session.endSession();
+    console.log('[STRUCTURE SERVICE - DELETE] Mongo session closed');
+  }
 };
 
 /**
@@ -218,21 +353,17 @@ const deleteStructureById = async (structureId) => {
  * @returns {Promise<QueryResult>}
  */
 
-
 const queryStructures = async (filter, options) => {
   const structure = await Structures.paginate(filter, options);
   return structure;
 };
-
 
 /**
  * Get structures by type
  * @param {string} type - Structure type
  * @returns {Promise<Array<Structure>>}
  */
-const getStructuresByType = async (type) => {
-  return Structures.find({ type });
-};
+const getStructuresByType = async (type) => Structures.find({ type });
 
 /**
  * Get parent structure
@@ -252,9 +383,8 @@ const getParentStructure = async (structureId) => {
  * @param {ObjectId} structureId
  * @returns {Promise<Array<Structure>>}
  */
-const getChildStructures = async (structureId) => {
-  return Structure.find({ parentId: structureId });
-};
+const getChildStructures = async (structureId) =>
+  Structure.find({ parentId: structureId });
 
 /**
  * Move structure to new parent

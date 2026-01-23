@@ -1,0 +1,526 @@
+name,level,structure,parent,address,city,state,country,postalCode,dateOfEstablishment,isMain,users
+National Headquarters,Root,Root Structure,,,,,,,,true,
+HEADQUARTERS I,Zone,Zone Structure,National Headquarters,,,,,,,false,
+Covenant Cathedral,Parish,Parish Structure,HEADQUARTERS I,,,,,,,false,kehinde.ajibola.covenant.cathedral@sotsm.org
+Amero,Parish,Parish Structure,HEADQUARTERS I,,,,,,,false,dele.owomoyela.amero@sotsm.org
+Ologuneru,Parish,Parish Structure,HEADQUARTERS I,,,,,,,false,abioye.ayorinde.ologuneru@sotsm.org
+Ikolaba II,Parish,Parish Structure,HEADQUARTERS I,,,,,,,false,emmanuel.mabayoje.ikolaba.ii@sotsm.org
+Oluyoro,Zone,Zone Structure,National Headquarters,,,,,,,false,
+HEADQUARTERS II,Zone,Zone Structure,National Headquarters,,,,,,,false,
+Garden of Victory,Parish,Parish Structure,HEADQUARTERS II,,,,,,,false,akinwale.coker.garden.of.victory@sotsm.org
+Alagbayun,Parish,Parish Structure,HEADQUARTERS II,,,,,,,false,olatunji.afolabi.alagbayun@sotsm.org
+Akingbade,Parish,Parish Structure,HEADQUARTERS II,,,,,,,false,adeleke.nelson.akingbade@sotsm.org
+"Fountain of Life, Aba-Osho",Parish,Parish Structure,HEADQUARTERS II,,,,,,,false,dotun.omokemi.fountain.of.life.aba.osho@sotsm.org
+Onideure (Zone),Zone,Zone Structure,National Headquarters,,,,,,,false,olawale.aluko.onideure.zone@sotsm.org
+Idi-Obi,Zone,Zone Structure,National Headquarters,,,,,,,false,
+"New Garment, Alakia (Zone)",Zone,Zone Structure,National Headquarters,,,,,,,false,toki.oluwole.new.garment.alakia.zone@sotsm.org
+Ajameta,Parish,Parish Structure,"New Garment, Alakia (Zone)",,,,,,,false,olubunmi.adeyemi.ajameta@sotsm.org
+HEADQUARTERS III,Zone,Zone Structure,National Headquarters,,,,,,,false,
+Loyola,Parish,Parish Structure,HEADQUARTERS III,,,,,,,false,adesoji.adeniji.loyola@sotsm.org
+Ogungbade,Parish,Parish Structure,HEADQUARTERS III,,,,,,,false,samuel.aderombi.ogungbade@sotsm.org
+GENESIS DIVISION,Division,Division Structure,National Headquarters,,,,,,,false,
+The Rock,Parish,Parish Structure,GENESIS DIVISION,,,,,,,false,enoch.nathaniel.the.rock@sotsm.org
+Lade (Zone),Zone,Zone Structure,GENESIS DIVISION,,,,,,,false,oladimeji.olusegun.lade.zone@sotsm.org
+Bakatari (Zone),Zone,Zone Structure,GENESIS DIVISION,,,,,,,false,yemi.adeleke.bakatari.zone@sotsm.org
+Ogungbade (Zone),Zone,Zone Structure,GENESIS DIVISION,,,,,,,false,femi.fayemi.ogungbade.zone@sotsm.org
+Opoopin,Parish,Parish Structure,Ogungbade (Zone),,,,,,,false,ojo.ibukun.opoopin@sotsm.org
+Alase,Parish,Parish Structure,Ogungbade (Zone),,,,,,,false,adejumo.williams.alase@sotsm.org
+Miracle Centre,Zone,Zone Structure,GENESIS DIVISION,,,,,,,false,bamiduro.taiwo.miracle.centre@sotsm.org
+Olubadan Estate,Parish,Parish Structure,Miracle Centre,,,,,,,false,adebola.taiwo.olubadan.estate@sotsm.org
+Adelubi (Zone),Zone,Zone Structure,GENESIS DIVISION,,,,,,,false,olatubosun.olayemi.adelubi.zone@sotsm.org
+Akoka,Parish,Parish Structure,Adelubi (Zone),,,,,,,false,comfort.adebola.akoka@sotsm.org
+Grace Arena,Parish,Parish Structure,Adelubi (Zone),,,,,,,false,victor.ayoade.grace.arena@sotsm.org
+Olaogun (Zone),Zone,Zone Structure,GENESIS DIVISION,,,,,,,false,goke.omotoso.olaogun.zone@sotsm.org
+King of Glory,Parish,Parish Structure,Olaogun (Zone),,,,,,,false,adesola.emmanuel.king.of.glory@sotsm.org
+kulodi,Parish,Parish Structure,Olaogun (Zone),,,,,,,false,kuti.olusegun.kulodi@sotsm.org
+ABUNDANCE DIOCESE,Diocese,Diocese Structure,GENESIS DIVISION,,,,,,,false,
+Eruomu,Parish,Parish Structure,ABUNDANCE DIOCESE,,,,,,,false,mrs.adeniyi.rachael.eruomu@sotsm.org
+Ile Marun (Zone),Zone,Zone Structure,ABUNDANCE DIOCESE,,,,,,,false,muyiwa.isola.ile.marun.zone@sotsm.org
+Resurrection (Zone),Zone,Zone Structure,ABUNDANCE DIOCESE,,,,,,,false,uzoka.patrick.resurrection.zone@sotsm.org
+Salawu (Zone),Zone,Zone Structure,ABUNDANCE DIOCESE,,,,,,,false,oyetunde.aiyedun.salawu.zone@sotsm.org
+Alabidun,Parish,Parish Structure,Salawu (Zone),,,,,,,false,alade.esther.alabidun@sotsm.org
+Alarere,Parish,Parish Structure,Salawu (Zone),,,,,,,false,gbenro.aderibigbe.alarere@sotsm.org
+Paara,Parish,Parish Structure,Salawu (Zone),,,,,,,false,lekan.olakorede.paara@sotsm.org
+Felele,Parish,Parish Structure,Salawu (Zone),,,,,,,false,dipo.oke.felele@sotsm.org
+Soka,Parish,Parish Structure,Salawu (Zone),,,,,,,false,olugbogi.moses.soka@sotsm.org
+GLORIOUS INHERITANCE DIOCESE,Diocese,Diocese Structure,GENESIS DIVISION,,,,,,,false,
+Akinfenwa,Parish,Parish Structure,GLORIOUS INHERITANCE DIOCESE,,,,,,,false,wole.okunola.akinfenwa@sotsm.org
+Redemptorist,Parish,Parish Structure,GLORIOUS INHERITANCE DIOCESE,,,,,,,false,fagbemi.john.redemptorist@sotsm.org
+New Gbagi,Parish,Parish Structure,GLORIOUS INHERITANCE DIOCESE,,,,,,,false,aliu.peter.new.gbagi@sotsm.org
+Kasumu,Parish,Parish Structure,GLORIOUS INHERITANCE DIOCESE,,,,,,,false,abifarin.olatunde.kasumu@sotsm.org
+Airport,Parish,Parish Structure,GLORIOUS INHERITANCE DIOCESE,,,,,,,false,adeaga.niyi.airport@sotsm.org
+Idi-Obi,Parish,Parish Structure,GLORIOUS INHERITANCE DIOCESE,,,,,,,false,ojo.ademola.idi.obi@sotsm.org
+Oluwo,Parish,Parish Structure,GLORIOUS INHERITANCE DIOCESE,,,,,,,false,david.popoola.oluwo@sotsm.org
+GLORIOUS LIFE DIOCESE,Diocese,Diocese Structure,GENESIS DIVISION,,,,,,,false,
+Akobo II,Parish,Parish Structure,GLORIOUS LIFE DIOCESE,,,,,,,false,mrs.adetutu.akintayo.akobo.ii@sotsm.org
+Kute I,Parish,Parish Structure,GLORIOUS LIFE DIOCESE,,,,,,,false,muyiwa.akinbode.kute.i@sotsm.org
+Kute II,Parish,Parish Structure,GLORIOUS LIFE DIOCESE,,,,,,,false,timothy.akinremi.kute.ii@sotsm.org
+Kute III,Parish,Parish Structure,GLORIOUS LIFE DIOCESE,,,,,,,false,oladejo.florence.kute.iii@sotsm.org
+Hausa Church I,Parish,Parish Structure,GLORIOUS LIFE DIOCESE,,,,,,,false,silas.miniyos.hausa.church.i@sotsm.org
+Hausa Church II,Parish,Parish Structure,GLORIOUS LIFE DIOCESE,,,,,,,false,iliya.tonde.hausa.church.ii@sotsm.org
+Abidiodan,Diocese,Diocese Structure,GENESIS DIVISION,,,,,,,false,dayo.ajayi.abidiodan@sotsm.org
+IBADAN CENTRAL DIV.,Division,Division Structure,National Headquarters,,,,,,,false,gbenga.afolabi.ibadan.central.div@sotsm.org
+CELEBRATION DIOCESE,Diocese,Diocese Structure,IBADAN CENTRAL DIV.,,,,,,,false,
+Ashi,Parish,Parish Structure,CELEBRATION DIOCESE,,,,,,,false,moses.adekanye.ashi@sotsm.org
+Inu-Koko,Parish,Parish Structure,CELEBRATION DIOCESE,,,,,,,false,david.oluwaseun.inu.koko@sotsm.org
+CLC Ikolaba (Zone),Zone,Zone Structure,CELEBRATION DIOCESE,,,,,,,false,adeniyi.familua.clc.ikolaba.zone@sotsm.org
+CLC Olorunda,Parish,Parish Structure,CLC Ikolaba (Zone),,,,,,,false,olowolayemo.tope.clc.olorunda@sotsm.org
+CLC Bada (Zone),Zone,Zone Structure,CELEBRATION DIOCESE,,,,,,,false,funke.oladebo.clc.bada.zone@sotsm.org
+CLC Ojurin,Parish,Parish Structure,CLC Bada (Zone),,,,,,,false,james.kayode.clc.ojurin@sotsm.org
+CLC Olorunda-Aba (Zone),Zone,Zone Structure,CELEBRATION DIOCESE,,,,,,,false,timothy.o.abodunrin.clc.olorunda.aba.zone@sotsm.org
+Bada II,Parish,Parish Structure,CLC Olorunda-Aba (Zone),,,,,,,false,olatunde.o.bada.ii@sotsm.org
+Olorunda Aba II,Parish,Parish Structure,CLC Olorunda-Aba (Zone),,,,,,,false,mrs.olunike.babarinde.olorunda.aba.ii@sotsm.org
+LIFELINE DIOCESE,Diocese,Diocese Structure,IBADAN CENTRAL DIV.,,,,,,,false,
+Iwo Road I,Parish,Parish Structure,LIFELINE DIOCESE,,,,,,,false,gbenga.adebambo.iwo.road.i@sotsm.org
+CLC Bode Wasimi (Zone),Zone,Zone Structure,LIFELINE DIOCESE,,,,,,,false,adedayo.enobahor.clc.bode.wasimi.zone@sotsm.org
+CLC Aliwo (Zone),Zone,Zone Structure,LIFELINE DIOCESE,,,,,,,false,olujide.richard.olujaye.clc.aliwo.zone@sotsm.org
+CLC Gbenla,Parish,Parish Structure,CLC Aliwo (Zone),,,,,,,false,banjo.adedeji.clc.gbenla@sotsm.org
+CLC Oje,Parish,Parish Structure,CLC Aliwo (Zone),,,,,,,false,francis.ojo.clc.oje@sotsm.org
+Jenriyin,Parish,Parish Structure,CLC Aliwo (Zone),,,,,,,false,ishola.tunde.jenriyin@sotsm.org
+NEW JERUSALEM DIOCESE,Diocese,Diocese Structure,IBADAN CENTRAL DIV.,,,,,,,false,
+Total Garden,Parish,Parish Structure,NEW JERUSALEM DIOCESE,,,,,,,false,lawrence.adebayo.total.garden@sotsm.org
+CLC Adeoyo,Parish,Parish Structure,NEW JERUSALEM DIOCESE,,,,,,,false,aderonke.oluokun.clc.adeoyo@sotsm.org
+Adegbayi,Parish,Parish Structure,NEW JERUSALEM DIOCESE,,,,,,,false,tomide.olayiwola.adegbayi@sotsm.org
+Agbadagudu,Parish,Parish Structure,NEW JERUSALEM DIOCESE,,,,,,,false,tunde.yoade.agbadagudu@sotsm.org
+Oke Adu,Parish,Parish Structure,NEW JERUSALEM DIOCESE,,,,,,,false,olufemi.akindele.oke.adu@sotsm.org
+CLC Oke-Are (Zone),Zone,Zone Structure,NEW JERUSALEM DIOCESE,,,,,,,false,ayeni.stella.clc.oke.are.zone@sotsm.org
+CLC Padre,Parish,Parish Structure,CLC Oke-Are (Zone),,,,,,,false,dare.akeju.clc.padre@sotsm.org
+CLC Idi-Obi,Parish,Parish Structure,CLC Oke-Are (Zone),,,,,,,false,bukunmi.adetunji.clc.idi.obi@sotsm.org
+Baba-Isale,Parish,Parish Structure,CLC Oke-Are (Zone),,,,,,,false,susana.nwosu.baba.isale@sotsm.org
+Odooye (Zone),Zone,Zone Structure,NEW JERUSALEM DIOCESE,,,,,,,false,olayiwola.abosede.odooye.zone@sotsm.org
+VICTORY DIOCESE,Diocese,Diocese Structure,IBADAN CENTRAL DIV.,,,,,,,false,
+Agbowo Victory Centre,Zone,Zone Structure,VICTORY DIOCESE,,,,,,,false,oladeji.o.olusola.agbowo.victory.centre@sotsm.org
+Aho Ajibode,Parish,Parish Structure,Agbowo Victory Centre,,,,,,,false,ayodele.oladipo.alaba.aho.ajibode@sotsm.org
+Agbowo Express (Zone),Zone,Zone Structure,VICTORY DIOCESE,,,,,,,false,tunde.adejumo.agbowo.express.zone@sotsm.org
+Orogun (Zone),Zone,Zone Structure,VICTORY DIOCESE,,,,,,,false,edward.peter.ogabor.orogun.zone@sotsm.org
+Barika,Parish,Parish Structure,Orogun (Zone),,,,,,,false,williams.bababunmi.barika@sotsm.org
+Elewuro,Parish,Parish Structure,Orogun (Zone),,,,,,,false,tunde.akinola.elewuro@sotsm.org
+Aduloju,Parish,Parish Structure,Orogun (Zone),,,,,,,false,adekunle.obilade.aduloju@sotsm.org
+Laaniba (Zone),Zone,Zone Structure,VICTORY DIOCESE,,,,,,,false,bamidele.john.laaniba.zone@sotsm.org
+Alapata,Parish,Parish Structure,Laaniba (Zone),,,,,,,false,kehinde.eto.oluwa.alapata@sotsm.org
+Ajetumobi,Parish,Parish Structure,Laaniba (Zone),,,,,,,false,adekunle.obilade.ajetumobi@sotsm.org
+Aba Odo,Parish,Parish Structure,Laaniba (Zone),,,,,,,false,kareem.olayinka.aba.odo@sotsm.org
+Jakan (oasis),Parish,Parish Structure,Laaniba (Zone),,,,,,,false,busari.kayode.jakan.oasis@sotsm.org
+MOUNT ZION DIOCESE,Diocese,Diocese Structure,IBADAN CENTRAL DIV.,,,,,,,false,
+Iwo Road II,Parish,Parish Structure,MOUNT ZION DIOCESE,,,,,,,false,olusegun.ojesanmi.iwo.road.ii@sotsm.org
+CLC Abayomi,Zone,Zone Structure,MOUNT ZION DIOCESE,,,,,,,false,
+Youth Church,Parish,Parish Structure,CLC Abayomi,,,,,,,false,david.olumide.youth.church@sotsm.org
+CLC Basorun (Zone),Zone,Zone Structure,MOUNT ZION DIOCESE,,,,,,,false,tolu.olusegun.omotoso.clc.basorun.zone@sotsm.org
+CLC Yawiri,Parish,Parish Structure,CLC Basorun (Zone),,,,,,,false,peters.abiodun.clc.yawiri@sotsm.org
+CLC Jonku (Zone),Zone,Zone Structure,MOUNT ZION DIOCESE,,,,,,,false,awogbade.henry.a.clc.jonku.zone@sotsm.org
+CLC Ofatedo,Parish,Parish Structure,CLC Jonku (Zone),,,,,,,false,oladiti.moses.oludele.clc.ofatedo@sotsm.org
+Molade I (Zone),Zone,Zone Structure,MOUNT ZION DIOCESE,,,,,,,false,akinyemi.olusegun.molade.i.zone@sotsm.org
+Molade II,Parish,Parish Structure,Molade I (Zone),,,,,,,false,oluyomi.lawal.molade.ii@sotsm.org
+Egbeda,Parish,Parish Structure,Molade I (Zone),,,,,,,false,awe.olusegun.egbeda@sotsm.org
+Elewuro II,Parish,Parish Structure,Molade I (Zone),,,,,,,false,femi.akanle.elewuro.ii@sotsm.org
+Ayepe,Zone,Zone Structure,MOUNT ZION DIOCESE,,,,,,,false,
+EVANGEL DIOCESE,Diocese,Diocese Structure,IBADAN CENTRAL DIV.,,,,,,,false,
+Ojoo,Parish,Parish Structure,EVANGEL DIOCESE,,,,,,,false,bisi.adetifa.ojoo@sotsm.org
+CLC Onile-Aro (Zone),Zone,Zone Structure,EVANGEL DIOCESE,,,,,,,false,olayiwola.omolabi.clc.onile.aro.zone@sotsm.org
+CLC Idi-Ose,Parish,Parish Structure,CLC Onile-Aro (Zone),,,,,,,false,bolanle.adelabu.clc.idi.ose@sotsm.org
+CLC Ajibode (Zone),Zone,Zone Structure,EVANGEL DIOCESE,,,,,,,false,ibukun.abioye.clc.ajibode.zone@sotsm.org
+CLC Akingbile,Parish,Parish Structure,CLC Ajibode (Zone),,,,,,,false,ademola.dare.clc.akingbile@sotsm.org
+CLC Niser/Itesiwju (Zone),Zone,Zone Structure,EVANGEL DIOCESE,,,,,,,false,grace.akin.ajayi.clc.niser.itesiwju.zone@sotsm.org
+CLC Kole,Parish,Parish Structure,CLC Niser/Itesiwju (Zone),,,,,,,false,jacob.gbolagbade.clc.kole@sotsm.org
+CLC Aroro-Yerokun,Parish,Parish Structure,CLC Niser/Itesiwju (Zone),,,,,,,false,sogunle.oluyemisi.clc.aroro.yerokun@sotsm.org
+CLC Moniya (Zone),Zone,Zone Structure,EVANGEL DIOCESE,,,,,,,false,fatai.adams.clc.moniya.zone@sotsm.org
+CLC Ajibade,Parish,Parish Structure,CLC Moniya (Zone),,,,,,,false,abiodun.adebayo.clc.ajibade@sotsm.org
+CLC Osajin-Lakoto,Parish,Parish Structure,CLC Moniya (Zone),,,,,,,false,oladeni.omolara.clc.osajin.lakoto@sotsm.org
+CLC Igbo-Oloyin,Parish,Parish Structure,CLC Moniya (Zone),,,,,,,false,sina.ogunrotimi.clc.igbo.oloyin@sotsm.org
+THRONE OF GLORY DIOCESE,Diocese,Diocese Structure,IBADAN CENTRAL DIV.,,,,,,,false,
+Bashorun,Parish,Parish Structure,THRONE OF GLORY DIOCESE,,,,,,,false,gbenga.afolabi.bashorun@sotsm.org
+CLC Gbagi (Zone),Zone,Zone Structure,THRONE OF GLORY DIOCESE,,,,,,,false,adewumi.sijibomi.clc.gbagi.zone@sotsm.org
+CLC Sawmill,Parish,Parish Structure,CLC Gbagi (Zone),,,,,,,false,adeniyi.adetunji.clc.sawmill@sotsm.org
+CLC Badeku,Parish,Parish Structure,CLC Gbagi (Zone),,,,,,,false,bello.ifedayo.akeem.clc.badeku@sotsm.org
+CLC Wakajaye (Zone),Zone,Zone Structure,THRONE OF GLORY DIOCESE,,,,,,,false,akinwale.emmanuel.clc.wakajaye.zone@sotsm.org
+CLC Oki,Parish,Parish Structure,CLC Wakajaye (Zone),,,,,,,false,gbolagade.adebayo.clc.oki@sotsm.org
+CLC Segelu,Parish,Parish Structure,CLC Wakajaye (Zone),,,,,,,false,olanisebe.adeyemi.clc.segelu@sotsm.org
+CLC Aremo (Zone),Zone,Zone Structure,THRONE OF GLORY DIOCESE,,,,,,,false,pst.afolabi.obafemi.johnson.clc.aremo.zone@sotsm.org
+CLC Agbeja,Parish,Parish Structure,CLC Aremo (Zone),,,,,,,false,oyetunde.abiola.clc.agbeja@sotsm.org
+CLC Bodija I (Zone),Zone,Zone Structure,THRONE OF GLORY DIOCESE,,,,,,,false,adio.adewale.oluseyi.clc.bodija.i.zone@sotsm.org
+CLC Alapata,Parish,Parish Structure,CLC Bodija I (Zone),,,,,,,false,oyeyemi.olapade.clc.alapata@sotsm.org
+RESUURRECTION POWER DIOCESE,Diocese,Diocese Structure,IBADAN CENTRAL DIV.,,,,,,,false,
+Cultural Centre,Zone,Zone Structure,RESUURRECTION POWER DIOCESE,,,,,,,false,bibilola.oladeji.cultural.centre@sotsm.org
+Oranyan,Parish,Parish Structure,Cultural Centre,,,,,,,false,onadele.muyiwa.oranyan@sotsm.org
+Amuloko,Parish,Parish Structure,Cultural Centre,,,,,,,false,sola.arowolo.amuloko@sotsm.org
+Ode-Aje,Parish,Parish Structure,Cultural Centre,,,,,,,false,busari.kehinde.ode.aje@sotsm.org
+Agugu,Parish,Parish Structure,Cultural Centre,,,,,,,false,moses.laoye.agugu@sotsm.org
+Ode-Aje II,Parish,Parish Structure,Cultural Centre,,,,,,,false,segun.wright.ode.aje.ii@sotsm.org
+Oranyan II,Parish,Parish Structure,Cultural Centre,,,,,,,false,blessing.adekole.oranyan.ii@sotsm.org
+Amuloko (Odebode),Zone,Zone Structure,RESUURRECTION POWER DIOCESE,,,,,,,false,
+Ile Aperin,Zone,Zone Structure,RESUURRECTION POWER DIOCESE,,,,,,,false,
+IBADAN NORTH DIVISION,Division,Division Structure,National Headquarters,,,,,,,false,wole.oyeyemi.ibadan.north.division@sotsm.org
+AKOBO DIOCESE,Diocese,Diocese Structure,IBADAN NORTH DIVISION,,,,,,,false,
+Akobo,Parish,Parish Structure,AKOBO DIOCESE,,,,,,,false,wole.oyeyemi.akobo@sotsm.org
+CLC Abidiodan,Diocese,Diocese Structure,IBADAN NORTH DIVISION,,,,,,,false,segun.awopeju.clc.abidiodan@sotsm.org
+CLC Eni-Irapada,Parish,Parish Structure,CLC Abidiodan,,,,,,,false,dara.awe.clc.eni.irapada@sotsm.org
+CLC Onikokoro,Parish,Parish Structure,CLC Abidiodan,,,,,,,false,oladeji.a.o.clc.onikokoro@sotsm.org
+CLC Ore-Ofe,Parish,Parish Structure,CLC Abidiodan,,,,,,,false,abiodun.adejumo.clc.ore.ofe@sotsm.org
+CLC Isokan Estate,Parish,Parish Structure,CLC Abidiodan,,,,,,,false,kunmi.gbenro.clc.isokan.estate@sotsm.org
+CLC Olorunda Abaa,Parish,Parish Structure,CLC Abidiodan,,,,,,,false,julius.fayemi.clc.olorunda.abaa@sotsm.org
+CLC Aba Igbagbo,Parish,Parish Structure,CLC Abidiodan,,,,,,,false,adegboyega.raphael.clc.aba.igbagbo@sotsm.org
+REDEMPTION DIOCESE,Diocese,Diocese Structure,IBADAN NORTH DIVISION,,,,,,,false,
+Agugu,Parish,Parish Structure,REDEMPTION DIOCESE,,,,,,,false,l.o.olayiwola.agugu@sotsm.org
+Gbaremu (Zone),Zone,Zone Structure,REDEMPTION DIOCESE,,,,,,,false,balogun.olusayo.gbaremu.zone@sotsm.org
+Babanla (Zone),Zone,Zone Structure,REDEMPTION DIOCESE,,,,,,,false,olalekan.akinsipe.babanla.zone@sotsm.org
+Idi-Osan,Parish,Parish Structure,Babanla (Zone),,,,,,,false,oyekunle.olubunmi.idi.osan@sotsm.org
+Itamerin,Parish,Parish Structure,Babanla (Zone),,,,,,,false,oladejo.kunle.itamerin@sotsm.org
+Ifesowapo,Parish,Parish Structure,Babanla (Zone),,,,,,,false,james.friday.ifesowapo@sotsm.org
+Ayekale II,Parish,Parish Structure,Babanla (Zone),,,,,,,false,adewole.olalekan.ayekale.ii@sotsm.org
+Erunmu,Parish,Parish Structure,Babanla (Zone),,,,,,,false,adewuyi.bamise.erunmu@sotsm.org
+TRANSFIGURATION DIO.,Diocese,Diocese Structure,IBADAN NORTH DIVISION,,,,,,,false,
+Aperin,Parish,Parish Structure,TRANSFIGURATION DIO.,,,,,,,false,oyeniyi.oyelese.aperin@sotsm.org
+Adesola (Zone),Zone,Zone Structure,TRANSFIGURATION DIO.,,,,,,,false,oladiran.bolanle.adesola.zone@sotsm.org
+CLC Elekuro,Parish,Parish Structure,Adesola (Zone),,,,,,,false,oladejo.olusegun.clc.elekuro@sotsm.org
+CLC Ajegunle,Parish,Parish Structure,Adesola (Zone),,,,,,,false,olumide.akinlabi.clc.ajegunle@sotsm.org
+CLC Olorunsogo,Parish,Parish Structure,Adesola (Zone),,,,,,,false,adebayo.hassan.taiwo.clc.olorunsogo@sotsm.org
+Ogbere Ti Oya (Zone),Zone,Zone Structure,TRANSFIGURATION DIO.,,,,,,,false,olumide.laniyan.ogbere.ti.oya.zone@sotsm.org
+CLC Olunloyo,Parish,Parish Structure,Ogbere Ti Oya (Zone),,,,,,,false,adeyi.oluwakayode.a.clc.olunloyo@sotsm.org
+CLC Odinjo,Parish,Parish Structure,Ogbere Ti Oya (Zone),,,,,,,false,aramide.olaniyan.clc.odinjo@sotsm.org
+CLC Idi Iroko Olodo,Parish,Parish Structure,Ogbere Ti Oya (Zone),,,,,,,false,amoo.olayinka.clc.idi.iroko.olodo@sotsm.org
+CLC Ariyo,Parish,Parish Structure,Ogbere Ti Oya (Zone),,,,,,,false,ojo.abayomi.t.clc.ariyo@sotsm.org
+Oja London (Zone),Zone,Zone Structure,TRANSFIGURATION DIO.,,,,,,,false,kayode.olusola.oja.london.zone@sotsm.org
+CLC Ologede-Olodo,Parish,Parish Structure,Oja London (Zone),,,,,,,false,adebisi.ademola.clc.ologede.olodo@sotsm.org
+CLC Koloko,Parish,Parish Structure,Oja London (Zone),,,,,,,false,oyewusi.deborah.clc.koloko@sotsm.org
+REVELATION DIOCESE,Diocese,Diocese Structure,IBADAN NORTH DIVISION,,,,,,,false,
+CLC Monatan,Parish,Parish Structure,REVELATION DIOCESE,,,,,,,false,segun.oladimeji.clc.monatan@sotsm.org
+CLC Adogba (Zone),Zone,Zone Structure,REVELATION DIOCESE,,,,,,,false,olusegun.lawson.clc.adogba.zone@sotsm.org
+CLC Iyana Church I,Parish,Parish Structure,CLC Adogba (Zone),,,,,,,false,abiodun.omotoso.clc.iyana.church.i@sotsm.org
+CLC Iyana Church II,Parish,Parish Structure,CLC Adogba (Zone),,,,,,,false,ayeni.ayodele.samuel.clc.iyana.church.ii@sotsm.org
+CLC Segelu,Parish,Parish Structure,CLC Adogba (Zone),,,,,,,false,adekunle.adedolapo.clc.segelu@sotsm.org
+CLC Gbena (Zone),Zone,Zone Structure,REVELATION DIOCESE,,,,,,,false,adelabu.adesokan.clc.gbena.zone@sotsm.org
+CLC Adex,Parish,Parish Structure,CLC Gbena (Zone),,,,,,,false,efemedoh.hope.clc.adex@sotsm.org
+BREAKTHROUGH DIO.,Diocese,Diocese Structure,IBADAN NORTH DIVISION,,,,,,,false,
+Isegun,Parish,Parish Structure,BREAKTHROUGH DIO.,,,,,,,false,layi.adisa.isegun@sotsm.org
+Moleke,Zone,Zone Structure,BREAKTHROUGH DIO.,,,,,,,false,
+Isegun II (Zone),Zone,Zone Structure,BREAKTHROUGH DIO.,,,,,,,false,olayinka.adubi.isegun.ii.zone@sotsm.org
+CLC Oloruntedo,Parish,Parish Structure,Isegun II (Zone),,,,,,,false,sunday.jayeoba.clc.oloruntedo@sotsm.org
+Kengbe (Zone),Zone,Zone Structure,BREAKTHROUGH DIO.,,,,,,,false,bolaji.olatunde.kengbe.zone@sotsm.org
+CLC Olosan,Parish,Parish Structure,Kengbe (Zone),,,,,,,false,adewale.temitope.clc.olosan@sotsm.org
+CLC Akanle,Parish,Parish Structure,Kengbe (Zone),,,,,,,false,adesina.omotayo.clc.akanle@sotsm.org
+Airport (Zone),Zone,Zone Structure,BREAKTHROUGH DIO.,,,,,,,false,oyedele.sola.airport.zone@sotsm.org
+CLC Ife-Olu,Parish,Parish Structure,Airport (Zone),,,,,,,false,stella.ayeni.clc.ife.olu@sotsm.org
+CLC Ogo-Oluwa,Parish,Parish Structure,Airport (Zone),,,,,,,false,falade.olusoji.clc.ogo.oluwa@sotsm.org
+CLC Youth,Parish,Parish Structure,Airport (Zone),,,,,,,false,adeyeni.adewole.clc.youth@sotsm.org
+CALVARY GRACE DIOCESE,Diocese,Diocese Structure,IBADAN NORTH DIVISION,,,,,,,false,
+Adegbayi,Parish,Parish Structure,CALVARY GRACE DIOCESE,,,,,,,false,kunmi.adeyinka.adegbayi@sotsm.org
+Ifesowapo (Zone),Zone,Zone Structure,CALVARY GRACE DIOCESE,,,,,,,false,akintunde.olufemi.ifesowapo.zone@sotsm.org
+Egbeda (Zone),Zone,Zone Structure,CALVARY GRACE DIOCESE,,,,,,,false,pst.hammed.oladiran.taiwo.famojuro.egbeda.zone@sotsm.org
+Iyana Agbala,Parish,Parish Structure,Egbeda (Zone),,,,,,,false,adejumo.mercy.m.iyana.agbala@sotsm.org
+Oluwo,Parish,Parish Structure,Egbeda (Zone),,,,,,,false,oluwakunle.moses.oluwo@sotsm.org
+Lam Adesina,Parish,Parish Structure,Egbeda (Zone),,,,,,,false,ojeyinka.abosede.lam.adesina@sotsm.org
+Kukumada,Parish,Parish Structure,Egbeda (Zone),,,,,,,false,jayeoba.olumide.sunday.kukumada@sotsm.org
+Amulegbodo,Zone,Zone Structure,CALVARY GRACE DIOCESE,,,,,,,false,
+CHARISMA DIOCESE,Diocese,Diocese Structure,IBADAN NORTH DIVISION,,,,,,,false,
+Olodo-Kumapayi,Parish,Parish Structure,CHARISMA DIOCESE,,,,,,,false,filani.omolara.olodo.kumapayi@sotsm.org
+Ejioku,Parish,Parish Structure,CHARISMA DIOCESE,,,,,,,false,omotayo.esther.ejioku@sotsm.org
+Ajagba,Parish,Parish Structure,CHARISMA DIOCESE,,,,,,,false,ojewande.olukayode.ajagba@sotsm.org
+Lalupon (Zone),Zone,Zone Structure,CHARISMA DIOCESE,,,,,,,false,john.olusegun.fatoki.lalupon.zone@sotsm.org
+Amosun (Zone),Zone,Zone Structure,CHARISMA DIOCESE,,,,,,,false,abomide.tolulope.amosun.zone@sotsm.org
+Oki Olodo,Parish,Parish Structure,Amosun (Zone),,,,,,,false,akinro.k.bolaji.oki.olodo@sotsm.org
+Olodo Bank,Parish,Parish Structure,Amosun (Zone),,,,,,,false,ajao.peter.olodo.bank@sotsm.org
+Wakajaye,Parish,Parish Structure,Amosun (Zone),,,,,,,false,aderinwale.jaralyne.wakajaye@sotsm.org
+Balogun,Parish,Parish Structure,Amosun (Zone),,,,,,,false,adeoye.taiwo.balogun@sotsm.org
+Arubiewe,Parish,Parish Structure,Amosun (Zone),,,,,,,false,oladiti.abiodun.elijah.arubiewe@sotsm.org
+Olodo Kumapayi,Parish,Parish Structure,Amosun (Zone),,,,,,,false,oladimeji.israel.olodo.kumapayi@sotsm.org
+DAYSPRING DIOCESE,Diocese,Diocese Structure,IBADAN NORTH DIVISION,,,,,,,false,
+Jenriyin,Parish,Parish Structure,DAYSPRING DIOCESE,,,,,,,false,oladayo.fatanmi.o.jenriyin@sotsm.org
+CLC Itesiwaju/Erunmu,Parish,Parish Structure,DAYSPRING DIOCESE,,,,,,,false,sunday.jegede.clc.itesiwaju.erunmu@sotsm.org
+CLC Adeleye,Parish,Parish Structure,DAYSPRING DIOCESE,,,,,,,false,obalana.abiodun.francis.clc.adeleye@sotsm.org
+CLC Odan-Eleekan (Zone),Zone,Zone Structure,DAYSPRING DIOCESE,,,,,,,false,kuku.abayomi.clc.odan.eleekan.zone@sotsm.org
+CLC Jinarere,Parish,Parish Structure,CLC Odan-Eleekan (Zone),,,,,,,false,idowu.kehinde.m.clc.jinarere@sotsm.org
+CLC Egba-Akinlumo,Parish,Parish Structure,CLC Odan-Eleekan (Zone),,,,,,,false,abiodun.adebowale.clc.egba.akinlumo@sotsm.org
+DAYSTAR DIOCESE,Diocese,Diocese Structure,IBADAN NORTH DIVISION,,,,,,,false,
+Amuloko I,Parish,Parish Structure,DAYSTAR DIOCESE,,,,,,,false,olaibi.taiwo.amuloko.i@sotsm.org
+Alawaye,Parish,Parish Structure,DAYSTAR DIOCESE,,,,,,,false,aboderin.joseph.alawaye@sotsm.org
+Elewe,Parish,Parish Structure,DAYSTAR DIOCESE,,,,,,,false,olaniyan.oluyemi.elewe@sotsm.org
+Aye Tuntun,Parish,Parish Structure,DAYSTAR DIOCESE,,,,,,,false,adeagbo.oluwatoyin.aye.tuntun@sotsm.org
+Idi-Ose,Parish,Parish Structure,DAYSTAR DIOCESE,,,,,,,false,olanlokun.kehinde.idi.ose@sotsm.org
+CLC Olomiyeye,Parish,Parish Structure,DAYSTAR DIOCESE,,,,,,,false,oyeleke.temitayo.clc.olomiyeye@sotsm.org
+Amuloko II,Parish,Parish Structure,DAYSTAR DIOCESE,,,,,,,false,emiola.temitope.amuloko.ii@sotsm.org
+Akanran,Parish,Parish Structure,DAYSTAR DIOCESE,,,,,,,false,olaniyi.ajani.akanran@sotsm.org
+Olonda Ogunsola,Parish,Parish Structure,DAYSTAR DIOCESE,,,,,,,false,lanaeoluwa.emmanuel.olonda.ogunsola@sotsm.org
+Apara,Parish,Parish Structure,DAYSTAR DIOCESE,,,,,,,false,fabiyi.seun.ezekiel.apara@sotsm.org
+Mato-Ajia,Parish,Parish Structure,DAYSTAR DIOCESE,,,,,,,false,adio.oluwaseun.mato.ajia@sotsm.org
+Idi-Iroko,Parish,Parish Structure,DAYSTAR DIOCESE,,,,,,,false,adeleke.olawale.matthew.idi.iroko@sotsm.org
+IBADAN SOUTH DIVISION,Division,Division Structure,National Headquarters,,,,,,,false,
+OLUYOLE DIOCESE,Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,
+Oluyole,Parish,Parish Structure,OLUYOLE DIOCESE,,,,,,,false,folashade.ajibade.oluyole@sotsm.org
+Adabeji,Parish,Parish Structure,OLUYOLE DIOCESE,,,,,,,false,kunmi.adedeji.adabeji@sotsm.org
+Fatusi II,Parish,Parish Structure,OLUYOLE DIOCESE,,,,,,,false,niyi.olanipekun.fatusi.ii@sotsm.org
+Idi-Ishin Elebu,Parish,Parish Structure,OLUYOLE DIOCESE,,,,,,,false,zacheus.oloruntola.idi.ishin.elebu@sotsm.org
+Jiboye,Parish,Parish Structure,OLUYOLE DIOCESE,,,,,,,false,alabi.dolapo.jiboye@sotsm.org
+Fatusi I,Parish,Parish Structure,OLUYOLE DIOCESE,,,,,,,false,david.femi.fatusi.i@sotsm.org
+Akala,Parish,Parish Structure,OLUYOLE DIOCESE,,,,,,,false,ojo.tosin.akala@sotsm.org
+Zion Assembly,Parish,Parish Structure,OLUYOLE DIOCESE,,,,,,,false,olosunde.member.zion.assembly@sotsm.org
+JUBILEE DIOCESE,Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,
+Ring Road,Parish,Parish Structure,JUBILEE DIOCESE,,,,,,,false,olahansoye.moses.ring.road@sotsm.org
+Orita,Parish,Parish Structure,JUBILEE DIOCESE,,,,,,,false,isaac.k.klenz.orita@sotsm.org
+Challenge (Zone),Zone,Zone Structure,JUBILEE DIOCESE,,,,,,,false,fadayomi.andrew.o.challenge.zone@sotsm.org
+Odo-Ona Elewe (Zone),Zone,Zone Structure,JUBILEE DIOCESE,,,,,,,false,azeez.oluremi.m.odo.ona.elewe.zone@sotsm.org
+Adeoyo (Zone),Zone,Zone Structure,JUBILEE DIOCESE,,,,,,,false,olabode.david.k.adeoyo.zone@sotsm.org
+Idi Iroko,Zone,Zone Structure,JUBILEE DIOCESE,,,,,,,false,
+Abimbola Felele,Zone,Zone Structure,JUBILEE DIOCESE,,,,,,,false,
+"Hall of Grace, Challenge",Zone,Zone Structure,JUBILEE DIOCESE,,,,,,,false,
+ZOE DIOCESE,Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,
+Felele,Parish,Parish Structure,ZOE DIOCESE,,,,,,,false,dejo.oyeyiola.felele@sotsm.org
+CLC Odo-Oba (Zone),Zone,Zone Structure,ZOE DIOCESE,,,,,,,false,adetipe.adeniyi.clc.odo.oba.zone@sotsm.org
+CLC Koso,Parish,Parish Structure,CLC Odo-Oba (Zone),,,,,,,false,akinlolu.olugbenga.clc.koso@sotsm.org
+CLC Ehin Grammar (Zone),Zone,Zone Structure,ZOE DIOCESE,,,,,,,false,olusola.akindele.clc.ehin.grammar.zone@sotsm.org
+CLC Molete Olorunsogo,Parish,Parish Structure,CLC Ehin Grammar (Zone),,,,,,,false,toba.gideon.clc.molete.olorunsogo@sotsm.org
+CLC Idi Oya,Parish,Parish Structure,CLC Ehin Grammar (Zone),,,,,,,false,oluwatosin.akinrinde.clc.idi.oya@sotsm.org
+Apadaba,Parish,Parish Structure,CLC Ehin Grammar (Zone),,,,,,,false,yetunde.oloside.apadaba@sotsm.org
+Irewolede,Parish,Parish Structure,CLC Ehin Grammar (Zone),,,,,,,false,peter.adeniran.irewolede@sotsm.org
+PENTECOST DIOCESE,Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,
+Olunde,Parish,Parish Structure,PENTECOST DIOCESE,,,,,,,false,ogunremi.soji.olunde@sotsm.org
+CLC Omiyale (Zone),Zone,Zone Structure,PENTECOST DIOCESE,,,,,,,false,akomolafe.esther.clc.omiyale.zone@sotsm.org
+CLC Papa-Jesu,Parish,Parish Structure,CLC Omiyale (Zone),,,,,,,false,lawal.paul.clc.papa.jesu@sotsm.org
+CLC Miofeakoba,Parish,Parish Structure,CLC Omiyale (Zone),,,,,,,false,ojewale.bukola.clc.miofeakoba@sotsm.org
+Ayegun (Zone),Zone,Zone Structure,PENTECOST DIOCESE,,,,,,,false,adeyemo.samuel.o.ayegun.zone@sotsm.org
+CLC Ago,Parish,Parish Structure,Ayegun (Zone),,,,,,,false,taiwo.yerokun.clc.ago@sotsm.org
+CLC Olunde II,Parish,Parish Structure,Ayegun (Zone),,,,,,,false,atinuke.olunloyo.clc.olunde.ii@sotsm.org
+Olomi,Zone,Zone Structure,PENTECOST DIOCESE,,,,,,,false,
+LIBERTY DIOCESE,Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,
+Liberty Pavilion,Parish,Parish Structure,LIBERTY DIOCESE,,,,,,,false,bimbo.ajayi.liberty.pavilion@sotsm.org
+City Temple (Zone),Zone,Zone Structure,LIBERTY DIOCESE,,,,,,,false,moses.o.adigun.city.temple.zone@sotsm.org
+Ososami (Zone),Zone,Zone Structure,LIBERTY DIOCESE,,,,,,,false,tunde.bolarinwa.olaiya.ososami.zone@sotsm.org
+Elebu Alaro (Zone),Zone,Zone Structure,LIBERTY DIOCESE,,,,,,,false,ajala.oladipupo.elebu.alaro.zone@sotsm.org
+Idi Arere (Zone),Zone,Zone Structure,LIBERTY DIOCESE,,,,,,,false,michael.talubi.idi.arere.zone@sotsm.org
+Oke-Bola,Parish,Parish Structure,Idi Arere (Zone),,,,,,,false,oluseun.osifeko.oke.bola@sotsm.org
+Akilapa,Parish,Parish Structure,Idi Arere (Zone),,,,,,,false,ayodele.ogunleye.akilapa@sotsm.org
+Agbokojo,Parish,Parish Structure,Idi Arere (Zone),,,,,,,false,kolawole.hamzat.agbokojo@sotsm.org
+Molete,Parish,Parish Structure,Idi Arere (Zone),,,,,,,false,o.akanni.molete@sotsm.org
+Liberty Arena,Parish,Parish Structure,Idi Arere (Zone),,,,,,,false,anthony.adeosun.liberty.arena@sotsm.org
+Ayetoro,Parish,Parish Structure,Idi Arere (Zone),,,,,,,false,olalekan.akanni.ayetoro@sotsm.org
+Lanisa,Parish,Parish Structure,Idi Arere (Zone),,,,,,,false,emmanuel.adenegan.lanisa@sotsm.org
+Elebu II,Parish,Parish Structure,Idi Arere (Zone),,,,,,,false,bolatito.ayoola.elebu.ii@sotsm.org
+RESTORATION DIOCESE,Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,
+CLC Bembo,Parish,Parish Structure,RESTORATION DIOCESE,,,,,,,false,oladokun.solomon.o.clc.bembo@sotsm.org
+Sure Mercy (Zone),Zone,Zone Structure,RESTORATION DIOCESE,,,,,,,false,isaac.olubayo.sure.mercy.zone@sotsm.org
+Jubilee,Parish,Parish Structure,Sure Mercy (Zone),,,,,,,false,emmanuel.adewale.jubilee@sotsm.org
+Rehoboth (Zone),Zone,Zone Structure,RESTORATION DIOCESE,,,,,,,false,pst.mrs.hannah.gbolagade.rehoboth.zone@sotsm.org
+Youth Church,Parish,Parish Structure,Rehoboth (Zone),,,,,,,false,gbenga.ogunlesi.youth.church@sotsm.org
+Oloko (Zone),Zone,Zone Structure,RESTORATION DIOCESE,,,,,,,false,olayiwola.michael.adebayo.oloko.zone@sotsm.org
+Heritage,Parish,Parish Structure,Oloko (Zone),,,,,,,false,afolabi.f.martins.heritage@sotsm.org
+Glorious Assembly,Parish,Parish Structure,Oloko (Zone),,,,,,,false,justina.ajayi.glorious.assembly@sotsm.org
+Great Joy,Parish,Parish Structure,Oloko (Zone),,,,,,,false,adetoro.adedotun.great.joy@sotsm.org
+Liberty Centre,Zone,Zone Structure,RESTORATION DIOCESE,,,,,,,false,olubayo.olubunmi.liberty.centre@sotsm.org
+AGAPE DIOCESE,Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,
+House of Glory,Parish,Parish Structure,AGAPE DIOCESE,,,,,,,false,mrs.rosemary.okotie.house.of.glory@sotsm.org
+Life Centre (Zone),Zone,Zone Structure,AGAPE DIOCESE,,,,,,,false,omoniyi.imafojie.life.centre.zone@sotsm.org
+Upper Room,Parish,Parish Structure,Life Centre (Zone),,,,,,,false,elijah.oyedotun.upper.room@sotsm.org
+Kuola (Zone),Zone,Zone Structure,AGAPE DIOCESE,,,,,,,false,ibukun.olayinka.kuola.zone@sotsm.org
+Ateere,Parish,Parish Structure,Kuola (Zone),,,,,,,false,timileyin.awosanya.ateere@sotsm.org
+Alaaka,Parish,Parish Structure,Kuola (Zone),,,,,,,false,adeoti.ayinde.alaaka@sotsm.org
+Captain Area (SOP),Zone,Zone Structure,AGAPE DIOCESE,,,,,,,false,abiodun.ogunniyi.captain.area.sop@sotsm.org
+EMMANUEL DIOCESE,Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,
+Ago Olugbala,Parish,Parish Structure,EMMANUEL DIOCESE,,,,,,,false,adekunle.olu.s.ago.olugbala@sotsm.org
+Omi Onigbagbo (Zone),Zone,Zone Structure,EMMANUEL DIOCESE,,,,,,,false,oguntunde.l.o.omi.onigbagbo.zone@sotsm.org
+Odo Ona (Zone),Zone,Zone Structure,EMMANUEL DIOCESE,,,,,,,false,akanbi.oludayo.odo.ona.zone@sotsm.org
+Owode (Zone),Zone,Zone Structure,EMMANUEL DIOCESE,,,,,,,false,dosumu.ezekiel.oludayo.owode.zone@sotsm.org
+Agbofieti (Zone),Zone,Zone Structure,EMMANUEL DIOCESE,,,,,,,false,agboola.o.agbofieti.zone@sotsm.org
+Ago Olugbala,Parish,Parish Structure,Agbofieti (Zone),,,,,,,false,olaobayemi.o.j.ago.olugbala@sotsm.org
+Great Grace,Parish,Parish Structure,Agbofieti (Zone),,,,,,,false,chris.uwagba.great.grace@sotsm.org
+Orisumibare,Parish,Parish Structure,Agbofieti (Zone),,,,,,,false,olanrewaju.member.orisumibare@sotsm.org
+Omi-Adio (Aba Tisa),Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,ajetumobi.o.omi.adio.aba.tisa@sotsm.org
+Odo Ona II,Parish,Parish Structure,Omi-Adio (Aba Tisa),,,,,,,false,salawu.mathias.odo.ona.ii@sotsm.org
+City of God,Parish,Parish Structure,Omi-Adio (Aba Tisa),,,,,,,false,samuel.amosu.city.of.god@sotsm.org
+Abundance Grace,Parish,Parish Structure,Omi-Adio (Aba Tisa),,,,,,,false,adebiyi.member.abundance.grace@sotsm.org
+Winner Parish,Zone,Zone Structure,Omi-Adio (Aba Tisa),,,,,,,false,
+Eleso Parish,Zone,Zone Structure,Omi-Adio (Aba Tisa),,,,,,,false,
+Abule Owo,Zone,Zone Structure,Omi-Adio (Aba Tisa),,,,,,,false,
+ALLELUIA DIOCESE,Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,
+Idi-Ishin,Parish,Parish Structure,ALLELUIA DIOCESE,,,,,,,false,abiodun.adegoke.idi.ishin@sotsm.org
+Kusela,Parish,Parish Structure,ALLELUIA DIOCESE,,,,,,,false,olaide.badru.kusela@sotsm.org
+Ekotedo,Parish,Parish Structure,ALLELUIA DIOCESE,,,,,,,false,babawale.ayinde.ekotedo@sotsm.org
+Mokola (Zone),Zone,Zone Structure,ALLELUIA DIOCESE,,,,,,,false,olorunfemi.adetoro.mokola.zone@sotsm.org
+Mokola II,Parish,Parish Structure,Mokola (Zone),,,,,,,false,femi.adesanoye.mokola.ii@sotsm.org
+Ologuneru (Zone),Zone,Zone Structure,ALLELUIA DIOCESE,,,,,,,false,adegbite.olalekan.ologuneru.zone@sotsm.org
+Alafara,Parish,Parish Structure,Ologuneru (Zone),,,,,,,false,emmanuel.oladejo.alafara@sotsm.org
+Ile Tutun (Zone),Zone,Zone Structure,ALLELUIA DIOCESE,,,,,,,false,ogedengbe.kayode.ile.tutun.zone@sotsm.org
+Adejumo,Parish,Parish Structure,Ile Tutun (Zone),,,,,,,false,ukpong.udofia.adejumo@sotsm.org
+Adetokun,Parish,Parish Structure,Ile Tutun (Zone),,,,,,,false,meshach.oyekanmi.adetokun@sotsm.org
+Elenusonso,Parish,Parish Structure,Ile Tutun (Zone),,,,,,,false,jude.oseghole.elenusonso@sotsm.org
+Unity Church,Zone,Zone Structure,ALLELUIA DIOCESE,,,,,,,false,
+HE'S ALIVE DIOCESE,Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,
+Lighthouse,Parish,Parish Structure,HE'S ALIVE DIOCESE,,,,,,,false,kunle.adesanya.lighthouse@sotsm.org
+Mokola I,Parish,Parish Structure,HE'S ALIVE DIOCESE,,,,,,,false,bamidele.adegunwa.mokola.i@sotsm.org
+Eleyele,Parish,Parish Structure,HE'S ALIVE DIOCESE,,,,,,,false,odekunle.lola.m.a.eleyele@sotsm.org
+"Arola, Apete",Parish,Parish Structure,HE'S ALIVE DIOCESE,,,,,,,false,samuel.ajayi.arola.apete@sotsm.org
+Sango (Zone),Zone,Zone Structure,HE'S ALIVE DIOCESE,,,,,,,false,taiwo.obayemi.sango.zone@sotsm.org
+"Jesus Assembly, Awotan, Apete",Parish,Parish Structure,Sango (Zone),,,,,,,false,pius.james.jesus.assembly.awotan.apete@sotsm.org
+Coca-Cola,Parish,Parish Structure,Sango (Zone),,,,,,,false,audu.oziododo.coca.cola@sotsm.org
+Oke Itunu,Parish,Parish Structure,Sango (Zone),,,,,,,false,godwin.ogudu.oke.itunu@sotsm.org
+"Zion Assembly, Akodu, Apete",Parish,Parish Structure,Sango (Zone),,,,,,,false,michael.adeniyi.zion.assembly.akodu.apete@sotsm.org
+SOLID ROCK DIOCESE,Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,
+Boluwaji,Parish,Parish Structure,SOLID ROCK DIOCESE,,,,,,,false,"oluseyi.adebayo.boluwaji@sotsm.org,adeniran.adeolu.boluwaji@sotsm.org"
+Idi-Mango,Parish,Parish Structure,SOLID ROCK DIOCESE,,,,,,,false,oluwasesan.adeyemo.idi.mango@sotsm.org
+Academy,Parish,Parish Structure,SOLID ROCK DIOCESE,,,,,,,false,oludele.samson.oyelere.academy@sotsm.org
+Sanyo,Parish,Parish Structure,SOLID ROCK DIOCESE,,,,,,,false,iriemi.mercy.sanyo@sotsm.org
+Soka,Parish,Parish Structure,SOLID ROCK DIOCESE,,,,,,,false,adedotun.christianah.soka@sotsm.org
+Ogo Oluwa,Parish,Parish Structure,SOLID ROCK DIOCESE,,,,,,,false,ige.samson.ogo.oluwa@sotsm.org
+DOMINION,Parish,Parish Structure,SOLID ROCK DIOCESE,,,,,,,false,muyiwa.ademiju.dominion@sotsm.org
+DOMINION DIOCESE,Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,
+Dominion Arena,Parish,Parish Structure,DOMINION DIOCESE,,,,,,,false,muyiwa.ademiju.dominion.arena@sotsm.org
+Ilesa,Parish,Parish Structure,DOMINION DIOCESE,,,,,,,false,nafiu.bamidupe.ilesa@sotsm.org
+Ido Osun,Parish,Parish Structure,DOMINION DIOCESE,,,,,,,false,olumide.adio.ido.osun@sotsm.org
+Kuse-Ido Osun,Parish,Parish Structure,DOMINION DIOCESE,,,,,,,false,omikunle.olakunle.kuse.ido.osun@sotsm.org
+NEW DOMINION DIOCESE,Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,
+Igbonna,Parish,Parish Structure,NEW DOMINION DIOCESE,,,,,,,false,adeyinka.adedokun.igbonna@sotsm.org
+Oroki (Zone),Zone,Zone Structure,NEW DOMINION DIOCESE,,,,,,,false,kayode.akinsola.oroki.zone@sotsm.org
+Odi Olowo (Zone),Zone,Zone Structure,NEW DOMINION DIOCESE,,,,,,,false,deji.omisakin.odi.olowo.zone@sotsm.org
+Ayetoro,Parish,Parish Structure,Odi Olowo (Zone),,,,,,,false,lateef.fatumbi.ayetoro@sotsm.org
+Owode Ede,Parish,Parish Structure,Odi Olowo (Zone),,,,,,,false,olusola.awe.owode.ede@sotsm.org
+Oke Onitea,Parish,Parish Structure,Odi Olowo (Zone),,,,,,,false,yomi.hope.akingbade.oke.onitea@sotsm.org
+Kings Parish,Parish,Parish Structure,Odi Olowo (Zone),,,,,,,false,nathaniel.denis.kings.parish@sotsm.org
+Alabameta,Parish,Parish Structure,Odi Olowo (Zone),,,,,,,false,james.ajiroba.alabameta@sotsm.org
+Oke-Baale,Parish,Parish Structure,Odi Olowo (Zone),,,,,,,false,john.oladapo.oke.baale@sotsm.org
+Presidential,Parish,Parish Structure,Odi Olowo (Zone),,,,,,,false,olabintan.funmilola.celilia.presidential@sotsm.org
+LIVING SPRING DIO.,Diocese,Diocese Structure,IBADAN SOUTH DIVISION,,,,,,,false,
+Glorious Life,Parish,Parish Structure,LIVING SPRING DIO.,,,,,,,false,ayodele.laogun.glorious.life@sotsm.org
+Kingsquare (Zone),Zone,Zone Structure,LIVING SPRING DIO.,,,,,,,false,femi.adesoye.kingsquare.zone@sotsm.org
+Ikirun 1 (Zone),Zone,Zone Structure,LIVING SPRING DIO.,,,,,,,false,jonathan.omofoye.ikirun.1.zone@sotsm.org
+Agunbelewo (Zone),Zone,Zone Structure,LIVING SPRING DIO.,,,,,,,false,gbenga.ibitoye.agunbelewo.zone@sotsm.org
+Ikirun II,Parish,Parish Structure,Agunbelewo (Zone),,,,,,,false,adepoju.aderopo.ikirun.ii@sotsm.org
+Ada,Parish,Parish Structure,Agunbelewo (Zone),,,,,,,false,paul.opeyemi.ige.ada@sotsm.org
+Omobolanle,Parish,Parish Structure,Agunbelewo (Zone),,,,,,,false,akinloye.rotimi.omobolanle@sotsm.org
+Okuku,Parish,Parish Structure,Agunbelewo (Zone),,,,,,,false,oyeleke.shina.okuku@sotsm.org
+Ayekale,Parish,Parish Structure,Agunbelewo (Zone),,,,,,,false,moses.oloruntoba.ayekale@sotsm.org
+Success,Parish,Parish Structure,Agunbelewo (Zone),,,,,,,false,olanrewaju.adekunle.success@sotsm.org
+SEED OF ABRAHAM,Zone,Zone Structure,LIVING SPRING DIO.,,,,,,,false,
+Ido Osun,Parish,Parish Structure,SEED OF ABRAHAM,,,,,,,false,muyiwa.akintokun.ido.osun@sotsm.org
+Ogo Oluwa (Zone),Zone,Zone Structure,LIVING SPRING DIO.,,,,,,,false,longe.alfred.ogo.oluwa.zone@sotsm.org
+Ede 1 (Zone),Zone,Zone Structure,LIVING SPRING DIO.,,,,,,,false,michael.oyebisi.ede.1.zone@sotsm.org
+Ejigbo (Zone),Zone,Zone Structure,LIVING SPRING DIO.,,,,,,,false,goodluck.ajeye.ejigbo.zone@sotsm.org
+Ofatedo,Parish,Parish Structure,Ejigbo (Zone),,,,,,,false,tinubu.olubunmi.ofatedo@sotsm.org
+Ilobu,Parish,Parish Structure,Ejigbo (Zone),,,,,,,false,simeon.kayode.ilobu@sotsm.org
+Owode Ilesa Road,Parish,Parish Structure,Ejigbo (Zone),,,,,,,false,dr.akande.joel.owode.ilesa.road@sotsm.org
+Old Government Office,Parish,Parish Structure,Ejigbo (Zone),,,,,,,false,ogundele.ibrahim.old.government.office@sotsm.org
+Gbongan,Parish,Parish Structure,Ejigbo (Zone),,,,,,,false,olatemiju.sunday.gbongan@sotsm.org
+Ede II,Parish,Parish Structure,Ejigbo (Zone),,,,,,,false,adegbenjo.olanrewaju.ede.ii@sotsm.org
+Akoda,Parish,Parish Structure,Ejigbo (Zone),,,,,,,false,taiwo.badmus.akoda@sotsm.org
+NGCLC,Zone,Zone Structure,LIVING SPRING DIO.,,,,,,,false,
+Lekki,Parish,Parish Structure,NGCLC,,,,,,,false,isaac.oke.lekki@sotsm.org
+HoW Bodija,Parish,Parish Structure,NGCLC,,,,,,,false,temitope.abraham.oyadeyi.how.bodija@sotsm.org
+HoW Place of Reality,Parish,Parish Structure,NGCLC,,,,,,,false,dolapo.kehinde.jaiyeola.how.place.of.reality@sotsm.org
+HoW Lighthouse,Parish,Parish Structure,NGCLC,,,,,,,false,tunji.onasanwo.how.lighthouse@sotsm.org
+HoW The Nehemiah Gen.,Parish,Parish Structure,NGCLC,,,,,,,false,isaac.oloogunebi.how.the.nehemiah.gen@sotsm.org
+HoW Gen. of Champions,Parish,Parish Structure,NGCLC,,,,,,,false,adegoke.oluwajarewon.how.gen.of.champions@sotsm.org
+Lincoln,Parish,Parish Structure,NGCLC,,,,,,,false,temitope.abraham.oyadeyi.lincoln@sotsm.org
+Wigan,Parish,Parish Structure,NGCLC,,,,,,,false,akinwande.tobi.wigan@sotsm.org
+Gloucester,Parish,Parish Structure,NGCLC,,,,,,,false,funmilola.bamidele.gloucester@sotsm.org
+Plymouth,Parish,Parish Structure,NGCLC,,,,,,,false,pelumi.adeoye.plymouth@sotsm.org
+Canada,Parish,Parish Structure,NGCLC,,,,,,,false,kehinde.jaiyeola.canada@sotsm.org
+Campus Fellowships,Parish,Parish Structure,NGCLC,,,,,,,false,philip.windapo.campus.fellowships@sotsm.org
+FUNNAB,Parish,Parish Structure,NGCLC,,,,,,,false,olaoluwapo.ifeoluwa.funnab@sotsm.org
+U.I.,Parish,Parish Structure,NGCLC,,,,,,,false,alabi.oluwadamilare.u.i@sotsm.org
+EKSU,Parish,Parish Structure,NGCLC,,,,,,,false,olayinka.oluwatomiwa.eksu@sotsm.org
+OAU,Parish,Parish Structure,NGCLC,,,,,,,false,ademoyegun.tobiloba.oau@sotsm.org
+LAUTECH,Zone,Zone Structure,LIVING SPRING DIO.,,,,,,,false,
+Polytechnic Ibadan,Parish,Parish Structure,LAUTECH,,,,,,,false,ayodeji.timileyin.polytechnic.ibadan@sotsm.org
+Polytechnic Esa-Oke,Parish,Parish Structure,LAUTECH,,,,,,,false,ore.member.polytechnic.esa.oke@sotsm.org
+Polytechnic Eruwa,Parish,Parish Structure,LAUTECH,,,,,,,false,kareem.opeyemi.john.polytechnic.eruwa@sotsm.org
+Moore Plantation,Parish,Parish Structure,LAUTECH,,,,,,,false,sangolade.joseph.moore.plantation@sotsm.org
+Polytechnic Ede,Parish,Parish Structure,LAUTECH,,,,,,,false,ogunribido.damilola.polytechnic.ede@sotsm.org
+OOU,Zone,Zone Structure,LIVING SPRING DIO.,,,,,,,false,
+NATIONAL MISSION,Division,Division Structure,National Headquarters,,,,,,,false,
+North Central,Zone,Zone Structure,NATIONAL MISSION,,,,,,,false,
+Benue,Parish,Parish Structure,North Central,,,,,,,false,daniel.ajayi.benue@sotsm.org
+Kogi,Parish,Parish Structure,North Central,,,,,,,false,"minitster.abraham.nurudeen.kogi@sotsm.org,peter.ojuluwayo.kogi@sotsm.org"
+Kwara,Parish,Parish Structure,North Central,,,,,,,false,"oluwasegun.adejare.kwara@sotsm.org,ajayi.daniel.kwara@sotsm.org"
+Nasarawa,Parish,Parish Structure,North Central,,,,,,,false,adeola.akinbola.nasarawa@sotsm.org
+Niger,Parish,Parish Structure,North Central,,,,,,,false,james.jedieal.niger@sotsm.org
+Plateau,Parish,Parish Structure,North Central,,,,,,,false,toluwabori.adedeji.plateau@sotsm.org
+North East,Zone,Zone Structure,NATIONAL MISSION,,,,,,,false,
+Adamawa: Jimeta,Parish,Parish Structure,North East,,,,,,,false,richard.pius.adamawa.jimeta@sotsm.org
+Adamawa: Sangere,Parish,Parish Structure,North East,,,,,,,false,samuel.ishaq.adamawa.sangere@sotsm.org
+Adamawa: Mala-Madugu,Parish,Parish Structure,North East,,,,,,,false,john.tonga.adamawa.mala.madugu@sotsm.org
+Bauchi,Parish,Parish Structure,North East,,,,,,,false,olusegun.ojo.bauchi@sotsm.org
+Borno,Parish,Parish Structure,North East,,,,,,,false,folami.ayodele.borno@sotsm.org
+Gombe,Parish,Parish Structure,North East,,,,,,,false,"favour.adeyeye.gombe@sotsm.org,samuel.peter.gombe@sotsm.org"
+Taraba,Parish,Parish Structure,North East,,,,,,,false,damilare.olakiigbe.taraba@sotsm.org
+Yobe,Parish,Parish Structure,North East,,,,,,,false,james.jenyo.yobe@sotsm.org
+North West,Zone,Zone Structure,NATIONAL MISSION,,,,,,,false,
+Kaduna,Parish,Parish Structure,North West,,,,,,,false,"kayode.amusan.kaduna@sotsm.org,tobi.olasoji.kaduna@sotsm.org"
+Katsina,Parish,Parish Structure,North West,,,,,,,false,muyiwa.aluko.katsina@sotsm.org
+Kano,Parish,Parish Structure,North West,,,,,,,false,"david.ekeagbo.kano@sotsm.org,maiyaki.john.oveze.kano@sotsm.org"
+Kebbi,Parish,Parish Structure,North West,,,,,,,false,olumide.david.kebbi@sotsm.org
+Sokoto,Parish,Parish Structure,North West,,,,,,,false,paul.anjorin.sokoto@sotsm.org
+Jigawa,Parish,Parish Structure,North West,,,,,,,false,aladetan.endurance.jigawa@sotsm.org
+Zamfara,Parish,Parish Structure,North West,,,,,,,false,obayuwana.richard.zamfara@sotsm.org
+South East,Zone,Zone Structure,NATIONAL MISSION,,,,,,,false,
+Abia,Parish,Parish Structure,South East,,,,,,,false,"awotunde.olusola.abia@sotsm.org,atanda.matthew.abia@sotsm.org"
+Anambra,Parish,Parish Structure,South East,,,,,,,false,"babajide.damilola.anambra@sotsm.org,orimoloye.mercy.anambra@sotsm.org"
+Ebonyi,Parish,Parish Structure,South East,,,,,,,false,ayewa.abiola.samuel.ebonyi@sotsm.org
+Enugu,Parish,Parish Structure,South East,,,,,,,false,"ajiboye.oluwaseun.s.enugu@sotsm.org,peter.moses.enugu@sotsm.org"
+Imo,Parish,Parish Structure,South East,,,,,,,false,oyesola.paul.imo@sotsm.org
+South South,Zone,Zone Structure,NATIONAL MISSION,,,,,,,false,
+Akwa-Ibom: Oron,Parish,Parish Structure,South South,,,,,,,false,"bimbo.ajala.akwa.ibom.oron@sotsm.org,efeneme.godbless.akwa.ibom.oron@sotsm.org"
+Akwa-Ibom: Uyo,Parish,Parish Structure,South South,,,,,,,false,okiato.timothy.akwa.ibom.uyo@sotsm.org
+Bayelsa,Parish,Parish Structure,South South,,,,,,,false,adelanwa.ayomide.bayelsa@sotsm.org
+Cross River,Parish,Parish Structure,South South,,,,,,,false,sunday.olabode.cross.river@sotsm.org
+Delta,Parish,Parish Structure,South South,,,,,,,false,joseph.ogar.delta@sotsm.org
+Edo,Parish,Parish Structure,South South,,,,,,,false,david.olaigbe.edo@sotsm.org
+Rivers,Parish,Parish Structure,South South,,,,,,,false,tosin.adeniyi.rivers@sotsm.org
+REGIONS,Division,Division Structure,National Headquarters,,,,,,,false,
+ABEOKUTA,Parish,Parish Structure,REGIONS,,,,,,,false,prof.abiola.oladapo.abeokuta@sotsm.org
+Kotopo,Parish,Parish Structure,REGIONS,,,,,,,false,prof.abiola.oladapo.kotopo@sotsm.org
+Isabo,Parish,Parish Structure,REGIONS,,,,,,,false,rotimi.lawal.isabo@sotsm.org
+Adigbe,Parish,Parish Structure,REGIONS,,,,,,,false,adekola.adeniji.adigbe@sotsm.org
+LAGOS,Parish,Parish Structure,REGIONS,,,,,,,false,dele.onilude.lagos@sotsm.org
+Ogidan,Parish,Parish Structure,REGIONS,,,,,,,false,dele.onilude.ogidan@sotsm.org
+Mowe,Parish,Parish Structure,REGIONS,,,,,,,false,seye.alenkhe.mowe@sotsm.org
+Oke Osa,Parish,Parish Structure,REGIONS,,,,,,,false,saba.gbolahan.oke.osa@sotsm.org
+Ikorodu,Parish,Parish Structure,REGIONS,,,,,,,false,oluwole.adeyemi.ikorodu@sotsm.org
+Ikorodu Igbe,Parish,Parish Structure,REGIONS,,,,,,,false,dare.omoniyi.ikorodu.igbe@sotsm.org
+Egbe,Parish,Parish Structure,REGIONS,,,,,,,false,seyii.j.agunbiade.egbe@sotsm.org
+Lambe,Parish,Parish Structure,REGIONS,,,,,,,false,james.odumeru.lambe@sotsm.org
+Surulere,Parish,Parish Structure,REGIONS,,,,,,,false,abiodun.kolawole.surulere@sotsm.org
+Ogba,Parish,Parish Structure,REGIONS,,,,,,,false,yemi.fagbolahan.ogba@sotsm.org
+Ogijo,Parish,Parish Structure,REGIONS,,,,,,,false,soji.ojo.ogijo@sotsm.org
+ONDO,Parish,Parish Structure,REGIONS,,,,,,,false,"ademola.akinlabi.ondo@sotsm.org,fadoju.imole.john.ondo@sotsm.org"
+Akure,Parish,Parish Structure,REGIONS,,,,,,,false,ademola.akinlabi.akure@sotsm.org
+Okiti Pupa,Parish,Parish Structure,REGIONS,,,,,,,false,felix.ogbon.otan.okiti.pupa@sotsm.org
+ADO EKITI,Parish,Parish Structure,REGIONS,,,,,,,false,"omoya.s.olagoke.ado.ekiti@sotsm.org,omoya.s.olagoke.ado.ekiti+1@sotsm.org"
+ABUJA,Parish,Parish Structure,REGIONS,,,,,,,false,mrs.abiola.ajibola.abuja@sotsm.org
+Wuse,Parish,Parish Structure,REGIONS,,,,,,,false,mrs.abiola.ajibola.wuse@sotsm.org
+Kuje,Parish,Parish Structure,REGIONS,,,,,,,false,james.oloyede.kuje@sotsm.org
+Karu,Parish,Parish Structure,REGIONS,,,,,,,false,alex.akinsanya.karu@sotsm.org
+Stronghold,Parish,Parish Structure,REGIONS,,,,,,,false,michael.avwerhota.stronghold@sotsm.org
+Gwagwalada,Parish,Parish Structure,REGIONS,,,,,,,false,lolade.olaleye.gwagwalada@sotsm.org
+Tundunwada,Parish,Parish Structure,REGIONS,,,,,,,false,oluseye.oyeniran.tundunwada@sotsm.org
+LAFIA,Parish,Parish Structure,REGIONS,,,,,,,false,"deola.akinbola.lafia@sotsm.org,deola.akinbola.lafia+1@sotsm.org"
+PORT HARCOURT,Parish,Parish Structure,REGIONS,,,,,,,false,"abiodun.adeniji.port.harcourt@sotsm.org,abiodun.adeniji.port.harcourt+1@sotsm.org"
+AFRICA REGION,Division,Division Structure,National Headquarters,,,,,,,false,
+Kenya East Africa,Parish,Parish Structure,AFRICA REGION,,,,,,,false,e.m.olubunmi.kenya.east.africa@sotsm.org
+Juja,Parish,Parish Structure,AFRICA REGION,,,,,,,false,e.m.olubunmi.juja@sotsm.org
+Kiandutu,Parish,Parish Structure,AFRICA REGION,,,,,,,false,raphael.wanjor.kiandutu@sotsm.org
+Malaba,Parish,Parish Structure,AFRICA REGION,,,,,,,false,simon.chege.malaba@sotsm.org
+Ghana,Parish,Parish Structure,AFRICA REGION,,,,,,,false,benjamin.emikpe.ghana@sotsm.org
+Conakry,Zone,Zone Structure,AFRICA REGION,,,,,,,false,
+INTERNATIONAL REGION,Division,Division Structure,National Headquarters,,,,,,,false,
+UK,Parish,Parish Structure,INTERNATIONAL REGION,,,,,,,false,kola.ibikunle.uk@sotsm.org
+Charlton,Parish,Parish Structure,INTERNATIONAL REGION,,,,,,,false,kola.ibikunle.charlton@sotsm.org
+Tooting,Parish,Parish Structure,INTERNATIONAL REGION,,,,,,,false,mobolaji.carew.tooting@sotsm.org
+Northampton,Parish,Parish Structure,INTERNATIONAL REGION,,,,,,,false,adelani.ayeni.northampton@sotsm.org
+Erith,Parish,Parish Structure,INTERNATIONAL REGION,,,,,,,false,adewumi.adekugbe.erith@sotsm.org
+Orpington,Parish,Parish Structure,INTERNATIONAL REGION,,,,,,,false,mary.ojediran.orpington@sotsm.org
+EUROPE,Zone,Zone Structure,INTERNATIONAL REGION,,,,,,,false,
+Irelands,Parish,Parish Structure,EUROPE,,,,,,,false,samson.ologunola.irelands@sotsm.org
+NORTH AMERICA,Parish,Parish Structure,EUROPE,,,,,,,false,olumuyiwa.ojo.north.america@sotsm.org
+Philadelphia,Parish,Parish Structure,EUROPE,,,,,,,false,"olumuyiwa.ojo.philadelphia@sotsm.org,ojo.patience.philadelphia@sotsm.org"
+Maryland,Parish,Parish Structure,EUROPE,,,,,,,false,lana.segun.moses.maryland@sotsm.org
+Atlanta,Parish,Parish Structure,EUROPE,,,,,,,false,oladokun.john.atlanta@sotsm.org
+Houston,Parish,Parish Structure,EUROPE,,,,,,,false,alabi.olutunde.houston@sotsm.org
+DC,Parish,Parish Structure,EUROPE,,,,,,,false,aderinoye.kunle.dc@sotsm.org
+Everett,Parish,Parish Structure,EUROPE,,,,,,,false,anibaba.taiwo.everett@sotsm.org
+Chicago,Parish,Parish Structure,EUROPE,,,,,,,false,olaniyan.abraham.chicago@sotsm.org
+RandMD,Parish,Parish Structure,EUROPE,,,,,,,false,oni.anthony.randmd@sotsm.org
+Dallas,Parish,Parish Structure,EUROPE,,,,,,,false,amoo.bukola.dallas@sotsm.org
+New Jersey,Parish,Parish Structure,EUROPE,,,,,,,false,onyeneke.tony.new.jersey@sotsm.org
+Manitoba,Parish,Parish Structure,EUROPE,,,,,,,false,olorunkemi.adeyele.manitoba@sotsm.org
+Quebec,Parish,Parish Structure,EUROPE,,,,,,,false,francis.adetifa.quebec@sotsm.org
+Ontario,Parish,Parish Structure,EUROPE,,,,,,,false,seyi.ojo.ontario@sotsm.org
+Canada,Zone,Zone Structure,INTERNATIONAL REGION,,,,,,,false,
+Arabian Penninsular,Zone,Zone Structure,INTERNATIONAL REGION,,,,,,,false,
+Qatar,Parish,Parish Structure,Arabian Penninsular,,,,,,,false,ayo.ajayi.qatar@sotsm.org

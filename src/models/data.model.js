@@ -19,7 +19,8 @@ const DataPointSchema = new mongoose.Schema(
       type: String,
       required: true,
       validate: {
-        validator: (value) => validator.isAlpha(value, 'en-US', { ignore: ' ' }),
+        validator: (value) =>
+          validator.isAlpha(value, 'en-US', { ignore: ' ' }),
         message: 'Name must contain only letters and spaces',
       },
     },

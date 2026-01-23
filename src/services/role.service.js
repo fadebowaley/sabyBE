@@ -169,12 +169,19 @@ const queryRoles = async (filter, options) => {
     console.log('[queryRoles] SabyUser - showing all roles across all tenants');
     // No additional filtering needed - remove tenant restriction
     delete filter.tenantId;
-  } else if (user?.isSuper || user?.isOwner) {
-    // SuperUser and Owner can only see roles within their tenant
+  } else if (user?.isSuper || user?.isOwner || user?.isAdmin) {
+    // SuperUser, Owner, and Admin can only see roles within their tenant
+    // Note: requireAccess middleware already validated role:read permission for isAdmin users
     if (user.tenantId) {
       filter.tenantId = user.tenantId;
+      let userType = 'Admin';
+      if (user.isSuper) {
+        userType = 'SuperUser';
+      } else if (user.isOwner) {
+        userType = 'Owner';
+      }
       console.log(
-        `[queryRoles] SuperUser/Owner - filtering by tenantId: ${user.tenantId}`
+        `[queryRoles] ${userType} - filtering by tenantId: ${user.tenantId}`
       );
     }
   } else {
@@ -232,8 +239,8 @@ const queryRoles = async (filter, options) => {
 
   return {
     results: roles,
-    page: page,
-    limit: limit,
+    page,
+    limit,
     totalPages,
     totalResults,
   };

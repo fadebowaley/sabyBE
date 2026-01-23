@@ -7,10 +7,28 @@ const createPayment = {
     tenantId: Joi.string().required().alphanum(),
     userId: Joi.string().required().alphanum(),
     amount: Joi.number().required(),
-    currency: Joi.string().valid('USD', 'EUR', 'GBP', 'INR', 'AUD', 'CAD', 'SGD', 'CHF', 'MYR', 'JPY', 'CNY').required(),
-    status: Joi.string().valid('pending', 'completed', 'failed', 'refunded').default('pending'),
+    currency: Joi.string()
+      .valid(
+        'USD',
+        'EUR',
+        'GBP',
+        'INR',
+        'AUD',
+        'CAD',
+        'SGD',
+        'CHF',
+        'MYR',
+        'JPY',
+        'CNY'
+      )
+      .required(),
+    status: Joi.string()
+      .valid('pending', 'completed', 'failed', 'refunded')
+      .default('pending'),
     reference: Joi.string().required(),
-    paymentMethod: Joi.string().valid('credit_card', 'debit_card', 'paypal', 'bank_transfer', 'crypto').required(),
+    paymentMethod: Joi.string()
+      .valid('credit_card', 'debit_card', 'paypal', 'bank_transfer', 'crypto')
+      .required(),
     paymentDate: Joi.date().default(Date.now),
     total: Joi.number().required(),
   }),
@@ -48,10 +66,28 @@ const updatePayment = {
   body: Joi.object()
     .keys({
       amount: Joi.number(),
-      currency: Joi.string().valid('USD', 'EUR', 'GBP', 'INR', 'AUD', 'CAD', 'SGD', 'CHF', 'MYR', 'JPY', 'CNY'),
+      currency: Joi.string().valid(
+        'USD',
+        'EUR',
+        'GBP',
+        'INR',
+        'AUD',
+        'CAD',
+        'SGD',
+        'CHF',
+        'MYR',
+        'JPY',
+        'CNY'
+      ),
       status: Joi.string().valid('pending', 'completed', 'failed', 'refunded'),
       reference: Joi.string(),
-      paymentMethod: Joi.string().valid('credit_card', 'debit_card', 'paypal', 'bank_transfer', 'crypto'),
+      paymentMethod: Joi.string().valid(
+        'credit_card',
+        'debit_card',
+        'paypal',
+        'bank_transfer',
+        'crypto'
+      ),
       total: Joi.number(),
     })
     .min(1),
@@ -67,7 +103,9 @@ const deletePayment = {
 // Validation schema for fetching payments by status
 const getPaymentsByStatus = {
   query: Joi.object().keys({
-    status: Joi.string().valid('pending', 'completed', 'failed', 'refunded').required(),
+    status: Joi.string()
+      .valid('pending', 'completed', 'failed', 'refunded')
+      .required(),
   }),
 };
 

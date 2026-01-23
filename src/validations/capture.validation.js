@@ -11,7 +11,9 @@ const createCapture = {
     data: Joi.object().required(),
     capturedAt: Joi.date().default(Date.now),
     source: Joi.string().valid('web', 'mobile', 'api', 'sync').default('web'),
-    status: Joi.string().valid('active', 'archived', 'pending').default('active'),
+    status: Joi.string()
+      .valid('active', 'archived', 'pending')
+      .default('active'),
   }),
 };
 
@@ -26,7 +28,9 @@ const bulkInsertCaptures = {
       data: Joi.object().required(),
       capturedAt: Joi.date().default(Date.now),
       source: Joi.string().valid('web', 'mobile', 'api', 'sync').default('web'),
-      status: Joi.string().valid('active', 'archived', 'pending').default('active'),
+      status: Joi.string()
+        .valid('active', 'archived', 'pending')
+        .default('active'),
     })
   ),
 };

@@ -141,8 +141,8 @@ const router = express.Router();
 
 router
   .route('/')
-  .post(auth('create:collection'), validate(collectionValidation.createCollection), collectionController.createCollection)
-  .get(auth('view:collection'), validate(collectionValidation.queryCollections), collectionController.queryCollections);
+  .post(auth('collection:create'), validate(collectionValidation.createCollection), collectionController.createCollection)
+  .get(auth('collection:read'), validate(collectionValidation.queryCollections), collectionController.queryCollections);
 
 /**
  * @swagger
@@ -240,14 +240,14 @@ router
 
 router
   .route('/:collectionId')
-  .get(auth('view:collection'), validate(collectionValidation.getCollectionById), collectionController.getCollectionById)
+  .get(auth('collection:read'), validate(collectionValidation.getCollectionById), collectionController.getCollectionById)
   .patch(
-    auth('update:collection'),
+    auth('collection:update'),
     validate(collectionValidation.updateCollectionById),
     collectionController.updateCollectionById
   )
   .delete(
-    auth('delete:collection'),
+    auth('collection:delete'),
     validate(collectionValidation.deleteCollectionById),
     collectionController.deleteCollectionById
   );

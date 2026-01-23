@@ -81,4 +81,3 @@ const updateToDebbySaby = async () => {
 
 // Run the script
 updateToDebbySaby();
-

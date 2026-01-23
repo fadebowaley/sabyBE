@@ -16,16 +16,29 @@ const createDefaultLevels = async (tenantId) => {
     console.log(`Creating default levels for tenant: ${tenantId}`);
 
     const defaultLevels = [
-      { name: 'Headquarters', description: 'Main headquarters level', rank: 1, tenantId },
+      {
+        name: 'Headquarters',
+        description: 'Main headquarters level',
+        rank: 1,
+        tenantId,
+      },
       { name: 'Region', description: 'Regional level', rank: 2, tenantId },
       { name: 'Branch', description: 'Branch level', rank: 3, tenantId },
-      { name: 'Department', description: 'Department level', rank: 4, tenantId },
+      {
+        name: 'Department',
+        description: 'Department level',
+        rank: 4,
+        tenantId,
+      },
     ];
 
     for (const levelData of defaultLevels) {
       try {
         // Check if level exists with this tenant
-        const existingLevel = await Level.findOne({ name: levelData.name, tenantId });
+        const existingLevel = await Level.findOne({
+          name: levelData.name,
+          tenantId,
+        });
         if (!existingLevel) {
           // Check if level exists without tenant (legacy)
           const legacyLevel = await Level.findOne({ name: levelData.name });
@@ -33,7 +46,9 @@ const createDefaultLevels = async (tenantId) => {
             // Update existing level with tenantId
             legacyLevel.tenantId = tenantId;
             await legacyLevel.save();
-            console.log(`Updated existing level with tenantId: ${levelData.name}`);
+            console.log(
+              `Updated existing level with tenantId: ${levelData.name}`
+            );
           } else {
             // Create new level
             const level = new Level(levelData);
@@ -50,12 +65,19 @@ const createDefaultLevels = async (tenantId) => {
           if (existingLevel && !existingLevel.tenantId) {
             existingLevel.tenantId = tenantId;
             await existingLevel.save();
-            console.log(`Updated existing level with tenantId: ${levelData.name}`);
+            console.log(
+              `Updated existing level with tenantId: ${levelData.name}`
+            );
           } else {
-            console.log(`Level already exists with tenantId: ${levelData.name}`);
+            console.log(
+              `Level already exists with tenantId: ${levelData.name}`
+            );
           }
         } else {
-          console.error(`Error processing level ${levelData.name}:`, error.message);
+          console.error(
+            `Error processing level ${levelData.name}:`,
+            error.message
+          );
         }
       }
     }
@@ -80,7 +102,10 @@ const createDefaultStructures = async (tenantId) => {
     // Create structures for each level
     for (const level of levels) {
       const structureName = `${level.name} Structure`;
-      const existingStructure = await Structures.findOne({ name: structureName, tenantId });
+      const existingStructure = await Structures.findOne({
+        name: structureName,
+        tenantId,
+      });
 
       if (!existingStructure) {
         const structureData = {
@@ -92,7 +117,9 @@ const createDefaultStructures = async (tenantId) => {
 
         const structure = new Structures(structureData);
         await structure.save();
-        console.log(`Created structure: ${structureName} for level: ${level.name}`);
+        console.log(
+          `Created structure: ${structureName} for level: ${level.name}`
+        );
       } else {
         console.log(`Structure already exists: ${structureName}`);
       }

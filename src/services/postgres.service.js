@@ -30,7 +30,9 @@ class PostgresService {
    */
   async getDatabaseInfo() {
     try {
-      const result = await this.executeQuery('SELECT version(), current_database(), current_user');
+      const result = await this.executeQuery(
+        'SELECT version(), current_database(), current_user'
+      );
       return {
         version: result.rows[0].version,
         database: result.rows[0].current_database,
@@ -70,9 +72,13 @@ class PostgresService {
     try {
       const columns = Object.keys(data);
       const values = Object.values(data);
-      const placeholders = columns.map((_, index) => `$${index + 1}`).join(', ');
+      const placeholders = columns
+        .map((_, index) => `$${index + 1}`)
+        .join(', ');
 
-      const query = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${placeholders}) RETURNING *`;
+      const query = `INSERT INTO ${tableName} (${columns.join(
+        ', '
+      )}) VALUES (${placeholders}) RETURNING *`;
       const result = await this.executeQuery(query, values);
       return result.rows[0];
     } catch (error) {
@@ -139,7 +145,9 @@ class PostgresService {
         paramIndex++;
       }
 
-      const query = `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE ${whereClauses.join(' AND ')} RETURNING *`;
+      const query = `UPDATE ${tableName} SET ${setClauses.join(
+        ', '
+      )} WHERE ${whereClauses.join(' AND ')} RETURNING *`;
       const result = await this.executeQuery(query, values);
       return result.rows[0];
     } catch (error) {
@@ -166,7 +174,9 @@ class PostgresService {
         paramIndex++;
       }
 
-      const query = `DELETE FROM ${tableName} WHERE ${whereClauses.join(' AND ')} RETURNING *`;
+      const query = `DELETE FROM ${tableName} WHERE ${whereClauses.join(
+        ' AND '
+      )} RETURNING *`;
       const result = await this.executeQuery(query, values);
       return result.rowCount;
     } catch (error) {

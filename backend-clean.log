@@ -1,0 +1,4014 @@
+
+> halo@1.0.0 dev
+> cross-env NODE_ENV=development nodemon src/index.js
+
+[33m[nodemon] 2.0.9[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,json[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:63222) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: 20.169.129.160:5432
+[32minfo[39m: 👤 User: sabyagentic_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 (Debian 15.14-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[32minfo[39m: 🚀 Server is running on port 4000
+[32minfo[39m: 🌍 Environment: development
+[32minfo[39m: 📊 Database Status:
+[32minfo[39m:    - MongoDB: ✅ Connected
+[32minfo[39m:    - PostgreSQL: ✅ Connected
+[32minfo[39m:    - Redis: ✅ Connected
+[32minfo[39m: Connected to email server
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+expired token expiry time ---> 30
+expired token ---> Moment<2025-10-23T11:45:15+01:00>
+expired token ---> Moment<2025-10-23T12:15:15+01:00>
+acess token --> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo
+[32minfo[39m: POST /v1/auth/login 200 - 99.151 ms
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+--- AUTH DEBUG ---
+Route: /v1/node?tenantId=hWiWJ_X0m6&limit=1
+HTTP Method: GET
+Required Permissions: [ 'view:node' ]
+[NODE CONTROLLER - QUERY] Query params: { tenantId: 'hWiWJ_X0m6', limit: 1 } Tenant: hWiWJ_X0m6
+[NODE CONTROLLER - QUERY] Filter with tenantId: { tenantId: 'hWiWJ_X0m6' }
+[TenantPlugin] paginate() - incoming options: { limit: 1, populate: 'level,structure,users.roles' }
+[TenantPlugin] Pre-hook triggered for: countDocuments
+[TenantPlugin] Options: {}
+[TenantPlugin] Pre-hook triggered for: find
+[TenantPlugin] Options: { sort: { createdAt: 1 }, skip: 0, limit: 1 }
+[NODE CONTROLLER - QUERY] Found 0 nodes for tenant: hWiWJ_X0m6
+[32minfo[39m: GET /v1/node?tenantId=hWiWJ_X0m6&limit=1 200 - 20.810 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '510',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214516071 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214516071 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 974.642 ms
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214516071 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission created: 5a3a63f2-ba8c-4c35-ad69-b10a144e8c6d
+[32minfo[39m: [Worker] PERM submission created - 5a3a63f2-ba8c-4c35-ad69-b10a144e8c6d (40% compliance, 2/5 events, status: partial)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214516071 - PERM submission completed (40.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214516071
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214516071
+[requireAccess] Checking access for endpoint: /v1/submissions/activity-log?tenant_id=hWiWJ_X0m6&limit=5 {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions/activity-log?tenant_id=hWiWJ_X0m6&limit=5 200 - 383.707 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214516060&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214516060&month=2025-10-01&perm_enabled=true 200 - 186.252 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '539',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214520654 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214520654 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 192.657 ms
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214520654 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214516060&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: ✅ PERM submission updated: 5a3a63f2-ba8c-4c35-ad69-b10a144e8c6d
+[32minfo[39m: [Worker] PERM submission updated - 5a3a63f2-ba8c-4c35-ad69-b10a144e8c6d (80% compliance, 4/5 events, status: partial)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214520654 - PERM submission completed (80.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214520654
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214520654
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214516060&month=2025-10-01&perm_enabled=true 200 - 927.099 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '479',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214524794 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214524794 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 193.088 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214516060&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214516060&month=2025-10-01&perm_enabled=true 200 - 192.884 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '431',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214528196 | Tenant: hWiWJ_X0m6
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214528196 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 192.079 ms
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214524794 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission updated: 5a3a63f2-ba8c-4c35-ad69-b10a144e8c6d
+[32minfo[39m: [Worker] PERM submission updated - 5a3a63f2-ba8c-4c35-ad69-b10a144e8c6d (100% compliance, 5/5 events, status: complete)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214524794 - PERM submission completed (100.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214524794
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214524794
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214528196 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission created: bbf04222-0946-40d4-a3fe-526a6ebaf4fa
+[32minfo[39m: [Worker] PERM submission created - bbf04222-0946-40d4-a3fe-526a6ebaf4fa (20% compliance, 1/5 events, status: incomplete)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214528196 - PERM submission completed (20.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214528196
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214528196
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&month=2025-10-01&perm_enabled=true 200 - 198.719 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '448',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214531604 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214531604 - PERM submission queued for 2025-11-01
+[32minfo[39m: POST /v1/submissions 202 - 192.385 ms
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214531604 - Processing PERM submission for 2025-11-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission created: 8174d138-3ce6-47ff-8d87-fa1cfc1d2eec
+[32minfo[39m: [Worker] PERM submission created - 8174d138-3ce6-47ff-8d87-fa1cfc1d2eec (60% compliance, 3/5 events, status: partial)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214531604 - PERM submission completed (60.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214531604
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214531604
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214516060&month=2025-11-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214516060&month=2025-11-01&perm_enabled=true 200 - 229.079 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&perm_enabled=true 200 - 298.534 ms
+[requireAccess] Checking access for endpoint: /v1/submissions/activity-log/recent?tenant_id=hWiWJ_X0m6&limit=10 {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1MTUsImV4cCI6MTc2MTIxNjMxNSwidHlwZSI6ImFjY2VzcyJ9.cZs3prtOtumvz5Az7hFEhE74dgoHemZkSKoSYgy_mTo',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions/activity-log/recent?tenant_id=hWiWJ_X0m6&limit=10 200 - 294.880 ms
+[32minfo[39m: GET /v1/submissions/activity-log/summary 200 - 364.413 ms
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+expired token expiry time ---> 30
+expired token ---> Moment<2025-10-23T11:46:29+01:00>
+expired token ---> Moment<2025-10-23T12:16:29+01:00>
+acess token --> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1ODksImV4cCI6MTc2MTIxNjM4OSwidHlwZSI6ImFjY2VzcyJ9.qPYkS36QZaf2V82eyCMpZRAqRVhoMIKkHStSM1CPUgk
+[32minfo[39m: POST /v1/auth/login 200 - 43.814 ms
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+--- AUTH DEBUG ---
+Route: /v1/node?tenantId=hWiWJ_X0m6&limit=1
+HTTP Method: GET
+Required Permissions: [ 'view:node' ]
+[NODE CONTROLLER - QUERY] Query params: { tenantId: 'hWiWJ_X0m6', limit: 1 } Tenant: hWiWJ_X0m6
+[NODE CONTROLLER - QUERY] Filter with tenantId: { tenantId: 'hWiWJ_X0m6' }
+[TenantPlugin] paginate() - incoming options: { limit: 1, populate: 'level,structure,users.roles' }
+[TenantPlugin] Pre-hook triggered for: countDocuments
+[TenantPlugin] Options: {}
+[TenantPlugin] Pre-hook triggered for: find
+[TenantPlugin] Options: { sort: { createdAt: 1 }, skip: 0, limit: 1 }
+[NODE CONTROLLER - QUERY] Found 0 nodes for tenant: hWiWJ_X0m6
+[32minfo[39m: GET /v1/node?tenantId=hWiWJ_X0m6&limit=1 200 - 10.701 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1ODksImV4cCI6MTc2MTIxNjM4OSwidHlwZSI6ImFjY2VzcyJ9.qPYkS36QZaf2V82eyCMpZRAqRVhoMIKkHStSM1CPUgk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1ODksImV4cCI6MTc2MTIxNjM4OSwidHlwZSI6ImFjY2VzcyJ9.qPYkS36QZaf2V82eyCMpZRAqRVhoMIKkHStSM1CPUgk',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '510',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214589593 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214589593 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 917.271 ms
+[requireAccess] Checking access for endpoint: /v1/submissions/activity-log?tenant_id=hWiWJ_X0m6&limit=5 {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1ODksImV4cCI6MTc2MTIxNjM4OSwidHlwZSI6ImFjY2VzcyJ9.qPYkS36QZaf2V82eyCMpZRAqRVhoMIKkHStSM1CPUgk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1ODksImV4cCI6MTc2MTIxNjM4OSwidHlwZSI6ImFjY2VzcyJ9.qPYkS36QZaf2V82eyCMpZRAqRVhoMIKkHStSM1CPUgk',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+[32minfo[39m: GET /v1/submissions/activity-log?tenant_id=hWiWJ_X0m6&limit=5 200 - 364.554 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214589587&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1ODksImV4cCI6MTc2MTIxNjM4OSwidHlwZSI6ImFjY2VzcyJ9.qPYkS36QZaf2V82eyCMpZRAqRVhoMIKkHStSM1CPUgk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ1ODksImV4cCI6MTc2MTIxNjM4OSwidHlwZSI6ImFjY2VzcyJ9.qPYkS36QZaf2V82eyCMpZRAqRVhoMIKkHStSM1CPUgk',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214589587&month=2025-10-01&perm_enabled=true 200 - 185.184 ms
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214589593 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission created: 3becf0dc-9625-45a3-a22b-915afed78907
+[32minfo[39m: [Worker] PERM submission created - 3becf0dc-9625-45a3-a22b-915afed78907 (40% compliance, 2/5 events, status: partial)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214589593 - PERM submission completed (40.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214589593
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214589593
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+expired token expiry time ---> 30
+expired token ---> Moment<2025-10-23T11:49:49+01:00>
+expired token ---> Moment<2025-10-23T12:19:49+01:00>
+acess token --> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c
+[32minfo[39m: POST /v1/auth/login 200 - 60.089 ms
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+--- AUTH DEBUG ---
+Route: /v1/node?tenantId=hWiWJ_X0m6&limit=1
+HTTP Method: GET
+Required Permissions: [ 'view:node' ]
+[NODE CONTROLLER - QUERY] Query params: { tenantId: 'hWiWJ_X0m6', limit: 1 } Tenant: hWiWJ_X0m6
+[NODE CONTROLLER - QUERY] Filter with tenantId: { tenantId: 'hWiWJ_X0m6' }
+[TenantPlugin] paginate() - incoming options: { limit: 1, populate: 'level,structure,users.roles' }
+[TenantPlugin] Pre-hook triggered for: countDocuments
+[TenantPlugin] Options: {}
+[TenantPlugin] Pre-hook triggered for: find
+[TenantPlugin] Options: { sort: { createdAt: 1 }, skip: 0, limit: 1 }
+[NODE CONTROLLER - QUERY] Found 0 nodes for tenant: hWiWJ_X0m6
+[32minfo[39m: GET /v1/node?tenantId=hWiWJ_X0m6&limit=1 200 - 6.622 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '510',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214789463 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214789463 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 905.359 ms
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214789463 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission created: 1a146a37-bd5a-488b-a32c-2323d97124f3
+[32minfo[39m: [Worker] PERM submission created - 1a146a37-bd5a-488b-a32c-2323d97124f3 (40% compliance, 2/5 events, status: partial)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214789463 - PERM submission completed (40.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214789463
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214789463
+[requireAccess] Checking access for endpoint: /v1/submissions/activity-log?tenant_id=hWiWJ_X0m6&limit=5 {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions/activity-log?tenant_id=hWiWJ_X0m6&limit=5 200 - 363.557 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214789456&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214789456&month=2025-10-01&perm_enabled=true 200 - 187.130 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '539',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214793951 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214793951 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 191.478 ms
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214793951 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission updated: 1a146a37-bd5a-488b-a32c-2323d97124f3
+[32minfo[39m: [Worker] PERM submission updated - 1a146a37-bd5a-488b-a32c-2323d97124f3 (80% compliance, 4/5 events, status: partial)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214793951 - PERM submission completed (80.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214793951
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214793951
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214789456&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214789456&month=2025-10-01&perm_enabled=true 200 - 187.946 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '479',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214797349 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214797349 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 195.162 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214789456&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214789456&month=2025-10-01&perm_enabled=true 200 - 183.180 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '431',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214800739 | Tenant: hWiWJ_X0m6
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214800739 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 184.084 ms
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214800739 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214797349 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission created: 9621c9f7-93c2-426e-bc6b-a7a477b1aecf
+[32minfo[39m: [Worker] PERM submission created - 9621c9f7-93c2-426e-bc6b-a7a477b1aecf (20% compliance, 1/5 events, status: incomplete)
+[32minfo[39m: ✅ PERM submission updated: 1a146a37-bd5a-488b-a32c-2323d97124f3
+[32minfo[39m: [Worker] PERM submission updated - 1a146a37-bd5a-488b-a32c-2323d97124f3 (100% compliance, 5/5 events, status: complete)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214800739 - PERM submission completed (20.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214800739
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214800739
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214797349 - PERM submission completed (100.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214797349
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214797349
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&month=2025-10-01&perm_enabled=true 200 - 190.390 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '448',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214804135 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214804135 - PERM submission queued for 2025-11-01
+[32minfo[39m: POST /v1/submissions 202 - 189.481 ms
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214804135 - Processing PERM submission for 2025-11-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission created: cd33db06-4817-45c0-ab05-49a2c049ac8a
+[32minfo[39m: [Worker] PERM submission created - cd33db06-4817-45c0-ab05-49a2c049ac8a (60% compliance, 3/5 events, status: partial)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214804135 - PERM submission completed (60.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214804135
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214804135
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214789456&month=2025-11-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214789456&month=2025-11-01&perm_enabled=true 200 - 194.255 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&perm_enabled=true 200 - 191.022 ms
+[requireAccess] Checking access for endpoint: /v1/submissions/activity-log/recent?tenant_id=hWiWJ_X0m6&limit=10 {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ3ODksImV4cCI6MTc2MTIxNjU4OSwidHlwZSI6ImFjY2VzcyJ9.bM9brcqI34kWvSyVb0f25coVPVfmBKgnqr9pTtjIj9c',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions/activity-log/recent?tenant_id=hWiWJ_X0m6&limit=10 200 - 183.706 ms
+[32minfo[39m: GET /v1/submissions/activity-log/summary 200 - 183.286 ms
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+expired token expiry time ---> 30
+expired token ---> Moment<2025-10-23T11:51:11+01:00>
+expired token ---> Moment<2025-10-23T12:21:11+01:00>
+acess token --> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ4NzEsImV4cCI6MTc2MTIxNjY3MSwidHlwZSI6ImFjY2VzcyJ9.t2-mVlNhc-1p8NfC0dlxnHPJ8Nu4zU_5T54U3GOkGGw
+[32minfo[39m: POST /v1/auth/login 200 - 42.567 ms
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+--- AUTH DEBUG ---
+Route: /v1/node?tenantId=hWiWJ_X0m6&limit=1
+HTTP Method: GET
+Required Permissions: [ 'view:node' ]
+[NODE CONTROLLER - QUERY] Query params: { tenantId: 'hWiWJ_X0m6', limit: 1 } Tenant: hWiWJ_X0m6
+[NODE CONTROLLER - QUERY] Filter with tenantId: { tenantId: 'hWiWJ_X0m6' }
+[TenantPlugin] paginate() - incoming options: { limit: 1, populate: 'level,structure,users.roles' }
+[TenantPlugin] Pre-hook triggered for: countDocuments
+[TenantPlugin] Options: {}
+[TenantPlugin] Pre-hook triggered for: find
+[TenantPlugin] Options: { sort: { createdAt: 1 }, skip: 0, limit: 1 }
+[NODE CONTROLLER - QUERY] Found 0 nodes for tenant: hWiWJ_X0m6
+[32minfo[39m: GET /v1/node?tenantId=hWiWJ_X0m6&limit=1 200 - 5.506 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ4NzEsImV4cCI6MTc2MTIxNjY3MSwidHlwZSI6ImFjY2VzcyJ9.t2-mVlNhc-1p8NfC0dlxnHPJ8Nu4zU_5T54U3GOkGGw',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ4NzEsImV4cCI6MTc2MTIxNjY3MSwidHlwZSI6ImFjY2VzcyJ9.t2-mVlNhc-1p8NfC0dlxnHPJ8Nu4zU_5T54U3GOkGGw',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '510',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214871427 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214871427 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 899.610 ms
+[requireAccess] Checking access for endpoint: /v1/submissions/activity-log?tenant_id=hWiWJ_X0m6&limit=5 {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ4NzEsImV4cCI6MTc2MTIxNjY3MSwidHlwZSI6ImFjY2VzcyJ9.t2-mVlNhc-1p8NfC0dlxnHPJ8Nu4zU_5T54U3GOkGGw',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ4NzEsImV4cCI6MTc2MTIxNjY3MSwidHlwZSI6ImFjY2VzcyJ9.t2-mVlNhc-1p8NfC0dlxnHPJ8Nu4zU_5T54U3GOkGGw',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions/activity-log?tenant_id=hWiWJ_X0m6&limit=5 200 - 363.620 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214871422&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ4NzEsImV4cCI6MTc2MTIxNjY3MSwidHlwZSI6ImFjY2VzcyJ9.t2-mVlNhc-1p8NfC0dlxnHPJ8Nu4zU_5T54U3GOkGGw',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ4NzEsImV4cCI6MTc2MTIxNjY3MSwidHlwZSI6ImFjY2VzcyJ9.t2-mVlNhc-1p8NfC0dlxnHPJ8Nu4zU_5T54U3GOkGGw',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214871422&month=2025-10-01&perm_enabled=true 200 - 185.440 ms
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214871427 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission created: c47e1c54-6f29-4510-99fa-3dab7e8be4fa
+[32minfo[39m: [Worker] PERM submission created - c47e1c54-6f29-4510-99fa-3dab7e8be4fa (40% compliance, 2/5 events, status: partial)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214871427 - PERM submission completed (40.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214871427
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214871427
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+expired token expiry time ---> 30
+expired token ---> Moment<2025-10-23T11:51:28+01:00>
+expired token ---> Moment<2025-10-23T12:21:28+01:00>
+acess token --> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ4ODgsImV4cCI6MTc2MTIxNjY4OCwidHlwZSI6ImFjY2VzcyJ9.ABxgNaCKdt2HKYywQLwD6atWyJ531ekefrzgRd6ET94
+[32minfo[39m: POST /v1/auth/login 200 - 42.487 ms
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+--- AUTH DEBUG ---
+Route: /v1/node?tenantId=hWiWJ_X0m6&limit=1
+HTTP Method: GET
+Required Permissions: [ 'view:node' ]
+[NODE CONTROLLER - QUERY] Query params: { tenantId: 'hWiWJ_X0m6', limit: 1 } Tenant: hWiWJ_X0m6
+[NODE CONTROLLER - QUERY] Filter with tenantId: { tenantId: 'hWiWJ_X0m6' }
+[TenantPlugin] paginate() - incoming options: { limit: 1, populate: 'level,structure,users.roles' }
+[TenantPlugin] Pre-hook triggered for: countDocuments
+[TenantPlugin] Options: {}
+[TenantPlugin] Pre-hook triggered for: find
+[TenantPlugin] Options: { sort: { createdAt: 1 }, skip: 0, limit: 1 }
+[NODE CONTROLLER - QUERY] Found 0 nodes for tenant: hWiWJ_X0m6
+[32minfo[39m: GET /v1/node?tenantId=hWiWJ_X0m6&limit=1 200 - 4.593 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ4ODgsImV4cCI6MTc2MTIxNjY4OCwidHlwZSI6ImFjY2VzcyJ9.ABxgNaCKdt2HKYywQLwD6atWyJ531ekefrzgRd6ET94',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ4ODgsImV4cCI6MTc2MTIxNjY4OCwidHlwZSI6ImFjY2VzcyJ9.ABxgNaCKdt2HKYywQLwD6atWyJ531ekefrzgRd6ET94',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '510',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214888221 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214888221 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 188.238 ms
+[requireAccess] Checking access for endpoint: /v1/submissions/activity-log?tenant_id=hWiWJ_X0m6&limit=5 {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ4ODgsImV4cCI6MTc2MTIxNjY4OCwidHlwZSI6ImFjY2VzcyJ9.ABxgNaCKdt2HKYywQLwD6atWyJ531ekefrzgRd6ET94',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ4ODgsImV4cCI6MTc2MTIxNjY4OCwidHlwZSI6ImFjY2VzcyJ9.ABxgNaCKdt2HKYywQLwD6atWyJ531ekefrzgRd6ET94',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+[32minfo[39m: GET /v1/submissions/activity-log?tenant_id=hWiWJ_X0m6&limit=5 200 - 365.180 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214888217&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ4ODgsImV4cCI6MTc2MTIxNjY4OCwidHlwZSI6ImFjY2VzcyJ9.ABxgNaCKdt2HKYywQLwD6atWyJ531ekefrzgRd6ET94',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ4ODgsImV4cCI6MTc2MTIxNjY4OCwidHlwZSI6ImFjY2VzcyJ9.ABxgNaCKdt2HKYywQLwD6atWyJ531ekefrzgRd6ET94',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214888217&month=2025-10-01&perm_enabled=true 200 - 179.762 ms
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214888221 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission created: acb290f8-c52d-445c-b13f-8af780be618a
+[32minfo[39m: [Worker] PERM submission created - acb290f8-c52d-445c-b13f-8af780be618a (40% compliance, 2/5 events, status: partial)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214888221 - PERM submission completed (40.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214888221
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214888221
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+expired token expiry time ---> 30
+expired token ---> Moment<2025-10-23T11:52:36+01:00>
+expired token ---> Moment<2025-10-23T12:22:36+01:00>
+acess token --> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ
+[32minfo[39m: POST /v1/auth/login 200 - 126.709 ms
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+--- AUTH DEBUG ---
+Route: /v1/node?tenantId=hWiWJ_X0m6&limit=1
+HTTP Method: GET
+Required Permissions: [ 'view:node' ]
+[NODE CONTROLLER - QUERY] Query params: { tenantId: 'hWiWJ_X0m6', limit: 1 } Tenant: hWiWJ_X0m6
+[NODE CONTROLLER - QUERY] Filter with tenantId: { tenantId: 'hWiWJ_X0m6' }
+[TenantPlugin] paginate() - incoming options: { limit: 1, populate: 'level,structure,users.roles' }
+[TenantPlugin] Pre-hook triggered for: countDocuments
+[TenantPlugin] Options: {}
+[TenantPlugin] Pre-hook triggered for: find
+[TenantPlugin] Options: { sort: { createdAt: 1 }, skip: 0, limit: 1 }
+[NODE CONTROLLER - QUERY] Found 0 nodes for tenant: hWiWJ_X0m6
+[32minfo[39m: GET /v1/node?tenantId=hWiWJ_X0m6&limit=1 200 - 87.121 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '510',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214956810 | Tenant: hWiWJ_X0m6
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214956810 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 923.975 ms
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214956810 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission created: 5673d041-90a6-45f8-a412-be304ee1d559
+[32minfo[39m: [Worker] PERM submission created - 5673d041-90a6-45f8-a412-be304ee1d559 (40% compliance, 2/5 events, status: partial)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214956810 - PERM submission completed (40.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214956810
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214956810
+[requireAccess] Checking access for endpoint: /v1/submissions/activity-log?tenant_id=hWiWJ_X0m6&limit=5 {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions/activity-log?tenant_id=hWiWJ_X0m6&limit=5 200 - 364.980 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214956795&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214956795&month=2025-10-01&perm_enabled=true 200 - 182.405 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '539',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214961296 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214961296 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 188.611 ms
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214961296 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission updated: 5673d041-90a6-45f8-a412-be304ee1d559
+[32minfo[39m: [Worker] PERM submission updated - 5673d041-90a6-45f8-a412-be304ee1d559 (80% compliance, 4/5 events, status: partial)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214961296 - PERM submission completed (80.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214961296
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214961296
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214956795&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214956795&month=2025-10-01&perm_enabled=true 200 - 183.175 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '479',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214964689 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214964689 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 189.554 ms
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214964689 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission updated: 5673d041-90a6-45f8-a412-be304ee1d559
+[32minfo[39m: [Worker] PERM submission updated - 5673d041-90a6-45f8-a412-be304ee1d559 (100% compliance, 5/5 events, status: complete)
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214956795&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214964689 - PERM submission completed (100.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214964689
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214964689
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214956795&month=2025-10-01&perm_enabled=true 200 - 188.769 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '431',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214968081 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214968081 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 186.594 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&month=2025-10-01&perm_enabled=true 200 - 191.972 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '448',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761214971469 | Tenant: hWiWJ_X0m6
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761214971469 - PERM submission queued for 2025-11-01
+[32minfo[39m: POST /v1/submissions 202 - 185.092 ms
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214968081 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission created: 760c1e71-229b-4b70-bcbd-cc2f04514ca2
+[32minfo[39m: [Worker] PERM submission created - 760c1e71-229b-4b70-bcbd-cc2f04514ca2 (20% compliance, 1/5 events, status: incomplete)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214968081 - PERM submission completed (20.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214968081
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214968081
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761214971469 - Processing PERM submission for 2025-11-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission created: 61d399f0-5467-4120-8d96-c9eb14b62237
+[32minfo[39m: [Worker] PERM submission created - 61d399f0-5467-4120-8d96-c9eb14b62237 (60% compliance, 3/5 events, status: partial)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761214971469 - PERM submission completed (60.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761214971469
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761214971469
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214956795&month=2025-11-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761214956795&month=2025-11-01&perm_enabled=true 200 - 181.860 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&perm_enabled=true 200 - 183.781 ms
+[requireAccess] Checking access for endpoint: /v1/submissions/activity-log/recent?tenant_id=hWiWJ_X0m6&limit=10 {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTQ5NTYsImV4cCI6MTc2MTIxNjc1NiwidHlwZSI6ImFjY2VzcyJ9.3N-dF6QPILRWoWN6oZTX3T8V-JGjNpzA3yUXDrVAwMQ',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions/activity-log/recent?tenant_id=hWiWJ_X0m6&limit=10 200 - 180.774 ms
+[32minfo[39m: GET /v1/submissions/activity-log/summary 200 - 185.968 ms
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+expired token expiry time ---> 30
+expired token ---> Moment<2025-10-23T11:53:28+01:00>
+expired token ---> Moment<2025-10-23T12:23:28+01:00>
+acess token --> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk
+[32minfo[39m: POST /v1/auth/login 200 - 78.113 ms
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+--- AUTH DEBUG ---
+Route: /v1/node?tenantId=hWiWJ_X0m6&limit=1
+HTTP Method: GET
+Required Permissions: [ 'view:node' ]
+[NODE CONTROLLER - QUERY] Query params: { tenantId: 'hWiWJ_X0m6', limit: 1 } Tenant: hWiWJ_X0m6
+[NODE CONTROLLER - QUERY] Filter with tenantId: { tenantId: 'hWiWJ_X0m6' }
+[TenantPlugin] paginate() - incoming options: { limit: 1, populate: 'level,structure,users.roles' }
+[TenantPlugin] Pre-hook triggered for: countDocuments
+[TenantPlugin] Options: {}
+[TenantPlugin] Pre-hook triggered for: find
+[TenantPlugin] Options: { sort: { createdAt: 1 }, skip: 0, limit: 1 }
+[NODE CONTROLLER - QUERY] Found 0 nodes for tenant: hWiWJ_X0m6
+[32minfo[39m: GET /v1/node?tenantId=hWiWJ_X0m6&limit=1 200 - 23.122 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '510',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761215008578 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761215008578 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 1031.796 ms
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761215008578 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission created: ba0e3d25-26d0-444f-8924-3bc514628268
+[32minfo[39m: [Worker] PERM submission created - ba0e3d25-26d0-444f-8924-3bc514628268 (40% compliance, 2/5 events, status: partial)
+[requireAccess] Checking access for endpoint: /v1/submissions/activity-log?tenant_id=hWiWJ_X0m6&limit=5 {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761215008578 - PERM submission completed (40.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761215008578
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761215008578
+[32minfo[39m: GET /v1/submissions/activity-log?tenant_id=hWiWJ_X0m6&limit=5 200 - 1110.292 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761215008570&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761215008570&month=2025-10-01&perm_enabled=true 200 - 189.677 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '539',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761215013948 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761215013948 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 194.841 ms
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761215013948 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761215008570&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761215008570&month=2025-10-01&perm_enabled=true 200 - 205.786 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '479',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761215017361 | Tenant: hWiWJ_X0m6
+[32minfo[39m: ✅ PERM submission updated: ba0e3d25-26d0-444f-8924-3bc514628268
+[32minfo[39m: [Worker] PERM submission updated - ba0e3d25-26d0-444f-8924-3bc514628268 (80% compliance, 4/5 events, status: partial)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761215017361 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 215.944 ms
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761215013948 - PERM submission completed (80.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761215013948
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761215013948
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761215017361 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission updated: ba0e3d25-26d0-444f-8924-3bc514628268
+[32minfo[39m: [Worker] PERM submission updated - ba0e3d25-26d0-444f-8924-3bc514628268 (100% compliance, 5/5 events, status: complete)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761215017361 - PERM submission completed (100.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761215017361
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761215017361
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761215008570&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761215008570&month=2025-10-01&perm_enabled=true 200 - 188.981 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '431',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761215020785 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761215020785 - PERM submission queued for 2025-10-01
+[32minfo[39m: POST /v1/submissions 202 - 191.419 ms
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761215020785 - Processing PERM submission for 2025-10-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: ✅ PERM submission created: 03bb4d4c-4e13-469b-9ce8-189cda6b8126
+[32minfo[39m: [Worker] PERM submission created - 03bb4d4c-4e13-469b-9ce8-189cda6b8126 (20% compliance, 1/5 events, status: incomplete)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761215020785 - PERM submission completed (20.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761215020785
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761215020785
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&month=2025-10-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&month=2025-10-01&perm_enabled=true 200 - 195.771 ms
+[requireAccess] Checking access for endpoint: /v1/submissions {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'user-agent': 'axios/1.12.2',
+  'content-length': '448',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: 📥 Submission enqueued - Job ID: hWiWJ_X0m6-1761215024194 | Tenant: hWiWJ_X0m6
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] queued - queued - Job: hWiWJ_X0m6-1761215024194 - PERM submission queued for 2025-11-01
+[32minfo[39m: POST /v1/submissions 202 - 195.201 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761215008570&month=2025-11-01&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&node_id=node_test_1761215008570&month=2025-11-01&perm_enabled=true 200 - 188.368 ms
+[requireAccess] Checking access for endpoint: /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&perm_enabled=true {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+[32minfo[39m: [Worker] Processing PERM submission for project=proj_Mrs538IYtOfd
+[32minfo[39m: GET /v1/submissions?tenant_id=hWiWJ_X0m6&project_id=proj_Mrs538IYtOfd&perm_enabled=true 200 - 198.072 ms
+[requireAccess] Checking access for endpoint: /v1/submissions/activity-log/recent?tenant_id=hWiWJ_X0m6&limit=10 {
+  permissions: [],
+  scope: undefined,
+  environment: undefined,
+  jwtOnly: false,
+  apiOnly: false
+}
+[requireAccess] Incoming headers: {
+  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'x-api-key': undefined,
+  requiredPermissions: []
+}
+[requireAccess] Full request headers: {
+  accept: 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU0Y2I5NmQxODBiMDI4NWQ5YTcwMWQiLCJpYXQiOjE3NjEyMTUwMDgsImV4cCI6MTc2MTIxNjgwOCwidHlwZSI6ImFjY2VzcyJ9.EHPCgoBdaQmqTS1KqN2rS1gfnV_ulS64vnROKH6azNk',
+  'user-agent': 'axios/1.12.2',
+  'accept-encoding': 'gzip, compress, deflate, br',
+  host: 'localhost:4000',
+  connection: 'close'
+}
+[requireAccess] Detected JWT
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+[requireAccess] Authenticated user: {
+  roles: [],
+  isOwner: true,
+  isSuper: true,
+  isSaby: true,
+  isAgreed: false,
+  createdBy: null,
+  otp: null,
+  otpExpires: null,
+  otpVerified: true,
+  phoneNumber: null,
+  isPhoneVerified: false,
+  isEmailVerified: true,
+  avatar: 'https://halocrm.s3.us-east-1.amazonaws.com/user/avatar-09.webp',
+  status: true,
+  deletedAt: null,
+  _id: 68e4cb96d180b0285d9a701d,
+  firstname: 'Debby',
+  lastname: 'Adebowale',
+  email: 'saby@saby.ai',
+  password: '$2a$08$o1.0/o0J3cDHswtnBPpdO.0KNYtXslW0gYv8ZcwaRkUdsupCw5dH.',
+  userId: '0YXBcDcxPH',
+  tenantId: 'hWiWJ_X0m6',
+  createdAt: 2025-10-07T08:13:10.710Z,
+  updatedAt: 2025-10-10T19:17:53.368Z,
+  haloId: 'HL-00030',
+  __v: 0
+}
+[requireAccess] Resolved access: user
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] processing - in progress - Job: hWiWJ_X0m6-1761215024194 - Processing PERM submission for 2025-11-01
+[32minfo[39m: [Worker] Calling permSubmissionService.submitPERMData for PERM submission
+[32minfo[39m: GET /v1/submissions/activity-log/recent?tenant_id=hWiWJ_X0m6&limit=10 200 - 188.246 ms
+[32minfo[39m: GET /v1/submissions/activity-log/summary 200 - 185.272 ms
+[32minfo[39m: ✅ PERM submission created: 3d0af34c-7745-49dc-8303-e701b9e2c29b
+[32minfo[39m: [Worker] PERM submission created - 3d0af34c-7745-49dc-8303-e701b9e2c29b (60% compliance, 3/5 events, status: partial)
+📡 Emitted activity update to tenant:hWiWJ_X0m6
+[32minfo[39m: [Activity] completed - success - Job: hWiWJ_X0m6-1761215024194 - PERM submission completed (60.00% compliance)
+[32minfo[39m: ✅ Submission job completed - ID: hWiWJ_X0m6-1761215024194
+[32minfo[39m: ✅ Submission worker completed job: hWiWJ_X0m6-1761215024194
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+node:internal/modules/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find module '../services/dynamicFormSchema.service'
+Require stack:
+- /Users/fadebowaley/saby/sabyBackend/src/controllers/unifiedSubmission.controller.js
+- /Users/fadebowaley/saby/sabyBackend/src/routes/v1/unifiedSubmission.route.js
+- /Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js
+- /Users/fadebowaley/saby/sabyBackend/src/app.js
+- /Users/fadebowaley/saby/sabyBackend/src/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+    at Module._load (node:internal/modules/cjs/loader:981:27)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/controllers/unifiedSubmission.controller.js:14:34)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/unifiedSubmission.route.js:5:37)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/fadebowaley/saby/sabyBackend/src/controllers/unifiedSubmission.controller.js',
+    '/Users/fadebowaley/saby/sabyBackend/src/routes/v1/unifiedSubmission.route.js',
+    '/Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js',
+    '/Users/fadebowaley/saby/sabyBackend/src/app.js',
+    '/Users/fadebowaley/saby/sabyBackend/src/index.js'
+  ]
+}
+
+Node.js v18.20.2
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+node:internal/modules/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find module '../services/dynamicFormSchema.service'
+Require stack:
+- /Users/fadebowaley/saby/sabyBackend/src/controllers/unifiedSubmission.controller.js
+- /Users/fadebowaley/saby/sabyBackend/src/routes/v1/unifiedSubmission.route.js
+- /Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js
+- /Users/fadebowaley/saby/sabyBackend/src/app.js
+- /Users/fadebowaley/saby/sabyBackend/src/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+    at Module._load (node:internal/modules/cjs/loader:981:27)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/controllers/unifiedSubmission.controller.js:14:34)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/unifiedSubmission.route.js:5:37)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/fadebowaley/saby/sabyBackend/src/controllers/unifiedSubmission.controller.js',
+    '/Users/fadebowaley/saby/sabyBackend/src/routes/v1/unifiedSubmission.route.js',
+    '/Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js',
+    '/Users/fadebowaley/saby/sabyBackend/src/app.js',
+    '/Users/fadebowaley/saby/sabyBackend/src/index.js'
+  ]
+}
+
+Node.js v18.20.2
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:97943) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: 20.169.129.160:5432
+[32minfo[39m: 👤 User: sabyagentic_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 (Debian 15.14-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m

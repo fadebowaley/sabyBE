@@ -3,28 +3,36 @@ const { nanoid } = require('nanoid');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
 // Schema for form elements (from form builder)
-const FormElementSchema = new mongoose.Schema({
-  id: { type: String, required: true },
-  type: { type: String, required: true },
-  properties: {
-    label: String,
-    placeholder: String,
-    required: { type: Boolean, default: false },
-    validation: mongoose.Schema.Types.Mixed,
-    options: [String], // For select, radio, checkbox
-    multiple: { type: Boolean, default: false },
-    accept: String, // For file uploads
-    defaultValue: mongoose.Schema.Types.Mixed,
-    numberType: String,
-    formula: String,
-    paragraphAlignment: String,
-    headerLevel: String,
-    headerAlignment: String,
-    textAlign: String,
-    acceptedTypes: String,
-    defaultCountry: String,
+const FormElementSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true },
+    type: { type: String, required: true },
+    properties: {
+      label: String,
+      placeholder: String,
+      required: { type: Boolean, default: false },
+      validation: mongoose.Schema.Types.Mixed,
+      options: [String], // For select, radio, checkbox
+      multiple: { type: Boolean, default: false },
+      accept: String, // For file uploads
+      defaultValue: mongoose.Schema.Types.Mixed,
+      numberType: String,
+      formula: String,
+      paragraphAlignment: String,
+      headerLevel: String,
+      headerAlignment: String,
+      textAlign: String,
+      acceptedTypes: String,
+      defaultCountry: String,
+    },
+    aliases: [{ type: String }],
+    metadata: {
+      type: mongoose.Schema.Types.Mixed,
+      default: undefined,
+    },
   },
-});
+  { _id: false }
+);
 
 // Schema for configuration data from modal
 const ProjectConfigurationSchema = new mongoose.Schema({
@@ -74,7 +82,11 @@ const UserSettingsSchema = new mongoose.Schema(
     ui: {
       theme: { type: String, default: 'default' },
       primaryColor: { type: String, default: '#3b82f6' },
-      layout: { type: String, enum: ['single', 'multi-step'], default: 'single' },
+      layout: {
+        type: String,
+        enum: ['single', 'multi-step'],
+        default: 'single',
+      },
       showProgressBar: { type: Boolean, default: true },
     },
     builder: {
@@ -94,6 +106,19 @@ const ProjectFormSchema = new mongoose.Schema(
       type: String,
       unique: true,
       index: true,
+    },
+    formId: {
+      type: String,
+      unique: true,
+      sparse: true, // Optional, for linking to event_calendar
+      index: true,
+    },
+    formReference: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+      // Format: #SB-000001 (human-readable sequential reference)
     },
     tenantId: {
       type: String,
@@ -120,6 +145,74 @@ const ProjectFormSchema = new mongoose.Schema(
 
     // User settings
     userSettings: UserSettingsSchema,
+
+    // ✨ NEW: PERM Settings (Flexible Calendar & Compliance Tracking)
+    permSettings: {
+      enabled: { type: Boolean, default: false },
+      // Tracking mode: 'none' (month-only), 'daily', or 'weekly'
+      trackingMode: {
+        type: String,
+        enum: ['none', 'daily', 'weekly'],
+        default: 'none',
+      },
+      // Configuration for daily tracking mode
+      dailyConfig: {
+        activeDays: [{ type: Number }], // [0-6] where 0=Sunday, 1=Monday, etc.
+        frequencyPerDay: { type: Number, default: 1 }, // 1x, 2x, 3x, 4x per day
+        skipWeekends: { type: Boolean, default: false },
+        skipHolidays: { type: Boolean, default: false },
+      },
+      // Configuration for weekly tracking mode
+      weeklyConfig: {
+        days: [
+          {
+            day: { type: Number }, // 0-6 (Sunday-Saturday)
+            name: { type: String }, // "Sunday", "Monday", etc.
+            frequency: {
+              type: String,
+              enum: ['weekly', 'biweekly', 'monthly'],
+            },
+            occurrences: { type: Number }, // For biweekly/monthly: how many times in month
+            enabled: { type: Boolean, default: true },
+          },
+        ],
+      },
+      // Common settings
+      requireNodeId: { type: Boolean, default: true },
+      requireMonth: { type: Boolean, default: true },
+      trackCompliance: { type: Boolean, default: true },
+      autoGenerateCalendar: { type: Boolean, default: true },
+      autoLockMonthEnd: { type: Boolean, default: true },
+      // Legacy field (kept for backward compatibility)
+      eventTypes: [{ type: String }],
+      // Optional: Require calendar template before submissions
+      calendarRequired: { type: Boolean, default: false },
+      // Calendar generation options for backdating
+      calendarGeneration: {
+        startDate: { type: String },
+        endDate: { type: String },
+        allowBackdating: { type: Boolean, default: false },
+        monthsToGenerate: { type: Number },
+      },
+    },
+
+    // Payment configuration (for forms with financial tag)
+    paymentConfig: {
+      enabled: { type: Boolean, default: false },
+      enabledChannels: [{ type: String }], // ['sabypipe', 'paystack', etc.]
+      defaultChannel: { type: String, default: 'sabypipe' },
+      channelConfigs: {
+        sabypipe: { type: mongoose.Schema.Types.Mixed },
+        paystack: { type: mongoose.Schema.Types.Mixed },
+        psb9mobile: { type: mongoose.Schema.Types.Mixed },
+        flutterwave: { type: mongoose.Schema.Types.Mixed },
+        premiumtrust: { type: mongoose.Schema.Types.Mixed },
+        monnify: { type: mongoose.Schema.Types.Mixed },
+        remita: { type: mongoose.Schema.Types.Mixed },
+        seerbit: { type: mongoose.Schema.Types.Mixed },
+      },
+    },
+
     // New access and API-related fields
     slug: {
       type: String,
@@ -146,6 +239,19 @@ const ProjectFormSchema = new mongoose.Schema(
         type: String,
         enum: ['draft', 'published', 'archived'],
         default: 'draft',
+      },
+      integrations: {
+        type: mongoose.Schema.Types.Mixed,
+        default: ['web'],
+        set: (values) => {
+          if (Array.isArray(values)) {
+            return values.map((value) => String(value).toLowerCase());
+          }
+          if (typeof values === 'string') {
+            return [values.toLowerCase()];
+          }
+          return values;
+        },
       },
     },
 
@@ -181,8 +287,38 @@ ProjectFormSchema.plugin(tenantPlugin);
  * Generate a unique projectId
  * @returns {string}
  */
-ProjectFormSchema.statics.generateProjectId = function () {
-  return `proj_${nanoid(12)}`;
+const createProjectSlug = (input = '') => {
+  if (!input || typeof input !== 'string') {
+    return 'project';
+  }
+
+  const normalized = input
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim()
+    .replace(/^-|-$/g, '');
+
+  if (!normalized) {
+    return 'project';
+  }
+
+  return normalized.slice(0, 32);
+};
+
+ProjectFormSchema.statics.generateProjectId = function (projectName = '') {
+  const slug = createProjectSlug(projectName);
+  const suffix = nanoid(6).toLowerCase();
+  return `proj_${slug}-${suffix}`;
+};
+
+/**
+ * Generate a unique formId
+ * @returns {string}
+ */
+ProjectFormSchema.statics.generateFormId = function () {
+  return `form_${nanoid(12)}`;
 };
 
 /**
@@ -192,10 +328,20 @@ ProjectFormSchema.statics.generateProjectId = function () {
  * @param {ObjectId} createdBy - The user creating the project
  * @returns {Promise<ProjectForm>}
  */
-ProjectFormSchema.statics.createProjectForm = async function (projectData, tenantId, createdBy) {
+ProjectFormSchema.statics.createProjectForm = async function (
+  projectData,
+  tenantId,
+  createdBy
+) {
   // Generate unique project ID
-  console.log('🎯 [ProjectForm] Creating project form with elements:', projectData);
-  console.log('🎯 [ProjectForm] Elements count:', projectData.elements ? projectData.elements.length : 0);
+  console.log(
+    '🎯 [ProjectForm] Creating project form with elements:',
+    projectData
+  );
+  console.log(
+    '🎯 [ProjectForm] Elements count:',
+    projectData.elements ? projectData.elements.length : 0
+  );
 
   if (projectData.elements && projectData.elements.length > 0) {
     projectData.elements.forEach((element, index) => {
@@ -205,18 +351,33 @@ ProjectFormSchema.statics.createProjectForm = async function (projectData, tenan
     });
   }
 
-  const projectId = this.generateProjectId();
+  const projectId = this.generateProjectId(
+    projectData?.configuration?.projectName || projectData?.name || ''
+  );
+
+  // Generate human-readable form reference
+  const Counter = require('./counter.model');
+  const formReference = await Counter.generateReference('formReference');
+
+  console.log(`🎯 [ProjectForm] Generated reference: ${formReference}`);
+
   // Prepare the project data
   const projectFormData = {
     ...projectData,
     projectId,
+    formReference,
     tenantId,
     createdBy,
     metadata: {
       ...projectData.metadata,
       elementsCount: projectData.elements ? projectData.elements.length : 0,
       hasValidation: projectData.elements
-        ? projectData.elements.some((el) => el.properties && el.properties.validation && el.properties.validation.required)
+        ? projectData.elements.some(
+            (el) =>
+              el.properties &&
+              el.properties.validation &&
+              el.properties.validation.required
+          )
         : false,
       lastModified: new Date(),
     },
@@ -234,7 +395,11 @@ ProjectFormSchema.statics.createProjectForm = async function (projectData, tenan
  * @param {ObjectId} [excludeProjectId] - The project ID to exclude from check
  * @returns {Promise<boolean>}
  */
-ProjectFormSchema.statics.isProjectNameTaken = async function (projectName, tenantId, excludeProjectId) {
+ProjectFormSchema.statics.isProjectNameTaken = async function (
+  projectName,
+  tenantId,
+  excludeProjectId
+) {
   const query = {
     'configuration.projectName': projectName,
     tenantId,
@@ -265,7 +430,10 @@ ProjectFormSchema.methods.incrementViews = async function () {
  */
 ProjectFormSchema.methods.incrementSubmissions = async function () {
   this.analytics.submissions += 1;
-  this.analytics.conversionRate = this.analytics.views > 0 ? (this.analytics.submissions / this.analytics.views) * 100 : 0;
+  this.analytics.conversionRate =
+    this.analytics.views > 0
+      ? (this.analytics.submissions / this.analytics.views) * 100
+      : 0;
   await this.save();
 };
 
@@ -273,11 +441,37 @@ ProjectFormSchema.methods.incrementSubmissions = async function () {
  * Soft delete project
  * @returns {Promise<ProjectForm>}
  */
-ProjectFormSchema.methods.softDelete = async function () {
+ProjectFormSchema.methods.softDelete = async function (userId = null) {
   this.deletedAt = new Date();
+  this.deletedBy = userId;
   this.status = 'archived';
+  this.metadata.deploymentStatus = 'archived';
   await this.save();
   return this;
+};
+
+/**
+ * Permanently delete project form and all related data
+ * @returns {Promise<Object>}
+ */
+ProjectFormSchema.methods.permanentlyDelete = async function () {
+  const { postgresPool } = require('../config/postgres');
+  const projectId = this.projectId;
+
+  // Delete from PostgreSQL
+  await postgresPool.query('DELETE FROM form_submissions WHERE project_id = $1', [projectId]);
+  await postgresPool.query('DELETE FROM event_calendar WHERE project_id = $1', [projectId]);
+  await postgresPool.query('DELETE FROM submission_activity_log WHERE project_id = $1', [projectId]);
+  await postgresPool.query('DELETE FROM dead_letter_queue WHERE project_id = $1', [projectId]);
+
+  // Delete from MongoDB
+  await this.deleteOne();
+
+  return {
+    deleted: true,
+    permanent: true,
+    projectId,
+  };
 };
 
 /**
@@ -285,8 +479,20 @@ ProjectFormSchema.methods.softDelete = async function () {
  * @returns {Promise<ProjectForm>}
  */
 ProjectFormSchema.methods.restore = async function () {
+  // Check if past 14-day grace period
+  if (this.deletedAt) {
+    const daysSinceDeletion = (Date.now() - this.deletedAt.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceDeletion > 14) {
+      const ApiError = require('../utils/ApiError');
+      const httpStatus = require('http-status');
+      throw new ApiError(httpStatus.GONE, 'Form deletion period expired (>14 days). Cannot restore.');
+    }
+  }
+
   this.deletedAt = null;
-  this.status = 'active';
+  this.deletedBy = null;
+  this.status = 'inactive'; // Don't auto-activate, let user republish
+  this.metadata.deploymentStatus = 'draft';
   await this.save();
   return this;
 };
@@ -295,10 +501,65 @@ ProjectFormSchema.methods.restore = async function () {
  * Publish project
  * @returns {Promise<ProjectForm>}
  */
-ProjectFormSchema.methods.publish = async function () {
+ProjectFormSchema.methods.publish = async function (options = {}) {
+  const {
+    startDate = null,
+    endDate = null,
+    monthsToGenerate = 4,
+    allowBackdating = false,
+  } = options;
+
   this.metadata.deploymentStatus = 'published';
   this.publishedAt = new Date();
   this.status = 'active';
+
+  // Auto-generate formId if not set
+  if (!this.formId) {
+    this.formId = this.constructor.generateFormId();
+  }
+
+  // Auto-generate calendar if PERM is enabled
+  if (this.permSettings?.enabled && this.permSettings?.autoGenerateCalendar) {
+    try {
+      const { eventCalendarService } = require('../services');
+      
+      // Use custom date range if provided, otherwise default to current month + 3
+      const baseDate = startDate ? new Date(startDate) : new Date();
+      const finalDate = endDate ? new Date(endDate) : new Date(baseDate);
+      
+      if (!endDate) {
+        // If no end date, generate for specified number of months
+        finalDate.setMonth(finalDate.getMonth() + (monthsToGenerate - 1));
+      }
+
+      // Calculate months to generate
+      const months = [];
+      let currentDate = new Date(baseDate);
+
+      while (currentDate <= finalDate) {
+        const year = currentDate.getFullYear();
+        const month = `${year}-${String(currentDate.getMonth() + 1).padStart(
+          2,
+          '0'
+        )}-01`;
+        months.push({ month, year });
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      }
+
+      // Generate calendars for all months
+      for (const { month, year } of months) {
+        await eventCalendarService.generateCalendarFromForm(this, month, year);
+      }
+
+      // eslint-disable-next-line no-console
+      console.log(`✅ Auto-generated calendars for form ${this.projectId}`);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('⚠️ Failed to auto-generate calendar:', error.message);
+      // Don't fail publish if calendar generation fails
+    }
+  }
+
   await this.save();
   return this;
 };
@@ -388,7 +649,9 @@ ProjectFormSchema.methods.generateEmbedHtml = function (options = {}) {
 <!-- Optional: Auto-resize script -->
 <script>
   window.addEventListener('message', function(event) {
-    if (event.data.type === 'halo-form-resize' && event.data.projectId === '${this.projectId}') {
+    if (event.data.type === 'halo-form-resize' && event.data.projectId === '${
+      this.projectId
+    }') {
       const iframe = document.querySelector('iframe[src*="${this.projectId}"]');
       if (iframe && event.data.height) {
         iframe.style.height = event.data.height + 'px';
@@ -474,7 +737,8 @@ ProjectFormSchema.methods.generateJavaScriptLoader = function (options = {}) {
       showLoader,
       responsive: true,
       validation: this.metadata.hasValidation,
-      allowMultipleSubmissions: this.userSettings.behavior.allowMultipleSubmissions,
+      allowMultipleSubmissions:
+        this.userSettings.behavior.allowMultipleSubmissions,
     },
   };
 
@@ -561,12 +825,17 @@ ProjectFormSchema.methods.generateIntegrationGuide = function (
     api: {
       endpoint: urls.api,
       method: 'GET',
-      authentication: this.configuration.security === 'private' ? 'Bearer token required' : 'Public access',
+      authentication:
+        this.configuration.security === 'private'
+          ? 'Bearer token required'
+          : 'Public access',
       submitEndpoint: urls.apiSubmit,
       submitMethod: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(this.configuration.security === 'private' && { Authorization: 'Bearer YOUR_API_TOKEN' }),
+        ...(this.configuration.security === 'private' && {
+          Authorization: 'Bearer YOUR_API_TOKEN',
+        }),
       },
     },
   };
@@ -581,7 +850,10 @@ ProjectFormSchema.pre('save', function (next) {
   if (this.elements) {
     this.metadata.elementsCount = this.elements.length;
     this.metadata.hasValidation = this.elements.some(
-      (el) => el.properties && el.properties.validation && el.properties.validation.required
+      (el) =>
+        el.properties &&
+        el.properties.validation &&
+        el.properties.validation.required
     );
   }
 

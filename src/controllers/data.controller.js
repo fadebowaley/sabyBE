@@ -30,7 +30,10 @@ const getDataByName = catchAsync(async (req, res) => {
 
 // Update data by ID
 const updateDataById = catchAsync(async (req, res) => {
-  const updatedData = await dataService.updateDataById(req.params.dataId, req.body);
+  const updatedData = await dataService.updateDataById(
+    req.params.dataId,
+    req.body
+  );
   res.send(updatedData);
 });
 

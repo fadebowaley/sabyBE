@@ -20,19 +20,23 @@ async function createTelegramTestProject() {
 
     // Check if test project already exists
     const existingProject = await ProjectForm.findOne({
-      projectId: 'proj_TELEGRAM_TEST'
+      projectId: 'proj_TELEGRAM_TEST',
     });
 
     if (existingProject) {
       console.log('✅ Test project already exists');
       console.log(`   Project ID: ${existingProject.projectId}`);
-      console.log(`   Project Name: ${existingProject.configuration?.projectName}`);
+      console.log(
+        `   Project Name: ${existingProject.configuration?.projectName}`
+      );
       console.log(`   Status: ${existingProject.status}`);
       return existingProject;
     }
 
     // Find a valid user for createdBy field
-    const validUser = await User.findOne({ tenantId: '7vR-Ldacit' }).select('_id');
+    const validUser = await User.findOne({ tenantId: '7vR-Ldacit' }).select(
+      '_id'
+    );
     if (!validUser) {
       console.log('❌ No users found in tenant 7vR-Ldacit');
       console.log('   Please create a user first or update the tenant ID');
@@ -52,7 +56,7 @@ async function createTelegramTestProject() {
         projectName: 'Telegram Test Project',
         projectCategory: 'Testing',
         projectDescription: 'A test project for Telegram bot functionality',
-        deploymentStatus: 'published'
+        deploymentStatus: 'published',
       },
       elements: [
         {
@@ -63,8 +67,8 @@ async function createTelegramTestProject() {
             required: true,
             placeholder: 'Enter your full name',
             minLength: 2,
-            maxLength: 100
-          }
+            maxLength: 100,
+          },
         },
         {
           id: 'email',
@@ -72,8 +76,8 @@ async function createTelegramTestProject() {
           properties: {
             label: 'Email Address',
             required: true,
-            placeholder: 'Enter your email address'
-          }
+            placeholder: 'Enter your email address',
+          },
         },
         {
           id: 'phone',
@@ -81,8 +85,8 @@ async function createTelegramTestProject() {
           properties: {
             label: 'Phone Number',
             required: true,
-            placeholder: 'Enter your phone number'
-          }
+            placeholder: 'Enter your phone number',
+          },
         },
         {
           id: 'age',
@@ -92,8 +96,8 @@ async function createTelegramTestProject() {
             required: false,
             min: 18,
             max: 120,
-            placeholder: 'Enter your age'
-          }
+            placeholder: 'Enter your age',
+          },
         },
         {
           id: 'department',
@@ -101,8 +105,8 @@ async function createTelegramTestProject() {
           properties: {
             label: 'Department',
             required: true,
-            options: ['Engineering', 'Marketing', 'Sales', 'Support', 'Other']
-          }
+            options: ['Engineering', 'Marketing', 'Sales', 'Support', 'Other'],
+          },
         },
         {
           id: 'skills',
@@ -111,8 +115,15 @@ async function createTelegramTestProject() {
             label: 'Skills (Select all that apply)',
             required: false,
             multiple: true,
-            options: ['JavaScript', 'Python', 'React', 'Node.js', 'MongoDB', 'PostgreSQL']
-          }
+            options: [
+              'JavaScript',
+              'Python',
+              'React',
+              'Node.js',
+              'MongoDB',
+              'PostgreSQL',
+            ],
+          },
         },
         {
           id: 'experience',
@@ -121,8 +132,8 @@ async function createTelegramTestProject() {
             label: 'Work Experience',
             required: false,
             placeholder: 'Describe your work experience',
-            maxLength: 500
-          }
+            maxLength: 500,
+          },
         },
         {
           id: 'resume',
@@ -130,8 +141,8 @@ async function createTelegramTestProject() {
           properties: {
             label: 'Resume/CV (Optional)',
             required: false,
-            description: 'Upload your resume or CV document'
-          }
+            description: 'Upload your resume or CV document',
+          },
         },
         {
           id: 'photo',
@@ -139,17 +150,17 @@ async function createTelegramTestProject() {
           properties: {
             label: 'Profile Photo (Optional)',
             required: false,
-            description: 'Upload a profile photo'
-          }
-        }
+            description: 'Upload a profile photo',
+          },
+        },
       ],
       metadata: {
         deploymentStatus: 'published',
         createdAt: new Date(),
         updatedAt: new Date(),
-        version: '1.0.0'
+        version: '1.0.0',
       },
-      createdBy: validUser._id
+      createdBy: validUser._id,
     });
 
     await testProject.save();
@@ -162,12 +173,14 @@ async function createTelegramTestProject() {
     // Verify user exists for testing
     const testUser = await User.findOne({
       phone: '+1234567890',
-      tenantId: '7vR-Ldacit'
+      tenantId: '7vR-Ldacit',
     });
 
     if (!testUser) {
       console.log('\n⚠️  Test user not found');
-      console.log('   You may need to create a test user with phone: +1234567890');
+      console.log(
+        '   You may need to create a test user with phone: +1234567890'
+      );
       console.log('   Or update the phone number in the validation service');
     } else {
       console.log('\n✅ Test user found');
@@ -180,14 +193,15 @@ async function createTelegramTestProject() {
     console.log('\n📋 Test Instructions:');
     console.log('1. Start the Telegram bot');
     console.log('2. Send /start to begin');
-    console.log('3. Share your phone number (must be registered in the system)');
+    console.log(
+      '3. Share your phone number (must be registered in the system)'
+    );
     console.log('4. Select "Telegram Test Project"');
     console.log('5. Fill out the form step by step');
     console.log('6. Test file uploads with photos/documents');
     console.log('7. Submit the form');
 
     return testProject;
-
   } catch (error) {
     console.error('❌ Failed to create test project:', error.message);
     throw error;
@@ -211,5 +225,5 @@ if (require.main === module) {
 }
 
 module.exports = {
-  createTelegramTestProject
+  createTelegramTestProject,
 };

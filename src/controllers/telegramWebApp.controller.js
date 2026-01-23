@@ -1,7 +1,11 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const ApiError = require('../utils/ApiError');
-const { userService, projectFormService, submissionService } = require('../services');
+const {
+  userService,
+  projectFormService,
+  submissionService,
+} = require('../services');
 const telegramValidationService = require('../ingestion/telegram/services/telegramValidation.service');
 const logger = require('../config/logger');
 
@@ -11,26 +15,36 @@ const logger = require('../config/logger');
 const authenticate = catchAsync(async (req, res) => {
   const { phoneNumber, chatId } = req.body;
 
-  console.log(`🔍 [DEBUG] Web App authentication attempt for phone: ${phoneNumber}`);
+  console.log(
+    `🔍 [DEBUG] Web App authentication attempt for phone: ${phoneNumber}`
+  );
   console.log(`🔍 [DEBUG] Chat ID: ${chatId}`);
 
   try {
     // Validate user by phone number
-    console.log(`🔍 [DEBUG] Calling telegramValidationService.getUserByPhone(${phoneNumber})`);
+    console.log(
+      `🔍 [DEBUG] Calling telegramValidationService.getUserByPhone(${phoneNumber})`
+    );
     const user = await telegramValidationService.getUserByPhone(phoneNumber);
 
-    console.log(`🔍 [DEBUG] getUserByPhone result:`, user ? 'User found' : 'User not found');
+    console.log(
+      `🔍 [DEBUG] getUserByPhone result:`,
+      user ? 'User found' : 'User not found'
+    );
 
     if (!user) {
       console.log(`❌ [DEBUG] User not found for phone: ${phoneNumber}`);
-      throw new ApiError(httpStatus.UNAUTHORIZED, 'User not found with this phone number');
+      throw new ApiError(
+        httpStatus.UNAUTHORIZED,
+        'User not found with this phone number'
+      );
     }
 
     console.log(`🔍 [DEBUG] User found:`, {
       id: user._id,
       name: user.name,
       phoneNumber: user.phoneNumber,
-      tenantId: user.tenantId
+      tenantId: user.tenantId,
     });
 
     // Generate a simple token for Web App session
@@ -41,7 +55,9 @@ const authenticate = catchAsync(async (req, res) => {
     user.webAppChatId = chatId;
     await user.save();
 
-    logger.info(`✅ Web App authentication successful for user ${user._id} (${phoneNumber})`);
+    logger.info(
+      `✅ Web App authentication successful for user ${user._id} (${phoneNumber})`
+    );
 
     res.status(httpStatus.OK).json({
       success: true,
@@ -52,12 +68,15 @@ const authenticate = catchAsync(async (req, res) => {
         email: user.email,
         phoneNumber: user.phoneNumber,
         tenantId: user.tenantId,
-        token: token,
+        token,
       },
     });
   } catch (error) {
     console.error(`❌ [DEBUG] Web App authentication error:`, error.message);
-    logger.error(`❌ Web App authentication failed for ${phoneNumber}:`, error.message);
+    logger.error(
+      `❌ Web App authentication failed for ${phoneNumber}:`,
+      error.message
+    );
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Authentication failed');
   }
 });
@@ -70,24 +89,36 @@ const getProjects = catchAsync(async (req, res) => {
 
   try {
     // Get projects for the user's tenant
-    const projectsResult = await projectFormService.getProjectFormsByTenant(tenantId);
+    const projectsResult = await projectFormService.getProjectFormsByTenant(
+      tenantId
+    );
     const projects = projectsResult.results || [];
 
-    logger.info(`✅ Web App loaded ${projects.length} projects for tenant ${tenantId}`);
+    logger.info(
+      `✅ Web App loaded ${projects.length} projects for tenant ${tenantId}`
+    );
 
     res.status(httpStatus.OK).json({
       success: true,
       projects: projects.map((project) => ({
         projectId: project.projectId,
         projectName: project.configuration?.projectName || 'Unnamed Project',
-        description: project.configuration?.description || 'Complete this form to submit your data',
+        description:
+          project.configuration?.description ||
+          'Complete this form to submit your data',
         elementsCount: project.elements ? project.elements.length : 0,
         createdAt: project.createdAt,
       })),
     });
   } catch (error) {
-    logger.error(`❌ Web App failed to load projects for tenant ${tenantId}:`, error.message);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to load projects');
+    logger.error(
+      `❌ Web App failed to load projects for tenant ${tenantId}:`,
+      error.message
+    );
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Failed to load projects'
+    );
   }
 });
 
@@ -100,7 +131,9 @@ const getForm = catchAsync(async (req, res) => {
 
   try {
     // Get project form
-    const projectForm = await projectFormService.getProjectFormByProjectId(projectId);
+    const projectForm = await projectFormService.getProjectFormByProjectId(
+      projectId
+    );
 
     if (!projectForm) {
       throw new ApiError(httpStatus.NOT_FOUND, 'Project form not found');
@@ -124,7 +157,10 @@ const getForm = catchAsync(async (req, res) => {
       },
     });
   } catch (error) {
-    logger.error(`❌ Web App failed to load form for project ${projectId}:`, error.message);
+    logger.error(
+      `❌ Web App failed to load form for project ${projectId}:`,
+      error.message
+    );
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to load form');
   }
 });
@@ -138,7 +174,9 @@ const submitForm = catchAsync(async (req, res) => {
 
   try {
     // Get project form for validation
-    const projectForm = await projectFormService.getProjectFormByProjectId(projectId);
+    const projectForm = await projectFormService.getProjectFormByProjectId(
+      projectId
+    );
 
     if (!projectForm) {
       throw new ApiError(httpStatus.NOT_FOUND, 'Project form not found');
@@ -151,13 +189,13 @@ const submitForm = catchAsync(async (req, res) => {
 
     // Prepare submission data
     const submissionData = {
-      tenantId: tenantId,
-      projectId: projectId,
+      tenantId,
+      projectId,
       project_name: projectForm.configuration?.projectName || projectId,
       project_category: projectForm.configuration?.projectCategory || 'General',
-      formId: formId,
+      formId,
       nodeId: `webapp-node-${Date.now()}`,
-      userId: userId,
+      userId,
       source: 'telegram-webapp',
       status: 'submitted',
       metadata: {
@@ -179,14 +217,15 @@ const submitForm = catchAsync(async (req, res) => {
     };
 
     // Validate submission
-    const validationResult = await telegramValidationService.validateTelegramSubmission(
-      {
-        phoneNumber: req.user.phoneNumber,
-        tenantId: tenantId,
-      },
-      submissionData.payload.structured,
-      projectId
-    );
+    const validationResult =
+      await telegramValidationService.validateTelegramSubmission(
+        {
+          phoneNumber: req.user.phoneNumber,
+          tenantId,
+        },
+        submissionData.payload.structured,
+        projectId
+      );
 
     if (!validationResult.valid) {
       throw new ApiError(httpStatus.BAD_REQUEST, 'Form validation failed');
@@ -196,10 +235,15 @@ const submitForm = catchAsync(async (req, res) => {
     const queueResult = await submissionService.queueSubmission(submissionData);
 
     if (!queueResult || queueResult.status !== 'queued') {
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to queue submission');
+      throw new ApiError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        'Failed to queue submission'
+      );
     }
 
-    logger.info(`✅ Web App submission successful for project ${projectId} (Job ID: ${queueResult.jobId})`);
+    logger.info(
+      `✅ Web App submission successful for project ${projectId} (Job ID: ${queueResult.jobId})`
+    );
 
     res.status(httpStatus.OK).json({
       success: true,
@@ -207,7 +251,10 @@ const submitForm = catchAsync(async (req, res) => {
       jobId: queueResult.jobId,
     });
   } catch (error) {
-    logger.error(`❌ Web App submission failed for project ${projectId}:`, error.message);
+    logger.error(
+      `❌ Web App submission failed for project ${projectId}:`,
+      error.message
+    );
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Submission failed');
   }
 });

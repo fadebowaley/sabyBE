@@ -1,7 +1,7 @@
 const httpStatus = require('http-status');
+const crypto = require('crypto');
 const { ApiKey } = require('../models');
 const ApiError = require('../utils/ApiError');
-const crypto = require('crypto');
 
 /**
  * Query for API keys with tenant filtering
@@ -36,7 +36,12 @@ const getApiKeysByTenant = async (tenantId, filter = {}, options = {}) => {
  * @returns {Promise<ApiKey>}
  */
 const getApiKeyById = async (id, tenantId) => {
-  console.log('[getApiKeyById] Looking up ApiKey by _id:', id, 'tenant:', tenantId);
+  console.log(
+    '[getApiKeyById] Looking up ApiKey by _id:',
+    id,
+    'tenant:',
+    tenantId
+  );
   const apiKey = await ApiKey.findOne({ _id: id, tenant: tenantId });
   if (!apiKey) {
     throw new ApiError(httpStatus.NOT_FOUND, 'API key not found');
@@ -46,12 +51,22 @@ const getApiKeyById = async (id, tenantId) => {
 
 /**
  * Get API key by hashed key
+ * Note: Does not filter by isActive - allows finding keys for approval status checking
  * @param {string} hashedKey
  * @returns {Promise<ApiKey>}
  */
 const getApiKeyByHash = async (hashedKey) => {
   console.log('[getApiKeyByHash] Looking up ApiKey by hashedKey:', hashedKey);
-  const apiKey = await ApiKey.findOne({ hashedKey, isActive: true });
+  const apiKey = await ApiKey.findOne({ hashedKey });
+  console.log('[getApiKeyByHash] Query result:', {
+    found: !!apiKey,
+    id: apiKey?._id,
+    label: apiKey?.label,
+    environment: apiKey?.environment,
+    isActive: apiKey?.isActive,
+    approvalStatus: apiKey?.approvalStatus,
+    tenant: apiKey?.tenant,
+  });
   return apiKey;
 };
 
@@ -61,15 +76,27 @@ const getApiKeyByHash = async (hashedKey) => {
  * @returns {Promise<ApiKey>}
  */
 const verifyApiKey = async (rawKey) => {
+  console.log('[verifyApiKey] ===== Starting API key verification =====');
+  console.log(
+    '[verifyApiKey] Raw key received:',
+    rawKey ? `${rawKey.substring(0, 10)}...` : 'null'
+  );
+
   if (!rawKey) {
+    console.log('[verifyApiKey] ❌ No API key provided');
     throw new ApiError(httpStatus.UNAUTHORIZED, 'API key is required');
   }
 
   // Extract the key from the authorization header if it's in Bearer format
-  let key = rawKey.startsWith('Bearer ') ? rawKey.substring(7) : rawKey;
+  const key = rawKey.startsWith('Bearer ') ? rawKey.substring(7) : rawKey;
+  console.log(
+    '[verifyApiKey] Extracted key (first 15 chars):',
+    key.substring(0, 15)
+  );
 
   // Only accept keys that start with sk_
   if (!key.startsWith('sk_')) {
+    console.log('[verifyApiKey] ❌ API key does not start with sk_');
     throw new ApiError(httpStatus.UNAUTHORIZED, 'API key must start with sk_');
   }
 
@@ -79,26 +106,147 @@ const verifyApiKey = async (rawKey) => {
   // Find the API key
   console.log('[verifyApiKey] Verifying API key with hash:', hashedKey);
   const apiKey = await getApiKeyByHash(hashedKey);
-  console.log('[verifyApiKey] found the key', apiKey);
+  console.log('[verifyApiKey] Database lookup result:', {
+    found: !!apiKey,
+    id: apiKey?._id,
+    label: apiKey?.label,
+  });
 
   if (!apiKey) {
+    console.log('[verifyApiKey] ❌ API key not found in database');
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid API key');
   }
 
+  console.log('[verifyApiKey] ✅ API key found. Checking status:', {
+    id: apiKey._id,
+    label: apiKey.label,
+    environment: apiKey.environment,
+    isActive: apiKey.isActive,
+    approvalStatus: apiKey.approvalStatus,
+    expires: apiKey.expires,
+    usageCount: apiKey.usageCount,
+    rateLimit: apiKey.rateLimit,
+  });
+
   // Check if key is expired
   if (apiKey.expires && new Date() > apiKey.expires) {
+    console.log(
+      '[verifyApiKey] ❌ API key has expired. Expires:',
+      apiKey.expires
+    );
     throw new ApiError(httpStatus.UNAUTHORIZED, 'API key has expired');
+  }
+  console.log('[verifyApiKey] ✅ Expiration check passed');
+
+  // For production keys: Check approval status FIRST (before checking isActive)
+  // This allows us to return proper approval status errors for pending/rejected keys
+  if (apiKey.environment === 'production') {
+    console.log(
+      '[verifyApiKey] 🔍 Production key detected. Checking approval status...'
+    );
+    console.log('[verifyApiKey] Approval status:', apiKey.approvalStatus);
+    console.log(
+      '[verifyApiKey] Is production ready:',
+      apiKey.isProductionReady
+    );
+
+    if (apiKey.approvalStatus !== 'approved') {
+      const statusMessage =
+        apiKey.approvalStatus === 'pending'
+          ? 'This production API key is pending approval. Please wait for SabyUser approval before using it.'
+          : apiKey.approvalStatus === 'rejected'
+          ? `This production API key was rejected. Reason: ${
+              apiKey.rejectionReason || 'No reason provided'
+            }`
+          : 'This production API key is not approved for use.';
+
+      console.log('[verifyApiKey] ❌ Production key not approved:', {
+        status: apiKey.approvalStatus,
+        message: statusMessage,
+      });
+      throw new ApiError(httpStatus.FORBIDDEN, statusMessage);
+    }
+    console.log('[verifyApiKey] ✅ Approval status check passed');
+
+    // Ensure production key is production-ready
+    if (!apiKey.isProductionReady) {
+      console.log('[verifyApiKey] ❌ Production key not ready');
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        'This production API key is not ready for use. Please contact support.'
+      );
+    }
+    console.log('[verifyApiKey] ✅ Production readiness check passed');
+  } else {
+    console.log(
+      '[verifyApiKey] 🔍 Staging key detected. Skipping approval check.'
+    );
+  }
+
+  // Check if key is active (after approval check, so pending keys get proper error)
+  console.log('[verifyApiKey] 🔍 Checking if key is active:', apiKey.isActive);
+  if (!apiKey.isActive) {
+    console.log('[verifyApiKey] ❌ API key is inactive');
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'API key is inactive');
+  }
+  console.log('[verifyApiKey] ✅ Active status check passed');
+
+  // For staging keys: Check usage limit BEFORE incrementing
+  // We check if the NEXT call would exceed the limit (usageCount + 1 > limit)
+  // This ensures exactly 100 calls are allowed (0-99 increment to 1-100, then 101st call is blocked)
+  if (apiKey.environment === 'staging') {
+    const stagingLimit = apiKey.stagingUsageLimit || 50; // Default limit
+    console.log('[verifyApiKey] 🔍 Checking staging usage limit:', {
+      currentUsage: apiKey.usageCount,
+      limit: stagingLimit,
+      nextUsage: apiKey.usageCount + 1,
+    });
+    // Check if adding 1 would exceed the limit
+    if (apiKey.usageCount + 1 > stagingLimit) {
+      console.log('[verifyApiKey] ❌ Staging usage limit reached');
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        `Staging API key usage limit reached (${stagingLimit} calls). Please request a production API key for continued access. Your production key request will be reviewed and approved by SabyUser.`
+      );
+    }
+    console.log('[verifyApiKey] ✅ Staging usage limit check passed');
   }
 
   // Update last used timestamp and usage count
-  console.log('[verifyApiKey] Updating usage for key _id:', apiKey._id);
-  await ApiKey.findByIdAndUpdate(apiKey._id, {
-    lastUsedAt: new Date(),
-    $inc: { usageCount: 1 },
+  // Note: For staging keys, this increment happens AFTER the limit check
+  // So if usageCount is 99, it will increment to 100, and the next call will be blocked
+  console.log('[verifyApiKey] 📝 Updating usage for key _id:', apiKey._id);
+  console.log('[verifyApiKey] Current usage count:', apiKey.usageCount);
+  const updateResult = await ApiKey.findByIdAndUpdate(
+    apiKey._id,
+    {
+      lastUsedAt: new Date(),
+      $inc: { usageCount: 1 },
+    },
+    { new: true } // Return updated document
+  );
+
+  // Update the apiKey object with new usageCount for accurate tracking
+  if (updateResult) {
+    apiKey.usageCount = updateResult.usageCount;
+    console.log(
+      '[verifyApiKey] ✅ Usage updated. New count:',
+      apiKey.usageCount
+    );
+  }
+
+  console.log('[verifyApiKey] ✅✅✅ API key verification SUCCESSFUL ✅✅✅');
+  console.log('[verifyApiKey] Final key details:', {
+    id: apiKey._id,
+    label: apiKey.label,
+    environment: apiKey.environment,
+    usageCount: apiKey.usageCount,
+    lastUsedAt: updateResult?.lastUsedAt,
   });
+  console.log('[verifyApiKey] ===== Verification complete =====');
 
   return apiKey;
-};;;
+};
 
 /**
  * Create an API key
@@ -194,8 +342,17 @@ const deleteApiKeyById = async (apiKeyId, tenantId) => {
 const regenerateApiKey = async (apiKeyId, tenantId) => {
   const existingKey = await getApiKeyById(apiKeyId, tenantId);
 
-  // Generate new key
-  const rawKey = crypto.randomBytes(32).toString('hex');
+  // Determine prefix based on environment
+  let prefix = 'sk_staging_';
+  if (existingKey.environment === 'production') {
+    prefix = 'sk_live_';
+  } else {
+    // Default to staging
+    prefix = 'sk_staging_';
+  }
+
+  // Generate new key with proper prefix (64 hex chars after prefix)
+  const rawKey = prefix + crypto.randomBytes(32).toString('hex');
   const hashedKey = crypto.createHash('sha256').update(rawKey).digest('hex');
 
   // Update the existing key with new hash
@@ -333,12 +490,29 @@ const deactivateExpiredKeys = async () => {
 };
 
 /**
- * Auto-generate web API keys on user registration
+ * Auto-generate web API keys for tenant owner on registration
+ * Note: This should only be called for users with isOwner === true
+ * API keys are tenant-scoped, so one key per tenant is appropriate
  * @param {string} tenantId
- * @param {ObjectId} userId
+ * @param {ObjectId} userId - Must be an isOwner user
  * @returns {Promise<{staging: object, production: object}>}
  */
 const autoGenerateWebApiKeys = async (tenantId, userId) => {
+  // Safety check: Only allow auto-generation for isOwner users
+  const { User } = require('../models');
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  if (!user.isOwner) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Auto-generation of API keys is only allowed for tenant owners (isOwner users)'
+    );
+  }
+
   const apiKeyApprovalService = require('./apiKeyApproval.service');
 
   // 1. Create Staging Web API Key (Active immediately)

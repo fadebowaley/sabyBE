@@ -20,7 +20,19 @@ const paymentSchema = mongoose.Schema(
     currency: {
       type: String,
       required: true,
-      enum: ['USD', 'EUR', 'GBP', 'INR', 'AUD', 'CAD', 'SGD', 'CHF', 'MYR', 'JPY', 'CNY'],
+      enum: [
+        'USD',
+        'EUR',
+        'GBP',
+        'INR',
+        'AUD',
+        'CAD',
+        'SGD',
+        'CHF',
+        'MYR',
+        'JPY',
+        'CNY',
+      ],
     },
     status: {
       type: String,
@@ -94,4 +106,3 @@ paymentSchema.statics.updatePaymentStatus = async function (reference, status) {
 const Payment = mongoose.model('Payment', paymentSchema);
 
 module.exports = Payment;
-

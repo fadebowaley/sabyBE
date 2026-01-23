@@ -2,9 +2,18 @@ const mongoose = require('mongoose');
 const app = require('./app');
 const config = require('./config/config');
 const logger = require('./config/logger');
-const { testConnection: testPostgresConnection, closePool: closePostgresPool } = require('./config/postgres');
-const { connectRedis, testRedisConnection, closeRedis } = require('./config/redis');
+const {
+  testConnection: testPostgresConnection,
+  closePool: closePostgresPool,
+} = require('./config/postgres');
+const {
+  connectRedis,
+  testRedisConnection,
+  closeRedis,
+} = require('./config/redis');
 const { initializeSocket } = require('./config/socket');
+const { initializeWorkers, shutdownWorkers } = require('./workers/index');
+const { startNodeSync, stopNodeSync } = require('./services/nodeSync.service');
 
 let server;
 
@@ -35,8 +44,23 @@ const connectToDatabases = async () => {
 
       // Initialize Socket.IO
       initializeSocket(server);
+
+      // Initialize scheduled jobs (only in production/staging)
+      if (config.env === 'production' || config.env === 'staging') {
+        const { scheduleCleanup } = require('./jobs/cleanupDeletedForms');
+        scheduleCleanup();
+        logger.info('✅ Scheduled jobs initialized');
+      }
+
+      // Start all background workers automatically
+      await initializeWorkers();
+
+      // Initialize node sync if enabled
+      await startNodeSync();
     } else {
-      logger.error('❌ Failed to connect to PostgreSQLor Redis. Server not started.');
+      logger.error(
+        '❌ Failed to connect to PostgreSQLor Redis. Server not started.'
+      );
       process.exit(1);
     }
   } catch (error) {
@@ -48,7 +72,15 @@ const connectToDatabases = async () => {
 // Initialize database connections
 connectToDatabases();
 
-const exitHandler = () => {
+const exitHandler = async () => {
+  // Stop workers first
+  try {
+    await shutdownWorkers();
+    await stopNodeSync();
+  } catch (error) {
+    logger.error('Error shutting down workers:', error);
+  }
+
   if (server) {
     server.close(() => {
       logger.info('Server closed');

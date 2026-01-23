@@ -28,14 +28,25 @@ const submissionWorker = new Worker(
   SUBMISSION_QUEUE_NAME,
   async (job) => {
     console.log('[Worker] Received job:', job.data);
-    const { tenantId, projectId, project_name, project_category, formId, nodeId, userId, source, payload, meta, status } =
-      job.data;
+    const {
+      tenantId,
+      projectId,
+      project_name,
+      project_category,
+      formId,
+      nodeId,
+      userId,
+      source,
+      payload,
+      meta,
+      status,
+    } = job.data;
 
     const submissionPayload = {
       tenant_id: tenantId,
       project_id: projectId,
-      project_name: project_name,
-      project_category: project_category,
+      project_name,
+      project_category,
       form_id: formId,
       node_id: nodeId,
       user_id: userId,
@@ -57,7 +68,9 @@ const submissionWorker = new Worker(
       try {
         // Extract user data from the job metadata if available
         const verifiedEmail =
-          (job.data.metadata && job.data.metadata.validation && job.data.metadata.validation.verifiedEmail) ||
+          (job.data.metadata &&
+            job.data.metadata.validation &&
+            job.data.metadata.validation.verifiedEmail) ||
           (job.data.metadata && job.data.metadata.from) ||
           'fadebowaley@gmail.com'; // Fallback to sender email
 
@@ -72,29 +85,37 @@ const submissionWorker = new Worker(
           projectName: project_name || 'Email Form',
         };
 
-        const notificationResult = await notificationQueueService.queueSubmissionConfirmation(
-          result,
-          userId,
-          projectId,
-          userData,
-          projectData
-        );
+        const notificationResult =
+          await notificationQueueService.queueSubmissionConfirmation(
+            result,
+            userId,
+            projectId,
+            userData,
+            projectData
+          );
 
         if (notificationResult.success) {
-          logger.info(`📧 Confirmation notification queued successfully - Job ID: ${notificationResult.jobId}`);
+          logger.info(
+            `📧 Confirmation notification queued successfully - Job ID: ${notificationResult.jobId}`
+          );
         } else {
-          logger.warn(`⚠️ Failed to queue confirmation notification: ${notificationResult.error}`);
+          logger.warn(
+            `⚠️ Failed to queue confirmation notification: ${notificationResult.error}`
+          );
         }
       } catch (notificationError) {
-        logger.error(`❌ Error queuing confirmation notification:`, notificationError.message);
+        logger.error(
+          `❌ Error queuing confirmation notification:`,
+          notificationError.message
+        );
       }
 
       // Log activity: processed
       const activityLog = {
         tenant_id: tenantId,
         project_id: projectId,
-        project_name: project_name,
-        project_category: project_category,
+        project_name,
+        project_category,
         form_id: formId,
         user_id: userId,
         action: 'processed',
@@ -131,8 +152,8 @@ const submissionWorker = new Worker(
       const activityLog = {
         tenant_id: tenantId,
         project_id: projectId,
-        project_name: project_name,
-        project_category: project_category,
+        project_name,
+        project_category,
         form_id: formId,
         user_id: userId,
         action: 'processed',

@@ -38,7 +38,11 @@ const queryApps = catchAsync(async (req, res) => {
 
 // Assign app to user or node
 const assignApp = catchAsync(async (req, res) => {
-  const result = await appService.assignApp(req.body.appId, req.body.entityId, req.body.entityType);
+  const result = await appService.assignApp(
+    req.body.appId,
+    req.body.entityId,
+    req.body.entityType
+  );
   res.send(result);
 });
 
@@ -50,7 +54,10 @@ const getAppsForTenantOrUser = catchAsync(async (req, res) => {
 
 // Toggle app status (active/inactive)
 const toggleAppStatus = catchAsync(async (req, res) => {
-  const result = await appService.toggleAppStatus(req.params.appId, req.body.status);
+  const result = await appService.toggleAppStatus(
+    req.params.appId,
+    req.body.status
+  );
   res.send(result);
 });
 
@@ -68,7 +75,7 @@ const deleteAppById = catchAsync(async (req, res) => {
 
 // Delete all apps for a tenant
 const deleteAppsByTenant = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
+  const { tenantId } = req.user;
   const result = await appService.deleteAppsByTenant(tenantId);
   res.status(httpStatus.OK).json({
     message: result.message,

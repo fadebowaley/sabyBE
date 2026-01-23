@@ -22,9 +22,8 @@ const createSetting = async (settingBody) => {
  * @param {Object} options
  * @returns {Promise<QueryResult>}
  */
-const querySettings = async (filter, options) => {
-  return Setting.paginate(filter, options);
-};
+const querySettings = async (filter, options) =>
+  Setting.paginate(filter, options);
 
 /**
  * Get setting by ID

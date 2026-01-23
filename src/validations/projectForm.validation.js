@@ -3,6 +3,7 @@ const { objectId } = require('./custom.validation');
 
 // Common schemas for reusability
 const formElementSchema = Joi.object({
+  _id: Joi.alternatives().try(Joi.string(), Joi.object()).optional(),
   id: Joi.string().required(),
   type: Joi.string().required(),
   properties: Joi.object({
@@ -15,27 +16,40 @@ const formElementSchema = Joi.object({
     options: Joi.array().items(Joi.string()),
     multiple: Joi.boolean().default(false),
     accept: Joi.string(),
-    placeholder: Joi.string().allow(''),
+    ratingType: Joi.string(),
+    maxRating: Joi.number().allow(null, 0),
     helpText: Joi.string().allow(''),
     min: Joi.number().allow(null),
     max: Joi.number().allow(null),
     step: Joi.number().allow(null),
-    paragraphAlignment: Joi.string().valid('left', 'center', 'right').default('left'),
+    paragraphAlignment: Joi.string()
+      .valid('left', 'center', 'right')
+      .default('left'),
     conditional: Joi.boolean().default(false),
     colSpan: Joi.number().integer().min(1).max(12).default(12),
     headerLevel: Joi.string().allow(''),
-    headerAlignment: Joi.string().valid('left', 'center', 'right').default('centre'),
-    textAlign: Joi.string().valid('left', 'center', 'right', 'justify').default('left'),
+    headerAlignment: Joi.string()
+      .valid('left', 'center', 'right')
+      .default('center'),
+    textAlign: Joi.string()
+      .valid('left', 'center', 'right', 'justify')
+      .default('left'),
     acceptedTypes: Joi.string().default('.jpg,.png,.pdf'),
     defaultValue: Joi.any(),
     defaultCountry: Joi.string().allow(''),
-  }),
-});
+    buttonText: Joi.string().allow(''), // NEW: Submit button text
+    buttonType: Joi.string().allow(''), // NEW: Submit button type
+  }).unknown(true),
+  metadata: Joi.object().unknown(true).optional(),
+  aliases: Joi.array().items(Joi.string()).optional(),
+}).unknown(true);
 
 const projectConfigurationSchema = Joi.object({
   projectName: Joi.string().required().trim().min(1).max(100),
   tags: Joi.array().items(Joi.string().trim()).default([]),
-  accessibility: Joi.array().items(Joi.string().valid('api', 'embedded', 'javascript', 'mobile')).default([]),
+  accessibility: Joi.array()
+    .items(Joi.string().valid('api', 'embedded', 'javascript', 'mobile'))
+    .default([]),
   security: Joi.string().valid('public', 'private').default('private'),
 });
 
@@ -78,12 +92,84 @@ const userSettingsSchema = Joi.object({
   }).default({}),
 }).default({});
 
+const metadataIntegrationsSchema = Joi.alternatives()
+  .try(
+    Joi.array().items(
+      Joi.string().valid(
+        'web',
+        'whatsapp',
+        'telegram',
+        'mobile',
+        'email',
+        'api'
+      )
+    ),
+    Joi.object().unknown(true)
+  )
+  .default(['web']);
+
 const metadataSchema = Joi.object({
   version: Joi.string().default('1.0.0'),
   elementsCount: Joi.number().default(0),
   hasValidation: Joi.boolean().default(false),
   lastModified: Joi.date().default(Date.now),
-  deploymentStatus: Joi.string().valid('draft', 'published', 'archived').default('draft'),
+  deploymentStatus: Joi.string()
+    .valid('draft', 'published', 'archived')
+    .default('draft'),
+  batchMode: Joi.string()
+    .valid('single_prompt', 'multi_step')
+    .default('multi_step'),
+  integrations: metadataIntegrationsSchema,
+  permEnabled: Joi.boolean().optional(),
+}).unknown(true);
+
+// PERM Settings Schema
+const permSettingsSchema = Joi.object({
+  enabled: Joi.boolean().default(false),
+  trackingMode: Joi.string().valid('none', 'daily', 'weekly').default('none'),
+  dailyConfig: Joi.object({
+    activeDays: Joi.array().items(Joi.number().min(0).max(6)).default([]),
+    frequencyPerDay: Joi.number().integer().min(1).max(10).default(1),
+    skipWeekends: Joi.boolean().default(false),
+    skipHolidays: Joi.boolean().default(false),
+  }).default({}),
+  weeklyConfig: Joi.object({
+    days: Joi.array()
+      .items(
+        Joi.object({
+          day: Joi.number().min(0).max(6).required(),
+          name: Joi.string().required(),
+          frequency: Joi.string()
+            .valid('weekly', 'biweekly', 'monthly')
+            .required(),
+          occurrences: Joi.number().integer().min(1).max(10),
+          enabled: Joi.boolean().default(true),
+        })
+      )
+      .default([]),
+  }).default({}),
+  requireNodeId: Joi.boolean().default(true),
+  requireMonth: Joi.boolean().default(true),
+  trackCompliance: Joi.boolean().default(true),
+  autoGenerateCalendar: Joi.boolean().default(true),
+  autoLockMonthEnd: Joi.boolean().default(false),
+  calendarRequired: Joi.boolean().default(false),
+  eventTypes: Joi.array().items(Joi.string()).default([]),
+  // Calendar Generation options for backdating
+  calendarGeneration: Joi.object({
+    startDate: Joi.string().isoDate().optional(),
+    endDate: Joi.string().isoDate().optional(),
+    allowBackdating: Joi.boolean().default(false),
+    monthsToGenerate: Joi.number().integer().min(1).max(36).optional(),
+  }).optional(),
+}).default({
+  enabled: false,
+  trackingMode: 'none',
+  requireNodeId: true,
+  requireMonth: true,
+  trackCompliance: true,
+  autoGenerateCalendar: true,
+  autoLockMonthEnd: false,
 });
 
 // Validation schemas
@@ -95,6 +181,7 @@ const createProjectForm = {
     wizardMode: Joi.boolean().default(false),
     columnSpans: Joi.object().default({}),
     userSettings: userSettingsSchema,
+    permSettings: permSettingsSchema, // ✨ NEW: PERM settings support
     metadata: metadataSchema,
   }),
 };
@@ -105,7 +192,11 @@ const getProjectForms = {
     'configuration.projectName': Joi.string(),
     'configuration.tags': Joi.string(),
     'configuration.security': Joi.string().valid('public', 'private'),
-    'metadata.deploymentStatus': Joi.string().valid('draft', 'published', 'archived'),
+    'metadata.deploymentStatus': Joi.string().valid(
+      'draft',
+      'published',
+      'archived'
+    ),
     tenantId: Joi.string(),
     q: Joi.string(),
     sortBy: Joi.string(),
@@ -123,7 +214,11 @@ const getProjectFormsByTenant = {
     status: Joi.string().valid('active', 'inactive', 'archived'),
     'configuration.projectName': Joi.string(),
     'configuration.tags': Joi.string(),
-    'metadata.deploymentStatus': Joi.string().valid('draft', 'published', 'archived'),
+    'metadata.deploymentStatus': Joi.string().valid(
+      'draft',
+      'published',
+      'archived'
+    ),
     sortBy: Joi.string(),
     limit: Joi.number().integer().min(1).max(100),
     page: Joi.number().integer().min(1),
@@ -139,7 +234,11 @@ const getProjectFormsByUser = {
     status: Joi.string().valid('active', 'inactive', 'archived'),
     'configuration.projectName': Joi.string(),
     'configuration.tags': Joi.string(),
-    'metadata.deploymentStatus': Joi.string().valid('draft', 'published', 'archived'),
+    'metadata.deploymentStatus': Joi.string().valid(
+      'draft',
+      'published',
+      'archived'
+    ),
     sortBy: Joi.string(),
     limit: Joi.number().integer().min(1).max(100),
     page: Joi.number().integer().min(1),
@@ -177,6 +276,7 @@ const updateProjectForm = {
       wizardMode: Joi.boolean(),
       columnSpans: Joi.object(),
       userSettings: userSettingsSchema,
+      permSettings: permSettingsSchema, // ✨ NEW: PERM settings support
       metadata: metadataSchema,
       status: Joi.string().valid('active', 'inactive', 'archived'),
     })
@@ -229,6 +329,16 @@ const publishProjectForm = {
   params: Joi.object().keys({
     projectFormId: Joi.string().custom(objectId).required(),
   }),
+  body: Joi.object()
+    .keys({
+      calendarGeneration: Joi.object({
+        startDate: Joi.string().isoDate().optional(),
+        endDate: Joi.string().isoDate().optional(),
+        allowBackdating: Joi.boolean().default(false),
+        monthsToGenerate: Joi.number().integer().min(1).max(36).optional(),
+      }).optional(),
+    })
+    .optional(),
 };
 
 const archiveProjectForm = {
@@ -254,7 +364,9 @@ const bulkOperations = {
     operations: Joi.array()
       .items(
         Joi.object().keys({
-          type: Joi.string().valid('delete', 'restore', 'publish', 'archive').required(),
+          type: Joi.string()
+            .valid('delete', 'restore', 'publish', 'archive')
+            .required(),
           projectFormId: Joi.string().custom(objectId).required(),
         })
       )

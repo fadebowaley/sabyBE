@@ -273,9 +273,13 @@ router.get('/templates', roleController.getRoleTemplates);
  */
 router
   .route('/')
-  .post(auth('create:roles'), validate(roleValidation.createRole), roleController.createRole)
-  .get(auth('view:roles'), roleController.getRoles)
-  .delete(auth('delete:roles'), roleController.deleteAllRoles);
+  .post(
+    auth('role:create'),
+    validate(roleValidation.createRole),
+    roleController.createRole
+  )
+  .get(auth('role:read'), roleController.getRoles)
+  .delete(auth('role:delete'), roleController.deleteAllRoles);
 
 /**
  * @swagger
@@ -365,9 +369,13 @@ router
  */
 router
   .route('/:roleId')
-  .get(auth('view:roles'), roleController.getRole)
-  .patch(auth('update:roles'), validate(roleValidation.updateRole), roleController.updateRole)
-  .delete(auth('delete:roles'), roleController.deleteRole);
+  .get(auth('role:read'), roleController.getRole)
+  .patch(
+    auth('role:update'),
+    validate(roleValidation.updateRole),
+    roleController.updateRole
+  )
+  .delete(auth('role:delete'), roleController.deleteRole);
 
 /**
  * @swagger
@@ -409,10 +417,18 @@ router
  */
 router
   .route('/:roleId/permissions')
-  .get(auth('view:roles'), validate(roleValidation.getPermissionsForRole), roleController.getPermissionsForRole)
-  .patch(auth('assign:permissions'), validate(roleValidation.assignPermissions), roleController.assignPermissions)
+  .get(
+    auth('role:read'),
+    validate(roleValidation.getPermissionsForRole),
+    roleController.getPermissionsForRole
+  )
+  .patch(
+    auth('role:permissions'),
+    validate(roleValidation.assignPermissions),
+    roleController.assignPermissions
+  )
   .delete(
-    auth('remove:permissions'),
+    auth('role:permissions'),
     validate(roleValidation.removePermissionsFromRole),
     roleController.removePermissionsFromRole
   );
@@ -449,6 +465,12 @@ router
  *         description: Internal server error
  */
 
-router.route('/bulk').post(auth('create:roles'), validate(roleValidation.bulkCreateRoles), roleController.bulkCreateRoles);
+router
+  .route('/bulk')
+  .post(
+    auth('role:create'),
+    validate(roleValidation.bulkCreateRoles),
+    roleController.bulkCreateRoles
+  );
 
 module.exports = router;

@@ -50,8 +50,13 @@ const toJSON = (schema) => {
         }
       });
 
-      ret.id = ret._id.toString();
-      delete ret._id;
+      // Handle null _id (can happen with deleted references or fallback objects)
+      if (ret._id) {
+        ret.id = ret._id.toString();
+        delete ret._id;
+      } else {
+        ret.id = null;
+      }
       delete ret.__v;
       // delete ret.createdAt;
       delete ret.updatedAt;

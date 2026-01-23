@@ -19,12 +19,15 @@ class DynamicValidationService {
       logger.info(`🔍 Validating form submission for project: ${projectId}`);
 
       // Load form schema
-      const schemaResult = await dynamicFormSchemaService.loadFormSchema(projectId, tenantId);
+      const schemaResult = await dynamicFormSchemaService.loadFormSchema(
+        projectId,
+        tenantId
+      );
       if (!schemaResult.valid) {
         return schemaResult;
       }
 
-      const schema = schemaResult.schema;
+      const { schema } = schemaResult;
       const validationResult = {
         valid: true,
         errors: [],
@@ -32,7 +35,7 @@ class DynamicValidationService {
         validatedData: {},
         missingFields: [],
         extraFields: [],
-        schema: schema,
+        schema,
         summary: {
           totalFields: schema.totalSteps,
           requiredFields: schema.validation.required.length,
@@ -49,7 +52,12 @@ class DynamicValidationService {
         const answerKey = i.toString();
         const submittedValue = answers[answerKey];
 
-        const fieldValidation = await this.validateFormField(element, submittedValue, answers, schema);
+        const fieldValidation = await this.validateFormField(
+          element,
+          submittedValue,
+          answers,
+          schema
+        );
 
         if (fieldValidation.valid) {
           validationResult.validatedData[element.id] = fieldValidation.value;
@@ -75,36 +83,47 @@ class DynamicValidationService {
       }
 
       // Check for extra fields
-      const expectedKeys = new Set(schema.elements.map((_, index) => index.toString()));
-      Object.keys(answers).forEach(key => {
+      const expectedKeys = new Set(
+        schema.elements.map((_, index) => index.toString())
+      );
+      Object.keys(answers).forEach((key) => {
         if (!expectedKeys.has(key)) {
           validationResult.extraFields.push(key);
         }
       });
 
       // Validate conditional fields
-      const conditionalValidation = await this.validateConditionalFields(schema, answers);
+      const conditionalValidation = await this.validateConditionalFields(
+        schema,
+        answers
+      );
       if (!conditionalValidation.valid) {
         validationResult.valid = false;
         validationResult.errors.push(...conditionalValidation.errors);
-        validationResult.summary.validationErrors += conditionalValidation.errors.length;
+        validationResult.summary.validationErrors +=
+          conditionalValidation.errors.length;
       }
 
       // Generate summary
       validationResult.summary.completionPercentage = Math.round(
-        (validationResult.summary.completedFields / validationResult.summary.totalFields) * 100
+        (validationResult.summary.completedFields /
+          validationResult.summary.totalFields) *
+          100
       );
 
       logger.info(`✅ Form validation completed for project: ${projectId}`, {
         valid: validationResult.valid,
         errors: validationResult.errors.length,
         warnings: validationResult.warnings.length,
-        completion: validationResult.summary.completionPercentage + '%',
+        completion: `${validationResult.summary.completionPercentage}%`,
       });
 
       return validationResult;
     } catch (error) {
-      logger.error(`❌ Error validating form submission for project ${projectId}:`, error.message);
+      logger.error(
+        `❌ Error validating form submission for project ${projectId}:`,
+        error.message
+      );
       return {
         valid: false,
         error: 'Error validating form submission',
@@ -124,7 +143,10 @@ class DynamicValidationService {
   async validateFormField(element, value, allAnswers, schema) {
     try {
       // Check if field is required
-      if (element.validation.required && (value === undefined || value === null || value === '')) {
+      if (
+        element.validation.required &&
+        (value === undefined || value === null || value === '')
+      ) {
         return {
           valid: false,
           error: `${element.label} is required`,
@@ -133,7 +155,10 @@ class DynamicValidationService {
       }
 
       // Skip validation for empty optional fields
-      if (!element.validation.required && (value === undefined || value === null || value === '')) {
+      if (
+        !element.validation.required &&
+        (value === undefined || value === null || value === '')
+      ) {
         return { valid: true, value: null };
       }
 
@@ -144,14 +169,22 @@ class DynamicValidationService {
       }
 
       // Constraint validation
-      const constraintValidation = this.validateFieldConstraints(element, value);
+      const constraintValidation = this.validateFieldConstraints(
+        element,
+        value
+      );
       if (!constraintValidation.valid) {
         return constraintValidation;
       }
 
       // Custom validation
       if (element.validation.custom) {
-        const customValidation = await this.validateCustomRules(element, value, allAnswers, schema);
+        const customValidation = await this.validateCustomRules(
+          element,
+          value,
+          allAnswers,
+          schema
+        );
         if (!customValidation.valid) {
           return customValidation;
         }
@@ -175,7 +208,7 @@ class DynamicValidationService {
    * @returns {Object} Type validation result
    */
   validateFieldType(element, value) {
-    const type = element.type;
+    const { type } = element;
     const rules = element.validation.rules || {};
 
     try {
@@ -220,21 +253,37 @@ class DynamicValidationService {
    */
   validateText(value, rules) {
     if (typeof value !== 'string') {
-      return { valid: false, error: 'Value must be text', code: 'INVALID_TYPE' };
+      return {
+        valid: false,
+        error: 'Value must be text',
+        code: 'INVALID_TYPE',
+      };
     }
 
     if (rules.minLength && value.length < rules.minLength) {
-      return { valid: false, error: `Text must be at least ${rules.minLength} characters`, code: 'MIN_LENGTH' };
+      return {
+        valid: false,
+        error: `Text must be at least ${rules.minLength} characters`,
+        code: 'MIN_LENGTH',
+      };
     }
 
     if (rules.maxLength && value.length > rules.maxLength) {
-      return { valid: false, error: `Text must be no more than ${rules.maxLength} characters`, code: 'MAX_LENGTH' };
+      return {
+        valid: false,
+        error: `Text must be no more than ${rules.maxLength} characters`,
+        code: 'MAX_LENGTH',
+      };
     }
 
     if (rules.pattern) {
       const regex = new RegExp(rules.pattern);
       if (!regex.test(value)) {
-        return { valid: false, error: 'Text does not match required pattern', code: 'PATTERN_MISMATCH' };
+        return {
+          valid: false,
+          error: 'Text does not match required pattern',
+          code: 'PATTERN_MISMATCH',
+        };
       }
     }
 
@@ -247,7 +296,11 @@ class DynamicValidationService {
   validateEmail(value, rules) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(value)) {
-      return { valid: false, error: 'Invalid email format', code: 'INVALID_EMAIL' };
+      return {
+        valid: false,
+        error: 'Invalid email format',
+        code: 'INVALID_EMAIL',
+      };
     }
 
     return { valid: true, value: value.toLowerCase() };
@@ -261,7 +314,11 @@ class DynamicValidationService {
     const cleanValue = value.replace(/[\s\-\(\)]/g, '');
 
     if (!phoneRegex.test(cleanValue)) {
-      return { valid: false, error: 'Invalid phone number format', code: 'INVALID_PHONE' };
+      return {
+        valid: false,
+        error: 'Invalid phone number format',
+        code: 'INVALID_PHONE',
+      };
     }
 
     return { valid: true, value: cleanValue };
@@ -273,15 +330,27 @@ class DynamicValidationService {
   validateNumber(value, rules) {
     const num = parseFloat(value);
     if (isNaN(num)) {
-      return { valid: false, error: 'Value must be a number', code: 'INVALID_NUMBER' };
+      return {
+        valid: false,
+        error: 'Value must be a number',
+        code: 'INVALID_NUMBER',
+      };
     }
 
     if (rules.min !== undefined && num < rules.min) {
-      return { valid: false, error: `Value must be at least ${rules.min}`, code: 'MIN_VALUE' };
+      return {
+        valid: false,
+        error: `Value must be at least ${rules.min}`,
+        code: 'MIN_VALUE',
+      };
     }
 
     if (rules.max !== undefined && num > rules.max) {
-      return { valid: false, error: `Value must be at most ${rules.max}`, code: 'MAX_VALUE' };
+      return {
+        valid: false,
+        error: `Value must be at most ${rules.max}`,
+        code: 'MAX_VALUE',
+      };
     }
 
     return { valid: true, value: num };
@@ -293,7 +362,11 @@ class DynamicValidationService {
   validateDate(value, rules) {
     const date = new Date(value);
     if (isNaN(date.getTime())) {
-      return { valid: false, error: 'Invalid date format', code: 'INVALID_DATE' };
+      return {
+        valid: false,
+        error: 'Invalid date format',
+        code: 'INVALID_DATE',
+      };
     }
 
     return { valid: true, value: date.toISOString() };
@@ -305,7 +378,11 @@ class DynamicValidationService {
   validateTime(value, rules) {
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
     if (!timeRegex.test(value)) {
-      return { valid: false, error: 'Invalid time format (HH:MM or HH:MM:SS)', code: 'INVALID_TIME' };
+      return {
+        valid: false,
+        error: 'Invalid time format (HH:MM or HH:MM:SS)',
+        code: 'INVALID_TIME',
+      };
     }
 
     return { valid: true, value };
@@ -328,10 +405,14 @@ class DynamicValidationService {
    */
   validateSelect(value, element, rules) {
     const options = element.options || [];
-    const validValues = options.map(option => option.value);
+    const validValues = options.map((option) => option.value);
 
     if (!validValues.includes(value)) {
-      return { valid: false, error: `Value must be one of: ${validValues.join(', ')}`, code: 'INVALID_OPTION' };
+      return {
+        valid: false,
+        error: `Value must be one of: ${validValues.join(', ')}`,
+        code: 'INVALID_OPTION',
+      };
     }
 
     return { valid: true, value };
@@ -342,7 +423,11 @@ class DynamicValidationService {
    */
   validateCheckbox(value, element, rules) {
     if (typeof value !== 'boolean' && value !== 'true' && value !== 'false') {
-      return { valid: false, error: 'Value must be true or false', code: 'INVALID_BOOLEAN' };
+      return {
+        valid: false,
+        error: 'Value must be true or false',
+        code: 'INVALID_BOOLEAN',
+      };
     }
 
     const boolValue = value === true || value === 'true';
@@ -359,20 +444,32 @@ class DynamicValidationService {
 
     // Validate file size
     if (rules.fileSize && value.size > rules.fileSize) {
-      return { valid: false, error: `File size must be less than ${rules.fileSize} bytes`, code: 'FILE_TOO_LARGE' };
+      return {
+        valid: false,
+        error: `File size must be less than ${rules.fileSize} bytes`,
+        code: 'FILE_TOO_LARGE',
+      };
     }
 
     // Validate file type
     if (rules.fileTypes && rules.fileTypes.length > 0) {
-      const fileExtension = value.filename ? value.filename.split('.').pop().toLowerCase() : '';
+      const fileExtension = value.filename
+        ? value.filename.split('.').pop().toLowerCase()
+        : '';
       const mimeType = value.mime_type || '';
 
-      const isValidType = rules.fileTypes.some(type => {
-        return fileExtension === type.toLowerCase() || mimeType.includes(type.toLowerCase());
-      });
+      const isValidType = rules.fileTypes.some(
+        (type) =>
+          fileExtension === type.toLowerCase() ||
+          mimeType.includes(type.toLowerCase())
+      );
 
       if (!isValidType) {
-        return { valid: false, error: `File type must be one of: ${rules.fileTypes.join(', ')}`, code: 'INVALID_FILE_TYPE' };
+        return {
+          valid: false,
+          error: `File type must be one of: ${rules.fileTypes.join(', ')}`,
+          code: 'INVALID_FILE_TYPE',
+        };
       }
     }
 
@@ -429,7 +526,7 @@ class DynamicValidationService {
 
     return {
       valid: errors.length === 0,
-      errors: errors,
+      errors,
     };
   }
 

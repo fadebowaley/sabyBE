@@ -6,7 +6,18 @@ const LogicConditionSchema = new mongoose.Schema({
   fieldId: { type: String, required: true }, // field to evaluate
   operator: {
     type: String,
-    enum: ['equals', 'not_equals', 'gt', 'lt', 'gte', 'lte', 'contains', 'not_contains', 'in', 'not_in'],
+    enum: [
+      'equals',
+      'not_equals',
+      'gt',
+      'lt',
+      'gte',
+      'lte',
+      'contains',
+      'not_contains',
+      'in',
+      'not_in',
+    ],
     required: true,
   },
   value: mongoose.Schema.Types.Mixed, // string, number, boolean, array
@@ -23,7 +34,11 @@ const LogicActionSchema = new mongoose.Schema({
 
 const FormLogicRuleSchema = new mongoose.Schema(
   {
-    formId: { type: mongoose.Schema.Types.ObjectId, ref: 'FormDefinition', required: true },
+    formId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'FormDefinition',
+      required: true,
+    },
     ruleName: { type: String },
     conditions: [LogicConditionSchema],
     actions: [LogicActionSchema],

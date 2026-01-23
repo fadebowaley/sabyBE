@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { nanoid } = require('nanoid');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 const { HaloCounter } = require('./haloCounter.model');
+
 const AVATAR_BASE_URL = 'https://halocrm.s3.us-east-1.amazonaws.com/user';
 
 const userSchema = mongoose.Schema(
@@ -27,6 +28,7 @@ const userSchema = mongoose.Schema(
     roles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Role', default: [] }],
     isOwner: { type: Boolean, default: false },
     isSuper: { type: Boolean, default: false },
+    isAdmin: { type: Boolean, default: false }, // Privileged user - above regular, below Owner
     isSaby: {
       type: Boolean,
       default: false,
@@ -73,6 +75,14 @@ const userSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    customFields: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    customFieldsVersion: {
+      type: Number,
+      default: 0,
+    },
 
     phoneNumber: {
       type: String,
@@ -99,6 +109,89 @@ const userSchema = mongoose.Schema(
     },
     deletedAt: { type: Date, default: null },
     createdAt: { type: Date, default: Date.now },
+
+    // Profile Update Compliance Tracking
+    profileUpdateCompliant: {
+      type: Boolean,
+      default: false,
+    },
+    profileUpdateCompliantAt: {
+      type: Date,
+      default: null,
+    },
+    profileUpdateCompliantBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    // Profile Edit Tracking
+    profileLastEditedAt: {
+      type: Date,
+      default: null,
+    },
+    profileEditCount: {
+      type: Number,
+      default: 0,
+    },
+
+    // ========== MERGED PROFILE FIELDS FROM USERPROFILE ==========
+    /**
+     * NOTE: The detailed profile fields below are retained for backward compatibility.
+     * Tenants should prefer capturing these attributes via `customFields` configuration.
+     * Fields migrated to the custom-field builder:
+     * - title, otherName, gender, dateOfBirth
+     * - highestQualification, professional, employmentCategory, occupation, employeeId
+     * - maritalStatus, spouse.name, spouse.phoneNumber, spouse.dateOfBirth
+     * - nextOfKin.name, nextOfKin.phoneNumber, nextOfKin.relationship
+     * - stateOfOrigin, lgaOfOrigin, homeTown
+     * - residentialAddress, stateOfResidence, lgaOfResidence
+     */
+    profile: {
+      // Personal details
+      title: { type: String }, // Mr., Mrs., Dr., etc.
+      otherName: { type: String },
+      gender: {
+        type: String,
+        enum: ['Male', 'Female', 'Other'],
+      },
+      dateOfBirth: { type: Date },
+
+      // Professional information
+      highestQualification: { type: String },
+      professional: { type: String },
+      employmentCategory: { type: String },
+      occupation: { type: String },
+      employeeId: { type: String },
+      officeTitle: { type: String, trim: true }, // Pastor, HOD, Bishop, Deacon, etc.
+
+      // Marital information
+      maritalStatus: {
+        type: String,
+        enum: ['Single', 'Married', 'Divorced', 'Widowed'],
+      },
+      spouse: {
+        name: { type: String },
+        phoneNumber: { type: String },
+        dateOfBirth: { type: Date },
+      },
+
+      // Next of kin
+      nextOfKin: {
+        name: { type: String },
+        phoneNumber: { type: String },
+        relationship: { type: String },
+      },
+
+      // Location - Origin
+      stateOfOrigin: { type: String },
+      lgaOfOrigin: { type: String },
+      homeTown: { type: String },
+
+      // Location - Residence
+      residentialAddress: { type: String },
+      stateOfResidence: { type: String },
+      lgaOfResidence: { type: String },
+    },
   },
   {
     timestamps: true,
@@ -237,7 +330,7 @@ userSchema.methods.isPasswordMatch = async function (password) {
  * @returns {boolean}
  */
 userSchema.methods.isOrdinaryUser = function () {
-  return !this.isSaby && !this.isSuper && !this.isOwner;
+  return !this.isSaby && !this.isSuper && !this.isOwner && !this.isAdmin;
 };
 
 /**
@@ -245,18 +338,19 @@ userSchema.methods.isOrdinaryUser = function () {
  * @returns {boolean}
  */
 userSchema.methods.canAccessWebPortal = function () {
-  return this.isSaby || this.isSuper || this.isOwner;
+  return this.isSaby || this.isSuper || this.isOwner || this.isAdmin;
 };
 
 /**
  * Get user hierarchy level
- * @returns {number} 1=SabyUser, 2=SuperUser, 3=Owner, 4=OrdinaryUser
+ * @returns {number} 1=SabyUser, 2=SuperUser, 3=Owner, 4=Admin, 5=OrdinaryUser
  */
 userSchema.methods.getHierarchyLevel = function () {
   if (this.isSaby) return 1;
   if (this.isSuper) return 2;
   if (this.isOwner) return 3;
-  return 4;
+  if (this.isAdmin) return 4;
+  return 5;
 };
 
 userSchema.pre('save', async function (next) {
@@ -268,7 +362,7 @@ userSchema.pre('save', async function (next) {
     this.password = await bcrypt.hash(this.password, 8);
   }
 
-  //Add avatar only if not already set
+  // Add avatar only if not already set
   if (!this.avatar) {
     const randomNum = Math.floor(Math.random() * 15) + 1; // 1 to 15
     const paddedNum = String(randomNum).padStart(2, '0'); // e.g., 01, 02, ...
@@ -277,7 +371,72 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-//Saving user password
+// Post-save hook for baseline intelligence updates
+userSchema.post('save', async function(doc) {
+  try {
+    // Only trigger baseline updates for meaningful changes
+    const relevantFields = [
+      'status', 'profile', 'roles', 'isEmailVerified', 'isPhoneVerified',
+      'isOwner', 'isSuper', 'isAdmin', 'isSaby', 'customFields'
+    ];
+    
+    const hasRelevantChanges = this.isNew || relevantFields.some(field => this.isModified(field));
+    
+    if (hasRelevantChanges) {
+      // Import here to avoid circular dependency
+      const { baselineIntelligenceService } = require('../services');
+      const { batchChangeProcessor } = require('../services');
+      
+      // Handle baseline updates asynchronously to avoid blocking user operations
+      setImmediate(async () => {
+        try {
+          // Check if this is part of a bulk operation (e.g., CSV import)
+          const isBulkOperation = process.env.BULK_OPERATION === 'true' || this.isBulkOperation;
+          
+          if (isBulkOperation && batchChangeProcessor) {
+            // Use batch processing for bulk operations
+            await batchChangeProcessor.addUserChange(doc);
+          } else {
+            // Use immediate processing for single changes
+            await baselineIntelligenceService.handleUserChange(doc);
+          }
+        } catch (error) {
+          const logger = require('../config/logger');
+          logger.error(
+            'Error updating baseline intelligence after user change:',
+            {
+              userId: doc._id,
+              tenantId: doc.tenantId,
+              error: error.message,
+              stack: error.stack,
+            }
+          );
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error in user post-save hook:', error);
+  }
+});
+
+// Post-remove hook for baseline intelligence updates
+userSchema.post('remove', async function(doc) {
+  try {
+    const { baselineIntelligenceService } = require('../services');
+    
+    setImmediate(async () => {
+      try {
+        await baselineIntelligenceService.handleUserChange(doc);
+      } catch (error) {
+        console.error('Error updating baseline intelligence after user removal:', error);
+      }
+    });
+  } catch (error) {
+    console.error('Error in user post-remove hook:', error);
+  }
+});
+
+// Saving user password
 userSchema.statics.resetPassword = async function (userId, newPassword) {
   const user = await this.findById(userId); // Fetch the user by ID
   if (!user) {
@@ -298,6 +457,10 @@ userSchema.statics.createBulk = async function (
   if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy)) {
     throw new Error('A valid creator ID (createdBy) must be provided');
   }
+
+  // Import Role model
+  const Role = mongoose.model('Role');
+
   for (const userBody of usersBody) {
     try {
       if (await this.isEmailTaken(userBody.email)) {
@@ -329,6 +492,73 @@ userSchema.statics.createBulk = async function (
         );
       }
 
+      // Handle status conversion (string to boolean)
+      if (typeof userBody.status === 'string') {
+        userBody.status =
+          userBody.status.toLowerCase() === 'true' ||
+          userBody.status.toLowerCase() === 'active';
+      }
+
+      // Handle phoneNumber: normalize from 'phone' field if present
+      if (userBody.phone && !userBody.phoneNumber) {
+        userBody.phoneNumber = userBody.phone;
+        delete userBody.phone;
+      }
+
+      // Handle roles: convert role names to ObjectIds
+      if (userBody.roles) {
+        let roleIds = [];
+        
+        // Normalize roles to array
+        let roleInput = userBody.roles;
+        if (typeof roleInput === 'string') {
+          // Handle comma-separated string
+          roleInput = roleInput.split(',').map((r) => r.trim()).filter((r) => r);
+        }
+        if (!Array.isArray(roleInput)) {
+          roleInput = [roleInput];
+        }
+
+        // Process each role
+        for (const roleItem of roleInput) {
+          if (!roleItem) continue;
+
+          // Check if it's already an ObjectId
+          if (mongoose.Types.ObjectId.isValid(roleItem)) {
+            // Verify the role exists
+            const role = await Role.findOne({
+              _id: roleItem,
+              tenantId: tenantId,
+            });
+            if (role) {
+              roleIds.push(roleItem);
+            } else {
+              console.warn(
+                `Role ID ${roleItem} not found for tenant ${tenantId}, skipping...`
+              );
+            }
+          } else {
+            // It's a role name, find by name (case-insensitive)
+            // Use regex for case-insensitive matching
+            const role = await Role.findOne({
+              name: { $regex: new RegExp(`^${roleItem.trim()}$`, 'i') },
+              tenantId: tenantId,
+            });
+            if (role) {
+              roleIds.push(role._id);
+            } else {
+              console.warn(
+                `Role "${roleItem}" not found for tenant ${tenantId}, skipping...`
+              );
+            }
+          }
+        }
+
+        userBody.roles = roleIds;
+      } else {
+        userBody.roles = [];
+      }
+
       userBody.userId = this.generateUserId();
       userBody.tenantId = tenantId;
       userBody.createdBy = createdBy;
@@ -355,8 +585,6 @@ userSchema.statics.createBulk = async function (
   };
   return { success, errors, summary };
 };
-
-
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;

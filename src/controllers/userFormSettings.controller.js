@@ -5,7 +5,9 @@ const catchAsync = require('../utils/catchAsync');
 const { userFormSettingsService } = require('../services');
 
 const createUserFormSettings = catchAsync(async (req, res) => {
-  const settings = await userFormSettingsService.createUserFormSettings(req.body);
+  const settings = await userFormSettingsService.createUserFormSettings(
+    req.body
+  );
   res.status(httpStatus.CREATED).send(settings);
 });
 
@@ -14,12 +16,17 @@ const getUserFormSettings = catchAsync(async (req, res) => {
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
   options.populate = 'user';
 
-  const result = await userFormSettingsService.queryUserFormSettings(filter, options);
+  const result = await userFormSettingsService.queryUserFormSettings(
+    filter,
+    options
+  );
   res.send(result);
 });
 
 const getUserFormSettingsById = catchAsync(async (req, res) => {
-  const settings = await userFormSettingsService.getUserFormSettingsById(req.params.settingsId);
+  const settings = await userFormSettingsService.getUserFormSettingsById(
+    req.params.settingsId
+  );
   if (!settings) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User form settings not found');
   }
@@ -27,35 +34,127 @@ const getUserFormSettingsById = catchAsync(async (req, res) => {
 });
 
 const getUserFormSettingsByUserId = catchAsync(async (req, res) => {
-  const settings = await userFormSettingsService.getUserFormSettingsByUserId(req.params.userId);
+  let settings = await userFormSettingsService.getUserFormSettingsByUserId(
+    req.params.userId
+  );
+  
+  // Auto-create default settings if they don't exist
   if (!settings) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'User form settings not found');
+    const defaultSettings = {
+      user: req.params.userId,
+      tenantId: req.user.tenantId,
+      defaultFormSettings: {
+        access: {
+          type: 'public',
+          requiresLogin: false,
+          allowedRoles: [],
+          submissionLimit: 0,
+          allowMultipleSubmissions: true,
+          allowAnonymous: true,
+        },
+        behavior: {
+          autosave: true,
+          saveDraft: true,
+          allowResubmission: false,
+          showProgressBar: true,
+          timeoutInMinutes: 30,
+          redirectAfterSubmit: '',
+          customSuccessMessage: '',
+        },
+        distribution: {
+          enablePublicUrl: true,
+          enablePrivateUrl: false,
+          enableHtmlEmbed: true,
+          enableApiSubmission: true,
+          enableJsEmbed: true,
+          customDomain: '',
+        },
+        notifications: {
+          onSubmit: {
+            sendToUser: false,
+            sendToOwner: true,
+            emailTemplateId: '',
+            customEmails: [],
+          },
+          onFailure: {
+            sendToOwner: true,
+            emailTemplateId: '',
+          },
+        },
+        ui: {
+          theme: 'light',
+          layout: 'single-page',
+          branding: {
+            logoUrl: '',
+            primaryColor: '#4285F4',
+            backgroundColor: '#FFFFFF',
+            fontFamily: 'Inter, sans-serif',
+            customCss: '',
+          },
+          language: 'en',
+          showFormTitle: true,
+          showFormDescription: true,
+        },
+        builder: {
+          selectedStyle: 'default',
+          wizardMode: false,
+          columnSpans: {},
+          elements: [],
+          formLayout: {
+            spacing: 'normal',
+            labelPosition: 'top',
+            buttonAlignment: 'right',
+          },
+          validation: {
+            showRequiredAsterisk: true,
+            validateOnSubmit: true,
+            validateOnBlur: false,
+          },
+        },
+      },
+    };
+    
+    settings = await userFormSettingsService.createUserFormSettings(defaultSettings);
   }
+  
   res.send(settings);
 });
 
 const updateUserFormSettings = catchAsync(async (req, res) => {
-  const settings = await userFormSettingsService.updateUserFormSettingsById(req.params.settingsId, req.body);
+  const settings = await userFormSettingsService.updateUserFormSettingsById(
+    req.params.settingsId,
+    req.body
+  );
   res.send(settings);
 });
 
 const updateUserFormSettingsByUserId = catchAsync(async (req, res) => {
-  const settings = await userFormSettingsService.updateUserFormSettingsByUserId(req.params.userId, req.body);
+  const settings = await userFormSettingsService.updateUserFormSettingsByUserId(
+    req.params.userId,
+    req.body
+  );
   res.send(settings);
 });
 
 const deleteUserFormSettings = catchAsync(async (req, res) => {
-  await userFormSettingsService.deleteUserFormSettingsById(req.params.settingsId);
+  await userFormSettingsService.deleteUserFormSettingsById(
+    req.params.settingsId
+  );
   res.status(httpStatus.NO_CONTENT).send();
 });
 
 const deleteUserFormSettingsByUserId = catchAsync(async (req, res) => {
-  await userFormSettingsService.deleteUserFormSettingsByUserId(req.params.userId);
+  await userFormSettingsService.deleteUserFormSettingsByUserId(
+    req.params.userId
+  );
   res.status(httpStatus.NO_CONTENT).send();
 });
 
 const upsertUserFormSettings = catchAsync(async (req, res) => {
-  const settings = await userFormSettingsService.upsertUserFormSettings(req.params.userId, req.body);
+  const settings = await userFormSettingsService.upsertUserFormSettings(
+    req.params.userId,
+    req.body
+  );
   res.send(settings);
 });
 

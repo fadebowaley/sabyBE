@@ -42,7 +42,9 @@ async function setupTelegramBot() {
       console.log('✅ Bot token is already configured');
       console.log(`   Token: ${currentToken.substring(0, 10)}...`);
 
-      const updateToken = await question('\nDo you want to update the token? (y/N): ');
+      const updateToken = await question(
+        '\nDo you want to update the token? (y/N): '
+      );
       if (updateToken.toLowerCase() !== 'y') {
         console.log('Keeping existing token.');
         await testBotToken(currentToken);
@@ -66,7 +68,9 @@ async function setupTelegramBot() {
 
     // Validate token format
     if (!newToken.includes(':')) {
-      console.log('❌ Invalid token format. Token should contain a colon (e.g., 123456789:ABCdefGHIjklMNOpqrsTUVwxyz)');
+      console.log(
+        '❌ Invalid token format. Token should contain a colon (e.g., 123456789:ABCdefGHIjklMNOpqrsTUVwxyz)'
+      );
       return;
     }
 
@@ -89,7 +93,10 @@ async function updateEnvFile(token) {
   // Check if TELEGRAM_BOT_TOKEN already exists
   if (envContent.includes('TELEGRAM_BOT_TOKEN=')) {
     // Update existing token
-    envContent = envContent.replace(/TELEGRAM_BOT_TOKEN=.*/, `TELEGRAM_BOT_TOKEN=${token}`);
+    envContent = envContent.replace(
+      /TELEGRAM_BOT_TOKEN=.*/,
+      `TELEGRAM_BOT_TOKEN=${token}`
+    );
   } else {
     // Add new token
     envContent += `\n# Telegram Bot Configuration\nTELEGRAM_BOT_TOKEN=${token}\n`;
@@ -117,15 +124,21 @@ async function testBotToken(token) {
     try {
       const webhookInfo = await bot.getWebhookInfo();
       console.log(`   Webhook URL: ${webhookInfo.url || 'Not set'}`);
-      console.log(`   Webhook Status: ${webhookInfo.ok ? 'Active' : 'Inactive'}`);
+      console.log(
+        `   Webhook Status: ${webhookInfo.ok ? 'Active' : 'Inactive'}`
+      );
     } catch (webhookError) {
-      console.log('   Webhook: Not configured (this is normal for development)');
+      console.log(
+        '   Webhook: Not configured (this is normal for development)'
+      );
     }
 
     console.log('\n🎉 Bot setup completed successfully!');
     console.log('\n📋 Next Steps:');
-    console.log('1. Start the bot: NODE_ENV=development node src/ingestion/telegram/bot.js');
-    console.log('2. Open Telegram and find your bot: @' + botInfo.username);
+    console.log(
+      '1. Start the bot: NODE_ENV=development node src/ingestion/telegram/bot.js'
+    );
+    console.log(`2. Open Telegram and find your bot: @${botInfo.username}`);
     console.log('3. Send /start to begin testing');
     console.log('4. Follow the authentication and form filling flow');
   } catch (error) {

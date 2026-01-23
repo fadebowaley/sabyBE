@@ -7,18 +7,14 @@ const ApiError = require('../utils/ApiError');
  * @param {Object} eventBody
  * @returns {Promise<Event>}
  */
-const createEvent = async (eventBody) => {
-  return Event.create(eventBody);
-};
+const createEvent = async (eventBody) => Event.create(eventBody);
 
 /**
  * Bulk import events
  * @param {Array} eventArray
  * @returns {Promise<Array<Event>>}
  */
-const bulkImportEvents = async (eventArray) => {
-  return Event.insertMany(eventArray);
-};
+const bulkImportEvents = async (eventArray) => Event.insertMany(eventArray);
 
 /**
  * Query for events
@@ -36,18 +32,15 @@ const queryEvents = async (filter, options) => {
  * @param {ObjectId} id
  * @returns {Promise<Event>}
  */
-const getEventById = async (id) => {
-  return Event.findById(id);
-};
+const getEventById = async (id) => Event.findById(id);
 
 /**
  * Get events by program ID
  * @param {ObjectId} programId
  * @returns {Promise<Array<Event>>}
  */
-const getEventsByProgram = async (programId) => {
-  return Event.find({ program: programId });
-};
+const getEventsByProgram = async (programId) =>
+  Event.find({ program: programId });
 
 /**
  * Update event by ID
@@ -83,9 +76,7 @@ const deleteEventById = async (eventId) => {
  * Delete all events
  * @returns {Promise<{ deletedCount: number }>}
  */
-const deleteAllEvents = async () => {
-  return Event.deleteMany({});
-};
+const deleteAllEvents = async () => Event.deleteMany({});
 
 /**
  * Get events by date range
@@ -93,12 +84,11 @@ const deleteAllEvents = async () => {
  * @param {Date} endDate
  * @returns {Promise<Array<Event>>}
  */
-const getEventsByDateRange = async (startDate, endDate) => {
-  return Event.find({
+const getEventsByDateRange = async (startDate, endDate) =>
+  Event.find({
     startDate: { $gte: startDate },
     endDate: { $lte: endDate },
   });
-};
 
 module.exports = {
   createEvent,

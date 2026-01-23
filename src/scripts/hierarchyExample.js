@@ -30,7 +30,11 @@ const createHierarchyExample = async () => {
       ),
       Level.findOneAndUpdate(
         { name: 'Headquarters' },
-        { name: 'Headquarters', rank: 1, description: 'Top level organization' },
+        {
+          name: 'Headquarters',
+          rank: 1,
+          description: 'Top level organization',
+        },
         { upsert: true, new: true }
       ),
       Level.findOneAndUpdate(
@@ -81,7 +85,11 @@ const createHierarchyExample = async () => {
     const structures = await Promise.all(
       structureData.map(async (data) => {
         const haloId = await Structures.generateHaloId(data.name);
-        return Structures.findOneAndUpdate({ name: data.name }, { ...data, haloId }, { upsert: true, new: true });
+        return Structures.findOneAndUpdate(
+          { name: data.name },
+          { ...data, haloId },
+          { upsert: true, new: true }
+        );
       })
     );
     logger.info('Created/Updated structures successfully');
@@ -152,12 +160,15 @@ const createHierarchyExample = async () => {
         const existingNode = await Nodes.findOne({ name: data.name });
         if (existingNode) {
           // If node exists, update it with new data but keep its nodeId
-          return Nodes.findOneAndUpdate({ name: data.name }, { ...data, nodeId: existingNode.nodeId }, { new: true });
-        } else {
-          // If node doesn't exist, generate new nodeId
-          const nodeId = await Nodes.generateNodeId();
-          return Nodes.create({ ...data, nodeId });
+          return Nodes.findOneAndUpdate(
+            { name: data.name },
+            { ...data, nodeId: existingNode.nodeId },
+            { new: true }
+          );
         }
+        // If node doesn't exist, generate new nodeId
+        const nodeId = await Nodes.generateNodeId();
+        return Nodes.create({ ...data, nodeId });
       })
     );
     logger.info('Created/Updated nodes successfully');
@@ -177,7 +188,9 @@ const createHierarchyExample = async () => {
     const ikejaHierarchyPath = await Nodes.getHierarchyPath(ikejaNode._id);
     logger.info('Complete Hierarchy Path for Ikeja Operations:');
     ikejaHierarchyPath.forEach((node) => {
-      logger.info(`Level: ${node.level}, Name: ${node.name}, Fingerprint: ${node.fingerprint}`);
+      logger.info(
+        `Level: ${node.level}, Name: ${node.name}, Fingerprint: ${node.fingerprint}`
+      );
     });
 
     // 2. Get all nodes at Branch level

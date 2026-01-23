@@ -9,15 +9,15 @@ const router = express.Router();
 // Route for creating a new event
 router
   .route('/')
-  .post(auth('create:event'), validate(eventValidation.createEvent), eventController.createEvent)
-  .get(auth('view:event'), validate(eventValidation.queryEvents), eventController.queryEvents);
+  .post(auth('event:create'), validate(eventValidation.createEvent), eventController.createEvent)
+  .get(auth('event:read'), validate(eventValidation.queryEvents), eventController.queryEvents);
 
 // Routes for fetching, updating, and deleting an event by ID
 router
   .route('/:eventId')
-  .get(auth('view:event'), validate(eventValidation.getEventById), eventController.getEventById)
-  .patch(auth('update:event'), validate(eventValidation.updateEventById), eventController.updateEventById)
-  .delete(auth('delete:event'), validate(eventValidation.deleteEventById), eventController.deleteEventById);
+  .get(auth('event:read'), validate(eventValidation.getEventById), eventController.getEventById)
+  .patch(auth('event:update'), validate(eventValidation.updateEventById), eventController.updateEventById)
+  .delete(auth('event:delete'), validate(eventValidation.deleteEventById), eventController.deleteEventById);
 
 // Route for bulk importing events
 router
@@ -27,16 +27,16 @@ router
 // Route for deleting all events for a tenant
 router
   .route('/deleteAll')
-  .delete(auth('delete:event'), validate(eventValidation.deleteAllEvents), eventController.deleteAllEvents);
+  .delete(auth('event:delete'), validate(eventValidation.deleteAllEvents), eventController.deleteAllEvents);
 
 // Route for getting events by a date range
 router
   .route('/dateRange')
-  .get(auth('view:event'), validate(eventValidation.getEventsByDateRange), eventController.getEventsByDateRange);
+  .get(auth('event:read'), validate(eventValidation.getEventsByDateRange), eventController.getEventsByDateRange);
 
 // Route for getting events by program
 router
   .route('/program/:programId')
-  .get(auth('view:event'), validate(eventValidation.getEventsByProgram), eventController.getEventsByProgram);
+  .get(auth('event:read'), validate(eventValidation.getEventsByProgram), eventController.getEventsByProgram);
 
 module.exports = router;

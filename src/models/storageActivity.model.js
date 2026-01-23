@@ -27,9 +27,19 @@ const storageActivitySchema = mongoose.Schema(
     action: {
       type: String,
       enum: [
-        'upload', 'download', 'delete', 'share', 'unshare', 
-        'move', 'copy', 'rename', 'create_folder', 'delete_folder',
-        'update_permissions', 'view', 'preview'
+        'upload',
+        'download',
+        'delete',
+        'share',
+        'unshare',
+        'move',
+        'copy',
+        'rename',
+        'create_folder',
+        'delete_folder',
+        'update_permissions',
+        'view',
+        'preview',
       ],
       required: true,
     },
@@ -56,5 +66,8 @@ storageActivitySchema.plugin(tenantPlugin);
 storageActivitySchema.index({ tenantId: 1, userId: 1, createdAt: -1 });
 storageActivitySchema.index({ action: 1, createdAt: -1 });
 
-const StorageActivity = mongoose.model('StorageActivity', storageActivitySchema);
+const StorageActivity = mongoose.model(
+  'StorageActivity',
+  storageActivitySchema
+);
 module.exports = StorageActivity;

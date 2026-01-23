@@ -9,16 +9,16 @@ const router = express.Router();
 // Route for creating and querying permissions
 router
   .route('/')
-  .post(auth('create:permissions'), validate(permissionValidation.createPermission), permissionController.createPermission)
-  .get(auth('view:permissions'), validate(permissionValidation.queryPermissions), permissionController.getPermissions);
+  .post(auth('permissions:create'), validate(permissionValidation.createPermission), permissionController.createPermission)
+  .get(auth('permissions:read'), validate(permissionValidation.queryPermissions), permissionController.getPermissions);
 
 // Route for querying, updating, or deleting a specific permission by name
 router
   .route('/:permissionName')
-  .get(auth('view:permissions'), validate(permissionValidation.getPermission), permissionController.getPermission)
-  .patch(auth('update:permissions'), validate(permissionValidation.updatePermission), permissionController.updatePermission)
+  .get(auth('permissions:read'), validate(permissionValidation.getPermission), permissionController.getPermission)
+  .patch(auth('permissions:update'), validate(permissionValidation.updatePermission), permissionController.updatePermission)
   .delete(
-    auth('delete:permissions'),
+    auth('permissions:delete'),
     validate(permissionValidation.deletePermission),
     permissionController.deletePermission
   );
@@ -29,7 +29,7 @@ router
 router
   .route('/bulk')
   .post(
-    auth('create:permissions'),
+    auth('permissions:create'),
     validate(permissionValidation.bulkCreatePermissions),
     permissionController.bulkCreatePermissions
   );

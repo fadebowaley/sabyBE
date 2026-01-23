@@ -6,7 +6,6 @@ const Permission = require('../../models/permission.model');
 const config = require('../../config/config'); // Adjust the path as necessary
 const logger = require('../../config/logger'); // Adjust the path as necessary
 
-
 const HTTP_ACTION_MAP = {
   GET: 'view',
   POST: 'create',
@@ -15,7 +14,7 @@ const HTTP_ACTION_MAP = {
   DELETE: 'delete',
 };
 
-const normalizePath = (p) => (p.startsWith('/') ? p : '/' + p);
+const normalizePath = (p) => (p.startsWith('/') ? p : `/${p}`);
 
 const loadStaticPermissions = (filePath) => {
   if (!fs.existsSync(filePath)) return [];
@@ -45,7 +44,6 @@ const extractResource = ({ filePath, routePath }) => {
   }
   return 'unknown';
 };
-
 
 // MongoDB connection
 const connectToDB = async () => {
@@ -80,12 +78,18 @@ const generatePermissions = async ({
     router.stack.forEach((layer) => {
       if (layer.route) {
         let pathStr = layer.route.path;
-        if (pathPrefix) pathStr = pathStr.replace(new RegExp(`^${pathPrefix}`), '');
+        if (pathPrefix)
+          pathStr = pathStr.replace(new RegExp(`^${pathPrefix}`), '');
         pathStr = normalizePath(pathStr);
-        const methods = Object.keys(layer.route.methods).map((m) => m.toUpperCase());
+        const methods = Object.keys(layer.route.methods).map((m) =>
+          m.toUpperCase()
+        );
         methods.forEach((method) => {
           const action = HTTP_ACTION_MAP[method];
-          const resource = extractResource({ filePath: file, routePath: pathStr }); // Pass routePath here
+          const resource = extractResource({
+            filePath: file,
+            routePath: pathStr,
+          }); // Pass routePath here
           const resourceFromPath = resource.split(':')[0];
 
           if (!action || !resource) return;
@@ -115,7 +119,9 @@ const generatePermissions = async ({
   const allPermissions = [...permissions, ...staticPermissions];
 
   const key = (p) => `${p.name}:${p.method}:${p.path}`;
-  const uniquePermissions = Array.from(new Map(allPermissions.map((p) => [key(p), p])).values());
+  const uniquePermissions = Array.from(
+    new Map(allPermissions.map((p) => [key(p), p])).values()
+  );
 
   writeSnapshot(uniquePermissions, snapshotPath);
 
@@ -127,8 +133,12 @@ const generatePermissions = async ({
   const existing = await Permission.find({});
   const existingKeys = new Set(existing.map((p) => key(p)));
 
-  const newPermissions = uniquePermissions.filter((p) => !existingKeys.has(key(p)));
-  const removedPermissions = existing.filter((p) => !uniquePermissions.find((up) => key(up) === key(p)));
+  const newPermissions = uniquePermissions.filter(
+    (p) => !existingKeys.has(key(p))
+  );
+  const removedPermissions = existing.filter(
+    (p) => !uniquePermissions.find((up) => key(up) === key(p))
+  );
 
   if (shouldSeed && newPermissions.length > 0) {
     await Permission.insertMany(newPermissions);

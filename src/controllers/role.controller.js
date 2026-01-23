@@ -4,13 +4,13 @@ const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { roleService } = require('../services');
 
-//Controller to create Roles
+// Controller to create Roles
 const createRole = catchAsync(async (req, res) => {
   const role = await roleService.createRole(req.body, req.user);
   res.status(httpStatus.CREATED).send(role);
 });
 
-//Controller to create bulk roles
+// Controller to create bulk roles
 const bulkCreateRoles = catchAsync(async (req, res) => {
   const roles = await roleService.bulkCreateRoles(
     req.body.rolesArray,
@@ -24,7 +24,7 @@ const bulkCreateRoles = catchAsync(async (req, res) => {
 
 // Controller: deleteAllRoles
 const deleteAllRoles = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
+  const { tenantId } = req.user;
   const result = await roleService.deleteAllRoles(tenantId);
   res.status(httpStatus.OK).json({
     message: result.message,
@@ -32,7 +32,7 @@ const deleteAllRoles = catchAsync(async (req, res) => {
   });
 });
 
-//controller to get Roles
+// controller to get Roles
 const getRoles = catchAsync(async (req, res) => {
   const filter = pick(req.query, ['name', 'isActive']);
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
@@ -41,7 +41,7 @@ const getRoles = catchAsync(async (req, res) => {
   res.send(result);
 });
 
-//Controller to get a particular roles
+// Controller to get a particular roles
 const getRole = catchAsync(async (req, res) => {
   const role = await roleService.getRoleById(req.params.roleId, req.user);
   if (!role) {
@@ -78,7 +78,7 @@ const getRoleTemplates = catchAsync(async (req, res) => {
 });
 
 const getPermissionsForRole = catchAsync(async (req, res) => {
-  const roleId = req.params.roleId;
+  const { roleId } = req.params;
   const permissions = await roleService.getPermissionsForRole(roleId);
   res.send({ roleId, permissions });
 });

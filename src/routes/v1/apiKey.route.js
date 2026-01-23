@@ -9,7 +9,7 @@ const router = express.Router();
 // Get all API keys for tenant
 router.get(
   '/',
-  requireAccess({ permissions: ['get:apikeys'], jwtOnly: true }),
+  requireAccess({ permissions: ['apikey:read'], jwtOnly: true }),
   validate(apiKeyValidation.getApiKeys),
   apiKeyController.getApiKeys
 );
@@ -42,7 +42,7 @@ router.get(
  *         name: environment
  *         schema:
  *           type: string
- *           enum: [production, development, staging]
+ *           enum: [production, staging]
  *         description: Filter by environment
  *       - in: query
  *         name: isActive
@@ -87,7 +87,7 @@ router.get(
 // Create new API key
 router.post(
   '/',
-  requireAccess({ permissions: ['create:apikeys'], jwtOnly: true }),
+  requireAccess({ permissions: ['apikey:create'], jwtOnly: true }),
   validate(apiKeyValidation.createApiKey),
   apiKeyController.createApiKey
 );
@@ -163,7 +163,7 @@ router.post(
 // Get API key by ID
 router.get(
   '/:keyId',
-  requireAccess({ permissions: ['get:apikeys'], jwtOnly: true }),
+  requireAccess({ permissions: ['apikey:read'], jwtOnly: true }),
   validate(apiKeyValidation.getApiKey),
   apiKeyController.getApiKey
 );
@@ -203,7 +203,7 @@ router.get(
 // Update API key
 router.patch(
   '/:keyId',
-  requireAccess({ permissions: ['update:apikeys'], jwtOnly: true }),
+  requireAccess({ permissions: ['apikey:update'], jwtOnly: true }),
   validate(apiKeyValidation.updateApiKey),
   apiKeyController.updateApiKey
 );
@@ -274,7 +274,7 @@ router.patch(
 // Delete API key
 router.delete(
   '/:keyId',
-  requireAccess({ permissions: ['delete:apikeys'], jwtOnly: true }),
+  requireAccess({ permissions: ['apikey:delete'], jwtOnly: true }),
   validate(apiKeyValidation.deleteApiKey),
   apiKeyController.deleteApiKey
 );
@@ -310,7 +310,7 @@ router.delete(
 // Get API key usage analytics
 router.get(
   '/:keyId/analytics',
-  requireAccess({ permissions: ['analytics:apikeys'], jwtOnly: true }),
+  requireAccess({ permissions: ['apikey:read'], jwtOnly: true }),
   validate(apiKeyValidation.getApiKeyAnalytics),
   apiKeyController.getApiKeyAnalytics
 );
@@ -400,7 +400,7 @@ router.get(
 // Regenerate API key
 router.post(
   '/:keyId/regenerate',
-  requireAccess({ permissions: ['regenerate:apikeys'], jwtOnly: true }),
+  requireAccess({ permissions: ['apikey:regenerate'], jwtOnly: true }),
   validate(apiKeyValidation.regenerateApiKey),
   apiKeyController.regenerateApiKey
 );

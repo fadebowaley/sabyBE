@@ -1,17 +1,20 @@
-
 // Import required dependencies
 const express = require('express');
 const validate = require('../../middlewares/validate');
 const authValidation = require('../../validations/auth.validation');
 const authController = require('../../controllers/auth.controller');
 const auth = require('../../middlewares/auth');
-const requireAccess = require('../../middlewares/requireAccess');
+const { loginLimiter } = require('../../middlewares/rateLimiter');
 
 // Create Express router instance
 const router = express.Router();
 
 // Register a new user
-router.post('/register', validate(authValidation.register), authController.register);
+router.post(
+  '/register',
+  validate(authValidation.register),
+  authController.register
+);
 
 /**
  * @swagger
@@ -70,7 +73,13 @@ router.post('/register', validate(authValidation.register), authController.regis
  */
 
 // Login user
-router.post('/login', validate(authValidation.login), authController.login);
+// All registered users can login without API key requirement
+router.post(
+  '/login',
+  loginLimiter, // User-based rate limiter (email-based)
+  validate(authValidation.login),
+  authController.login
+);
 
 /**
  * @swagger
@@ -152,7 +161,11 @@ router.post('/logout', validate(authValidation.logout), authController.logout);
  */
 
 // Refresh access tokens
-router.post('/refresh-tokens', validate(authValidation.refreshTokens), authController.refreshTokens);
+router.post(
+  '/refresh-tokens',
+  validate(authValidation.refreshTokens),
+  authController.refreshTokens
+);
 
 /**
  * @swagger
@@ -188,7 +201,11 @@ router.post('/refresh-tokens', validate(authValidation.refreshTokens), authContr
  */
 
 // Request password reset
-router.post('/forgot-password', validate(authValidation.forgotPassword), authController.forgotPassword);
+router.post(
+  '/forgot-password',
+  validate(authValidation.forgotPassword),
+  authController.forgotPassword
+);
 
 /**
  * @swagger
@@ -221,7 +238,11 @@ router.post('/forgot-password', validate(authValidation.forgotPassword), authCon
  */
 
 // Reset password
-router.post('/reset-password', validate(authValidation.resetPassword), authController.resetPassword);
+router.post(
+  '/reset-password',
+  validate(authValidation.resetPassword),
+  authController.resetPassword
+);
 
 /**
  * @swagger
@@ -263,7 +284,11 @@ router.post('/reset-password', validate(authValidation.resetPassword), authContr
  */
 
 // Send verification email
-router.post('/send-verification-email', auth(), authController.sendVerificationEmail);
+router.post(
+  '/send-verification-email',
+  auth(),
+  authController.sendVerificationEmail
+);
 
 /**
  * @swagger
@@ -285,7 +310,11 @@ router.post('/send-verification-email', auth(), authController.sendVerificationE
  */
 
 // Verify email
-router.post('/verify-email', validate(authValidation.verifyEmail), authController.verifyEmail);
+router.post(
+  '/verify-email',
+  validate(authValidation.verifyEmail),
+  authController.verifyEmail
+);
 
 /**
  * @swagger
@@ -313,7 +342,11 @@ router.post('/verify-email', validate(authValidation.verifyEmail), authControlle
  */
 
 // Verify OTP for user
-router.post('/verify-otp', validate(authValidation.verifyOtp), authController.verifyOtp);
+router.post(
+  '/verify-otp',
+  validate(authValidation.verifyOtp),
+  authController.verifyOtp
+);
 
 /**
  * @swagger
@@ -345,7 +378,11 @@ router.post('/verify-otp', validate(authValidation.verifyOtp), authController.ve
  */
 
 // Resend OTP for user
-router.post('/resend-otp', validate(authValidation.resendOtp), authController.resendOtp);
+router.post(
+  '/resend-otp',
+  validate(authValidation.resendOtp),
+  authController.resendOtp
+);
 
 /**
  * @swagger
@@ -371,6 +408,320 @@ router.post('/resend-otp', validate(authValidation.resendOtp), authController.re
  *         description: OTP resent successfully
  *       "400":
  *         description: Email not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+// Change password for unverified users (requires OTP)
+router.post(
+  '/change-password',
+  validate(authValidation.changePassword),
+  authController.changePassword
+);
+
+/**
+ * @swagger
+ * /auth/change-password:
+ *   post:
+ *     summary: Change password for unverified user (requires OTP)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - newPassword
+ *               - otp
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: john.doe@example.com
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 8
+ *                 example: NewPassword123
+ *               otp:
+ *                 type: string
+ *                 length: 6
+ *                 example: "123456"
+ *     responses:
+ *       "200":
+ *         description: Password updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Password updated successfully. You can now login.
+ *       "400":
+ *         description: Invalid or expired OTP
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+// Verify password for authenticated users
+router.post(
+  '/verify-password',
+  auth(),
+  validate(authValidation.verifyPassword),
+  authController.verifyPassword
+);
+
+/**
+ * @swagger
+ * /auth/verify-password:
+ *   post:
+ *     summary: Verify current password for authenticated user
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - password
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: currentPassword123
+ *     responses:
+ *       "200":
+ *         description: Password verified successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Password verified successfully
+ *       "401":
+ *         description: Invalid password or unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+// Change password for authenticated users
+router.post(
+  '/change-password-authenticated',
+  auth(),
+  validate(authValidation.changePasswordAuthenticated),
+  authController.changePasswordAuthenticated
+);
+
+/**
+ * @swagger
+ * /auth/change-password-authenticated:
+ *   post:
+ *     summary: Change password for authenticated user
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 format: password
+ *                 example: oldPassword123
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 8
+ *                 example: newSecurePassword456
+ *     responses:
+ *       "200":
+ *         description: Password changed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Password changed successfully
+ *       "400":
+ *         description: Invalid request (same password, weak password, etc.)
+ *       "401":
+ *         description: Invalid current password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+// Request OTP for email change
+router.post(
+  '/request-email-change-otp',
+  auth(),
+  validate(authValidation.requestEmailChangeOtp),
+  authController.requestEmailChangeOtp
+);
+
+/**
+ * @swagger
+ * /auth/request-email-change-otp:
+ *   post:
+ *     summary: Request OTP for email change
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentValue
+ *             properties:
+ *               currentValue:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *     responses:
+ *       "200":
+ *         description: OTP sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: OTP sent to your email address
+ *       "400":
+ *         description: Invalid email or email mismatch
+ *       "429":
+ *         description: Too many requests (rate limited)
+ */
+
+// Request OTP for phone change
+router.post(
+  '/request-phone-change-otp',
+  auth(),
+  validate(authValidation.requestPhoneChangeOtp),
+  authController.requestPhoneChangeOtp
+);
+
+/**
+ * @swagger
+ * /auth/request-phone-change-otp:
+ *   post:
+ *     summary: Request OTP for phone change
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentValue
+ *             properties:
+ *               currentValue:
+ *                 type: string
+ *                 example: "+1234567890"
+ *     responses:
+ *       "200":
+ *         description: OTP sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: OTP sent to your phone number
+ *       "400":
+ *         description: Invalid phone or phone mismatch
+ *       "429":
+ *         description: Too many requests (rate limited)
+ */
+
+// Check API key expiration status (notification only)
+router.get(
+  '/check-api-key-status',
+  auth(),
+  authController.checkApiKeyStatus
+);
+
+/**
+ * @swagger
+ * /auth/check-api-key-status:
+ *   get:
+ *     summary: Check API key expiration status
+ *     description: Returns API key expiration status (notification only, does not affect authentication)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       "200":
+ *         description: API key status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 hasApiKey:
+ *                   type: boolean
+ *                   example: true
+ *                 isExpired:
+ *                   type: boolean
+ *                   nullable: true
+ *                   example: false
+ *                 expiresAt:
+ *                   type: string
+ *                   format: date-time
+ *                   nullable: true
+ *                   example: "2024-12-31T23:59:59Z"
+ *                 daysUntilExpiry:
+ *                   type: number
+ *                   nullable: true
+ *                   example: 30
+ *                 message:
+ *                   type: string
+ *                   example: "API key expires in 30 days"
+ *       "401":
+ *         description: Unauthorized
  *         content:
  *           application/json:
  *             schema:

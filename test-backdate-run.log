@@ -1,0 +1,216 @@
+
+🧪 ========================================
+   BACKDATED FULL COMPLIANCE TEST
+   October 2025 - Complete Month
+========================================
+
+📝 Step 1: Connecting to MongoDB...
+(node:51296) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+✅ MongoDB connected
+
+📝 Step 2: Testing PostgreSQL connection...
+✅ PostgreSQL connected
+
+📝 Step 3: Creating PERM-enabled form...
+🎯 [ProjectForm] Creating project form with elements: {
+  configuration: {
+    projectName: 'October 2025 Backdated Test Form',
+    projectCategory: 'Testing',
+    security: 'private',
+    description: 'Test form for backdated compliance verification'
+  },
+  elements: [
+    { id: 'event_name', type: 'text', properties: [Object] },
+    { id: 'attendance', type: 'number', properties: [Object] },
+    { id: 'offering', type: 'number', properties: [Object] },
+    { id: 'notes', type: 'textarea', properties: [Object] }
+  ],
+  permSettings: {
+    enabled: true,
+    trackingMode: 'weekly',
+    weeklyConfig: { days: [Array] },
+    requireNodeId: true,
+    requireMonth: true,
+    trackCompliance: true,
+    autoGenerateCalendar: true
+  },
+  metadata: { deploymentStatus: 'draft' },
+  status: 'inactive'
+}
+🎯 [ProjectForm] Elements count: 4
+🎯 [ProjectForm] Element 1: {
+  fullElementJson: '{\n' +
+    '  "id": "event_name",\n' +
+    '  "type": "text",\n' +
+    '  "properties": {\n' +
+    '    "label": "Event Name",\n' +
+    '    "required": true,\n' +
+    '    "placeholder": "e.g., Sunday Service, Tuesday Bible Study"\n' +
+    '  }\n' +
+    '}'
+}
+🎯 [ProjectForm] Element 2: {
+  fullElementJson: '{\n' +
+    '  "id": "attendance",\n' +
+    '  "type": "number",\n' +
+    '  "properties": {\n' +
+    '    "label": "Attendance Count",\n' +
+    '    "required": true,\n' +
+    '    "validation": {\n' +
+    '      "min": 0,\n' +
+    '      "max": 10000\n' +
+    '    }\n' +
+    '  }\n' +
+    '}'
+}
+🎯 [ProjectForm] Element 3: {
+  fullElementJson: '{\n' +
+    '  "id": "offering",\n' +
+    '  "type": "number",\n' +
+    '  "properties": {\n' +
+    '    "label": "Offering Amount ($)",\n' +
+    '    "required": false,\n' +
+    '    "validation": {\n' +
+    '      "min": 0\n' +
+    '    }\n' +
+    '  }\n' +
+    '}'
+}
+🎯 [ProjectForm] Element 4: {
+  fullElementJson: '{\n' +
+    '  "id": "notes",\n' +
+    '  "type": "textarea",\n' +
+    '  "properties": {\n' +
+    '    "label": "Additional Notes",\n' +
+    '    "required": false\n' +
+    '  }\n' +
+    '}'
+}
+✅ Form created successfully!
+   Project ID: proj_m6ysjyxLSsFc
+   Form ID: 690a3bb9e3f1a3c86009c20f
+   Tenant ID: test-tenant-1762278329637
+   PERM enabled: true
+   Tracking mode: weekly
+   Expected events: 14 (4 Sundays + 5 Tuesdays + 5 Thursdays)
+
+📝 Step 4: Publishing form...
+   (Calendar will auto-generate for current month)
+[32minfo[39m: Generated weekly calendar: 13 events for 2025-11-01
+[32minfo[39m: Generated weekly calendar: 13 events for 2025-12-01
+[32minfo[39m: Generated weekly calendar: 13 events for 2026-01-01
+[32minfo[39m: Generated weekly calendar: 12 events for 2026-02-01
+✅ Auto-generated calendars for form proj_m6ysjyxLSsFc
+✅ Form published!
+   Published at: 2025-11-04T17:45:29.804Z
+   Status: active
+   Deployment: published
+
+📝 Step 5: Generating calendar for October 2025 (backdated)...
+[32minfo[39m: Generated weekly calendar: 13 events for 2025-10-01
+✅ October 2025 calendar generated!
+
+📝 Step 6: Verifying calendar details...
+✅ Calendar verified:
+   Month: 2025-09-30T23:00:00.000Z
+   Year: 2025
+   Total events required: 13
+   Tracking mode: weekly
+   Event dates: 13
+   First event date: 2025-10-01
+   Last event date: 2025-10-29
+
+📝 Step 7: Submitting compliance data for all events...
+   Creating 13 submissions...
+[32minfo[39m: 📥 Submission enqueued - Job ID: test-tenant-1762278329637-1762278329896 | Tenant: test-tenant-1762278329637
+[32minfo[39m: 📥 Submission enqueued - Job ID: test-tenant-1762278329637-1762278329954 | Tenant: test-tenant-1762278329637
+[32minfo[39m: 📥 Submission enqueued - Job ID: test-tenant-1762278329637-1762278330005 | Tenant: test-tenant-1762278329637
+[32minfo[39m: 📥 Submission enqueued - Job ID: test-tenant-1762278329637-1762278330056 | Tenant: test-tenant-1762278329637
+[32minfo[39m: 📥 Submission enqueued - Job ID: test-tenant-1762278329637-1762278330110 | Tenant: test-tenant-1762278329637
+   ✓ Queued 5/13 submissions
+[32minfo[39m: 📥 Submission enqueued - Job ID: test-tenant-1762278329637-1762278330162 | Tenant: test-tenant-1762278329637
+[32minfo[39m: 📥 Submission enqueued - Job ID: test-tenant-1762278329637-1762278330215 | Tenant: test-tenant-1762278329637
+[33mwarn[39m: Unable to connect to email server. Make sure you have configured the SMTP options in .env
+[32minfo[39m: 📥 Submission enqueued - Job ID: test-tenant-1762278329637-1762278330266 | Tenant: test-tenant-1762278329637
+[32minfo[39m: 📥 Submission enqueued - Job ID: test-tenant-1762278329637-1762278330318 | Tenant: test-tenant-1762278329637
+[32minfo[39m: 📥 Submission enqueued - Job ID: test-tenant-1762278329637-1762278330370 | Tenant: test-tenant-1762278329637
+   ✓ Queued 10/13 submissions
+[32minfo[39m: 📥 Submission enqueued - Job ID: test-tenant-1762278329637-1762278330423 | Tenant: test-tenant-1762278329637
+[32minfo[39m: 📥 Submission enqueued - Job ID: test-tenant-1762278329637-1762278330477 | Tenant: test-tenant-1762278329637
+[32minfo[39m: 📥 Submission enqueued - Job ID: test-tenant-1762278329637-1762278330529 | Tenant: test-tenant-1762278329637
+   ✓ Queued 13/13 submissions
+
+✅ All 13 submissions queued!
+   Job IDs (first 3): test-tenant-1762278329637-1762278329896, test-tenant-1762278329637-1762278329954, test-tenant-1762278329637-1762278330005
+
+📝 Step 8: Waiting for workers to process submissions...
+   (This may take 30-60 seconds for all jobs to complete)
+   Attempt 1/12: 0/13 processed (0% compliance)
+   Attempt 2/12: 0/13 processed (0% compliance)
+   Attempt 3/12: 0/13 processed (0% compliance)
+   Attempt 4/12: 0/13 processed (0% compliance)
+   Attempt 5/12: 0/13 processed (0% compliance)
+   Attempt 6/12: 0/13 processed (0% compliance)
+   Attempt 7/12: 0/13 processed (0% compliance)
+   Attempt 8/12: 0/13 processed (0% compliance)
+   Attempt 9/12: 0/13 processed (0% compliance)
+   Attempt 10/12: 0/13 processed (0% compliance)
+   Attempt 11/12: 0/13 processed (0% compliance)
+   Attempt 12/12: 0/13 processed (0% compliance)
+
+📝 Step 9: Checking final compliance...
+⚠️ No submission record found yet
+   Workers may still be processing
+
+📋 Check status manually:
+   docker exec saby-postgres-local psql -U halograph_user -d halograph -c "
+     SELECT * FROM form_submissions 
+     WHERE project_id = 'proj_m6ysjyxLSsFc' AND month = '2025-10-01';"
+
+📝 Step 10: Checking activity log...
+✅ Activity Summary:
+
+========================================
+   TEST SUMMARY
+========================================
+✅ Form created (PERM-enabled, weekly tracking)
+✅ Form published
+✅ Calendar generated for October 2025
+✅ 13 submissions queued
+✅ Workers processed submissions
+
+========================================
+   CLEANUP (Optional)
+========================================
+
+To remove this test data:
+
+1. PostgreSQL:
+   DELETE FROM form_submissions WHERE tenant_id = 'test-tenant-1762278329637';
+   DELETE FROM event_calendar WHERE tenant_id = 'test-tenant-1762278329637';
+   DELETE FROM submission_activity_log WHERE tenant_id = 'test-tenant-1762278329637';
+   DELETE FROM dead_letter_queue WHERE tenant_id = 'test-tenant-1762278329637';
+
+2. MongoDB:
+   await ProjectForm.findOneAndDelete({ projectId: 'proj_m6ysjyxLSsFc' });
+
+Or run the cleanup script:
+   node -e "require('./src/models/ProjectForm').findOneAndDelete({ projectId: 'proj_m6ysjyxLSsFc' }).then(() => console.log('Deleted'))"
+
+🎉 Test complete!
+
+MongoDB connection closed
+
+Error: connect ECONNREFUSED ::1:6379
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1555:16) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '::1',
+  port: 6379
+}

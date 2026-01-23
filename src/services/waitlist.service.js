@@ -40,17 +40,13 @@ const queryWaitlist = async (filter, options) => {
  * @param {ObjectId} id
  * @returns {Promise<Waitlist>}
  */
-const getWaitlistEntryById = async (id) => {
-  return Waitlist.findById(id);
-};
+const getWaitlistEntryById = async (id) => Waitlist.findById(id);
 
 /**
  * Get waitlist statistics
  * @returns {Promise<Object>}
  */
-const getWaitlistStats = async () => {
-  return Waitlist.getStats();
-};
+const getWaitlistStats = async () => Waitlist.getStats();
 
 /**
  * Update waitlist entry status
@@ -122,13 +118,13 @@ const exportWaitlist = async (format = 'json', filter = {}) => {
       'subscribedAt',
       'invitedAt',
       'convertedAt',
-      'ipAddress'
+      'ipAddress',
     ];
 
     const csvRows = [headers.join(',')];
-    
-    entries.forEach(entry => {
-      const row = headers.map(header => {
+
+    entries.forEach((entry) => {
+      const row = headers.map((header) => {
         const value = entry[header];
         if (value === null || value === undefined) return '';
         if (value instanceof Date) return value.toISOString();
@@ -159,4 +155,3 @@ module.exports = {
   deleteWaitlistEntry,
   exportWaitlist,
 };
-

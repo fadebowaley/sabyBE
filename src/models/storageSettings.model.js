@@ -76,5 +76,8 @@ storageSettingsSchema.plugin(toJSON);
 storageSettingsSchema.plugin(paginate);
 storageSettingsSchema.plugin(tenantPlugin);
 
-const StorageSettings = mongoose.model('StorageSettings', storageSettingsSchema);
+const StorageSettings = mongoose.model(
+  'StorageSettings',
+  storageSettingsSchema
+);
 module.exports = StorageSettings;

@@ -4,7 +4,9 @@ const createData = {
   body: Joi.object().keys({
     name: Joi.string().required(),
     type: Joi.string().required(),
-    content: Joi.alternatives().try(Joi.string(), Joi.object(), Joi.array()).required(),
+    content: Joi.alternatives()
+      .try(Joi.string(), Joi.object(), Joi.array())
+      .required(),
     metadata: Joi.object().allow(null),
     isPublic: Joi.boolean().default(false),
     tags: Joi.array().items(Joi.string()),

@@ -12,8 +12,14 @@ app.use(express.urlencoded({ extended: true }));
 
 // WhatsApp webhook routes
 app.get('/webhook', (req, res) => {
-  const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query;
-  logger.info(`🔍 WhatsApp webhook verification - Mode: ${mode}, Token: ${token}, Expected: ${whatsappBot.VERIFY_TOKEN}`);
+  const {
+    'hub.mode': mode,
+    'hub.verify_token': token,
+    'hub.challenge': challenge,
+  } = req.query;
+  logger.info(
+    `🔍 WhatsApp webhook verification - Mode: ${mode}, Token: ${token}, Expected: ${whatsappBot.VERIFY_TOKEN}`
+  );
 
   const verificationResult = whatsappBot.verifyWebhook(mode, token, challenge);
 
@@ -68,7 +74,11 @@ async function initializeWhatsAppServer() {
       logger.info(`🔗 Webhook URL: http://localhost:${port}/webhook`);
     });
   } catch (error) {
-    logger.error('❌ Failed to initialize WhatsApp server:', error.message);
+    logger.error('❌ Failed to initialize WhatsApp server');
+    logger.error(`   Error: ${error.message || 'Unknown error'}`);
+    if (error.stack) {
+      logger.error(`   Stack: ${error.stack}`);
+    }
     throw error;
   }
 }
@@ -87,7 +97,11 @@ process.on('SIGTERM', async () => {
 // Initialize server when module is loaded
 if (require.main === module) {
   initializeWhatsAppServer().catch((error) => {
-    logger.error('❌ Failed to initialize WhatsApp server:', error.message);
+    logger.error('❌ Failed to initialize WhatsApp server');
+    logger.error(`   Error: ${error.message || 'Unknown error'}`);
+    if (error.stack) {
+      logger.error(`   Stack: ${error.stack}`);
+    }
     process.exit(1);
   });
 }

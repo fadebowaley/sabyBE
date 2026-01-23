@@ -27,7 +27,11 @@ const getFolders = catchAsync(async (req, res) => {
   console.log('🔍 getFolders options:', options);
   console.log('🔍 getFolders userInfo:', userInfo);
 
-  const result = await storageFolderService.getFolders(filter, options, userInfo);
+  const result = await storageFolderService.getFolders(
+    filter,
+    options,
+    userInfo
+  );
   console.log(result);
   res.send(result);
 });
@@ -38,7 +42,10 @@ const getFolder = catchAsync(async (req, res) => {
     userId: req.user._id,
   };
 
-  const folder = await storageFolderService.getFolderById(req.params.folderId, userInfo);
+  const folder = await storageFolderService.getFolderById(
+    req.params.folderId,
+    userInfo
+  );
   res.send(folder);
 });
 
@@ -48,7 +55,10 @@ const getFolderContents = catchAsync(async (req, res) => {
     userId: req.user._id,
   };
 
-  const contents = await storageFolderService.getFolderContents(req.params.folderId, userInfo);
+  const contents = await storageFolderService.getFolderContents(
+    req.params.folderId,
+    userInfo
+  );
   res.send(contents);
 });
 
@@ -60,7 +70,11 @@ const updateFolder = catchAsync(async (req, res) => {
     userId: req.user._id,
   };
 
-  const folder = await storageFolderService.updateFolder(req.params.folderId, updateData, userInfo);
+  const folder = await storageFolderService.updateFolder(
+    req.params.folderId,
+    updateData,
+    userInfo
+  );
   res.send(folder);
 });
 
@@ -82,19 +96,31 @@ const moveFolder = catchAsync(async (req, res) => {
     userId: req.user._id,
   };
 
-  const folder = await storageFolderService.moveFolder(req.params.folderId, parentFolder, userInfo);
+  const folder = await storageFolderService.moveFolder(
+    req.params.folderId,
+    parentFolder,
+    userInfo
+  );
   res.send(folder);
 });
 
 const shareFolder = catchAsync(async (req, res) => {
-  const shareOptions = pick(req.body, ['expiryDate', 'allowUpload', 'password']);
+  const shareOptions = pick(req.body, [
+    'expiryDate',
+    'allowUpload',
+    'password',
+  ]);
 
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
   };
 
-  const shareResult = await storageFolderService.shareFolder(req.params.folderId, shareOptions, userInfo);
+  const shareResult = await storageFolderService.shareFolder(
+    req.params.folderId,
+    shareOptions,
+    userInfo
+  );
   res.send(shareResult);
 });
 
@@ -114,12 +140,18 @@ const getSharedFolder = catchAsync(async (req, res) => {
   }
 
   // Check expiry
-  if (folder.shareSettings.shareExpiry && new Date() > folder.shareSettings.shareExpiry) {
+  if (
+    folder.shareSettings.shareExpiry &&
+    new Date() > folder.shareSettings.shareExpiry
+  ) {
     throw new ApiError(httpStatus.GONE, 'Share link has expired');
   }
 
   // Check password
-  if (folder.shareSettings.password && folder.shareSettings.password !== password) {
+  if (
+    folder.shareSettings.password &&
+    folder.shareSettings.password !== password
+  ) {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid password');
   }
 
@@ -148,7 +180,10 @@ const getFolderHierarchy = catchAsync(async (req, res) => {
     userId: req.user._id,
   };
 
-  const hierarchy = await storageFolderService.getFolderHierarchy(req.params.folderId, userInfo);
+  const hierarchy = await storageFolderService.getFolderHierarchy(
+    req.params.folderId,
+    userInfo
+  );
   res.send(hierarchy);
 });
 
@@ -161,7 +196,11 @@ const getRootFolders = catchAsync(async (req, res) => {
   const filter = { parentFolder: null };
   const options = { sortBy: 'name:asc' };
 
-  const result = await storageFolderService.getFolders(filter, options, userInfo);
+  const result = await storageFolderService.getFolders(
+    filter,
+    options,
+    userInfo
+  );
   res.send(result);
 });
 

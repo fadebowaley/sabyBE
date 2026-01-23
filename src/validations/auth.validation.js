@@ -40,7 +40,7 @@ const forgotPassword = {
 
 const resetPassword = {
   query: Joi.object().keys({
-  token: Joi.string().required(),
+    token: Joi.string().required(),
   }),
   body: Joi.object().keys({
     password: Joi.string().required().custom(password),
@@ -63,10 +63,42 @@ const verifyOtp = {
 const resendOtp = {
   body: Joi.object().keys({
     email: Joi.string().required().email(),
+    purpose: Joi.string().valid('registration', 'password-reset').optional(),
   }),
 };
 
+const changePassword = {
+  body: Joi.object().keys({
+    email: Joi.string().required().email(),
+    newPassword: Joi.string().required().custom(password),
+    otp: Joi.string().required().length(6),
+  }),
+};
 
+const verifyPassword = {
+  body: Joi.object().keys({
+    password: Joi.string().required(),
+  }),
+};
+
+const changePasswordAuthenticated = {
+  body: Joi.object().keys({
+    currentPassword: Joi.string().required(),
+    newPassword: Joi.string().required().custom(password),
+  }),
+};
+
+const requestEmailChangeOtp = {
+  body: Joi.object().keys({
+    currentValue: Joi.string().required().email(),
+  }),
+};
+
+const requestPhoneChangeOtp = {
+  body: Joi.object().keys({
+    currentValue: Joi.string().required(),
+  }),
+};
 
 module.exports = {
   register,
@@ -77,6 +109,10 @@ module.exports = {
   resetPassword,
   verifyEmail,
   verifyOtp,
-  resendOtp
-
+  resendOtp,
+  changePassword,
+  verifyPassword,
+  changePasswordAuthenticated,
+  requestEmailChangeOtp,
+  requestPhoneChangeOtp,
 };

@@ -10,20 +10,20 @@ const router = express.Router();
 // Route for creating a new department
 router
   .route('/')
-  .post(auth('create:department'), validate(departmentValidation.createDepartment), departmentController.createDepartment)
-  .get(auth('view:department'), validate(departmentValidation.queryDepartments), departmentController.queryDepartments);
+  .post(auth('department:create'), validate(departmentValidation.createDepartment), departmentController.createDepartment)
+  .get(auth('department:read'), validate(departmentValidation.queryDepartments), departmentController.queryDepartments);
 
 // Routes for fetching, updating, and deleting a department by ID
 router
   .route('/:departmentId')
-  .get(auth('view:department'), validate(departmentValidation.getDepartmentById), departmentController.getDepartmentById)
+  .get(auth('department:read'), validate(departmentValidation.getDepartmentById), departmentController.getDepartmentById)
   .patch(
-    auth('update:department'),
+    auth('department:update'),
     validate(departmentValidation.updateDepartmentById),
     departmentController.updateDepartmentById
   )
   .delete(
-    auth('delete:department'),
+    auth('department:delete'),
     validate(departmentValidation.deleteDepartmentById),
     departmentController.deleteDepartmentById
   );

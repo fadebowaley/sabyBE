@@ -14,11 +14,11 @@ services:
       - PORT=4000
       - MONGODB_URL=mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-password}@mongodb:27017/halo-prod?authSource=admin
       # Remote PostgreSQL configuration
-      - POSTGRES_HOST=20.169.129.160
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=sabyagentic_user
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-WcKoT/m9hFGMaiztjci/reLyMVln9qE0ReAaHc0Cb8E=}
-      - POSTGRES_DB=halograph
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-halograph_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-local_test_password_2025}
+      - POSTGRES_DB=${POSTGRES_DB:-halograph}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=redispassword2025
@@ -48,6 +48,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:4000/', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
@@ -58,7 +60,24 @@ services:
     networks:
       - halo-prod-network
 
-  # NOTE: PostgreSQL service removed - now using remote PostgreSQL on VM
+  postgres:
+    image: postgres:15-alpine
+    container_name: halo-prod-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-halograph}
+      POSTGRES_USER: ${POSTGRES_USER:-halograph_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_test_password_2025}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    networks:
+      - halo-prod-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-halograph_user} -d ${POSTGRES_DB:-halograph}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   # Production MongoDB
   mongodb:
@@ -104,7 +123,7 @@ services:
 volumes:
   mongodb_prod_data:
   redis_prod_data:
-  # Removed postgres_prod_data volume - using remote PostgreSQL
+  postgres_prod_data:
 
 networks:
   halo-prod-network:

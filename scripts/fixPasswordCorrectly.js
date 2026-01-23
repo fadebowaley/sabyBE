@@ -70,4 +70,3 @@ const fixPasswordCorrectly = async () => {
 
 // Run the script
 fixPasswordCorrectly();
-

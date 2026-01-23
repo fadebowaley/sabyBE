@@ -10,27 +10,27 @@ const router = express.Router();
 router
   .route('/')
   .post(
-    auth('create:eventConfig'),
+    auth('eventConfig:create'),
     validate(eventConfigValidation.createEventConfig),
     eventConfigController.createEventConfig
   )
-  .get(auth('view:eventConfig'), validate(eventConfigValidation.queryEventConfigs), eventConfigController.queryEventConfigs);
+  .get(auth('eventConfig:read'), validate(eventConfigValidation.queryEventConfigs), eventConfigController.queryEventConfigs);
 
 // Routes for fetching, updating, and deleting an event config by ID
 router
   .route('/:eventConfigId')
   .get(
-    auth('view:eventConfig'),
+    auth('eventConfig:read'),
     validate(eventConfigValidation.getEventConfigById),
     eventConfigController.getEventConfigById
   )
   .patch(
-    auth('update:eventConfig'),
+    auth('eventConfig:update'),
     validate(eventConfigValidation.updateEventConfigById),
     eventConfigController.updateEventConfigById
   )
   .delete(
-    auth('delete:eventConfig'),
+    auth('eventConfig:delete'),
     validate(eventConfigValidation.deleteEventConfigById),
     eventConfigController.deleteEventConfigById
   );
@@ -39,7 +39,7 @@ router
 router
   .route('/deleteAll')
   .delete(
-    auth('delete:eventConfig'),
+    auth('eventConfig:delete'),
     validate(eventConfigValidation.deleteAllConfigs),
     eventConfigController.deleteAllConfigs
   );
@@ -47,6 +47,6 @@ router
 // Route for getting event configuration by event ID
 router
   .route('/event/:eventId')
-  .get(auth('view:eventConfig'), validate(eventConfigValidation.getConfigByEvent), eventConfigController.getConfigByEvent);
+  .get(auth('eventConfig:read'), validate(eventConfigValidation.getConfigByEvent), eventConfigController.getConfigByEvent);
 
 module.exports = router;

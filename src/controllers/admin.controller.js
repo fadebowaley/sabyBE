@@ -36,14 +36,17 @@ const queryAdmins = catchAsync(async (req, res) => {
 
 // Get all admins under a tenant
 const getAdminsByTenant = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
+  const { tenantId } = req.user;
   const admins = await adminService.getAdminsByTenant(tenantId);
   res.send(admins);
 });
 
 // Update an admin by ID
 const updateAdminById = catchAsync(async (req, res) => {
-  const updated = await adminService.updateAdminById(req.params.adminId, req.body);
+  const updated = await adminService.updateAdminById(
+    req.params.adminId,
+    req.body
+  );
   res.send(updated);
 });
 
@@ -55,7 +58,7 @@ const deleteAdminById = catchAsync(async (req, res) => {
 
 // Delete all admins under a tenant
 const deleteAdminsByTenant = catchAsync(async (req, res) => {
-  const tenantId = req.user.tenantId;
+  const { tenantId } = req.user;
   const result = await adminService.deleteAdminsByTenant(tenantId);
   res.status(httpStatus.OK).json({
     message: result.message,

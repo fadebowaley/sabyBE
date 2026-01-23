@@ -48,15 +48,16 @@ services:
     container_name: halo-local-backend
     ports:
       - "4000:4000"
+      - "4001:4001"
     environment:
       - NODE_ENV=development
       - PORT=4000
       - MONGODB_URL=mongodb://mongodb:27017/halo-local
-      # Remote PostgreSQL configuration (default)
-      - POSTGRES_HOST=${POSTGRES_HOST:-20.169.129.160}
+      # Local PostgreSQL configuration (docker-compose service)
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
-      - POSTGRES_USER=${POSTGRES_USER:-sabyagentic_user}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-WcKoT/m9hFGMaiztjci/reLyMVln9qE0ReAaHc0Cb8E=}
+      - POSTGRES_USER=${POSTGRES_USER:-halograph_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-local_test_password_2025}
       - POSTGRES_DB=${POSTGRES_DB:-halograph}
       # To use local PostgreSQL instead, set these in your .env:
       # POSTGRES_HOST=postgres

@@ -1,0 +1,54 @@
+
+[1m[36m╔════════════════════════════════════════════════════════════╗[0m
+[1m[36m║     PERM UNIFIED SUBMISSION - COMPREHENSIVE TEST          ║[0m
+[1m[36m╚════════════════════════════════════════════════════════════╝[0m
+
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 1: Login User
+[32m✅[0m Logged in as: saby@saby.ai
+[34mℹ[0m User ID: 68e4cb96d180b0285d9a701d
+[34mℹ[0m Tenant ID: hWiWJ_X0m6
+[34mℹ[0m Token: eyJhbGciOiJIUzI1NiIs...
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 2: Setup PERM Form in MongoDB
+(node:19373) DeprecationWarning: current URL string parser is deprecated, and will be removed in a future version. To use the new parser, pass option { useNewUrlParser: true } to MongoClient.connect.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:19373) [MONGODB DRIVER] Warning: Current Server Discovery and Monitoring engine is deprecated, and will be removed in a future version. To use the new Server Discover and Monitoring engine, pass option { useUnifiedTopology: true } to the MongoClient constructor.
+[32m✅[0m Connected to MongoDB
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+(node:19373) DeprecationWarning: collection.ensureIndex is deprecated. Use createIndexes instead.
+[34mℹ[0m Found existing PERM form
+[32m✅[0m Project ID: proj_Mrs538IYtOfd
+[32m✅[0m Form ID: proj_Mrs538IYtOfd
+[34mℹ[0m Form Name: PERM Event Tracking Test
+[34mℹ[0m Elements: 5 event checkboxes
+[34mℹ[0m Status: active
+[34mℹ[0m Deployment: published
+[34mℹ[0m MongoDB connection closed
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 3: Setup Test Node
+[33m⚠️[0m No existing nodes found, using test node: node_test_1761216835000
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 4: Submit Initial PERM Data (CREATE)
+[34mℹ[0m Submitting PERM data for month: 2025-10-01
+[34mℹ[0m Node ID: node_test_1761216835000
+[34mℹ[0m Events submitted: 2/5 (40% compliance)
+[31m❌[0m Initial PERM submission failed: API Error: 500 - {"code":500,"message":"logger is not defined","stack":"ReferenceError: logger is not defined\n    at /Users/fadebowaley/saby/sabyBackend/src/controllers/unifiedSubmission.controller.js:69:3\n    at /Users/fadebowaley/saby/sabyBackend/src/utils/catchAsync.js:31:19\n    at Layer.handle [as handle_request] (/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/layer.js:95:5)\n    at next (/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/route.js:137:13)\n    at /Users/fadebowaley/saby/sabyBackend/src/middlewares/validate.js:53:10\n    at Layer.handle [as handle_request] (/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/layer.js:95:5)\n    at next (/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/route.js:137:13)\n    at /Users/fadebowaley/saby/sabyBackend/src/middlewares/requireAccess.js:328:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)"}
+
+[1m[36m============================================================[0m
+
+[1m[31m╔════════════════════════════════════════════════════════════╗[0m
+[1m[31m║              ❌ TEST FAILED! ❌                            ║[0m
+[1m[31m╚════════════════════════════════════════════════════════════╝[0m
+
+[31m❌[0m Test suite failed: API Error: 500 - {"code":500,"message":"logger is not defined","stack":"ReferenceError: logger is not defined\n    at /Users/fadebowaley/saby/sabyBackend/src/controllers/unifiedSubmission.controller.js:69:3\n    at /Users/fadebowaley/saby/sabyBackend/src/utils/catchAsync.js:31:19\n    at Layer.handle [as handle_request] (/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/layer.js:95:5)\n    at next (/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/route.js:137:13)\n    at /Users/fadebowaley/saby/sabyBackend/src/middlewares/validate.js:53:10\n    at Layer.handle [as handle_request] (/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/layer.js:95:5)\n    at next (/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/route.js:137:13)\n    at /Users/fadebowaley/saby/sabyBackend/src/middlewares/requireAccess.js:328:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)"}
+[31m❌[0m Stack trace: Error: API Error: 500 - {"code":500,"message":"logger is not defined","stack":"ReferenceError: logger is not defined\n    at /Users/fadebowaley/saby/sabyBackend/src/controllers/unifiedSubmission.controller.js:69:3\n    at /Users/fadebowaley/saby/sabyBackend/src/utils/catchAsync.js:31:19\n    at Layer.handle [as handle_request] (/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/layer.js:95:5)\n    at next (/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/route.js:137:13)\n    at /Users/fadebowaley/saby/sabyBackend/src/middlewares/validate.js:53:10\n    at Layer.handle [as handle_request] (/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/layer.js:95:5)\n    at next (/Users/fadebowaley/saby/sabyBackend/node_modules/express/lib/router/route.js:137:13)\n    at /Users/fadebowaley/saby/sabyBackend/src/middlewares/requireAccess.js:328:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)"}
+    at apiRequest (/Users/fadebowaley/saby/sabyBackend/test-perm-unified-submission.js:82:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async submitInitialPERMData (/Users/fadebowaley/saby/sabyBackend/test-perm-unified-submission.js:335:22)
+    at async runTests (/Users/fadebowaley/saby/sabyBackend/test-perm-unified-submission.js:912:5)

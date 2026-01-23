@@ -20,8 +20,8 @@ const apiKeySchema = mongoose.Schema(
     },
     environment: {
       type: String,
-      enum: ['production', 'development', 'staging'],
-      default: 'development',
+      enum: ['production', 'staging'],
+      default: 'staging',
     },
     permissions: {
       type: [String], // e.g., ['read', 'write', 'delete']
@@ -70,6 +70,13 @@ const apiKeySchema = mongoose.Schema(
     rateLimit: {
       type: Number, // requests per minute
       default: 1000,
+    },
+    // Staging key usage limit (total calls allowed before requiring production key)
+    stagingUsageLimit: {
+      type: Number,
+      default: 100, // Default: 100 calls for staging keys
+      description:
+        'Total number of calls allowed for staging keys before requiring production key approval',
     },
     metadata: {
       ipAddress: { type: String },
@@ -123,7 +130,6 @@ apiKeySchema.plugin(paginate);
  * @typedef ApiKey
  */
 
-
 // models/apiKey.model.js
 apiKeySchema.statics.generateKey = async function ({
   tenantId,
@@ -136,13 +142,12 @@ apiKeySchema.statics.generateKey = async function ({
   expires,
   createdBy,
 }) {
-  let prefix = 'sk_';
+  let prefix = 'sk_staging_';
   if (environment === 'production') {
     prefix = 'sk_live_';
-  } else if (environment === 'staging') {
-    prefix = 'sk_staging_';
   } else {
-    prefix = 'sk_test_';
+    // Default to staging
+    prefix = 'sk_staging_';
   }
 
   // Generate 64-character key (industry standard: prefix + 64 hex chars)
@@ -156,6 +161,9 @@ apiKeySchema.statics.generateKey = async function ({
   const approvalStatus =
     environment === 'production' ? 'pending' : 'auto-approved';
   const isActive = environment !== 'production'; // Auto-activate non-prod keys
+
+  // Set staging usage limit (default: 100 calls)
+  const stagingUsageLimit = environment === 'staging' ? 100 : undefined;
 
   const keyDoc = await this.create({
     tenant: tenantId,
@@ -172,12 +180,11 @@ apiKeySchema.statics.generateKey = async function ({
     approvalStatus,
     isActive,
     isProductionReady: false,
+    stagingUsageLimit, // Set usage limit for staging keys
   });
 
   return { rawKey, keyDoc };
 };
-
-
 
 const ApiKey = mongoose.model('ApiKey', apiKeySchema);
 

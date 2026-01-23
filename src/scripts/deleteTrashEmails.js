@@ -17,18 +17,18 @@ const connectToDB = async () => {
 (async () => {
   await connectToDB();
 
-// Function to delete all emails in the trash
-async function deleteAllTrashEmails() {
-  console.log('Starting deletion of all trash emails in 1 second...');
-  setTimeout(async () => {
-    try {
-      const result = await InMail.deleteMany({ status: 'trash' });
-      console.log(`Deleted ${result.deletedCount} emails from trash.`);
-    } catch (error) {
-      console.error('Error deleting trash emails:', error);
-    }
-  }, 1000); // 1-second delay
-}
+  // Function to delete all emails in the trash
+  async function deleteAllTrashEmails() {
+    console.log('Starting deletion of all trash emails in 1 second...');
+    setTimeout(async () => {
+      try {
+        const result = await InMail.deleteMany({ status: 'trash' });
+        console.log(`Deleted ${result.deletedCount} emails from trash.`);
+      } catch (error) {
+        console.error('Error deleting trash emails:', error);
+      }
+    }, 1000); // 1-second delay
+  }
 
   // Execute the function
   deleteAllTrashEmails();

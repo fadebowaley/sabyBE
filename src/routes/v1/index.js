@@ -3,11 +3,16 @@ const apiKeyRoute = require('./apiKey.route');
 const apiKeyApprovalRoute = require('./apiKeyApproval.route');
 const appRoute = require('./app.route');
 const authRoute = require('./auth.route');
+const baselineIntelligenceRoute = require('./baselineIntelligence.route');
+const baselineJobsRoute = require('./baselineJobs.route');
+const baselineAnalysisConfigRoute = require('./baselineAnalysisConfig.route');
+const complianceRoute = require('./compliance.route');
+const customFieldConfigRoute = require('./customFieldConfig.route');
 const dataRoute = require('./data.route');
 const docsRoute = require('./docs.route');
 const levelRoute = require('./level.route');
 const nodeRoute = require('./node.route');
-const nodeProfileRoute = require('./nodeprofile.route');
+// const nodeProfileRoute = require('./nodeprofile.route'); // ✅ DELETED: Merged into node.route
 const paymentRoute = require('./payment.route');
 const permissionRoute = require('./permission.route');
 const projectFormRoute = require('./projectForm.route');
@@ -16,7 +21,7 @@ const roleRoute = require('./role.route');
 const structureRoute = require('./structure.route');
 const userRoute = require('./user.route');
 const userFormSettingsRoute = require('./userFormSettings.route');
-const userProfileRoute = require('./userProfile.route');
+// const userProfileRoute = require('./userProfile.route'); // ✅ DELETED: Merged into user.route
 const adminRoute = require('./admin.route');
 const captureRoute = require('./capture.route');
 const departmentRoute = require('./department.route');
@@ -31,9 +36,26 @@ const inmailRoute = require('./inmail.route');
 const postgresRoute = require('./postgres.route');
 const storageRoute = require('./storage.route');
 const storageFolderRoute = require('./storageFolder.route');
+const tenantConfigRoute = require('./tenantConfig.route');
+const schemaRoute = require('./schema.route');
 const submissionRoute = require('./submission.route');
 const telegramWebAppRoute = require('./telegramWebApp.route');
 const waitlistRoute = require('./waitlist.route');
+// Reporting & Analytics Routes
+const submissionReportRoute = require('./submissionReport.route');
+const complianceReportRoute = require('./complianceReport.route');
+const validationReportRoute = require('./validationReport.route');
+const notificationReportRoute = require('./notificationReport.route');
+const analyticsReportRoute = require('./analyticsReport.route');
+const exportReportRoute = require('./exportReport.route');
+const trendAnalysisRoute = require('./trendAnalysis.route');
+const permReportRoute = require('./permReport.route');
+const rollupReportRoute = require('./rollupReport.route');
+// PERM Routes
+const unifiedSubmissionRoute = require('./unifiedSubmission.route');
+const eventCalendarRoute = require('./eventCalendar.route');
+const eventComplianceRoute = require('./eventCompliance.route');
+const permSubmissionRoute = require('./permSubmission.route');
 
 // declare rest of the routes: nodeLevel, nodeStructure, node etc.
 const config = require('../../config/config');
@@ -59,6 +81,26 @@ const defaultRoutes = [
     route: authRoute,
   },
   {
+    path: '/baseline', // Example: /baseline/network, /baseline/node/123
+    route: baselineIntelligenceRoute,
+  },
+  {
+    path: '/baseline/jobs', // Example: /baseline/jobs/stats, /baseline/jobs/metrics
+    route: baselineJobsRoute,
+  },
+  {
+    path: '/baseline-analysis-config', // Example: /baseline-analysis-config/user
+    route: baselineAnalysisConfigRoute,
+  },
+  {
+    path: '/compliance', // Example: /compliance/table, /compliance/summary
+    route: complianceRoute,
+  },
+  {
+    path: '/custom-field-config', // Example: /custom-field-config/user
+    route: customFieldConfigRoute,
+  },
+  {
     path: '/users', // Example: /users/123, /users/profile
     route: userRoute,
   },
@@ -66,10 +108,11 @@ const defaultRoutes = [
     path: '/user-form-settings', // Example: /user-form-settings/user/123
     route: userFormSettingsRoute,
   },
-  {
-    path: '/user-profiles', // Example: /user-profiles/123
-    route: userProfileRoute,
-  },
+  // ✅ DELETED: UserProfile merged into User model
+  // {
+  //   path: '/user-profiles',
+  //   route: userProfileRoute,
+  // },
   {
     path: '/project-forms', // Example: /project-forms/123, /project-forms/project/abc123
     route: projectFormRoute,
@@ -110,10 +153,11 @@ const defaultRoutes = [
     path: '/node', // Example: /node/123, /node/info
     route: nodeRoute,
   },
-  {
-    path: '/nodeprofile', // Example: /nodeprofile/node/123
-    route: nodeProfileRoute,
-  },
+  // ✅ DELETED: NodeProfile merged into Node model
+  // {
+  //   path: '/nodeprofile',
+  //   route: nodeProfileRoute,
+  // },
   {
     path: '/admin', // Example: /admin/123, /admin/info
     route: adminRoute,
@@ -171,12 +215,74 @@ const defaultRoutes = [
     route: storageRoute,
   },
   {
+    path: '/tenant-config',
+    route: tenantConfigRoute,
+  },
+  {
+    path: '/schema',
+    route: schemaRoute,
+  },
+  {
     path: '/telegram',
     route: telegramWebAppRoute,
   },
   {
     path: '/waitlist',
     route: waitlistRoute,
+  },
+  // Unified Submission & PERM Routes
+  {
+    path: '/submissions',
+    route: unifiedSubmissionRoute,
+  },
+  // {
+  //   path: '/perm/submissions',
+  //   route: permSubmissionRoute,
+  // },
+  {
+    path: '/event-calendar',
+    route: eventCalendarRoute,
+  },
+  // {
+  //   path: '/event-compliance',
+  //   route: eventComplianceRoute,
+  // },
+  // Reporting Routes
+  {
+    path: '/submission-reports',
+    route: submissionReportRoute,
+  },
+  // {
+  //   path: '/compliance-reports',
+  //   route: complianceReportRoute,
+  // },
+  {
+    path: '/validation-reports',
+    route: validationReportRoute,
+  },
+  // {
+  //   path: '/notification-reports',
+  //   route: notificationReportRoute,
+  // },
+  {
+    path: '/analytics',
+    route: analyticsReportRoute,
+  },
+  {
+    path: '/export',
+    route: exportReportRoute,
+  },
+  {
+    path: '/trend-analysis',
+    route: trendAnalysisRoute,
+  },
+  {
+    path: '/perm-report',
+    route: permReportRoute,
+  },
+  {
+    path: '/rollups',
+    route: rollupReportRoute,
   },
 ];
 

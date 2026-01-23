@@ -1,6 +1,7 @@
 const httpStatus = require('http-status');
 const { ProjectForm } = require('../models');
 const ApiError = require('../utils/ApiError');
+const fieldCatalogService = require('./fieldCatalog.service');
 
 /**
  * Create a project form
@@ -11,11 +12,24 @@ const ApiError = require('../utils/ApiError');
  */
 const createProjectForm = async (projectFormBody, tenantId, createdBy) => {
   // Check if project name is already taken within the tenant
-  const isNameTaken = await ProjectForm.isProjectNameTaken(projectFormBody.configuration.projectName, tenantId);
+  const isNameTaken = await ProjectForm.isProjectNameTaken(
+    projectFormBody.configuration.projectName,
+    tenantId
+  );
   if (isNameTaken) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'A project with this name already exists in your workspace');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'A project with this name already exists in your workspace'
+    );
   }
-  return ProjectForm.createProjectForm(projectFormBody, tenantId, createdBy);
+  const projectForm = await ProjectForm.createProjectForm(
+    projectFormBody,
+    tenantId,
+    createdBy
+  );
+
+  await fieldCatalogService.syncCatalogFromForm(projectForm);
+  return projectForm;
 };
 
 /**
@@ -121,14 +135,19 @@ const getProjectFormsByUser = async (userId, filter = {}, options = {}) => {
  * @param {Object} options - Update options
  * @returns {Promise<ProjectForm>}
  */
-const updateProjectFormById = async (projectFormId, updateBody, options = {}) => {
+const updateProjectFormById = async (
+  projectFormId,
+  updateBody,
+  options = {}
+) => {
   const projectForm = await getProjectFormById(projectFormId);
 
   // Check if project name is being updated and if it's already taken
   if (
     updateBody.configuration &&
     updateBody.configuration.projectName &&
-    updateBody.configuration.projectName !== projectForm.configuration.projectName
+    updateBody.configuration.projectName !==
+      projectForm.configuration.projectName
   ) {
     const isNameTaken = await ProjectForm.isProjectNameTaken(
       updateBody.configuration.projectName,
@@ -137,7 +156,10 @@ const updateProjectFormById = async (projectFormId, updateBody, options = {}) =>
     );
 
     if (isNameTaken) {
-      throw new ApiError(httpStatus.BAD_REQUEST, 'A project with this name already exists in your workspace');
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'A project with this name already exists in your workspace'
+      );
     }
   }
 
@@ -153,6 +175,7 @@ const updateProjectFormById = async (projectFormId, updateBody, options = {}) =>
     await projectForm.populate(options.populate);
   }
 
+  await fieldCatalogService.syncCatalogFromForm(projectForm);
   return projectForm;
 };
 
@@ -163,7 +186,11 @@ const updateProjectFormById = async (projectFormId, updateBody, options = {}) =>
  * @param {Object} options - Update options
  * @returns {Promise<ProjectForm>}
  */
-const updateProjectFormByProjectId = async (projectId, updateBody, options = {}) => {
+const updateProjectFormByProjectId = async (
+  projectId,
+  updateBody,
+  options = {}
+) => {
   const projectForm = await getProjectFormByProjectId(projectId);
   return updateProjectFormById(projectForm._id, updateBody, options);
 };
@@ -176,17 +203,55 @@ const updateProjectFormByProjectId = async (projectId, updateBody, options = {})
 const deleteProjectFormById = async (projectFormId) => {
   const projectForm = await getProjectFormById(projectFormId);
   await projectForm.deleteOne();
+  await fieldCatalogService.removeCatalogForProject(projectForm.projectId);
   return projectForm;
 };
 
 /**
  * Soft delete project form by id
  * @param {ObjectId} projectFormId - The project form ID
+ * @param {ObjectId} userId - User who deleted it
  * @returns {Promise<ProjectForm>}
  */
-const softDeleteProjectFormById = async (projectFormId) => {
+const softDeleteProjectFormById = async (projectFormId, userId = null) => {
   const projectForm = await getProjectFormById(projectFormId);
-  return projectForm.softDelete();
+  return projectForm.softDelete(userId);
+};
+
+/**
+ * Delete project form (soft-delete for regular users, permanent for sabyUser)
+ * @param {string} projectId - The project ID
+ * @param {ObjectId} userId - User who is deleting
+ * @param {boolean} permanent - True for permanent deletion (sabyUser only)
+ * @returns {Promise<Object>}
+ */
+const deleteProjectForm = async (projectId, userId, permanent = false) => {
+  const projectForm = await ProjectForm.findOne({ projectId, deletedAt: null });
+
+  if (!projectForm) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'Form not found or already deleted'
+    );
+  }
+
+  if (permanent) {
+    // PERMANENT DELETE (sabyUser only - checked in controller)
+    const result = await projectForm.permanentlyDelete();
+    await fieldCatalogService.removeCatalogForProject(projectForm.projectId);
+    return result;
+  } else {
+    // SOFT DELETE (14-day grace period)
+    await projectForm.softDelete(userId);
+
+    return {
+      deleted: true,
+      permanent: false,
+      deletedAt: projectForm.deletedAt,
+      permanentDeletionDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      message: 'Form soft-deleted. Will be permanently removed in 14 days.',
+    };
+  }
 };
 
 /**
@@ -207,13 +272,28 @@ const restoreProjectFormById = async (projectFormId) => {
 };
 
 /**
+ * Get all soft-deleted project forms (within 14-day grace period)
+ * @param {string} tenantId - Tenant ID
+ * @returns {Promise<ProjectForm[]>}
+ */
+const getDeletedProjectForms = async (tenantId) => {
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+  return ProjectForm.find({
+    tenantId,
+    deletedAt: { $gte: fourteenDaysAgo },
+  }).sort({ deletedAt: -1 });
+};
+
+/**
  * Publish project form
  * @param {ObjectId} projectFormId - The project form ID
  * @returns {Promise<ProjectForm>}
  */
-const publishProjectForm = async (projectFormId) => {
+const publishProjectForm = async (projectFormId, options = {}) => {
   const projectForm = await getProjectFormById(projectFormId);
-  return projectForm.publish();
+  return projectForm.publish(options);
 };
 
 /**
@@ -347,6 +427,8 @@ module.exports = {
   deleteProjectFormById,
   softDeleteProjectFormById,
   restoreProjectFormById,
+  deleteProjectForm,
+  getDeletedProjectForms,
   publishProjectForm,
   archiveProjectForm,
   incrementProjectViews,

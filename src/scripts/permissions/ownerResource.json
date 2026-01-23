@@ -1,4 +1,39 @@
-
 {
-  "ownerResourceBundle": ["user", "app", "structure", "node", "payment", "level", "storage", "project", "apikeys", "project-form", "roles", "permissions"]
+  "ownerResourceBundle": [
+    "admin",
+    "analytics",
+    "apikey",
+    "apikeyapproval",
+    "app",
+    "baselineintelligence",
+    "baselinejobs",
+    "captures",
+    "collection",
+    "compliance",
+    "department",
+    "event",
+    "eventcalendar",
+    "export",
+    "inmail",
+    "level",
+    "node",
+    "payment",
+    "permission",
+    "program",
+    "projectform",
+    "project-form",
+    "report",
+    "role",
+    "setting",
+    "statement",
+    "storage",
+    "storage-file",
+    "storagefolder",
+    "structure",
+    "submission",
+    "unifiedsubmission",
+    "user",
+    "user-form-settings",
+    "validation"
+  ]
 }

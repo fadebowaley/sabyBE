@@ -80,4 +80,3 @@ apiKeyApprovalSchema.index({ apiKey: 1 });
 const ApiKeyApproval = mongoose.model('ApiKeyApproval', apiKeyApprovalSchema);
 
 module.exports = ApiKeyApproval;
-

@@ -10,11 +10,15 @@ const createEvent = {
     description: Joi.string().trim().max(200),
     startDate: Joi.date().required(),
     endDate: Joi.date(),
-    status: Joi.string().valid('pending', 'completed', 'cancelled').default('pending'),
+    status: Joi.string()
+      .valid('pending', 'completed', 'cancelled')
+      .default('pending'),
     program: Joi.string().custom(objectId),
     collections: Joi.array().items(Joi.string().custom(objectId)),
     datapoints: Joi.array().items(Joi.string().custom(objectId)),
-    reminders: Joi.array().items(Joi.string().valid('1 hour before', '1 day before')),
+    reminders: Joi.array().items(
+      Joi.string().valid('1 hour before', '1 day before')
+    ),
     notifyBySMS: Joi.boolean().default(false),
     notifyByEmail: Joi.boolean().default(false),
   }),
@@ -53,7 +57,9 @@ const updateEventById = {
       program: Joi.string().custom(objectId),
       collections: Joi.array().items(Joi.string().custom(objectId)),
       datapoints: Joi.array().items(Joi.string().custom(objectId)),
-      reminders: Joi.array().items(Joi.string().valid('1 hour before', '1 day before')),
+      reminders: Joi.array().items(
+        Joi.string().valid('1 hour before', '1 day before')
+      ),
       notifyBySMS: Joi.boolean(),
       notifyByEmail: Joi.boolean(),
     })
@@ -100,11 +106,15 @@ const bulkImportEvents = {
         description: Joi.string().trim().max(200),
         startDate: Joi.date().required(),
         endDate: Joi.date(),
-        status: Joi.string().valid('pending', 'completed', 'cancelled').default('pending'),
+        status: Joi.string()
+          .valid('pending', 'completed', 'cancelled')
+          .default('pending'),
         program: Joi.string().custom(objectId),
         collections: Joi.array().items(Joi.string().custom(objectId)),
         datapoints: Joi.array().items(Joi.string().custom(objectId)),
-        reminders: Joi.array().items(Joi.string().valid('1 hour before', '1 day before')),
+        reminders: Joi.array().items(
+          Joi.string().valid('1 hour before', '1 day before')
+        ),
         notifyBySMS: Joi.boolean().default(false),
         notifyByEmail: Joi.boolean().default(false),
       })

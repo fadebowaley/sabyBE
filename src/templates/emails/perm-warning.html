@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Compliance Warning</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          'Helvetica Neue', Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+      }
+      .email-container {
+        max-width: 600px;
+        margin: 20px auto;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+      }
+      .header .icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+      }
+      .content {
+        padding: 30px;
+      }
+      .progress-container {
+        margin: 25px 0;
+      }
+      .progress-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+      .progress-bar-bg {
+        background: #e9ecef;
+        border-radius: 10px;
+        height: 30px;
+        overflow: hidden;
+      }
+      .progress-bar-fill {
+        background: linear-gradient(90deg, #ff9800 0%, #f57c00 100%);
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        margin: 25px 0;
+      }
+      .stat-card {
+        background: #fff3cd;
+        padding: 15px;
+        border-radius: 6px;
+        text-align: center;
+        border: 1px solid #ffc107;
+      }
+      .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #856404;
+      }
+      .stat-label {
+        font-size: 11px;
+        color: #856404;
+        text-transform: uppercase;
+      }
+      .button {
+        display: inline-block;
+        padding: 14px 35px;
+        background: #ff9800;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        margin: 20px 0;
+        font-weight: 600;
+      }
+      .footer {
+        background: #f8f9fa;
+        padding: 20px 30px;
+        text-align: center;
+        font-size: 12px;
+        color: #6c757d;
+        border-top: 1px solid #e9ecef;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="header">
+        <div class="icon">⚠️</div>
+        <h1>Compliance Warning</h1>
+      </div>
+
+      <div class="content">
+        <p class="greeting">Dear {{nodeName}} Administrator,</p>
+
+        <p>
+          Your PERM submission for <strong>{{month}}</strong> is currently below
+          the recommended compliance threshold.
+        </p>
+
+        <div class="progress-container">
+          <div class="progress-label">
+            <span>Current Compliance</span>
+            <span>{{compliance}}%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: {{compliance}}%;">
+              {{compliance}}%
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">{{eventsSubmitted}}/{{eventsRequired}}</div>
+            <div class="stat-label">Events</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{{eventsRemaining}}</div>
+            <div class="stat-label">Remaining</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{{daysRemaining}}</div>
+            <div class="stat-label">Days Left</div>
+          </div>
+        </div>
+
+        <p><strong>Next Steps:</strong></p>
+        <ol>
+          <li>Review missing events list</li>
+          <li>Submit remaining {{eventsRemaining}} events</li>
+          <li>Aim for at least 80% compliance</li>
+        </ol>
+
+        <center>
+          <a href="{{submissionUrl}}" class="button">Update Submission</a>
+        </center>
+
+        <p style="margin-top: 25px; font-size: 14px; color: #6c757d">
+          <strong>Reminder:</strong> Submissions must be completed before
+          month-end to maintain compliance standing.
+        </p>
+      </div>
+
+      <div class="footer">
+        <p>
+          This is an automated compliance notification from the PERM System.
+        </p>
+        <p>© 2025 Saby. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>
+
+
+
+

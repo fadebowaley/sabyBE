@@ -18,6 +18,7 @@ const queryLevels = {
     tenantId: Joi.string().alphanum(),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),
+    onlyWithStructures: Joi.boolean().optional(), // Filter to only levels with active structures
   }),
 };
 

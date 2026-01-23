@@ -9,54 +9,54 @@ const router = express.Router();
 // Route for creating a new payment
 router
   .route('/')
-  .post(auth('create:payment'), validate(paymentValidation.createPayment), paymentController.createPayment)
-  .get(auth('view:payment'), validate(paymentValidation.queryPayments), paymentController.queryPayments);
+  .post(auth('payment:create'), validate(paymentValidation.createPayment), paymentController.createPayment)
+  .get(auth('payment:read'), validate(paymentValidation.queryPayments), paymentController.queryPayments);
 
 // Route for fetching a payment by ID or reference
 router
   .route('/:paymentId')
-  .get(auth('view:payment'), validate(paymentValidation.getPayment), paymentController.getPayment)
-  .patch(auth('update:payment'), validate(paymentValidation.updatePayment), paymentController.updatePayment)
-  .delete(auth('delete:payment'), validate(paymentValidation.deletePayment), paymentController.deletePayment);
+  .get(auth('payment:read'), validate(paymentValidation.getPayment), paymentController.getPayment)
+  .patch(auth('payment:update'), validate(paymentValidation.updatePayment), paymentController.updatePayment)
+  .delete(auth('payment:delete'), validate(paymentValidation.deletePayment), paymentController.deletePayment);
 
 // Route for fetching a payment by reference
 router
   .route('/reference/:reference')
-  .get(auth('view:payment'), validate(paymentValidation.getPaymentByReference), paymentController.getPaymentByReference);
+  .get(auth('payment:read'), validate(paymentValidation.getPaymentByReference), paymentController.getPaymentByReference);
 
 // Route for fetching payments by status
 router
   .route('/status')
-  .get(auth('view:payment'), validate(paymentValidation.getPaymentsByStatus), paymentController.getPaymentsByStatus);
+  .get(auth('payment:read'), validate(paymentValidation.getPaymentsByStatus), paymentController.getPaymentsByStatus);
 
 // Route for fetching payments by user
 router
   .route('/user/:userId')
-  .get(auth('view:payment'), validate(paymentValidation.getPaymentsByUser), paymentController.getPaymentsByUser);
+  .get(auth('payment:read'), validate(paymentValidation.getPaymentsByUser), paymentController.getPaymentsByUser);
 
 // Route for processing a payment
 router
   .route('/:paymentId/process')
-  .patch(auth('update:payment'), validate(paymentValidation.processPayment), paymentController.processPayment);
+  .patch(auth('payment:update'), validate(paymentValidation.processPayment), paymentController.processPayment);
 
 // Route for completing a payment
 router
   .route('/:paymentId/complete')
-  .patch(auth('update:payment'), validate(paymentValidation.completePayment), paymentController.completePayment);
+  .patch(auth('payment:update'), validate(paymentValidation.completePayment), paymentController.completePayment);
 
 // Route for canceling a payment
 router
   .route('/:paymentId/cancel')
-  .patch(auth('update:payment'), validate(paymentValidation.cancelPayment), paymentController.cancelPayment);
+  .patch(auth('payment:update'), validate(paymentValidation.cancelPayment), paymentController.cancelPayment);
 
 // Route for refunding a payment
 router
   .route('/:paymentId/refund')
-  .patch(auth('update:payment'), validate(paymentValidation.refundPayment), paymentController.refundPayment);
+  .patch(auth('payment:update'), validate(paymentValidation.refundPayment), paymentController.refundPayment);
 
 // Route for generating a payment receipt
 router
   .route('/:paymentId/receipt')
-  .get(auth('view:payment'), validate(paymentValidation.generatePaymentReceipt), paymentController.generatePaymentReceipt);
+  .get(auth('payment:read'), validate(paymentValidation.generatePaymentReceipt), paymentController.generatePaymentReceipt);
 
 module.exports = router;

@@ -8,14 +8,14 @@ const router = express.Router();
 
 router
   .route('/')
-  .post(auth('create:structures'), validate(structureValidation.createStructure), structureController.createStructure)
-  .get(auth('view:structures'), validate(structureValidation.getStructures), structureController.getStructures);
+  .post(auth('structures:create'), validate(structureValidation.createStructure), structureController.createStructure)
+  .get(auth('structures:read'), validate(structureValidation.getStructures), structureController.getStructures);
 
 router
   .route('/:structureId')
-  .get(auth('view:structures'), validate(structureValidation.getStructure), structureController.getStructure)
-  .patch(auth('update:structures'), validate(structureValidation.updateStructure), structureController.updateStructure)
-  .delete(auth('delete:structures'), validate(structureValidation.deleteStructure), structureController.deleteStructure);
+  .get(auth('structures:read'), validate(structureValidation.getStructure), structureController.getStructure)
+  .patch(auth('structures:update'), validate(structureValidation.updateStructure), structureController.updateStructure)
+  .delete(auth('structures:delete'), validate(structureValidation.deleteStructure), structureController.deleteStructure);
 
 module.exports = router;
 

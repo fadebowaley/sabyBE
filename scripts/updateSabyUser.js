@@ -66,7 +66,7 @@ const updateSabyUser = async () => {
       process.exit(0);
     }
 
-    let updates = {};
+    const updates = {};
 
     if (action === '1' || action === '4') {
       const email = await question('New email address: ');
@@ -150,4 +150,3 @@ const updateSabyUser = async () => {
 
 // Run the script
 updateSabyUser();
-

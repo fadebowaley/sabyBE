@@ -8,30 +8,74 @@ const router = express.Router();
 
 router
   .route('/')
-  .post(auth('create:apps'), validate(appValidation.createApp), appController.createApp)
-  .get(auth('view:apps'), validate(appValidation.queryApps), appController.queryApps);
+  .post(
+    auth('app:create'),
+    validate(appValidation.createApp),
+    appController.createApp
+  )
+  .get(
+    auth('app:read'),
+    validate(appValidation.queryApps),
+    appController.queryApps
+  );
 
-router.route('/bulk-create').post(auth('create:apps'), validate(appValidation.bulkCreateApps), appController.bulkCreateApps);
+router
+  .route('/bulk-create')
+  .post(
+    auth('app:import'),
+    validate(appValidation.bulkCreateApps),
+    appController.bulkCreateApps
+  );
 
 router
   .route('/:appId')
-  .get(auth('view:apps'), validate(appValidation.getAppById), appController.getAppById)
-  .patch(auth('update:apps'), validate(appValidation.updateApp), appController.updateAppById)
-  .delete(auth('delete:apps'), validate(appValidation.deleteApp), appController.deleteAppById);
+  .get(
+    auth('app:read'),
+    validate(appValidation.getAppById),
+    appController.getAppById
+  )
+  .patch(
+    auth('app:update'),
+    validate(appValidation.updateApp),
+    appController.updateAppById
+  )
+  .delete(
+    auth('app:delete'),
+    validate(appValidation.deleteApp),
+    appController.deleteAppById
+  );
 
-router.route('/assign/:appId').patch(auth('update:apps'), validate(appValidation.assignApp), appController.assignApp);
+router
+  .route('/assign/:appId')
+  .patch(
+    auth('app:assign'),
+    validate(appValidation.assignApp),
+    appController.assignApp
+  );
 
 router
   .route('/tenant-or-user/:tenantId/:userId')
-  .get(auth('view:apps'), validate(appValidation.getAppsForTenantOrUser), appController.getAppsForTenantOrUser);
+  .get(
+    auth('app:read'),
+    validate(appValidation.getAppsForTenantOrUser),
+    appController.getAppsForTenantOrUser
+  );
 
 router
   .route('/toggle-status/:appId')
-  .patch(auth('update:apps'), validate(appValidation.toggleAppStatus), appController.toggleAppStatus);
+  .patch(
+    auth('app:toggleStatus'),
+    validate(appValidation.toggleAppStatus),
+    appController.toggleAppStatus
+  );
 
 router
   .route('/tenant/:tenantId')
-  .delete(auth('delete:apps'), validate(appValidation.deleteAppsByTenant), appController.deleteAppsByTenant);
+  .delete(
+    auth('app:delete'),
+    validate(appValidation.deleteAppsByTenant),
+    appController.deleteAppsByTenant
+  );
 
 module.exports = router;
 

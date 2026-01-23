@@ -1,0 +1,1543 @@
+
+> halo@1.0.0 dev
+> cross-env NODE_ENV=development nodemon src/index.js
+
+[33m[nodemon] 2.0.9[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,json[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:34260) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:42425) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:42917) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:47366) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:47593) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:47788) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:48630) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:44003) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:44145) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:44303) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:46085) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:48552) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:48696) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:48729) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:53027) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:53835) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:54002) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+[33mwarn[39m: ⚠️  Email ingestor worker not available (missing dependencies)
+(node:54109) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: ✅ Connected to MongoDB
+[32minfo[39m: 🔄 Testing PostgreSQL connection...
+[32minfo[39m: 📊 Host: localhost:5432
+[32minfo[39m: 👤 User: halograph_user
+[32minfo[39m: 🗄️  Database: halograph
+[32minfo[39m: ✅ PostgreSQL connected successfully
+[32minfo[39m: 📋 PostgreSQL Version: PostgreSQL 15.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+[32minfo[39m: ✅ Redis connected
+[32minfo[39m: ⚙️  Redis ready for commands
+[32minfo[39m: ✅ Redis ping successful
+[32minfo[39m: 🚀 Initializing background workers...
+[32minfo[39m: ✅ Submission worker started
+[32minfo[39m: ✅ PERM notification worker started
+[32minfo[39m: 🔔 Notification worker initialized
+[32minfo[39m: ✅ Notification worker started
+[32minfo[39m: ⊘ Email ingestor worker not available (missing dependencies)
+[32minfo[39m: 🎉 All workers initialized successfully
+[31merror[39m: Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at doListen (node:net:2014:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[32minfo[39m: 🛑 Shutting down workers...
+[32minfo[39m: ✅ Submission worker stopped
+[32minfo[39m: ✅ PERM notification worker stopped
+[32minfo[39m: ✅ Notification worker stopped
+[32minfo[39m: 🛑 All workers shut down
+[32minfo[39m: Server closed
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+/Users/fadebowaley/saby/sabyBackend/src/controllers/projectForm.controller.js:279
+const deleteProjectForm = catchAsync(async (req, res) => {
+      ^
+
+SyntaxError: Identifier 'deleteProjectForm' has already been declared
+    at internalCompileFunction (node:internal/vm:76:18)
+    at wrapSafe (node:internal/modules/cjs/loader:1283:20)
+    at Module._compile (node:internal/modules/cjs/loader:1328:27)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/projectForm.route.js:5:31)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js:13:26)
+
+Node.js v18.20.2
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+/Users/fadebowaley/saby/sabyBackend/src/controllers/projectForm.controller.js:279
+const deleteProjectForm = catchAsync(async (req, res) => {
+      ^
+
+SyntaxError: Identifier 'deleteProjectForm' has already been declared
+    at internalCompileFunction (node:internal/vm:76:18)
+    at wrapSafe (node:internal/modules/cjs/loader:1283:20)
+    at Module._compile (node:internal/modules/cjs/loader:1328:27)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/projectForm.route.js:5:31)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js:13:26)
+
+Node.js v18.20.2
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+/Users/fadebowaley/saby/sabyBackend/src/controllers/projectForm.controller.js:279
+const deleteProjectForm = catchAsync(async (req, res) => {
+      ^
+
+SyntaxError: Identifier 'deleteProjectForm' has already been declared
+    at internalCompileFunction (node:internal/vm:76:18)
+    at wrapSafe (node:internal/modules/cjs/loader:1283:20)
+    at Module._compile (node:internal/modules/cjs/loader:1328:27)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/projectForm.route.js:5:31)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js:13:26)
+
+Node.js v18.20.2
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+/Users/fadebowaley/saby/sabyBackend/src/controllers/projectForm.controller.js:279
+const deleteProjectForm = catchAsync(async (req, res) => {
+      ^
+
+SyntaxError: Identifier 'deleteProjectForm' has already been declared
+    at internalCompileFunction (node:internal/vm:76:18)
+    at wrapSafe (node:internal/modules/cjs/loader:1283:20)
+    at Module._compile (node:internal/modules/cjs/loader:1328:27)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/projectForm.route.js:5:31)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js:13:26)
+
+Node.js v18.20.2
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+/Users/fadebowaley/saby/sabyBackend/src/controllers/projectForm.controller.js:279
+const deleteProjectForm = catchAsync(async (req, res) => {
+      ^
+
+SyntaxError: Identifier 'deleteProjectForm' has already been declared
+    at internalCompileFunction (node:internal/vm:76:18)
+    at wrapSafe (node:internal/modules/cjs/loader:1283:20)
+    at Module._compile (node:internal/modules/cjs/loader:1328:27)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/projectForm.route.js:5:31)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js:13:26)
+
+Node.js v18.20.2
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+/Users/fadebowaley/saby/sabyBackend/src/controllers/projectForm.controller.js:279
+const deleteProjectForm = catchAsync(async (req, res) => {
+      ^
+
+SyntaxError: Identifier 'deleteProjectForm' has already been declared
+    at internalCompileFunction (node:internal/vm:76:18)
+    at wrapSafe (node:internal/modules/cjs/loader:1283:20)
+    at Module._compile (node:internal/modules/cjs/loader:1328:27)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/projectForm.route.js:5:31)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js:13:26)
+
+Node.js v18.20.2
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+/Users/fadebowaley/saby/sabyBackend/src/controllers/projectForm.controller.js:279
+const deleteProjectForm = catchAsync(async (req, res) => {
+      ^
+
+SyntaxError: Identifier 'deleteProjectForm' has already been declared
+    at internalCompileFunction (node:internal/vm:76:18)
+    at wrapSafe (node:internal/modules/cjs/loader:1283:20)
+    at Module._compile (node:internal/modules/cjs/loader:1328:27)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/projectForm.route.js:5:31)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js:13:26)
+
+Node.js v18.20.2
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+/Users/fadebowaley/saby/sabyBackend/src/controllers/projectForm.controller.js:279
+const deleteProjectForm = catchAsync(async (req, res) => {
+      ^
+
+SyntaxError: Identifier 'deleteProjectForm' has already been declared
+    at internalCompileFunction (node:internal/vm:76:18)
+    at wrapSafe (node:internal/modules/cjs/loader:1283:20)
+    at Module._compile (node:internal/modules/cjs/loader:1328:27)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/projectForm.route.js:5:31)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js:13:26)
+
+Node.js v18.20.2
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🔍 [REQUIRE ACCESS] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [REQUIRE ACCESS] Bundle type: object
+🔍 [REQUIRE ACCESS] Is Array?: true
+🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded: [
+  'user',       'app',
+  'structures', 'node',
+  'payment',    'level',
+  'storage',    'project',
+  'apikeys',    'project-form',
+  'roles',      'permissions',
+  'submission'
+]
+🔍 [AUTH MIDDLEWARE] Bundle type: object
+🔍 [AUTH MIDDLEWARE] Is Array?: true
+/Users/fadebowaley/saby/sabyBackend/src/controllers/projectForm.controller.js:279
+const deleteProjectForm = catchAsync(async (req, res) => {
+      ^
+
+SyntaxError: Identifier 'deleteProjectForm' has already been declared
+    at internalCompileFunction (node:internal/vm:76:18)
+    at wrapSafe (node:internal/modules/cjs/loader:1283:20)
+    at Module._compile (node:internal/modules/cjs/loader:1328:27)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/projectForm.route.js:5:31)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1422:10)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at Module.require (node:internal/modules/cjs/loader:1231:19)
+    at require (node:internal/modules/helpers:177:18)
+    at Object.<anonymous> (/Users/fadebowaley/saby/sabyBackend/src/routes/v1/index.js:13:26)
+
+Node.js v18.20.2
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m

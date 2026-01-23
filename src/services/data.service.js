@@ -7,9 +7,7 @@ const ApiError = require('../utils/ApiError');
  * @param {Object} dataBody
  * @returns {Promise<Data>}
  */
-const createData = async (dataBody) => {
-  return Data.create(dataBody);
-};
+const createData = async (dataBody) => Data.create(dataBody);
 
 /**
  * Get data by id
@@ -70,9 +68,7 @@ const deleteDataById = async (dataId) => {
  * @param {number} [options.page] - Current page (default = 1)
  * @returns {Promise<QueryResult>}
  */
-const queryData = async (filter, options) => {
-  return Data.paginate(filter, options);
-};
+const queryData = async (filter, options) => Data.paginate(filter, options);
 
 /**
  * Import data from external source
@@ -90,10 +86,16 @@ const importData = async (format, data, options = {}) => {
     parsedData = JSON.parse(data);
   } else if (format === 'csv') {
     // CSV parsing logic would go here
-    throw new ApiError(httpStatus.NOT_IMPLEMENTED, 'CSV import not implemented');
+    throw new ApiError(
+      httpStatus.NOT_IMPLEMENTED,
+      'CSV import not implemented'
+    );
   } else if (format === 'xml') {
     // XML parsing logic would go here
-    throw new ApiError(httpStatus.NOT_IMPLEMENTED, 'XML import not implemented');
+    throw new ApiError(
+      httpStatus.NOT_IMPLEMENTED,
+      'XML import not implemented'
+    );
   } else {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Unsupported format');
   }
@@ -118,12 +120,19 @@ const exportData = async (format, ids = null, filter = {}) => {
   // Convert to requested format
   if (format === 'json') {
     return JSON.stringify(data);
-  } else if (format === 'csv') {
+  }
+  if (format === 'csv') {
     // CSV conversion logic would go here
-    throw new ApiError(httpStatus.NOT_IMPLEMENTED, 'CSV export not implemented');
+    throw new ApiError(
+      httpStatus.NOT_IMPLEMENTED,
+      'CSV export not implemented'
+    );
   } else if (format === 'xml') {
     // XML conversion logic would go here
-    throw new ApiError(httpStatus.NOT_IMPLEMENTED, 'XML export not implemented');
+    throw new ApiError(
+      httpStatus.NOT_IMPLEMENTED,
+      'XML export not implemented'
+    );
   } else {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Unsupported format');
   }

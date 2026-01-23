@@ -8,8 +8,6 @@ const passport = require('passport');
 const http = require('http');
 const httpStatus = require('http-status');
 const path = require('path');
-const swaggerJsdoc = require('swagger-jsdoc');
-const swaggerUi = require('swagger-ui-express');
 const config = require('./config/config');
 const morgan = require('./config/morgan');
 const { jwtStrategy } = require('./config/passport');
@@ -18,10 +16,11 @@ const routes = require('./routes/v1');
 const { errorConverter, errorHandler } = require('./middlewares/error');
 const ApiError = require('./utils/ApiError');
 const logger = require('./config/logger');
-const swaggerConfig = require('./docs/swaggerConfig');
 
 const app = express();
 
+// Trust proxy to get real client IPs from nginx
+app.set('trust proxy', 1); // Trust first proxy (nginx)
 
 if (config.env !== 'test') {
   app.use(morgan.successHandler);
@@ -44,25 +43,48 @@ app.use(mongoSanitize());
 // gzip compression
 app.use(compression());
 
+// CORS configuration
+// For production, consider using environment variables for origins
 const corsOptions = {
   origin: [
     'http://localhost:5173',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://0.0.0.0:3000',
-    'http://10.17.1.18:3000',
-    'http://40.71.204.212:3000', // Staging frontend
-    'https://40.71.204.212:3000', // Staging frontend HTTPS
-    'https://api-staging.saby.ai', // Staging backend HTTPS
-    'https://saby.ai', // Production frontend
-    'https://www.saby.ai', // Production frontend with www
-    'https://api.saby.ai', // Production backend
+    // Production frontend domains (priority order)
+    'https://dashboard.saby.ai', // Main production dashboard
+    'https://saby.ai',
+    'https://www.saby.ai',
+    'https://web.saby.ai',
+    'https://stg.saby.ai',
+    // External domains that need API access
+    'https://portal.sotsm.org',
+    // Add production origins from environment variables if needed
+    ...(config.cors?.allowedOrigins || []),
   ],
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+  // Allow custom headers for API key authentication and other integrations
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-API-Key', // API key header for authentication
+    'x-api-key', // Lowercase variant (browsers may normalize)
+    'X-Requested-With', // Common header for AJAX requests
+    'Accept', // Accept header for content negotiation
+    'Origin', // Origin header for CORS
+    'Access-Control-Request-Method', // CORS preflight
+    'Access-Control-Request-Headers', // CORS preflight
+  ],
+  exposedHeaders: [
+    'X-RateLimit-Limit',
+    'X-RateLimit-Remaining',
+    'X-RateLimit-Reset',
+    'X-Request-ID',
+  ],
   credentials: true,
+  // Preflight cache duration (24 hours)
+  maxAge: 86400,
 };
-
 
 /*
 Access-Control-Allow-Origin: http://localhost:3000
@@ -80,47 +102,72 @@ app.use(passport.initialize());
 passport.use('jwt', jwtStrategy);
 
 // limit repeated failed requests to auth endpoints
-if (config.env === 'production') {
+// Enable in both production and staging
+if (config.env === 'production' || config.env === 'staging') {
   app.use('/v1/auth', authLimiter);
 }
 
-// Serve static files from public directory
+// Serve static files for landing page
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Health check endpoint (moved to /health)
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    message:
-      '🛠️ "I will restore you to health and heal your wounds." – Jeremiah 30:17 | Saby Staging v1.0.2 - FRESH TEST 2025-01-05 🔧',
-    timestamp: new Date().toISOString(),
-    environment: 'staging',
-    version: '1.0.0',
-  });
+// Landing page (root route)
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Health check endpoint (alternative)
-app.get('/api/health', (req, res) => {
+// Health check endpoint with detailed status
+app.get('/api/health', async (req, res) => {
+  const mongoose = require('mongoose');
+  const {
+    testConnection: testPostgresConnection,
+  } = require('./config/postgres');
+  const { redisClient } = require('./config/redis');
+
+  // Check database connections
+  const mongoStatus =
+    mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+
+  let postgresStatus = 'disconnected';
+  try {
+    const isConnected = await testPostgresConnection();
+    postgresStatus = isConnected ? 'connected' : 'disconnected';
+  } catch (error) {
+    postgresStatus = 'error';
+  }
+
+  let redisStatus = 'disconnected';
+  try {
+    if (redisClient && typeof redisClient.ping === 'function') {
+      await redisClient.ping();
+      redisStatus = 'connected';
+    }
+  } catch (error) {
+    redisStatus = 'error';
+  }
+
   res.status(200).json({
     status: 'OK',
     message:
-      '🛠️ “I will restore you to health and heal your wounds.” – Jeremiah 30:17 | Saby Staging v1.0.2 Mo Version 🔧',
+      '🛠️ "I will restore you to health and heal your wounds." – Jeremiah 30:17',
     timestamp: new Date().toISOString(),
-    environment: 'staging',
-    version: '1.0.0',
+    environment: config.env || 'development',
+    version: '1.0.4',
+    uptime: process.uptime(),
+    databases: {
+      mongodb: mongoStatus,
+      postgresql: postgresStatus,
+      redis: redisStatus,
+    },
+    node: {
+      version: process.version,
+      platform: process.platform,
+      arch: process.arch,
+    },
   });
 });
 
 // v1 api routes
 app.use('/v1', routes);
-
-// Swagger API documentation
-const swaggerSpec = swaggerJsdoc(swaggerConfig);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  explorer: true,
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Saby API Documentation'
-}));
 
 // WhatsApp webhook forwarding to separate bot
 app.get('/whatsapp/webhook', (req, res) => {
@@ -128,9 +175,12 @@ app.get('/whatsapp/webhook', (req, res) => {
 
   // Build query string manually
   const queryParams = new URLSearchParams();
-  if (req.query['hub.mode']) queryParams.append('hub.mode', req.query['hub.mode']);
-  if (req.query['hub.verify_token']) queryParams.append('hub.verify_token', req.query['hub.verify_token']);
-  if (req.query['hub.challenge']) queryParams.append('hub.challenge', req.query['hub.challenge']);
+  if (req.query['hub.mode'])
+    queryParams.append('hub.mode', req.query['hub.mode']);
+  if (req.query['hub.verify_token'])
+    queryParams.append('hub.verify_token', req.query['hub.verify_token']);
+  if (req.query['hub.challenge'])
+    queryParams.append('hub.challenge', req.query['hub.challenge']);
 
   const url = `http://localhost:4001/webhook?${queryParams.toString()}`;
   logger.info('Proxying to:', url);
@@ -188,7 +238,10 @@ app.post('/whatsapp/webhook', (req, res) => {
 });
 
 // Serve static files
-app.use('/telegram-webapp', express.static(path.join(__dirname, '../public/telegram-webapp')));
+app.use(
+  '/telegram-webapp',
+  express.static(path.join(__dirname, '../public/telegram-webapp'))
+);
 
 // send back a 404 error for any unknown api request
 app.use((req, res, next) => {

@@ -2,6 +2,41 @@ const mongoose = require('mongoose');
 const httpStatus = require('http-status');
 const { User, Role } = require('../models');
 const ApiError = require('../utils/ApiError');
+const { validateCustomFields } = require('./customField.service');
+const { USER_ESSENTIAL_FIELDS } = require('../config/essentials');
+const { getUsersInAdminNodeDescendants } = require('./nodeAccess.service');
+
+const buildUserResponse = (userDoc) => {
+  if (!userDoc) {
+    return null;
+  }
+  const plain =
+    typeof userDoc.toObject === 'function'
+      ? userDoc.toObject({ virtuals: true })
+      : userDoc;
+  const response = {};
+
+  USER_ESSENTIAL_FIELDS.forEach((field) => {
+    if (plain[field] !== undefined) {
+      response[field] = plain[field];
+    }
+  });
+
+  if (response.profile === undefined) {
+    response.profile = plain.profile || {};
+  }
+
+  if (
+    plain.customFields &&
+    typeof plain.customFields === 'object' &&
+    Object.keys(plain.customFields).length > 0
+  ) {
+    response.customFields = plain.customFields;
+    response.customFieldsVersion = plain.customFieldsVersion || 0;
+  }
+
+  return response;
+};
 
 /**
  * Create a user
@@ -13,9 +48,37 @@ const createUser = async (userBody) => {
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
-  return User.createUser(userBody);
-};
 
+  // Handle customFields validation if provided
+  const customFieldsProvided = Object.prototype.hasOwnProperty.call(
+    userBody,
+    'customFields'
+  );
+  const customFieldsPayload = customFieldsProvided
+    ? userBody.customFields
+    : undefined;
+
+  if (customFieldsProvided) {
+    delete userBody.customFields;
+  }
+
+  // Create user first to get tenantId
+  const user = await User.createUser(userBody);
+
+  // Validate and apply customFields if provided
+  if (customFieldsProvided) {
+    const { values, version } = await validateCustomFields({
+      tenantId: user.tenantId,
+      entityType: 'user',
+      payload: customFieldsPayload,
+    });
+    user.customFields = values;
+    user.customFieldsVersion = version;
+    await user.save();
+  }
+
+  return user;
+};
 
 const ownerCreate = async (userBody) => {
   if (await User.isEmailTaken(userBody.email)) {
@@ -25,7 +88,36 @@ const ownerCreate = async (userBody) => {
     );
   }
   console.log('this is owner creatre', userBody);
-  return User.createUser(userBody);
+
+  // Handle customFields validation if provided
+  const customFieldsProvided = Object.prototype.hasOwnProperty.call(
+    userBody,
+    'customFields'
+  );
+  const customFieldsPayload = customFieldsProvided
+    ? userBody.customFields
+    : undefined;
+
+  if (customFieldsProvided) {
+    delete userBody.customFields;
+  }
+
+  // Create user first to get tenantId
+  const user = await User.createUser(userBody);
+
+  // Validate and apply customFields if provided
+  if (customFieldsProvided) {
+    const { values, version } = await validateCustomFields({
+      tenantId: user.tenantId,
+      entityType: 'user',
+      payload: customFieldsPayload,
+    });
+    user.customFields = values;
+    user.customFieldsVersion = version;
+    await user.save();
+  }
+
+  return user;
 };
 
 /**
@@ -55,7 +147,36 @@ const createSabyUser = async (userBody) => {
   userBody.isOwner = true;
 
   console.log('Creating SabyUser:', userBody);
-  return User.createUser(userBody);
+
+  // Handle customFields validation if provided
+  const customFieldsProvided = Object.prototype.hasOwnProperty.call(
+    userBody,
+    'customFields'
+  );
+  const customFieldsPayload = customFieldsProvided
+    ? userBody.customFields
+    : undefined;
+
+  if (customFieldsProvided) {
+    delete userBody.customFields;
+  }
+
+  // Create user first to get tenantId
+  const user = await User.createUser(userBody);
+
+  // Validate and apply customFields if provided
+  if (customFieldsProvided) {
+    const { values, version } = await validateCustomFields({
+      tenantId: user.tenantId,
+      entityType: 'user',
+      payload: customFieldsPayload,
+    });
+    user.customFields = values;
+    user.customFieldsVersion = version;
+    await user.save();
+  }
+
+  return user;
 };
 
 // const bulkCreate = async (usersBody) => {
@@ -93,9 +214,8 @@ const createSabyUser = async (userBody) => {
 //   };
 // };
 
-const bulkCreate = async (usersBody, createdBy, tenantId) => {
-  return await User.createBulk(usersBody, createdBy, tenantId);
-};
+const bulkCreate = async (usersBody, createdBy, tenantId) =>
+  await User.createBulk(usersBody, createdBy, tenantId);
 
 const bulkSoftDeleteByTenantId = async (tenantId) => {
   // Initialize an array to store success and error results
@@ -145,13 +265,13 @@ const restoreUsersByTenantId = async (tenantId) => {
   try {
     // Find soft-deleted users with the provided tenantId
     const usersToRestore = await User.find({
-      tenantId: tenantId,
+      tenantId,
       deletedAt: { $ne: null },
     });
     const restoredUsers = [];
     const failedUsers = [];
 
-    for (let user of usersToRestore) {
+    for (const user of usersToRestore) {
       try {
         // Restore the user
         user.deletedAt = null; // Nullify the deletedAt field to restore the user
@@ -221,9 +341,39 @@ const queryUsers = async (filter, options) => {
     // SuperUser and Owner can only see users within their tenant
     if (user.tenantId) {
       filter.tenantId = user.tenantId;
+      const userType = user.isSuper ? 'SuperUser' : 'Owner';
       console.log(
-        `[queryUsers] SuperUser/Owner - filtering by tenantId: ${user.tenantId}`
+        `[queryUsers] ${userType} - filtering by tenantId: ${user.tenantId}`
       );
+    }
+  } else if (user?.isAdmin) {
+    // Admin users can only see users assigned to descendant nodes (children) of their assigned nodes
+    // Note: requireAccess middleware already validated user:read permission for isAdmin users
+    if (user.tenantId) {
+      filter.tenantId = user.tenantId;
+      console.log(
+        `[queryUsers] Admin - filtering by users in descendant nodes for tenantId: ${user.tenantId}`
+      );
+
+      // Get user IDs assigned to descendant nodes
+      const descendantUserIds = await getUsersInAdminNodeDescendants(
+        user,
+        user.tenantId
+      );
+
+      if (descendantUserIds.length === 0) {
+        // No users found in descendant nodes - return empty result
+        console.log(
+          '[queryUsers] Admin user has no users in descendant nodes - returning empty result'
+        );
+        filter._id = { $in: [] }; // Impossible filter - no results
+      } else {
+        // Filter to only users assigned to descendant nodes
+        filter._id = { $in: descendantUserIds };
+        console.log(
+          `[queryUsers] Admin - filtering to ${descendantUserIds.length} users in descendant nodes`
+        );
+      }
     }
   } else {
     // Ordinary users should not have access to user listing
@@ -257,6 +407,10 @@ const queryUsers = async (filter, options) => {
     });
   }
 
+  if (result.results && result.results.length > 0) {
+    result.results = result.results.map((user) => buildUserResponse(user));
+  }
+
   return result;
 };
 
@@ -278,9 +432,7 @@ const getUserHierarchyLevel = (user) => {
  * @returns {Promise<User>}
  */
 
-const getUserById = async (id) => {
-  return User.findById(id);
-};
+const getUserById = async (id) => User.findById(id);
 
 /**
  * Get user by email
@@ -288,9 +440,7 @@ const getUserById = async (id) => {
  * @returns {Promise<User>}
  */
 
-const getUserByEmail = async (email) => {
-  return User.findOne({ email });
-};
+const getUserByEmail = async (email) => User.findOne({ email });
 
 /**
  * Get user by phone number (handles + and no +, trims spaces)
@@ -309,7 +459,7 @@ const getUserByPhone = async (phoneNumber) => {
   }
   if (!normalized.startsWith('+')) {
     console.log(`[getUserByPhone] Trying with +: +${normalized}`);
-    user = await User.findOne({ phoneNumber: '+' + normalized });
+    user = await User.findOne({ phoneNumber: `+${normalized}` });
     if (user) {
       console.log(`[getUserByPhone] Found with +: ${user.email}`);
       return user;
@@ -369,6 +519,17 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
       : 'No current user'
   );
 
+  const customFieldsProvided = Object.prototype.hasOwnProperty.call(
+    updateBody,
+    'customFields'
+  );
+  const customFieldsPayload = customFieldsProvided
+    ? updateBody.customFields
+    : undefined;
+  if (customFieldsProvided) {
+    delete updateBody.customFields;
+  }
+
   const user = await User.findById(userId);
 
   if (!user) {
@@ -388,7 +549,8 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     currentUser &&
     (updateBody.isSaby !== undefined ||
       updateBody.isOwner !== undefined ||
-      updateBody.isSuper !== undefined)
+      updateBody.isSuper !== undefined ||
+      updateBody.isAdmin !== undefined)
   ) {
     console.log(
       `🔒 [UserService.updateUserById] Privilege change detected, validating authorization...`
@@ -510,12 +672,175 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
         `✅ [UserService.updateUserById] SuperUser privilege change authorized`
       );
     }
+
+    // Admin privilege management
+    if (updateBody.isAdmin !== undefined) {
+      console.log(
+        `👔 [UserService.updateUserById] Admin privilege change: ${user.isAdmin} → ${updateBody.isAdmin}`
+      );
+
+      // Owner, SuperUser, or SabyUser can manage Admin privilege
+      if (!currentUser.isOwner && !currentUser.isSuper && !currentUser.isSaby) {
+        console.warn(
+          `⚠️ [UserService.updateUserById] Unauthorized Admin management attempt by ${currentUser.firstname} ${currentUser.lastname}`
+        );
+        throw new ApiError(
+          httpStatus.FORBIDDEN,
+          'Only Owner, SuperUser, or SabyUser can manage Admin privileges'
+        );
+      }
+
+      // Cannot promote SabyUser, SuperUser, or Owner to Admin (they already have higher privileges)
+      if (
+        updateBody.isAdmin === true &&
+        (user.isSaby || user.isSuper || user.isOwner)
+      ) {
+        console.warn(
+          `⚠️ [UserService.updateUserById] Cannot add Admin flag to user with higher privileges`
+        );
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          'Cannot add Admin privilege to SabyUser, SuperUser, or Owner'
+        );
+      }
+
+      console.log(
+        `✅ [UserService.updateUserById] Admin privilege change authorized`
+      );
+    }
   }
+
+  // Separate user fields from profile fields
+  const userFields = [
+    'firstname',
+    'lastname',
+    'email',
+    'phone',
+    'password',
+    'userId',
+    'isSaby',
+    'isSuper',
+    'isOwner',
+    'isAdmin',
+    'isActive',
+    'isEmailVerified',
+    'roles',
+    'tenantId',
+    'profileUpdateCompliant',
+    'profileUpdateCompliantAt',
+    'profileUpdateCompliantBy',
+    'profileLastEditedAt',
+    'profileEditCount',
+  ];
+
+  const profileFields = [
+    'title',
+    'otherName',
+    'phoneNumber',
+    'gender',
+    'dateOfBirth',
+    'highestQualification',
+    'professional',
+    'maritalStatus',
+    'stateOfOrigin',
+    'lgaOfOrigin',
+    'homeTown',
+    'spouseName',
+    'spousePhoneNumber',
+    'spouseDateOfBirth',
+    'nextOfKinName',
+    'nextOfKinPhoneNumber',
+    'nextOfKinRelationship',
+    'residentialAddress',
+    'stateOfResidence',
+    'lgaOfResidence',
+    'employmentCategory',
+    'occupation',
+    'employeeId',
+    'officeTitle',
+  ];
+
+  // Extract user-specific fields and profile fields
+  const userUpdate = {};
+  const profileUpdate = {};
+
+  // Handle nested profile object
+  if (updateBody.profile && typeof updateBody.profile === 'object') {
+    Object.keys(updateBody.profile).forEach((key) => {
+      if (profileFields.includes(key)) {
+        profileUpdate[key] = updateBody.profile[key];
+      }
+    });
+    // Remove profile from updateBody to avoid processing it again
+    delete updateBody.profile;
+  }
+
+  // Handle top-level profile fields
+  Object.keys(updateBody).forEach((key) => {
+    if (userFields.includes(key)) {
+      userUpdate[key] = updateBody[key];
+    } else if (profileFields.includes(key)) {
+      profileUpdate[key] = updateBody[key];
+    }
+  });
+
+  console.log(
+    `📝 [UserService.updateUserById] User fields to update:`,
+    Object.keys(userUpdate)
+  );
+  console.log(
+    `📝 [UserService.updateUserById] Profile fields to update:`,
+    Object.keys(profileUpdate)
+  );
 
   // Perform the update
   console.log(`💾 [UserService.updateUserById] Applying updates to user...`);
   try {
-    Object.assign(user, updateBody);
+    // Only update fields that are present in userUpdate
+    Object.keys(userUpdate).forEach((key) => {
+      user[key] = userUpdate[key];
+    });
+
+    if (customFieldsProvided) {
+      const { values, version } = await validateCustomFields({
+        tenantId: user.tenantId,
+        entityType: 'user',
+        payload: customFieldsPayload,
+      });
+      user.customFields = values;
+      user.customFieldsVersion = version;
+    }
+
+    // Update profile if profile fields exist (BEFORE saving)
+    if (Object.keys(profileUpdate).length > 0) {
+      console.log(
+        `📝 [UserService.updateUserById] Updating profile fields:`,
+        Object.keys(profileUpdate)
+      );
+      // Initialize profile object if it doesn't exist
+      if (!user.profile) {
+        user.profile = {};
+      }
+      // Update profile fields
+      Object.keys(profileUpdate).forEach((key) => {
+        user.profile[key] = profileUpdate[key];
+      });
+      // Mark profile as modified for Mongoose to save it
+      user.markModified('profile');
+      console.log(
+        `✅ [UserService.updateUserById] Profile fields updated successfully`
+      );
+    }
+
+    // Track profile edits if profile fields were updated
+    if (Object.keys(profileUpdate).length > 0) {
+      user.profileLastEditedAt = new Date();
+      user.profileEditCount = (user.profileEditCount || 0) + 1;
+      console.log(
+        `📝 [UserService.updateUserById] Profile edit tracked: count=${user.profileEditCount}, lastEdited=${user.profileLastEditedAt}`
+      );
+    }
+
     await user.save();
     console.log(
       `✅ [UserService.updateUserById] User updated successfully: ${user.firstname} ${user.lastname}`
@@ -523,6 +848,32 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     console.log(
       `🎖️ [UserService.updateUserById] New privileges: isSaby=${user.isSaby}, isSuper=${user.isSuper}, isOwner=${user.isOwner}`
     );
+
+    // Trigger compliance recalculation if profile was updated
+    // This runs asynchronously to avoid blocking the response
+    if (Object.keys(profileUpdate).length > 0) {
+      setImmediate(async () => {
+        try {
+          const { complianceService } = require('./');
+          const complianceScore =
+            await complianceService.calculateComplianceScore(
+              user._id.toString(),
+              null,
+              user.tenantId
+            );
+          logger.info(
+            `✅ [UserService.updateUserById] Compliance recalculated for ${user.firstname} ${user.lastname}: overall=${complianceScore.overallCompliance}%, isCompliant=${complianceScore.isCompliant}`
+          );
+        } catch (error) {
+          logger.error(
+            `❌ [UserService.updateUserById] Error recalculating compliance for ${user._id}:`,
+            error
+          );
+          // Don't throw - compliance recalculation failure shouldn't break profile update
+        }
+      });
+    }
+
     return user;
   } catch (error) {
     console.error(`❌ [UserService.updateUserById] Save failed:`, error);
@@ -652,6 +1003,212 @@ const assignRoles = async (userId, inputRoles) => {
   return user;
 };
 
+/**
+ * Get profile update leaderboard
+ * Ranks users by most recent profile updates
+ * @param {string} tenantId
+ * @param {string} timeframe - 'all', '24h', '7d', '30d'
+ * @param {number} limit
+ * @returns {Promise<Object>}
+ */
+const getProfileUpdateLeaderboard = async (
+  tenantId,
+  timeframe = 'all',
+  limit = 50
+) => {
+  try {
+    // Build date filter based on timeframe
+    const dateFilter = {};
+    const now = new Date();
+
+    if (timeframe === '24h') {
+      dateFilter.updatedAt = {
+        $gte: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+      };
+    } else if (timeframe === '7d') {
+      dateFilter.updatedAt = {
+        $gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+      };
+    } else if (timeframe === '30d') {
+      dateFilter.updatedAt = {
+        $gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+      };
+    }
+
+    // Get users sorted by most recent profile update
+    const users = await User.find({
+      tenantId,
+      ...dateFilter,
+      profile: { $exists: true, $ne: null },
+    })
+      .sort({ updatedAt: -1 })
+      .limit(limit)
+      .lean();
+
+    // Get nodes for users
+    const { Nodes } = require('../models');
+    const userIds = users.map((u) => u._id);
+    const nodes = await Nodes.find({
+      tenantId,
+      users: { $in: userIds },
+      deletedAt: null,
+    })
+      .populate('level', 'name')
+      .lean();
+
+    // Create node map by user
+    const nodeMapByUser = new Map();
+    for (const node of nodes) {
+      for (const userId of node.users || []) {
+        const userIdStr = userId.toString();
+        if (!nodeMapByUser.has(userIdStr)) {
+          nodeMapByUser.set(userIdStr, node);
+        }
+      }
+    }
+
+    // Build leaderboard
+    const leaderboard = users.map((user, index) => {
+      const userIdStr = user._id.toString();
+      const userNode = nodeMapByUser.get(userIdStr);
+
+      const diffInMs = now.getTime() - new Date(user.updatedAt).getTime();
+      const daysAgo = Math.floor(diffInMs / (24 * 60 * 60 * 1000));
+
+      return {
+        rank: index + 1,
+        id: userIdStr,
+        userId: user.userId || user.haloId || userIdStr,
+        fullName: `${user.firstname || ''} ${user.lastname || ''}`.trim(),
+        email: user.email,
+        phoneNumber: user.phoneNumber || '',
+        avatar: user.avatar || '',
+        nodeName: userNode?.name || null,
+        nodeLevel: userNode?.level?.name || null,
+        profileUpdatedAt: user.updatedAt,
+        profileUpdateCompliant: user.profileUpdateCompliant || false,
+        profileUpdateCompliantAt: user.profileUpdateCompliantAt || null,
+        daysAgo,
+      };
+    });
+
+    // Calculate stats
+    const allUsers = await User.find({ tenantId }).lean();
+    const last24h = allUsers.filter(
+      (u) =>
+        u.updatedAt &&
+        new Date(u.updatedAt).getTime() >= now.getTime() - 24 * 60 * 60 * 1000
+    ).length;
+    const last7d = allUsers.filter(
+      (u) =>
+        u.updatedAt &&
+        new Date(u.updatedAt).getTime() >=
+          now.getTime() - 7 * 24 * 60 * 60 * 1000
+    ).length;
+    const last30d = allUsers.filter(
+      (u) =>
+        u.updatedAt &&
+        new Date(u.updatedAt).getTime() >=
+          now.getTime() - 30 * 24 * 60 * 60 * 1000
+    ).length;
+
+    return {
+      leaderboard,
+      stats: {
+        totalUpdates: allUsers.length,
+        last24Hours: last24h,
+        last7Days: last7d,
+        last30Days: last30d,
+        averageUpdateTime: 0,
+      },
+    };
+  } catch (error) {
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Failed to get profile update leaderboard'
+    );
+  }
+};
+
+/**
+ * Get profile edit statistics
+ * @param {string} tenantId - Tenant ID
+ * @returns {Promise<Object>} Profile edit statistics
+ */
+const getProfileEditStatistics = async (tenantId) => {
+  try {
+    const users = await User.find({ tenantId }).lean();
+
+    const totalUsers = users.length;
+    const usersWithEdits = users.filter(
+      (u) => u.profileEditCount && u.profileEditCount > 0
+    ).length;
+    const usersWithoutEdits = totalUsers - usersWithEdits;
+
+    // Calculate average edit count
+    const totalEdits = users.reduce(
+      (sum, u) => sum + (u.profileEditCount || 0),
+      0
+    );
+    const averageEdits = usersWithEdits > 0 ? totalEdits / usersWithEdits : 0;
+
+    // Get recent edits (last 24 hours, 7 days, 30 days)
+    const now = new Date();
+    const last24h = users.filter(
+      (u) =>
+        u.profileLastEditedAt &&
+        new Date(u.profileLastEditedAt).getTime() >=
+          now.getTime() - 24 * 60 * 60 * 1000
+    ).length;
+    const last7d = users.filter(
+      (u) =>
+        u.profileLastEditedAt &&
+        new Date(u.profileLastEditedAt).getTime() >=
+          now.getTime() - 7 * 24 * 60 * 60 * 1000
+    ).length;
+    const last30d = users.filter(
+      (u) =>
+        u.profileLastEditedAt &&
+        new Date(u.profileLastEditedAt).getTime() >=
+          now.getTime() - 30 * 24 * 60 * 60 * 1000
+    ).length;
+
+    // Get users with most edits
+    const topEditors = users
+      .filter((u) => u.profileEditCount && u.profileEditCount > 0)
+      .sort((a, b) => (b.profileEditCount || 0) - (a.profileEditCount || 0))
+      .slice(0, 10)
+      .map((u) => ({
+        id: u._id.toString(),
+        name: `${u.firstname || ''} ${u.lastname || ''}`.trim(),
+        email: u.email,
+        editCount: u.profileEditCount || 0,
+        lastEditedAt: u.profileLastEditedAt || null,
+      }));
+
+    return {
+      totalUsers,
+      usersWithEdits,
+      usersWithoutEdits,
+      editRate: totalUsers > 0 ? (usersWithEdits / totalUsers) * 100 : 0,
+      totalEdits,
+      averageEdits: Math.round(averageEdits * 100) / 100,
+      recentEdits: {
+        last24Hours: last24h,
+        last7Days: last7d,
+        last30Days: last30d,
+      },
+      topEditors,
+    };
+  } catch (error) {
+    logger.error('Error getting profile edit statistics:', error);
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Failed to get profile edit statistics'
+    );
+  }
+};
+
 module.exports = {
   createUser,
   queryUsers,
@@ -670,4 +1227,7 @@ module.exports = {
   getUserByPhone,
   getUserRoles,
   getUserNodes,
+  buildUserResponse,
+  getProfileUpdateLeaderboard,
+  getProfileEditStatistics,
 };

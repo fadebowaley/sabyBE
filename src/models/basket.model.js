@@ -22,11 +22,15 @@ const BasketSchema = mongoose.Schema(
 
 // Function to calculate total amount from offerings
 BasketSchema.methods.calculateTotalAmount = async function () {
-  const offerings = await mongoose.model('Collections').find({ _id: { $in: this.offerings } });
-  this.totalAmount = offerings.reduce((total, offering) => total + offering.amount, 0);
+  const offerings = await mongoose
+    .model('Collections')
+    .find({ _id: { $in: this.offerings } });
+  this.totalAmount = offerings.reduce(
+    (total, offering) => total + offering.amount,
+    0
+  );
   await this.save();
 };
-
 
 const Basket = mongoose.model('Basket', BasketSchema);
 module.exports = Basket;

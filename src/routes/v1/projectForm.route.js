@@ -267,6 +267,9 @@ router.get(
 // Get project form statistics
 router.get('/stats', auth('view:project-form'), projectFormController.getProjectFormStats);
 
+// Get deleted project forms (within 14-day grace period)
+router.get('/deleted', auth('view:project-form'), projectFormController.getDeletedProjectForms);
+
 // Get project form by project ID (public route for form access)
 router.get(
   '/project/:projectId',
@@ -312,6 +315,13 @@ router.get(
   auth('view:project-form'),
   validate(projectFormValidation.getProjectAnalytics),
   projectFormController.getProjectAnalytics
+);
+
+// Update payment configuration
+router.patch(
+  '/project/:projectId/payment-config',
+  auth('update:project-form'),
+  projectFormController.updatePaymentConfig
 );
 
 // Increment project submissions (for when form is submitted)
@@ -478,6 +488,13 @@ router.patch(
   auth('update:project-form'),
   validate(projectFormValidation.archiveProjectForm),
   projectFormController.archiveProjectForm
+);
+
+// Delete by projectId (soft-delete or permanent)
+router.delete(
+  '/project/:projectId',
+  auth('delete:project-form'),
+  projectFormController.deleteProjectForm
 );
 
 // Bulk operations

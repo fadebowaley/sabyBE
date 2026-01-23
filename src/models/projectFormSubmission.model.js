@@ -164,14 +164,21 @@ ProjectFormSubmissionSchema.statics.createSubmission = async function (
 ) {
   // Get the project form to validate
   const ProjectForm = mongoose.model('ProjectForm');
-  const projectForm = await ProjectForm.findOne({ projectId, tenantId, deletedAt: null });
+  const projectForm = await ProjectForm.findOne({
+    projectId,
+    tenantId,
+    deletedAt: null,
+  });
 
   if (!projectForm) {
     throw new Error('Project form not found or is not available');
   }
 
   // Check if form is published and active
-  if (projectForm.metadata.deploymentStatus !== 'published' || projectForm.status !== 'active') {
+  if (
+    projectForm.metadata.deploymentStatus !== 'published' ||
+    projectForm.status !== 'active'
+  ) {
     throw new Error('This form is not currently accepting submissions');
   }
 
@@ -184,7 +191,8 @@ ProjectFormSubmissionSchema.statics.createSubmission = async function (
     submittedAt: submissionData.submittedAt || new Date(),
     metadata: {
       ...submissionData.metadata,
-      submissionId: submissionData.metadata?.submissionId || `sub_${nanoid(12)}`,
+      submissionId:
+        submissionData.metadata?.submissionId || `sub_${nanoid(12)}`,
     },
   };
 
@@ -204,7 +212,11 @@ ProjectFormSubmissionSchema.statics.createSubmission = async function (
  * @param {Object} options - Query options
  * @returns {Promise<QueryResult>}
  */
-ProjectFormSubmissionSchema.statics.getSubmissionsByProject = async function (projectId, filter = {}, options = {}) {
+ProjectFormSubmissionSchema.statics.getSubmissionsByProject = async function (
+  projectId,
+  filter = {},
+  options = {}
+) {
   const finalFilter = {
     ...filter,
     projectId,
@@ -224,7 +236,11 @@ ProjectFormSubmissionSchema.statics.getSubmissionsByProject = async function (pr
  * @param {Object} options - Query options
  * @returns {Promise<QueryResult>}
  */
-ProjectFormSubmissionSchema.statics.getSubmissionsByTenant = async function (tenantId, filter = {}, options = {}) {
+ProjectFormSubmissionSchema.statics.getSubmissionsByTenant = async function (
+  tenantId,
+  filter = {},
+  options = {}
+) {
   const finalFilter = {
     ...filter,
     tenantId,
@@ -253,7 +269,10 @@ ProjectFormSubmissionSchema.methods.softDelete = async function () {
  * @param {string} notes - Processing notes
  * @returns {Promise<ProjectFormSubmission>}
  */
-ProjectFormSubmissionSchema.methods.markAsProcessed = async function (processedBy, notes = '') {
+ProjectFormSubmissionSchema.methods.markAsProcessed = async function (
+  processedBy,
+  notes = ''
+) {
   this.status = 'completed';
   this.processing = {
     processedAt: new Date(),
@@ -271,7 +290,11 @@ ProjectFormSubmissionSchema.methods.markAsProcessed = async function (processedB
  * @param {string} downloadUrl - Download URL
  * @returns {Promise<ProjectFormSubmission>}
  */
-ProjectFormSubmissionSchema.methods.addExport = async function (exportedBy, format, downloadUrl) {
+ProjectFormSubmissionSchema.methods.addExport = async function (
+  exportedBy,
+  format,
+  downloadUrl
+) {
   this.exports.push({
     exportedBy,
     format,
@@ -282,10 +305,13 @@ ProjectFormSubmissionSchema.methods.addExport = async function (exportedBy, form
 };
 
 // Pre-save middleware
-ProjectFormSubmissionSchema.pre('save', function (next) {
+ProjectFormSubmissionSchema.pre('save', (next) => {
   // Validate submission data against form elements if needed
   // This could be expanded to include more complex validation
   next();
 });
 
-module.exports = mongoose.model('ProjectFormSubmission', ProjectFormSubmissionSchema);
+module.exports = mongoose.model(
+  'ProjectFormSubmission',
+  ProjectFormSubmissionSchema
+);

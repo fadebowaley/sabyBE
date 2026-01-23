@@ -15,36 +15,66 @@ class DynamicFormSchemaService {
    */
   async loadFormSchema(projectId, tenantId) {
     try {
-      logger.info(`🔍 Loading dynamic form schema for project: ${projectId}, tenant: ${tenantId}`);
+      logger.info(
+        `🔍 Loading dynamic form schema for project: ${projectId}, tenant: ${tenantId}`
+      );
 
       // Get project form from database
-      const projectForm = await projectFormService.getProjectFormByProjectId(projectId);
+      const projectForm = await projectFormService.getProjectFormByProjectId(
+        projectId
+      );
 
       if (!projectForm) {
         logger.warn(`❌ Project form not found: ${projectId}`);
-        return { valid: false, error: 'Project form not found', code: 'PROJECT_NOT_FOUND' };
+        return {
+          valid: false,
+          error: 'Project form not found',
+          code: 'PROJECT_NOT_FOUND',
+        };
       }
 
       // Validate project belongs to tenant
       if (projectForm.tenantId !== tenantId) {
-        logger.warn(`❌ Project ${projectId} does not belong to tenant ${tenantId}`);
-        return { valid: false, error: 'Project does not belong to your tenant', code: 'TENANT_MISMATCH' };
+        logger.warn(
+          `❌ Project ${projectId} does not belong to tenant ${tenantId}`
+        );
+        return {
+          valid: false,
+          error: 'Project does not belong to your tenant',
+          code: 'TENANT_MISMATCH',
+        };
       }
 
       // Validate project is active and published
-      if (projectForm.status !== 'active' || projectForm.metadata?.deploymentStatus !== 'published') {
+      if (
+        projectForm.status !== 'active' ||
+        projectForm.metadata?.deploymentStatus !== 'published'
+      ) {
         logger.warn(`❌ Project ${projectId} is not active or published`);
-        return { valid: false, error: 'Project is not active or published', code: 'PROJECT_NOT_ACTIVE' };
+        return {
+          valid: false,
+          error: 'Project is not active or published',
+          code: 'PROJECT_NOT_ACTIVE',
+        };
       }
 
       // Process form schema
       const formSchema = this.processFormSchema(projectForm);
 
-      logger.info(`✅ Form schema loaded successfully for project: ${projectId}`);
+      logger.info(
+        `✅ Form schema loaded successfully for project: ${projectId}`
+      );
       return { valid: true, schema: formSchema };
     } catch (error) {
-      logger.error(`❌ Error loading form schema for project ${projectId}:`, error.message);
-      return { valid: false, error: 'Error loading form schema', code: 'LOAD_ERROR' };
+      logger.error(
+        `❌ Error loading form schema for project ${projectId}:`,
+        error.message
+      );
+      return {
+        valid: false,
+        error: 'Error loading form schema',
+        code: 'LOAD_ERROR',
+      };
     }
   }
 
@@ -125,7 +155,7 @@ class DynamicFormSchemaService {
     const processedElement = {
       id: element.id || `field_${index}`,
       type: element.type || 'text',
-      index: index,
+      index,
       label: properties.label || `Question ${index + 1}`,
       description: properties.description || '',
       placeholder: properties.placeholder || '',
@@ -161,8 +191,10 @@ class DynamicFormSchemaService {
     const rules = {};
 
     // Basic validation rules
-    if (validation.minLength !== undefined) rules.minLength = validation.minLength;
-    if (validation.maxLength !== undefined) rules.maxLength = validation.maxLength;
+    if (validation.minLength !== undefined)
+      rules.minLength = validation.minLength;
+    if (validation.maxLength !== undefined)
+      rules.maxLength = validation.maxLength;
     if (validation.min !== undefined) rules.min = validation.min;
     if (validation.max !== undefined) rules.max = validation.max;
     if (validation.pattern !== undefined) rules.pattern = validation.pattern;
@@ -177,11 +209,13 @@ class DynamicFormSchemaService {
 
     // File validation
     if (validation.fileSize !== undefined) rules.fileSize = validation.fileSize;
-    if (validation.fileTypes !== undefined) rules.fileTypes = validation.fileTypes;
+    if (validation.fileTypes !== undefined)
+      rules.fileTypes = validation.fileTypes;
     if (validation.maxFiles !== undefined) rules.maxFiles = validation.maxFiles;
 
     // Custom validation
-    if (validation.customRules !== undefined) rules.customRules = validation.customRules;
+    if (validation.customRules !== undefined)
+      rules.customRules = validation.customRules;
 
     return rules;
   }
@@ -195,25 +229,28 @@ class DynamicFormSchemaService {
     const properties = element.properties || {};
     const options = properties.options || [];
 
-    return options.map((option, index) => {
-      if (typeof option === 'string') {
-        return {
-          value: option,
-          label: option,
-          index: index,
-        };
-      } else if (typeof option === 'object') {
-        return {
-          value: option.value || option.label || `option_${index}`,
-          label: option.label || option.value || `Option ${index + 1}`,
-          index: index,
-          description: option.description || '',
-          disabled: option.disabled || false,
-          metadata: option.metadata || {},
-        };
-      }
-      return null;
-    }).filter(Boolean);
+    return options
+      .map((option, index) => {
+        if (typeof option === 'string') {
+          return {
+            value: option,
+            label: option,
+            index,
+          };
+        }
+        if (typeof option === 'object') {
+          return {
+            value: option.value || option.label || `option_${index}`,
+            label: option.label || option.value || `Option ${index + 1}`,
+            index,
+            description: option.description || '',
+            disabled: option.disabled || false,
+            metadata: option.metadata || {},
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
   }
 
   /**
@@ -248,7 +285,12 @@ class DynamicFormSchemaService {
    * @returns {Object|null} Form element or null
    */
   getElementByIndex(schema, index) {
-    if (!schema || !schema.elements || index < 0 || index >= schema.elements.length) {
+    if (
+      !schema ||
+      !schema.elements ||
+      index < 0 ||
+      index >= schema.elements.length
+    ) {
       return null;
     }
     return schema.elements[index];
@@ -327,7 +369,7 @@ class DynamicFormSchemaService {
 
     return {
       valid: errors.length === 0,
-      errors: errors,
+      errors,
     };
   }
 
@@ -341,7 +383,7 @@ class DynamicFormSchemaService {
     const requiredCount = schema.validation.required.length;
     const optionalCount = schema.validation.optional.length;
 
-    schema.elements.forEach(element => {
+    schema.elements.forEach((element) => {
       elementTypes[element.type] = (elementTypes[element.type] || 0) + 1;
     });
 
@@ -351,7 +393,7 @@ class DynamicFormSchemaService {
       requiredQuestions: requiredCount,
       optionalQuestions: optionalCount,
       estimatedTime: this.estimateFormTime(schema),
-      elementTypes: elementTypes,
+      elementTypes,
       categories: this.getFormCategories(schema),
     };
   }
@@ -364,7 +406,7 @@ class DynamicFormSchemaService {
   estimateFormTime(schema) {
     let totalTime = 0;
 
-    schema.elements.forEach(element => {
+    schema.elements.forEach((element) => {
       switch (element.type) {
         case 'text':
         case 'email':
@@ -401,7 +443,7 @@ class DynamicFormSchemaService {
   getFormCategories(schema) {
     const categories = new Set();
 
-    schema.elements.forEach(element => {
+    schema.elements.forEach((element) => {
       if (element.metadata && element.metadata.category) {
         categories.add(element.metadata.category);
       }

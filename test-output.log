@@ -1,0 +1,67 @@
+
+[1m[36m╔════════════════════════════════════════════════════════════╗[0m
+[1m[36m║     PERM UNIFIED SUBMISSION - COMPREHENSIVE TEST          ║[0m
+[1m[36m╚════════════════════════════════════════════════════════════╝[0m
+
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 1: Login User
+[32m✅[0m Logged in as: saby@saby.ai
+[34mℹ[0m User ID: 68e4cb96d180b0285d9a701d
+[34mℹ[0m Tenant ID: hWiWJ_X0m6
+[34mℹ[0m Token: eyJhbGciOiJIUzI1NiIs...
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 2: Setup PERM Form in MongoDB
+(node:22166) DeprecationWarning: current URL string parser is deprecated, and will be removed in a future version. To use the new parser, pass option { useNewUrlParser: true } to MongoClient.connect.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:22166) [MONGODB DRIVER] Warning: Current Server Discovery and Monitoring engine is deprecated, and will be removed in a future version. To use the new Server Discover and Monitoring engine, pass option { useUnifiedTopology: true } to the MongoClient constructor.
+[32m✅[0m Connected to MongoDB
+[TenantPlugin] Pre-hook triggered for: findOne
+[TenantPlugin] Options: {}
+(node:22166) DeprecationWarning: collection.ensureIndex is deprecated. Use createIndexes instead.
+[34mℹ[0m Found existing PERM form
+[32m✅[0m Project ID: proj_Mrs538IYtOfd
+[32m✅[0m Form ID: proj_Mrs538IYtOfd
+[34mℹ[0m Form Name: PERM Event Tracking Test
+[34mℹ[0m Elements: 5 event checkboxes
+[34mℹ[0m Status: active
+[34mℹ[0m Deployment: published
+[34mℹ[0m MongoDB connection closed
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 3: Setup Test Node
+[33m⚠️[0m No existing nodes found, using test node: node_test_1761212568140
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 4: Submit Initial PERM Data (CREATE)
+[34mℹ[0m Submitting PERM data for month: 2025-10-01
+[34mℹ[0m Node ID: node_test_1761212568140
+[34mℹ[0m Events submitted: 2/5 (40% compliance)
+[32m✅[0m PERM submission queued!
+[34mℹ[0m Job ID: hWiWJ_X0m6-1761212568156
+[34mℹ[0m Type: perm
+[34mℹ[0m Month: 2025-10-01
+[34mℹ[0m Node ID: node_test_1761212568140
+[34mℹ[0m Waiting 3s for worker to process...
+[34mℹ[0m Activity logs retrieved: 309 total
+[34mℹ[0m   [33mqueued[0m: PERM submission queued for 2025-10-01
+[34mℹ[0m   [33mqueued[0m: PERM submission queued for 2025-10-01
+[34mℹ[0m   [33mrejected[0m: "buttonText" is not allowed, "buttonType" is not allowed
+
+[1m[36m============================================================[0m
+[36m▶[0m STEP 5: Verify Initial Submission Saved
+[34mℹ[0m Submissions found: 0
+[31m❌[0m Verification failed: No submissions found after worker processing
+
+[1m[36m============================================================[0m
+
+[1m[31m╔════════════════════════════════════════════════════════════╗[0m
+[1m[31m║              ❌ TEST FAILED! ❌                            ║[0m
+[1m[31m╚════════════════════════════════════════════════════════════╝[0m
+
+[31m❌[0m Test suite failed: No submissions found after worker processing
+[31m❌[0m Stack trace: Error: No submissions found after worker processing
+    at verifyInitialSubmission (/Users/fadebowaley/saby/sabyBackend/test-perm-unified-submission.js:412:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async runTests (/Users/fadebowaley/saby/sabyBackend/test-perm-unified-submission.js:913:5)

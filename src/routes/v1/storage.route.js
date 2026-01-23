@@ -125,7 +125,7 @@ router.get('/search',
 );
 
 router.get('/stats',
-  auth('view:storage:stats'),
+  auth('storage:read'),
   storageController.getStorageStats
 );
 

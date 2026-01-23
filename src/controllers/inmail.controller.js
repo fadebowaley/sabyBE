@@ -56,7 +56,10 @@ const queryMessages = catchAsync(async (req, res) => {
  */
 const updateMessage = catchAsync(async (req, res) => {
   console.log('[InMail Controller] Updating message:', req.params.inmailId);
-  const updated = await inmailService.updateMessage(req.params.inmailId, req.body);
+  const updated = await inmailService.updateMessage(
+    req.params.inmailId,
+    req.body
+  );
   res.send(updated);
 });
 

@@ -50,11 +50,11 @@ const testLogin = async () => {
       console.log('=======');
       console.log(
         'Access Token: ',
-        response.data.tokens.access.token.substring(0, 50) + '...'
+        `${response.data.tokens.access.token.substring(0, 50)}...`
       );
       console.log(
         'Refresh Token:',
-        response.data.tokens.refresh.token.substring(0, 50) + '...'
+        `${response.data.tokens.refresh.token.substring(0, 50)}...`
       );
       console.log(
         '\n🎉 You can now use these credentials to login to the frontend!'
@@ -92,4 +92,3 @@ const testLogin = async () => {
 
 // Run the test
 testLogin();
-

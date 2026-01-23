@@ -113,10 +113,18 @@ async function sendFoolproofEmail() {
     console.log('\n🔍 Expected System Behavior:');
     console.log('============================');
     console.log('1. Email will be picked up by email-ingestor worker');
-    console.log('2. Sender validation will pass (fadebowaley@gmail.com is registered user)');
-    console.log('3. Project form validation will pass (proj_xzN3KGnRNP3G exists)');
-    console.log('4. Tenant access validation will pass (user belongs to 7vR-Ldacit)');
-    console.log('5. Form field validation will pass (all required fields present)');
+    console.log(
+      '2. Sender validation will pass (fadebowaley@gmail.com is registered user)'
+    );
+    console.log(
+      '3. Project form validation will pass (proj_xzN3KGnRNP3G exists)'
+    );
+    console.log(
+      '4. Tenant access validation will pass (user belongs to 7vR-Ldacit)'
+    );
+    console.log(
+      '5. Form field validation will pass (all required fields present)'
+    );
     console.log('6. Duplicate prevention will pass (first submission)');
     console.log('7. Submission will be queued for processing');
     console.log('8. Confirmation email will be sent to fadebowaley@gmail.com');

@@ -1,9 +1,9 @@
+const httpStatus = require('http-status');
 const InMail = require('../models/inmail.model');
 const User = require('../models/user.model');
 const Role = require('../models/role.model');
 const Storage = require('../models/storage.model');
 const ApiError = require('../utils/ApiError');
-const httpStatus = require('http-status');
 
 /**
  * Resolve recipients including special groups

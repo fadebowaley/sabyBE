@@ -11,10 +11,16 @@ const logger = require('../config/logger');
  * @param {Object} res - Express response object
  */
 const verifyWebhook = catchAsync(async (req, res) => {
-  const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query;
+  const {
+    'hub.mode': mode,
+    'hub.verify_token': token,
+    'hub.challenge': challenge,
+  } = req.query;
 
   logger.info(`🔍 Controller received - Query: ${JSON.stringify(req.query)}`);
-  logger.info(`🔍 Controller extracted - Mode: ${mode}, Token: ${token}, Challenge: ${challenge}`);
+  logger.info(
+    `🔍 Controller extracted - Mode: ${mode}, Token: ${token}, Challenge: ${challenge}`
+  );
 
   const verificationResult = whatsappBot.verifyWebhook(mode, token, challenge);
 
@@ -61,15 +67,27 @@ const sendMessage = catchAsync(async (req, res) => {
     let result;
     switch (type) {
       case 'text':
-        result = await whatsappNotificationService.sendTextMessage(phoneNumber, message);
+        result = await whatsappNotificationService.sendTextMessage(
+          phoneNumber,
+          message
+        );
         break;
       case 'button':
         const { buttons } = req.body;
-        result = await whatsappNotificationService.sendButtonMessage(phoneNumber, message, buttons);
+        result = await whatsappNotificationService.sendButtonMessage(
+          phoneNumber,
+          message,
+          buttons
+        );
         break;
       case 'list':
         const { buttonText, items } = req.body;
-        result = await whatsappNotificationService.sendListMessage(phoneNumber, message, buttonText, items);
+        result = await whatsappNotificationService.sendListMessage(
+          phoneNumber,
+          message,
+          buttonText,
+          items
+        );
         break;
       default:
         throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid message type');
@@ -81,8 +99,14 @@ const sendMessage = catchAsync(async (req, res) => {
       data: result,
     });
   } catch (error) {
-    logger.error(`❌ Error sending WhatsApp message to ${phoneNumber}:`, error.message);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to send message');
+    logger.error(
+      `❌ Error sending WhatsApp message to ${phoneNumber}:`,
+      error.message
+    );
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Failed to send message'
+    );
   }
 });
 
@@ -113,7 +137,10 @@ const getStatus = catchAsync(async (req, res) => {
     });
   } catch (error) {
     logger.error('❌ Error getting WhatsApp bot status:', error.message);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to get bot status');
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Failed to get bot status'
+    );
   }
 });
 
@@ -135,7 +162,10 @@ const restartBot = catchAsync(async (req, res) => {
     });
   } catch (error) {
     logger.error('❌ Error restarting WhatsApp bot:', error.message);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to restart bot');
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Failed to restart bot'
+    );
   }
 });
 
@@ -170,7 +200,10 @@ const getSessions = catchAsync(async (req, res) => {
     });
   } catch (error) {
     logger.error('❌ Error getting WhatsApp sessions:', error.message);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to get sessions');
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Failed to get sessions'
+    );
   }
 });
 
@@ -194,8 +227,14 @@ const deleteSession = catchAsync(async (req, res) => {
       throw new ApiError(httpStatus.NOT_FOUND, 'Session not found');
     }
   } catch (error) {
-    logger.error(`❌ Error deleting WhatsApp session for ${phoneNumber}:`, error.message);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to delete session');
+    logger.error(
+      `❌ Error deleting WhatsApp session for ${phoneNumber}:`,
+      error.message
+    );
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Failed to delete session'
+    );
   }
 });
 
