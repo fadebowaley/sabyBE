@@ -1,43 +1,59 @@
-name: 🚀 Unified VM Deployment (Staging + Production)
+name: 🚀 Production VM Deployment
 
 on:
   push:
-    branches: [production, develop, proddy]
-    tags: ["v*"]
+    branches: [production]
   workflow_dispatch:
     inputs:
-      environment:
-        description: "Environment to deploy to"
-        required: true
-        default: "staging"
-        type: choice
-        options:
-          - staging
-          - production
-          - proddy
+      image_tag:
+        description: "Image tag to deploy (default: production)"
+        required: false
+        default: production
+        type: string
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: fadebowaley/sabybe/halobe
+  NODE_VERSION: "18"
+  DEFAULT_PROD_HOST: 45.32.179.162
+  DEFAULT_PROD_USER: saby
+  DEFAULT_DEPLOY_DIR: /opt/saby
 
 permissions:
-  contents: write
+  contents: read
   packages: write
 
+concurrency:
+  group: backend-production-deploy
+  cancel-in-progress: true
+
 jobs:
-  # ═══════════════════════════════════════════════════════════════════
-  # BUILD & PUSH IMAGE
-  # ═══════════════════════════════════════════════════════════════════
+  test:
+    name: ✅ Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🧰 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: 📦 Install deps
+        run: npm ci
+
+      - name: 🧪 Run tests
+        run: npm test
+
   build-and-push:
     name: 🐳 Build & Push Docker Image
     runs-on: ubuntu-latest
+    needs: test
     permissions:
       contents: read
       packages: write
-
-    outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
-
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -45,7 +61,7 @@ jobs:
       - name: 🔧 Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: 🔐 Log in to Container Registry
+      - name: 🔐 Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -58,11 +74,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=prod-
+            type=raw,value=production
+            type=raw,value=latest
 
       - name: 🏗️ Build and push Docker image
         uses: docker/build-push-action@v5
@@ -70,155 +84,109 @@ jobs:
           context: .
           file: ./Dockerfile.prod
           push: true
-          tags: |
-            ${{ steps.meta.outputs.tags }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
 
-  # ═══════════════════════════════════════════════════════════════════
-  # DEPLOY TO STAGING - UNIFIED VM
-  # ═══════════════════════════════════════════════════════════════════
-  deploy-staging:
-    name: 🧪 Deploy to Unified Staging VM
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    if: |
-      (github.ref == 'refs/heads/develop' && github.event_name == 'push') ||
-      (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging')
-    environment: staging
-    steps:
-      - name: 🔐 Setup SSH
-        uses: webfactory/ssh-agent@v0.7.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: 🚀 Deploy to Unified Staging VM
-        run: |
-          echo "🚀 Deploying backend to UNIFIED Staging VM"
-          echo "🐳 Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop"
-          echo "🖥️  VM: ${{ secrets.NEW_STAGING_IP }}"
-
-          ssh -o StrictHostKeyChecking=no haloadmin@${{ secrets.NEW_STAGING_IP }} << 'ENDSSH'
-            set -e
-            cd /opt/saby
-            
-            echo "🔐 Logging in to GHCR..."
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
-            
-            echo "📥 Pulling latest backend and WhatsApp images (no cache)..."
-            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml pull --no-parallel backend whatsapp
-            
-            echo "🛑 Stopping old backend and WhatsApp containers..."
-            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml stop backend whatsapp || true
-            
-            echo "🗑️ Removing old backend and WhatsApp containers..."
-            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml rm -f backend whatsapp || true
-            
-            echo "🚀 Starting new backend container (project: saby-staging)..."
-            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml up -d --force-recreate backend
-            
-            echo "⏳ Waiting for backend to be healthy..."
-            sleep 20
-            
-            echo "🏥 Backend health check..."
-            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml ps backend
-            
-            echo "📊 Testing backend endpoint..."
-            curl -f http://localhost:4000 || echo "⚠️ Backend not responding yet, may need more time"
-            
-            echo "📝 Recent backend logs:"
-            docker logs saby-backend-staging --tail 20
-            
-            echo "🚀 Starting WhatsApp service (project: saby-staging)..."
-            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml up -d --force-recreate whatsapp
-            
-            echo "⏳ Waiting for WhatsApp to be healthy..."
-            sleep 10
-            
-            echo "🏥 WhatsApp health check..."
-            COMPOSE_PROJECT_NAME=saby-staging docker-compose -f docker-compose.staging.yml ps whatsapp
-            
-            echo "📝 Recent WhatsApp logs:"
-            docker logs saby-staging-whatsapp --tail 20 || true
-            
-            echo "✅ Backend and WhatsApp deployment completed!"
-          ENDSSH
-
-      - name: ✅ Deployment Summary
-        run: |
-          echo "✅ Backend and WhatsApp deployed to unified staging VM"
-          echo "🌐 Backend accessible at: http://${{ secrets.NEW_STAGING_IP }}:4000"
-          echo "📱 WhatsApp service accessible at: http://${{ secrets.NEW_STAGING_IP }}:4001"
-
-  # ═══════════════════════════════════════════════════════════════════
-  # DEPLOY TO PRODUCTION - UNIFIED VM
-  # ═══════════════════════════════════════════════════════════════════
   deploy-production:
     name: 🏭 Deploy to Unified Production VM
     runs-on: ubuntu-latest
     needs: build-and-push
     if: |
-      (github.ref == 'refs/heads/production' && github.event_name == 'push') ||
-      (github.ref == 'refs/heads/proddy' && github.event_name == 'push') ||
-      (github.event_name == 'workflow_dispatch' && (inputs.environment == 'production' || inputs.environment == 'proddy'))
+      (github.event_name == 'push' && github.ref == 'refs/heads/production') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/production')
     environment: production
     steps:
+      - name: 🔒 Validate deploy ref
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/production" ]; then
+            echo "❌ Manual deploys must run from production branch."
+            exit 1
+          fi
+
       - name: 🔐 Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: 🚀 Deploy to Unified Production VM
+      - name: 🔐 Add server to known hosts
         run: |
-          echo "🚀 Deploying backend to UNIFIED Production VM"
-          echo "🌿 Branch: ${{ github.ref }}"
-          echo "🐳 Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production"
+          PROD_HOST="${{ secrets.SABY_PROD_VM_IP }}"
+          if [ -z "$PROD_HOST" ]; then PROD_HOST="${{ env.DEFAULT_PROD_HOST }}"; fi
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$PROD_HOST" >> ~/.ssh/known_hosts
 
-          ssh -o StrictHostKeyChecking=no haloadmin@${{ secrets.NEW_PRODUCTION_VM_IP }} << 'ENDSSH'
-            set -e
-            cd /opt/saby
-            
+      - name: 🚀 Deploy backend to production VM
+        run: |
+          PROD_HOST="${{ secrets.SABY_PROD_VM_IP }}"
+          PROD_USER="${{ secrets.SABY_PROD_VM_USER }}"
+          DEPLOY_DIR="${{ secrets.SABY_PROD_DEPLOY_DIR }}"
+          GHCR_USER="${{ secrets.GHCR_USERNAME }}"
+          IMAGE_TAG="${{ github.event.inputs.image_tag }}"
+
+          if [ -z "$PROD_HOST" ]; then PROD_HOST="${{ env.DEFAULT_PROD_HOST }}"; fi
+          if [ -z "$PROD_USER" ]; then PROD_USER="${{ env.DEFAULT_PROD_USER }}"; fi
+          if [ -z "$DEPLOY_DIR" ]; then DEPLOY_DIR="${{ env.DEFAULT_DEPLOY_DIR }}"; fi
+          if [ -z "$GHCR_USER" ]; then GHCR_USER="fadebowaley"; fi
+          if [ -z "$IMAGE_TAG" ]; then IMAGE_TAG="production"; fi
+
+          if [ -z "${{ secrets.GHCR_PAT }}" ]; then
+            echo "❌ GHCR_PAT secret is required for production deploy."
+            exit 1
+          fi
+
+          echo "🚀 Deploying backend to unified production VM"
+          echo "🌿 Branch: ${{ github.ref }}"
+          echo "🐳 Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$IMAGE_TAG"
+          echo "🖥️ Host: $PROD_USER@$PROD_HOST"
+
+          ssh "$PROD_USER@$PROD_HOST" << ENDSSH
+            set -euo pipefail
+            cd "$DEPLOY_DIR"
+
+            COMPOSE_FILE="docker-compose.yml"
+            if [ ! -f "\$COMPOSE_FILE" ]; then
+              if [ -f "docker-compose.prod.yml" ]; then
+                COMPOSE_FILE="docker-compose.prod.yml"
+              else
+                echo "❌ No compose file found in $DEPLOY_DIR"
+                ls -lah
+                exit 1
+              fi
+            fi
+
+            if docker compose version >/dev/null 2>&1; then
+              DC="docker compose"
+            else
+              DC="docker-compose"
+            fi
+
             echo "🔐 Logging in to GHCR..."
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u fadebowaley --password-stdin
-            
-            echo "📥 Pulling latest backend and WhatsApp images (no cache)..."
-            COMPOSE_PROJECT_NAME=saby-production docker-compose -f docker-compose.production.yml pull --no-parallel backend whatsapp telegram
-            
-            echo "🛑 Stopping old backend container..."
-            COMPOSE_PROJECT_NAME=saby-production docker-compose -f docker-compose.production.yml stop backend || true
-            
-            echo "🗑️ Removing old backend container..."
-            COMPOSE_PROJECT_NAME=saby-production docker-compose -f docker-compose.production.yml rm -f backend || true
-            
-            echo "🚀 Starting new backend container (project: saby-production)..."
-            COMPOSE_PROJECT_NAME=saby-production docker-compose -f docker-compose.production.yml up -d --force-recreate backend
-            
-            echo "⏳ Waiting for backend to be healthy..."
+            echo "${{ secrets.GHCR_PAT }}" | docker login "${{ env.REGISTRY }}" -u "$GHCR_USER" --password-stdin
+
+            echo "📥 Pulling backend image..."
+            docker pull "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$IMAGE_TAG"
+
+            echo "🏷️ Tagging backend image for compose compatibility..."
+            docker tag "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$IMAGE_TAG" "saby-backend:production-local"
+
+            echo "🚀 Recreating backend (no build)..."
+            \$DC -f "\$COMPOSE_FILE" up -d --no-build --force-recreate backend
+
+            echo "⏳ Waiting for backend to settle..."
             sleep 20
-            
-            echo "🏥 Backend health check..."
-            COMPOSE_PROJECT_NAME=saby-production docker-compose -f docker-compose.production.yml ps backend
-            
-            echo "📊 Testing backend endpoint..."
-            curl -f http://localhost:4000 || echo "⚠️ Backend not responding yet, may need more time"
-            
+
+            echo "🏥 Backend service status..."
+            \$DC -f "\$COMPOSE_FILE" ps backend
+
+            echo "📊 Backend endpoint checks..."
+            curl -fsS http://127.0.0.1:4000/api/health || true
+            curl -kfsS https://api.saby.ai/api/health || true
+
             echo "📝 Recent backend logs:"
-            docker logs saby-backend-production --tail 20
-            
-            echo "🚀 Starting WhatsApp service (project: saby-production)..."
-            COMPOSE_PROJECT_NAME=saby-production docker-compose -f docker-compose.production.yml up -d --force-recreate whatsapp
-            
-            echo "⏳ Waiting for WhatsApp to be healthy..."
-            sleep 10
-            
-            echo "🚀 Starting Telegram service (project: saby-production)..."
-            COMPOSE_PROJECT_NAME=saby-production docker-compose -f docker-compose.production.yml up -d --force-recreate telegram
-            
-            echo "📝 Recent WhatsApp logs:"
-            docker logs saby-production-whatsapp --tail 20 || true
-            
-            echo "✅ Backend, WhatsApp, and Telegram deployment completed!"
+            docker logs saby-backend --tail 60 || docker logs saby-backend-production --tail 60 || true
+
+            echo "✅ Backend deployment completed"
           ENDSSH
