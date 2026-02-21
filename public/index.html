@@ -3,326 +3,258 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Saby API - Staging Environment</title>
+    <title>Saby API | Production</title>
+    <meta
+      name="description"
+      content="Production API portal for Saby platform services on api.saby.ai."
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <style>
+      :root {
+        --bg: #f4f7f8;
+        --surface: #ffffff;
+        --surface-soft: #eef3f4;
+        --ink: #0f1f25;
+        --ink-muted: #48616a;
+        --line: #c6d4d9;
+        --brand: #007f89;
+        --brand-soft: #d5eff1;
+        --ok: #0f8a45;
+        --warn: #b45e04;
+        --danger: #b42318;
+        --shadow: 0 20px 45px rgba(10, 27, 35, 0.1);
+      }
+
       * {
+        box-sizing: border-box;
         margin: 0;
         padding: 0;
-        box-sizing: border-box;
       }
 
       body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background:
+          radial-gradient(circle at 15% 12%, rgba(0, 127, 137, 0.16) 0%, transparent 42%),
+          radial-gradient(circle at 85% 0%, rgba(242, 155, 77, 0.14) 0%, transparent 35%),
+          var(--bg);
+        color: var(--ink);
+        font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+        line-height: 1.55;
         min-height: 100vh;
-        padding: 20px;
-        color: #333;
+        padding: 28px 18px 42px;
       }
 
-      .container {
-        max-width: 1200px;
+      .frame {
+        max-width: 1120px;
         margin: 0 auto;
+        animation: rise 0.65s ease-out both;
       }
 
-      .header {
-        text-align: center;
-        color: white;
-        margin-bottom: 40px;
-        animation: fadeInDown 0.6s ease-out;
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 26px;
+        gap: 16px;
       }
 
-      .logo {
-        font-size: 48px;
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
         font-weight: 700;
-        margin-bottom: 10px;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        letter-spacing: 0.03em;
       }
 
-      .subtitle {
-        font-size: 20px;
-        opacity: 0.95;
-        font-weight: 300;
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+        border-radius: 11px;
+        background: linear-gradient(135deg, #007f89, #0c5f66);
+        box-shadow: 0 10px 20px rgba(0, 127, 137, 0.3);
       }
 
-      .env-badge {
-        display: inline-block;
-        background: rgba(255, 255, 255, 0.2);
-        padding: 8px 20px;
+      .badge {
+        border: 1px solid #9bc5cb;
+        background: #e3f4f5;
+        color: #07565d;
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+      }
+
+      .hero {
+        background: var(--surface);
+        border: 1px solid var(--line);
         border-radius: 20px;
-        margin-top: 15px;
-        font-size: 14px;
-        font-weight: 500;
-        backdrop-filter: blur(10px);
+        box-shadow: var(--shadow);
+        padding: 30px;
+        display: grid;
+        grid-template-columns: 1.6fr 1fr;
+        gap: 24px;
+        margin-bottom: 22px;
       }
 
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 20px;
-        margin-bottom: 30px;
+      .hero h1 {
+        font-size: clamp(32px, 4.4vw, 50px);
+        line-height: 1.04;
+        margin-bottom: 10px;
       }
-      
-      .grid-full {
+
+      .hero p {
+        color: var(--ink-muted);
+        margin-bottom: 18px;
+        max-width: 64ch;
+      }
+
+      .meta {
         display: grid;
-        grid-template-columns: 1fr;
-        gap: 20px;
-        margin-bottom: 30px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .meta-card {
+        border: 1px solid var(--line);
+        background: var(--surface-soft);
+        border-radius: 12px;
+        padding: 12px;
+      }
+
+      .meta-label {
+        font-size: 12px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+      }
+
+      .meta-value {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 13px;
+        margin-top: 4px;
+        word-break: break-all;
+      }
+
+      .quick {
+        display: grid;
+        gap: 10px;
+      }
+
+      .quick a {
+        text-decoration: none;
+        color: var(--ink);
+        border: 1px solid var(--line);
+        background: var(--surface-soft);
+        border-radius: 12px;
+        padding: 11px 12px;
+        font-size: 14px;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+      }
+
+      .quick a:hover {
+        transform: translateY(-1px);
+        border-color: #83b5bc;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 18px;
       }
 
       .card {
-        background: white;
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        animation: fadeInUp 0.6s ease-out;
-        border: 1px solid rgba(0, 0, 0, 0.05);
-      }
-
-      .card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-      }
-      
-      .card-compact {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
         padding: 20px;
       }
 
-      .card-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 20px;
-      }
-
-      .card-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-        margin-right: 12px;
-        flex-shrink: 0;
-      }
-
-      .icon-green {
-        background: linear-gradient(135deg, #d4f4dd 0%, #b8f2c6 100%);
-        color: #10b981;
-      }
-
-      .icon-blue {
-        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-        color: #3b82f6;
-      }
-
-      .icon-purple {
-        background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%);
-        color: #a855f7;
-      }
-
-      .icon-orange {
-        background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
-        color: #f97316;
-      }
-
-      .card-title {
+      .card h2 {
         font-size: 18px;
-        font-weight: 600;
-        color: #333;
+        margin-bottom: 10px;
       }
 
-      .card-subtitle {
-        font-size: 14px;
-        color: #666;
-        margin-top: 5px;
+      .code {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 12px;
+        background: #0d1b20;
+        color: #c4ffe8;
+        padding: 14px;
+        border-radius: 12px;
+        overflow-x: auto;
       }
 
-      .status-item {
+      .status-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px 0;
-        border-bottom: 1px solid #f0f0f0;
-      }
-
-      .status-item:last-child {
-        border-bottom: none;
-      }
-
-      .status-label {
+        border-bottom: 1px solid #e3eaed;
+        padding: 9px 0;
         font-size: 14px;
-        color: #666;
-        display: flex;
-        align-items: center;
       }
 
-      .status-value {
-        font-size: 14px;
+      .status-row:last-child {
+        border-bottom: 0;
+      }
+
+      .status-pill {
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 12px;
         font-weight: 600;
-        color: #333;
+        letter-spacing: 0.03em;
       }
 
-      .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-right: 10px;
-        animation: pulse 2s infinite;
+      .ok {
+        background: #e1f6e7;
+        color: var(--ok);
       }
 
-      .status-dot.green {
-        background: #38ef7d;
+      .warn {
+        background: #fff2e0;
+        color: var(--warn);
       }
 
-      .status-dot.red {
-        background: #f5576c;
+      .danger {
+        background: #fde8e8;
+        color: var(--danger);
       }
 
-      .status-dot.yellow {
-        background: #fee140;
+      .routes {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
       }
 
-      @keyframes pulse {
-        0%,
-        100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0.5;
-        }
-      }
-
-      .metric {
-        margin-top: 16px;
-      }
-
-      .metric-value {
-        font-size: 32px;
-        font-weight: 700;
-        color: #1f2937;
-        line-height: 1;
-        margin-bottom: 4px;
-      }
-
-      .metric-label {
+      .route {
+        border: 1px solid var(--line);
+        background: var(--surface-soft);
+        border-radius: 12px;
+        padding: 12px;
         font-size: 13px;
-        color: #6b7280;
-        font-weight: 500;
-      }
-      
-      .metric-trend {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 13px;
-        font-weight: 600;
-        margin-top: 8px;
-      }
-      
-      .trend-up {
-        color: #10b981;
-      }
-      
-      .trend-neutral {
-        color: #6b7280;
       }
 
-      .cta-section {
-        background: white;
-        border-radius: 16px;
-        padding: 40px;
-        text-align: center;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        animation: fadeInUp 0.8s ease-out;
-      }
-
-      .cta-title {
-        font-size: 28px;
-        font-weight: 700;
-        margin-bottom: 15px;
-        color: #333;
-      }
-
-      .cta-description {
-        font-size: 16px;
-        color: #666;
-        margin-bottom: 30px;
-        line-height: 1.6;
-      }
-
-      .btn-group {
-        display: flex;
-        gap: 15px;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-
-      .btn {
-        padding: 15px 35px;
-        border-radius: 30px;
-        font-size: 16px;
-        font-weight: 600;
-        text-decoration: none;
-        transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-      }
-
-      .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
-      }
-
-      .btn-secondary {
-        background: white;
-        color: #667eea;
-        border: 2px solid #667eea;
-      }
-
-      .btn-secondary:hover {
-        background: #667eea;
-        color: white;
+      .route code {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 12px;
       }
 
       .footer {
-        text-align: center;
-        color: white;
-        margin-top: 40px;
-        opacity: 0.9;
-        font-size: 14px;
+        margin-top: 20px;
+        color: var(--ink-muted);
+        font-size: 13px;
       }
 
-      .loading {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border: 3px solid rgba(255, 255, 255, 0.3);
-        border-radius: 50%;
-        border-top-color: #667eea;
-        animation: spin 1s ease-in-out infinite;
-      }
-
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-
-      @keyframes fadeInDown {
+      @keyframes rise {
         from {
           opacity: 0;
-          transform: translateY(-20px);
+          transform: translateY(18px);
         }
         to {
           opacity: 1;
@@ -330,336 +262,187 @@
         }
       }
 
-      @keyframes fadeInUp {
-        from {
-          opacity: 0;
-          transform: translateY(20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
+      @media (max-width: 980px) {
+        .hero,
+        .layout {
+          grid-template-columns: 1fr;
         }
       }
 
-      .version-info {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        background: rgba(255, 255, 255, 0.15);
-        padding: 10px 20px;
-        border-radius: 20px;
-        margin-top: 10px;
-        backdrop-filter: blur(10px);
-      }
-
-      .endpoints-list {
-        display: grid;
-        gap: 10px;
-      }
-
-      .endpoint-item {
-        background: #f8f9fa;
-        padding: 12px 16px;
-        border-radius: 10px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: all 0.3s ease;
-      }
-
-      .endpoint-item:hover {
-        background: #e9ecef;
-        transform: translateX(5px);
-      }
-
-      .endpoint-path {
-        font-family: 'Courier New', monospace;
-        font-size: 14px;
-        color: #495057;
-      }
-
-      .endpoint-status {
-        font-size: 12px;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-weight: 600;
-      }
-
-      .status-live {
-        background: #d4edda;
-        color: #155724;
-      }
-
-      @media (max-width: 1024px) {
-        .grid {
-          grid-template-columns: repeat(2, 1fr);
-        }
-      }
-
-      @media (max-width: 768px) {
-        .grid {
+      @media (max-width: 640px) {
+        .routes,
+        .meta {
           grid-template-columns: 1fr;
         }
 
-        .btn-group {
-          flex-direction: column;
-        }
-
-        .btn {
-          width: 100%;
+        .hero,
+        .card {
+          padding: 16px;
         }
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <!-- Header -->
-      <div class="header">
-        <div class="logo">🚀 Saby API</div>
-        <div class="subtitle">Unified Platform for Data, Analytics & Growth</div>
-        <div class="env-badge">🔧 STAGING ENVIRONMENT</div>
-        <div class="version-info">
-          <span id="version">v1.0.0</span>
-          <span>•</span>
-          <span id="environment">development</span>
-          <span>•</span>
-          <span id="uptime">Loading...</span>
+    <main class="frame">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>SABY API</span>
         </div>
-      </div>
+        <span class="badge">PRODUCTION</span>
+      </header>
 
-      <!-- System Status Grid -->
-      <div class="grid">
-        <!-- System Health Card -->
-        <div class="card card-compact">
-          <div class="card-header">
-            <div class="card-icon icon-green">⚡</div>
-            <div>
-              <div class="card-title" id="api-status">All Systems</div>
-              <div class="card-subtitle">Operational</div>
-            </div>
-          </div>
-          <div class="metric">
-            <div class="metric-value" id="uptime-value">--</div>
-            <div class="metric-label">Server Uptime</div>
-            <div class="metric-trend trend-up">
-              <span>↑</span>
-              <span id="uptime-percent">100%</span> availability
-            </div>
-          </div>
-        </div>
-
-        <!-- Database Connections Card -->
-        <div class="card card-compact">
-          <div class="card-header">
-            <div class="card-icon icon-blue">🗄️</div>
-            <div>
-              <div class="card-title">Databases</div>
-              <div class="card-subtitle" id="db-summary">3/3 Connected</div>
-            </div>
-          </div>
-          <div class="metric">
-            <div class="metric-value" id="db-count">3</div>
-            <div class="metric-label">Active Connections</div>
-            <div class="metric-trend trend-up">
-              <span id="mongodb-mini">MongoDB ✓</span>
-              <span id="postgres-mini">PostgreSQL ✓</span>
-              <span id="redis-mini">Redis ✓</span>
-            </div>
+      <section class="hero">
+        <div>
+          <h1>Reliable API Surface for Saby Services</h1>
+          <p>
+            <code>api.saby.ai</code> is the production ingress for authentication, user management,
+            hierarchy, forms, storage, analytics, and compliance workloads.
+          </p>
+          <div class="meta">
+            <article class="meta-card">
+              <p class="meta-label">Base URL</p>
+              <p class="meta-value">https://api.saby.ai/v1</p>
+            </article>
+            <article class="meta-card">
+              <p class="meta-label">Auth Scheme</p>
+              <p class="meta-value">Bearer JWT</p>
+            </article>
+            <article class="meta-card">
+              <p class="meta-label">Health Endpoint</p>
+              <p class="meta-value">GET /api/health</p>
+            </article>
+            <article class="meta-card">
+              <p class="meta-label">Primary Consumers</p>
+              <p class="meta-value">saby.ai, web.saby.ai</p>
+            </article>
           </div>
         </div>
 
-        <!-- API Performance Card -->
-        <div class="card card-compact">
-          <div class="card-header">
-            <div class="card-icon icon-purple">📊</div>
-            <div>
-              <div class="card-title">Performance</div>
-              <div class="card-subtitle">Last 7 days</div>
-            </div>
-          </div>
-          <div class="metric">
-            <div class="metric-value" id="response-time">< 100ms</div>
-            <div class="metric-label">Avg Response Time</div>
-            <div class="metric-trend trend-up">
-              <span>✓</span>
-              <span>Fast</span>
-            </div>
-          </div>
-        </div>
+        <aside class="quick">
+          <a href="/api/health" target="_blank" rel="noopener noreferrer">Open Health JSON</a>
+          <a href="https://saby.ai" target="_blank" rel="noopener noreferrer">Open Saby Dashboard</a>
+          <a href="https://web.saby.ai" target="_blank" rel="noopener noreferrer">Open Web Portal</a>
+          <a href="mailto:admin@saby.ai">Report API Incident</a>
+        </aside>
+      </section>
 
-        <!-- Environment Card -->
-        <div class="card card-compact">
-          <div class="card-header">
-            <div class="card-icon icon-orange">⚙️</div>
-            <div>
-              <div class="card-title" id="env-mode">Development</div>
-              <div class="card-subtitle">Environment</div>
-            </div>
+      <section class="layout">
+        <article class="card">
+          <h2>Quick Start</h2>
+          <pre class="code"><code>curl --request GET \
+  --url https://api.saby.ai/v1/users?page=1&amp;limit=20 \
+  --header 'Authorization: Bearer &lt;access_token&gt;' \
+  --header 'Content-Type: application/json'</code></pre>
+          <div class="routes">
+            <div class="route"><code>POST /v1/auth/login</code><br />Issue access token</div>
+            <div class="route"><code>GET /v1/users</code><br />User listing and filters</div>
+            <div class="route"><code>GET /v1/node</code><br />Node hierarchy access</div>
+            <div class="route"><code>GET /v1/storage/stats</code><br />Storage metrics</div>
           </div>
-          <div class="metric">
-            <div class="metric-value" id="node-version">v18</div>
-            <div class="metric-label">Node.js Version</div>
-            <div class="metric-trend trend-neutral">
-              <span id="platform-info">linux x64</span>
-            </div>
+        </article>
+
+        <article class="card">
+          <h2>Runtime Status</h2>
+          <div class="status-row">
+            <span>API Status</span>
+            <span id="status" class="status-pill warn">Checking...</span>
           </div>
-        </div>
-      </div>
+          <div class="status-row">
+            <span>Environment</span>
+            <strong id="environment">--</strong>
+          </div>
+          <div class="status-row">
+            <span>Version</span>
+            <strong id="version">--</strong>
+          </div>
+          <div class="status-row">
+            <span>Uptime</span>
+            <strong id="uptime">--</strong>
+          </div>
+          <div class="status-row">
+            <span>MongoDB</span>
+            <span id="mongo" class="status-pill warn">--</span>
+          </div>
+          <div class="status-row">
+            <span>PostgreSQL</span>
+            <span id="postgres" class="status-pill warn">--</span>
+          </div>
+          <div class="status-row">
+            <span>Redis</span>
+            <span id="redis" class="status-pill warn">--</span>
+          </div>
+          <div class="status-row">
+            <span>Last Probe</span>
+            <strong id="timestamp">--</strong>
+          </div>
+        </article>
+      </section>
 
-      <!-- CTA Section -->
-      <div class="cta-section">
-        <h2 class="cta-title">🛠️ Developer Resources</h2>
-        <p class="cta-description">
-          Access comprehensive API documentation, test endpoints, and explore our unified platform for data management,
-          analytics, and growth insights.
-        </p>
-        <div class="btn-group">
-          <a href="/v1/docs" class="btn btn-primary">
-            <span>📚</span>
-            <span>API Documentation</span>
-          </a>
-          <a href="/api/health" class="btn btn-secondary">
-            <span>💚</span>
-            <span>Health Check</span>
-          </a>
-          <a href="https://dev.saby.ai" class="btn btn-secondary">
-            <span>🎨</span>
-            <span>Frontend App</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div class="footer">
-        <p>Saby Platform &copy; 2025 | Staging Environment | CI/CD Deployed</p>
-        <p style="margin-top: 10px; font-size: 12px; opacity: 0.8">
-          "I will restore you to health and heal your wounds." – Jeremiah 30:17
-        </p>
-      </div>
-    </div>
+      <p class="footer">
+        This page exposes operational metadata only. Secrets, credentials, and private
+        infrastructure details are never rendered.
+      </p>
+    </main>
 
     <script>
-      let requestCount = 0;
-      let serverUptime = 0;
+      const statusEl = document.getElementById('status');
+      const envEl = document.getElementById('environment');
+      const versionEl = document.getElementById('version');
+      const uptimeEl = document.getElementById('uptime');
+      const mongoEl = document.getElementById('mongo');
+      const postgresEl = document.getElementById('postgres');
+      const redisEl = document.getElementById('redis');
+      const tsEl = document.getElementById('timestamp');
 
-      // Fetch system metrics
-      async function loadMetrics() {
+      function statusClass(value) {
+        if (value === 'connected' || value === 'ok') return 'ok';
+        if (value === 'error' || value === 'disconnected') return 'danger';
+        return 'warn';
+      }
+
+      function formatUptime(totalSeconds) {
+        const sec = Math.max(0, Math.floor(totalSeconds || 0));
+        const d = Math.floor(sec / 86400);
+        const h = Math.floor((sec % 86400) / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        return `${d}d ${h}h ${m}m`;
+      }
+
+      async function refreshStatus() {
         try {
-          const response = await fetch('/api/health');
-          const data = await response.json();
+          const res = await fetch('/api/health', { cache: 'no-store' });
+          if (!res.ok) throw new Error('Health request failed');
 
-          // Update header version and environment
-          document.getElementById('version').textContent = 'v' + (data.version || '1.0.0');
-          document.getElementById('environment').textContent = data.environment || 'development';
+          const data = await res.json();
+          const db = data.databases || {};
+          const overallStatus = String(data.status || '').toLowerCase();
 
-          // Card 1: System Health
-          document.getElementById('api-status').textContent = data.status === 'OK' ? 'All Systems' : 'System Issues';
+          statusEl.textContent = (data.status || 'OK').toUpperCase();
+          statusEl.className = `status-pill ${statusClass(overallStatus === 'ok' ? 'ok' : 'error')}`;
 
-          // Update uptime from server
-          if (data.uptime) {
-            serverUptime = data.uptime;
-            updateServerUptime();
-          }
+          envEl.textContent = data.environment || '--';
+          versionEl.textContent = data.version || '--';
+          uptimeEl.textContent = formatUptime(data.uptime);
+          tsEl.textContent = data.timestamp
+            ? new Date(data.timestamp).toLocaleString()
+            : '--';
 
-          // Card 2: Database Connections
-          let connectedCount = 0;
-          if (data.databases) {
-            // Update individual database mini indicators
-            updateDatabaseMini('mongodb-mini', 'MongoDB', data.databases.mongodb);
-            updateDatabaseMini('postgres-mini', 'PostgreSQL', data.databases.postgresql);
-            updateDatabaseMini('redis-mini', 'Redis', data.databases.redis);
+          mongoEl.textContent = db.mongodb || '--';
+          postgresEl.textContent = db.postgresql || '--';
+          redisEl.textContent = db.redis || '--';
 
-            // Count connected databases
-            if (data.databases.mongodb === 'connected') connectedCount++;
-            if (data.databases.postgresql === 'connected') connectedCount++;
-            if (data.databases.redis === 'connected') connectedCount++;
-
-            document.getElementById('db-count').textContent = connectedCount;
-            document.getElementById('db-summary').textContent = `${connectedCount}/3 Connected`;
-          }
-
-          // Card 3: Performance (response time already set)
-          // Response time is handled by the approximate calculation below
-
-          // Card 4: Environment Info
-          if (data.node && data.node.version) {
-            document.getElementById('node-version').textContent = data.node.version;
-            if (data.node.platform && data.node.arch) {
-              document.getElementById('platform-info').textContent = `${data.node.platform} ${data.node.arch}`;
-            }
-          }
-
-          document.getElementById('env-mode').textContent = 
-            (data.environment || 'development').charAt(0).toUpperCase() + 
-            (data.environment || 'development').slice(1);
-
-          // Increment request counter
-          requestCount++;
+          mongoEl.className = `status-pill ${statusClass(db.mongodb)}`;
+          postgresEl.className = `status-pill ${statusClass(db.postgresql)}`;
+          redisEl.className = `status-pill ${statusClass(db.redis)}`;
         } catch (error) {
-          console.error('Failed to load metrics:', error);
-          document.getElementById('api-status').textContent = 'System Error';
-          document.getElementById('db-summary').textContent = 'Unable to connect';
+          statusEl.textContent = 'UNAVAILABLE';
+          statusEl.className = 'status-pill danger';
         }
       }
 
-      function updateDatabaseMini(elementId, name, status) {
-        const element = document.getElementById(elementId);
-        if (status === 'connected') {
-          element.textContent = `${name} ✓`;
-          element.style.color = '#10b981';
-        } else {
-          element.textContent = `${name} ✗`;
-          element.style.color = '#ef4444';
-        }
-      }
-
-      // Update server uptime display
-      function updateServerUptime() {
-        const uptimeElement = document.getElementById('uptime');
-        const uptimeValueElement = document.getElementById('uptime-value');
-        const hours = Math.floor(serverUptime / 3600);
-        const minutes = Math.floor((serverUptime % 3600) / 60);
-        const seconds = Math.floor(serverUptime % 60);
-        const days = Math.floor(hours / 24);
-        const remainingHours = hours % 24;
-
-        // Header uptime (compact)
-        if (hours > 0) {
-          uptimeElement.textContent = `${hours}h ${minutes}m`;
-        } else if (minutes > 0) {
-          uptimeElement.textContent = `${minutes}m ${seconds}s`;
-        } else {
-          uptimeElement.textContent = `${seconds}s`;
-        }
-
-        // Card uptime (large display)
-        if (days > 0) {
-          uptimeValueElement.textContent = `${days}d ${remainingHours}h`;
-        } else if (hours > 0) {
-          uptimeValueElement.textContent = `${hours}h ${minutes}m`;
-        } else if (minutes > 0) {
-          uptimeValueElement.textContent = `${minutes}m`;
-        } else {
-          uptimeValueElement.textContent = `${seconds}s`;
-        }
-
-        // Increment uptime for next update
-        serverUptime++;
-      }
-
-      // Load metrics on page load
-      loadMetrics();
-
-      // Refresh metrics every 10 seconds
-      setInterval(loadMetrics, 10000);
-
-      // Update uptime every second
-      setInterval(updateServerUptime, 1000);
-
-      // Set deployed time (from page load)
-      const deployedTime = new Date();
-      document.getElementById('deployed-time').textContent = deployedTime.toLocaleDateString();
+      refreshStatus();
+      setInterval(refreshStatus, 30000);
     </script>
   </body>
 </html>
-
