@@ -13,7 +13,6 @@ const docsRoute = require('./docs.route');
 const levelRoute = require('./level.route');
 const nodeRoute = require('./node.route');
 // const nodeProfileRoute = require('./nodeprofile.route'); // ✅ DELETED: Merged into node.route
-const paymentRoute = require('./payment.route');
 const permissionRoute = require('./permission.route');
 const projectFormRoute = require('./projectForm.route');
 const projectFormSubmissionRoute = require('./projectFormSubmission.route');
@@ -27,13 +26,11 @@ const captureRoute = require('./capture.route');
 const departmentRoute = require('./department.route');
 const eventRoute = require('./event.route');
 const eventConfigRoute = require('./eventConfig.route');
-const programRoute = require('./program.route');
 const reportRoute = require('./report.route');
 const settingsRoute = require('./settings.route');
 const statementRoute = require('./statement.route');
 const collectionRoute = require('./collection.route');
 const inmailRoute = require('./inmail.route');
-const postgresRoute = require('./postgres.route');
 const storageRoute = require('./storage.route');
 const storageFolderRoute = require('./storageFolder.route');
 const tenantConfigRoute = require('./tenantConfig.route');
@@ -47,7 +44,6 @@ const complianceReportRoute = require('./complianceReport.route');
 const validationReportRoute = require('./validationReport.route');
 const notificationReportRoute = require('./notificationReport.route');
 const analyticsReportRoute = require('./analyticsReport.route');
-const exportReportRoute = require('./exportReport.route');
 const trendAnalysisRoute = require('./trendAnalysis.route');
 const permReportRoute = require('./permReport.route');
 const rollupReportRoute = require('./rollupReport.route');
@@ -142,10 +138,6 @@ const defaultRoutes = [
     route: levelRoute,
   },
   {
-    path: '/payment', // Example: /payment/123, /payment/info
-    route: paymentRoute,
-  },
-  {
     path: '/structure', // Example: /structure/123, /structure/info
     route: structureRoute,
   },
@@ -179,10 +171,6 @@ const defaultRoutes = [
     route: eventConfigRoute,
   },
   {
-    path: '/program', // Example: /program/123, /program/info
-    route: programRoute,
-  },
-  {
     path: '/report', // Example: /report/123, /report/info
     route: reportRoute,
   },
@@ -201,10 +189,6 @@ const defaultRoutes = [
   {
     path: '/inmail',
     route: inmailRoute,
-  },
-  {
-    path: '/postgres',
-    route: postgresRoute,
   },
   {
     path: '/storage/folders',
@@ -269,10 +253,6 @@ const defaultRoutes = [
     route: analyticsReportRoute,
   },
   {
-    path: '/export',
-    route: exportReportRoute,
-  },
-  {
     path: '/trend-analysis',
     route: trendAnalysisRoute,
   },
@@ -307,11 +287,5 @@ if (config.env === 'development') {
     router.use(route.path, route.route);
   });
 }
-
-router.use('/admin', adminRoute);
-router.use('/captures', captureRoute);
-router.use('/collections', collectionRoute);
-router.use('/departments', departmentRoute);
-router.use('/submitData', submissionRoute);
 
 module.exports = router;
