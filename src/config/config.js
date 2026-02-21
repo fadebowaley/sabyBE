@@ -186,13 +186,8 @@ module.exports = {
   mongoose: {
     url: envVars.MONGODB_URL + (envVars.NODE_ENV === 'test' ? '-test' : ''),
     options: {
-      useCreateIndex: true,
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       serverSelectionTimeoutMS: 30000,
       socketTimeoutMS: 45000,
-      bufferCommands: true,
-      bufferMaxEntries: 0,
       maxPoolSize: 10,
       minPoolSize: 1,
       family: 4, // Force IPv4 to avoid ::1 connection issues
