@@ -63,29 +63,27 @@ const extractApiKey = (req) => {
 
   // Check x-api-key header first (case-insensitive)
   let apiKey = req.header('x-api-key') || req.header('X-API-Key');
+  if (typeof apiKey === 'string' && apiKey.trim() === '') {
+    apiKey = null;
+  }
 
   // If not found, check Authorization header for Bearer token format
   if (!apiKey) {
     const authHeader = req.header('Authorization');
-    if (authHeader) {
-      // Check if it's a Bearer token
-      if (authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7).trim();
-        // Accept token if it starts with sk_ (API key format)
-        // For backward compatibility, also accept tokens without prefix
-        // but prefer sk_ prefixed keys
+    if (typeof authHeader === 'string' && authHeader.trim() !== '') {
+      // Support standard Bearer tokens (allow extra whitespace after "Bearer")
+      if (/^Bearer\s+/i.test(authHeader)) {
+        const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+        // Only treat Bearer as an API key when it matches our API key prefix.
         if (token.startsWith('sk_')) {
-          apiKey = authHeader; // Return full "Bearer sk_..." format for consistency
-        } else if (token.length > 20) {
-          // For backward compatibility: accept long tokens without prefix
-          // This allows old keys to work while we migrate
+          // Keep original header formatting for backward compatibility (tests rely on this)
           apiKey = authHeader;
         }
       } else if (authHeader.startsWith('sk_')) {
         // Direct API key without Bearer prefix
         apiKey = authHeader;
-      } else if (authHeader.length > 20) {
-        // For backward compatibility: accept long tokens without prefix
+      } else if (/^Bearersk_/i.test(authHeader)) {
+        // Malformed "Bearer" header (missing space) but containing a valid API key
         apiKey = authHeader;
       }
     }

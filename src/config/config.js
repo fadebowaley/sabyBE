@@ -7,7 +7,7 @@ dotenv.config({ path: path.join(__dirname, '../../.env') });
 const envVarsSchema = Joi.object()
   .keys({
     NODE_ENV: Joi.string()
-      .valid('production', 'development', 'staging')
+      .valid('production', 'development', 'staging', 'test')
       .default('development'),
     PORT: Joi.number().default(4000),
     SABYFE_URL: Joi.string().description(

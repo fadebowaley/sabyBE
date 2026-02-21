@@ -53,10 +53,14 @@ const corsOptions = {
     'http://0.0.0.0:3000',
     // Production frontend domains (priority order)
     'https://dashboard.saby.ai', // Main production dashboard
+    'https://app.saby.ai', // Current production frontend
+    'https://www.app.saby.ai',
     'https://saby.ai',
     'https://www.saby.ai',
     'https://web.saby.ai',
     'https://stg.saby.ai',
+    'https://portal.saby.ai',
+    'https://www.portal.saby.ai',
     // External domains that need API access
     'https://portal.sotsm.org',
     // Add production origins from environment variables if needed

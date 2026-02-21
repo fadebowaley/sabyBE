@@ -20,6 +20,9 @@ jest.mock('bullmq', () => ({
 }));
 
 jest.mock('aws-sdk', () => ({
+  config: {
+    update: jest.fn(),
+  },
   S3: jest.fn(() => ({
     upload: jest.fn(() => ({
       promise: jest.fn(() => Promise.resolve({ Location: 'test-location' }))
@@ -29,6 +32,20 @@ jest.mock('aws-sdk', () => ({
     }))
   }))
 }));
+
+// Mock axios (axios v1 is ESM; Jest 26 will choke on parsing it if required)
+jest.mock('axios', () => {
+  const mock = {
+    get: jest.fn(() => Promise.resolve({ data: {} })),
+    post: jest.fn(() => Promise.resolve({ data: {} })),
+    put: jest.fn(() => Promise.resolve({ data: {} })),
+    delete: jest.fn(() => Promise.resolve({ data: {} })),
+    create: jest.fn(() => mock),
+    defaults: {},
+    interceptors: { request: { use: jest.fn() }, response: { use: jest.fn() } },
+  };
+  return mock;
+});
 
 // Mock uploadthing
 jest.mock('uploadthing/server', () => ({

@@ -67,7 +67,8 @@ async function initializeWhatsAppServer() {
     logger.info('✅ WhatsApp bot initialized');
 
     // Start server
-    const port = config.whatsapp.port || 4001;
+    // Cloud Run (and most PaaS) require listening on the port provided in $PORT.
+    const port = Number(process.env.PORT || config.whatsapp.port || 4001);
     app.listen(port, () => {
       logger.info(`✅ WhatsApp Bot Server running on port ${port}`);
       logger.info(`🌍 Environment: ${config.env}`);

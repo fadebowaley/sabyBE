@@ -33,9 +33,13 @@ const connectToDatabases = async () => {
 
     if (postgresConnected && redisConnected) {
       // Start the server only if both databases are connected
-      server = app.listen(config.port, '::', () => {
+      // Bind to IPv4 by default so other containers on the Docker network can reach this service.
+      // (Binding to "::" can make IPv4 connections fail in some container setups.)
+      const bindHost = process.env.BIND_HOST || '0.0.0.0';
+      server = app.listen(config.port, bindHost, () => {
         logger.info(`🚀 Server is running on port ${config.port}`);
         logger.info(`🌍 Environment: ${config.env}`);
+        logger.info(`📡 Bind host: ${bindHost}`);
         logger.info('📊 Database Status:');
         logger.info('   - MongoDB: ✅ Connected');
         logger.info('   - PostgreSQL: ✅ Connected');
@@ -46,14 +50,24 @@ const connectToDatabases = async () => {
       initializeSocket(server);
 
       // Initialize scheduled jobs (only in production/staging)
-      if (config.env === 'production' || config.env === 'staging') {
+      if (
+        (config.env === 'production' || config.env === 'staging') &&
+        process.env.JOBS_ENABLED !== 'false'
+      ) {
         const { scheduleCleanup } = require('./jobs/cleanupDeletedForms');
         scheduleCleanup();
         logger.info('✅ Scheduled jobs initialized');
+      } else if (process.env.JOBS_ENABLED === 'false') {
+        logger.info('⊘ Scheduled jobs disabled (JOBS_ENABLED=false)');
       }
 
-      // Start all background workers automatically
-      await initializeWorkers();
+      // Background workers can be expensive locally. Keep them enabled by default
+      // (production behavior), but allow disabling via env for local prod debugging.
+      if (process.env.WORKERS_ENABLED === 'false') {
+        logger.info('⊘ Background workers disabled (WORKERS_ENABLED=false)');
+      } else {
+        await initializeWorkers();
+      }
 
       // Initialize node sync if enabled
       await startNodeSync();

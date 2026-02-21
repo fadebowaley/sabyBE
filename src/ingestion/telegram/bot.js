@@ -19,7 +19,16 @@ const sessionManager = require('./session');
 // Create bot instance
 const bot = new TelegramBot(config.telegram.botToken, {
   polling: config.env === 'development',
-  webHook: config.env === 'production' ? { port: 8443 } : false,
+  // For Cloud Run, the container must listen on the port provided in $PORT.
+  // Telegram requires HTTPS on the public URL; Cloud Run terminates TLS at the edge,
+  // so the container itself can serve plain HTTP.
+  webHook:
+    config.env === 'production' || config.env === 'staging'
+      ? {
+          port: Number(process.env.PORT || 8080),
+          host: '0.0.0.0',
+        }
+      : false,
 });
 
 /**
@@ -34,7 +43,10 @@ async function initializeBot() {
     logger.info('✅ Connected to MongoDB');
 
     // Set up webhook for production
-    if (config.env === 'production' && config.telegram.webhookUrl) {
+    if (
+      (config.env === 'production' || config.env === 'staging') &&
+      config.telegram.webhookUrl
+    ) {
       await bot.setWebHook(
         `${config.telegram.webhookUrl}/bot${config.telegram.botToken}`
       );

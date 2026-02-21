@@ -322,6 +322,9 @@ userSchema.statics.createUser = async function (userBody) {
  */
 
 userSchema.methods.isPasswordMatch = async function (password) {
+  // Some imported/legacy user records may not have a password hash set.
+  // Treat as a non-match rather than throwing (bcrypt requires strings).
+  if (!this.password) return false;
   return bcrypt.compare(password, this.password);
 };
 
