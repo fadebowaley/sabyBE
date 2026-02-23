@@ -46,6 +46,104 @@ const queueSubmission = async (submissionBody) => {
 };
 
 /**
+ * Enqueue an update submission job for async processing
+ * @param {Object} updateBody - { submissionId, updates, userId, tenantId }
+ * @returns {Promise<{ jobId: string, status: string }>}
+ */
+const queueUpdateSubmission = async (updateBody) => {
+  const { submissionId, updates, userId, tenantId } = updateBody;
+
+  if (!submissionId || !tenantId) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'submissionId and tenantId required'
+    );
+  }
+
+  try {
+    const job = await submissionQueue.add(
+      'update:data',
+      {
+        submissionId,
+        updates,
+        userId,
+        tenantId,
+      },
+      {
+        jobId: `update-${submissionId}-${Date.now()}`,
+        removeOnComplete: true,
+        removeOnFail: false,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 3000,
+        },
+      }
+    );
+
+    logger.info(
+      `📝 Update submission enqueued - Job ID: ${job.id} | Submission: ${submissionId}`
+    );
+    return { jobId: job.id, status: 'queued' };
+  } catch (error) {
+    logger.error('❌ Update submission queue failed:', error);
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Update submission queue failed'
+    );
+  }
+};
+
+/**
+ * Enqueue a delete submission job for async processing
+ * @param {Object} deleteBody - { submissionId, userId, tenantId, permanent }
+ * @returns {Promise<{ jobId: string, status: string }>}
+ */
+const queueDeleteSubmission = async (deleteBody) => {
+  const { submissionId, userId, tenantId, permanent = false } = deleteBody;
+
+  if (!submissionId || !tenantId) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'submissionId and tenantId required'
+    );
+  }
+
+  try {
+    const job = await submissionQueue.add(
+      'delete:data',
+      {
+        submissionId,
+        userId,
+        tenantId,
+        permanent,
+      },
+      {
+        jobId: `delete-${submissionId}-${Date.now()}`,
+        removeOnComplete: true,
+        removeOnFail: false,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 3000,
+        },
+      }
+    );
+
+    logger.info(
+      `🗑️ Delete submission enqueued - Job ID: ${job.id} | Submission: ${submissionId} | Permanent: ${permanent}`
+    );
+    return { jobId: job.id, status: 'queued' };
+  } catch (error) {
+    logger.error('❌ Delete submission queue failed:', error);
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Delete submission queue failed'
+    );
+  }
+};
+
+/**
  * List/query submissions by tenant ID (and optional filters)
  */
 const listSubmissions = async (filters = {}) =>
@@ -260,24 +358,32 @@ const getActivityLogSummary = async () => {
 const getEnhancedActivityLogs = async (filters = {}) => {
   // 1. Get base activity logs
   const { results: logs, total } = await getActivityLogs(filters);
-  
+
   if (logs.length === 0) {
     return { results: [], total: 0 };
   }
-  
+
   // 2. Extract unique IDs (clean quotes from user_id if present)
-  const userIds = [...new Set(logs.map(l => {
-    if (!l.user_id) return null;
-    // Remove quotes if present
-    return l.user_id.replace(/^"|"$/g, '');
-  }).filter(Boolean))];
-  const nodeIds = [...new Set(logs.map(l => l.node_id).filter(Boolean))];
-  const projectIds = [...new Set(logs.map(l => l.project_id).filter(Boolean))];
-  
+  const userIds = [
+    ...new Set(
+      logs
+        .map((l) => {
+          if (!l.user_id) return null;
+          // Remove quotes if present
+          return l.user_id.replace(/^"|"$/g, '');
+        })
+        .filter(Boolean)
+    ),
+  ];
+  const nodeIds = [...new Set(logs.map((l) => l.node_id).filter(Boolean))];
+  const projectIds = [
+    ...new Set(logs.map((l) => l.project_id).filter(Boolean)),
+  ];
+
   console.log('🔍 [Enhanced Logs] User IDs to lookup:', userIds);
   console.log('🔍 [Enhanced Logs] Project IDs to lookup:', projectIds);
   console.log('🔍 [Enhanced Logs] Node IDs to lookup:', nodeIds);
-  
+
   // 3. Fetch user data from MongoDB (using _id, not userId)
   const User = require('../models/user.model');
   const mongoose = require('mongoose');
@@ -299,8 +405,8 @@ const getEnhancedActivityLogs = async (filters = {}) => {
     return acc;
   }, {});
   console.log('👥 [Enhanced Logs] User map keys:', Object.keys(userMap));
-  
-  // 4. Fetch node data from MongoDB  
+
+  // 4. Fetch node data from MongoDB
   let nodeMap = {};
   if (nodeIds.length > 0) {
     const Node = require('../models/node.model');
@@ -320,7 +426,7 @@ const getEnhancedActivityLogs = async (filters = {}) => {
     }, {});
     console.log('🏢 [Enhanced Logs] Node map keys:', Object.keys(nodeMap));
   }
-  
+
   // 5. Fetch form references from MongoDB
   const ProjectForm = require('../models/projectForm.model');
   const forms = await ProjectForm.find({ projectId: { $in: projectIds } })
@@ -332,12 +438,12 @@ const getEnhancedActivityLogs = async (filters = {}) => {
     return acc;
   }, {});
   console.log('📝 [Enhanced Logs] Form map:', formMap);
-  
+
   // 6. Enhance logs with joined data
-  const enhancedLogs = logs.map(log => {
+  const enhancedLogs = logs.map((log) => {
     // Clean user_id for lookup (remove quotes if present)
     const cleanUserId = log.user_id ? log.user_id.replace(/^"|"$/g, '') : null;
-    
+
     return {
       ...log,
       // User data
@@ -354,15 +460,21 @@ const getEnhancedActivityLogs = async (filters = {}) => {
       form_reference: formMap[log.project_id],
     };
   });
-  
-  console.log('✅ [Enhanced Logs] Returning', enhancedLogs.length, 'enhanced logs');
+
+  console.log(
+    '✅ [Enhanced Logs] Returning',
+    enhancedLogs.length,
+    'enhanced logs'
+  );
   console.log('📊 [Enhanced Logs] Sample:', enhancedLogs[0]);
-  
+
   return { results: enhancedLogs, total };
 };
 
 module.exports = {
   queueSubmission,
+  queueUpdateSubmission,
+  queueDeleteSubmission,
   listSubmissions,
   getSubmissionById,
   deleteSubmission,

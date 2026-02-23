@@ -56,4 +56,15 @@ if (require.main === module) {
 
 module.exports = {
   submissionQueue,
+  // Helper to add different job types
+  addJob: async (type, data, options = {}) => {
+    const jobTypes = ['submit:data', 'update:data', 'delete:data'];
+    if (!jobTypes.includes(type)) {
+      throw new Error(`Invalid job type: ${type}`);
+    }
+    return submissionQueue.add(type, data, {
+      jobId: `${data.tenantId}-${type}-${Date.now()}`,
+      ...options,
+    });
+  },
 };

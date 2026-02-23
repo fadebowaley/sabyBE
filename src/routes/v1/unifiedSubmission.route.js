@@ -95,25 +95,20 @@ router
     validate(submissionValidation.submitData),
     unifiedSubmissionController.submitData
   )
-  .get(
-    auth(),
-    unifiedSubmissionController.listSubmissions
-  );
+  .get(auth(), unifiedSubmissionController.listSubmissions);
 
 // Retry failed submission
 router.post(
   '/:id/retry',
   auth(),
+  validate(submissionValidation.retrySubmission),
   unifiedSubmissionController.retrySubmission
 );
 
 // Get, Update, Delete specific submission
 router
   .route('/:id')
-  .get(
-    auth(),
-    unifiedSubmissionController.getSubmission
-  )
+  .get(auth(), unifiedSubmissionController.getSubmission)
   .patch(
     auth(),
     validate(submissionValidation.updateSubmission),

@@ -6,6 +6,8 @@ const catchAsync = require('../utils/catchAsync');
 const logger = require('../config/logger');
 const {
   queueSubmission,
+  queueUpdateSubmission,
+  queueDeleteSubmission,
   getActivityLogs: getActivityLogsService,
   getActivityLogSummary: getActivityLogSummaryService,
   listSubmissions: listSubmissionsService,
@@ -252,7 +254,6 @@ const retrySubmission = catchAsync(async (req, res) => {
     retriedSubmissionId: id,
   });
 });
-
 
 function formatFieldLabel(key = '') {
   return key
@@ -869,25 +870,107 @@ const bulkDeleteActivityLogs = catchAsync(async (req, res) => {
 });
 
 /**
- * Update submission
+ * Update submission - queues the update for async processing
  */
 const updateSubmission = catchAsync(async (req, res) => {
-  const submission = await SubmissionModel.updateSubmissionById(
-    req.params.id,
-    req.body
-  );
-  if (!submission) {
+  const { id: submissionId } = req.params;
+  const { data, payload, status, meta } = req.body;
+  const userId = req.user?._id;
+  const tenantId = req.user?.tenantId;
+
+  // Quick validation - check if submission exists
+  const existing = await SubmissionModel.getSubmissionById(submissionId);
+  if (!existing) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
   }
-  res.send(submission);
+
+  // Permission check - user must own the submission or be admin/sabyUser
+  const canEdit =
+    req.user?.role === 'admin' ||
+    req.user?.role === 'sabyUser' ||
+    existing.user_id === userId?.toString() ||
+    existing.tenant_id === tenantId;
+
+  if (!canEdit) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Not authorized to update this submission'
+    );
+  }
+
+  // Queue the update for async processing
+  const result = await queueUpdateSubmission({
+    submissionId,
+    updates: { data, payload, status, meta },
+    userId,
+    tenantId,
+  });
+
+  res.status(httpStatus.ACCEPTED).send({
+    success: true,
+    message: 'Submission update queued for processing',
+    jobId: result.jobId,
+    status: result.status,
+  });
 });
 
 /**
- * Delete submission
+ * Delete submission - queues the delete for async processing
  */
 const deleteSubmission = catchAsync(async (req, res) => {
-  await SubmissionModel.deleteSubmissionById(req.params.id);
-  res.status(httpStatus.NO_CONTENT).send();
+  const { id: submissionId } = req.params;
+  const { permanent } = req.body;
+  const userId = req.user?._id;
+  const tenantId = req.user?.tenantId;
+
+  // Quick validation - check if submission exists
+  const existing = await SubmissionModel.getSubmissionById(submissionId);
+  if (!existing) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
+  }
+
+  // Permission check
+  const canDelete =
+    req.user?.role === 'admin' ||
+    req.user?.role === 'sabyUser' ||
+    existing.user_id === userId?.toString() ||
+    existing.tenant_id === tenantId;
+
+  if (!canDelete) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Not authorized to delete this submission'
+    );
+  }
+
+  // Permanent delete requires admin/sabyUser
+  if (
+    permanent &&
+    req.user?.role !== 'sabyUser' &&
+    req.user?.role !== 'admin'
+  ) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Permanent deletion requires admin role'
+    );
+  }
+
+  // Queue the delete for async processing
+  const result = await queueDeleteSubmission({
+    submissionId,
+    userId,
+    tenantId,
+    permanent: permanent || false,
+  });
+
+  res.status(httpStatus.ACCEPTED).send({
+    success: true,
+    message: permanent
+      ? 'Submission permanently deleted'
+      : 'Submission queued for deletion (soft delete)',
+    jobId: result.jobId,
+    status: result.status,
+  });
 });
 
 /**
@@ -1005,8 +1088,6 @@ const cleanupTestData = catchAsync(async (req, res) => {
     deleted: deletedCounts,
   });
 });
-
-
 
 module.exports = {
   submitData,
