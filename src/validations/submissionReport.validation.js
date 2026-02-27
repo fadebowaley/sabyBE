@@ -51,6 +51,22 @@ const getSubmissions = {
 };
 
 /**
+ * Validation for GET /v1/submission-reports/module-table
+ */
+const getModuleReportTable = {
+  query: Joi.object().keys({
+    project_id: Joi.string().required(),
+    node_id: Joi.string(),
+    nodeId: Joi.string(),
+    month: Joi.string().pattern(/^\d{4}-\d{2}(-01)?$/),
+    start_date: Joi.date().iso(),
+    end_date: Joi.date().iso(),
+    limit: Joi.number().integer().min(1).max(500).default(100),
+    offset: Joi.number().integer().min(0).default(0),
+  }),
+};
+
+/**
  * Validation for GET /v1/submission-reports/:id
  */
 const getSubmissionById = {
@@ -232,6 +248,7 @@ const bulkDeleteSubmissions = {
 };
 
 module.exports = {
+  getModuleReportTable,
   getSubmissions,
   getSubmissionById,
   getComplianceReport,

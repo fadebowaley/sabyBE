@@ -18,6 +18,215 @@ const httpStatus = require('http-status');
 const SubmissionModel = require('../models/submission.model');
 const ApiError = require('../utils/ApiError');
 const { logActivity } = require('../utils/activityLogger');
+const { postgresPool } = require('../config/postgres');
+
+const DEFAULT_TABLE_LIMIT = 100;
+const MAX_TABLE_LIMIT = 500;
+
+const toSnakeCase = (value = '') =>
+  String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+const prettifyKey = (key = '') =>
+  String(key)
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const unwrapValue = (value) => {
+  if (value === null || value === undefined) return null;
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === 'object' ? JSON.stringify(item) : item))
+      .join(', ');
+  }
+  if (typeof value === 'object') {
+    if (Object.prototype.hasOwnProperty.call(value, 'value')) {
+      return value.value;
+    }
+    try {
+      return JSON.stringify(value);
+    } catch (_err) {
+      return String(value);
+    }
+  }
+  return value;
+};
+
+const buildDynamicColumns = (catalogRows = [], submissionRows = []) => {
+  const columns = [
+    { key: 'sn', label: 'S/N', pinned: true },
+    { key: 'submission_id', label: 'Submission ID', pinned: true },
+    { key: 'nodeid', label: 'NodeId', pinned: true },
+    { key: 'node_name', label: 'Node Name' },
+    { key: 'status', label: 'Status' },
+    { key: 'submitted_at', label: 'Submitted At' },
+  ];
+
+  const usedKeys = new Set(columns.map((column) => column.key));
+  const sourceKeyToColumnKey = new Map();
+
+  const register = (sourceKey, labelHint) => {
+    if (!sourceKey) return;
+    if (sourceKeyToColumnKey.has(sourceKey)) return;
+
+    const label = labelHint || prettifyKey(sourceKey);
+    let candidate = toSnakeCase(label) || toSnakeCase(sourceKey) || 'field';
+    let suffix = 2;
+    while (usedKeys.has(candidate)) {
+      candidate = `${toSnakeCase(label) || 'field'}_${suffix}`;
+      suffix += 1;
+    }
+    usedKeys.add(candidate);
+    sourceKeyToColumnKey.set(sourceKey, candidate);
+    columns.push({ key: candidate, label, source_key: sourceKey });
+  };
+
+  catalogRows.forEach((row) => {
+    register(row.field_key, row.field_label);
+  });
+
+  submissionRows.forEach((row) => {
+    const payload = row.data && typeof row.data === 'object' ? row.data : {};
+    Object.keys(payload).forEach((key) => register(key, null));
+  });
+
+  return { columns, sourceKeyToColumnKey };
+};
+
+/**
+ * Get module report table in row/column format.
+ * Columns are generated dynamically from form catalog + submission payload keys.
+ * Rows are sourced directly from form_submissions for immediate availability.
+ */
+const getModuleReportTable = async (filters = {}) => {
+  const {
+    tenant_id,
+    project_id,
+    node_filter,
+    start_date,
+    end_date,
+    month,
+    limit = DEFAULT_TABLE_LIMIT,
+    offset = 0,
+  } = filters;
+
+  if (!tenant_id) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'tenant_id is required');
+  }
+  if (!project_id) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'project_id is required');
+  }
+
+  const safeLimit = Math.min(Math.max(Number(limit) || DEFAULT_TABLE_LIMIT, 1), MAX_TABLE_LIMIT);
+  const safeOffset = Math.max(Number(offset) || 0, 0);
+
+  const where = ['tenant_id = $1', 'project_id = $2'];
+  const values = [tenant_id, project_id];
+  let index = 3;
+
+  if (node_filter) {
+    where.push(`(node_id = $${index} OR node_reference = $${index})`);
+    values.push(node_filter);
+    index += 1;
+  }
+  if (month) {
+    where.push(`month = $${index}`);
+    values.push(month);
+    index += 1;
+  }
+  if (start_date) {
+    where.push(`created_at >= $${index}`);
+    values.push(start_date);
+    index += 1;
+  }
+  if (end_date) {
+    where.push(`created_at <= $${index}`);
+    values.push(end_date);
+    index += 1;
+  }
+
+  // Hide soft-deleted records from reporting table by default.
+  where.push(`status != 'deleted'`);
+
+  const whereClause = `WHERE ${where.join(' AND ')}`;
+
+  const rowsQuery = `
+    SELECT
+      id,
+      node_id,
+      node_reference,
+      node_name,
+      status,
+      data,
+      created_at
+    FROM form_submissions
+    ${whereClause}
+    ORDER BY created_at DESC
+    LIMIT $${index} OFFSET $${index + 1}
+  `;
+  const rowsValues = [...values, safeLimit, safeOffset];
+  const rowsResult = await postgresPool.query(rowsQuery, rowsValues);
+
+  const countQuery = `SELECT COUNT(*)::bigint AS total FROM form_submissions ${whereClause}`;
+  const countResult = await postgresPool.query(countQuery, values);
+  const total = Number(countResult.rows[0]?.total || 0);
+
+  let catalogRows = [];
+  try {
+    const catalogQuery = `
+      SELECT field_key, field_label
+      FROM form_field_catalog
+      WHERE tenant_id = $1
+        AND project_id = $2
+      ORDER BY field_label ASC, field_key ASC
+    `;
+    const catalogResult = await postgresPool.query(catalogQuery, [tenant_id, project_id]);
+    catalogRows = catalogResult.rows || [];
+  } catch (_catalogError) {
+    // Fail-safe: reporting still works even when catalog entries are missing.
+    catalogRows = [];
+  }
+
+  const { columns, sourceKeyToColumnKey } = buildDynamicColumns(
+    catalogRows,
+    rowsResult.rows
+  );
+
+  const rows = rowsResult.rows.map((row, rowIndex) => {
+    const reportRow = {
+      sn: safeOffset + rowIndex + 1,
+      submission_id: row.id,
+      nodeid: row.node_reference || row.node_id || null,
+      node_name: row.node_name || null,
+      status: row.status,
+      submitted_at: row.created_at,
+    };
+
+    const payload = row.data && typeof row.data === 'object' ? row.data : {};
+    Object.entries(payload).forEach(([sourceKey, rawValue]) => {
+      const key = sourceKeyToColumnKey.get(sourceKey);
+      if (key) {
+        reportRow[key] = unwrapValue(rawValue);
+      }
+    });
+
+    return reportRow;
+  });
+
+  return {
+    total,
+    limit: safeLimit,
+    offset: safeOffset,
+    columns,
+    rows,
+  };
+};
 
 /**
  * Get submissions with advanced filtering
@@ -630,4 +839,5 @@ module.exports = {
   unlockSubmission,
   deleteSubmission,
   bulkDeleteSubmissions,
+  getModuleReportTable,
 };

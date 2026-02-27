@@ -14,6 +14,42 @@ const {
 } = require('../../services');
 const { postgresPool } = require('../../config/postgres');
 
+const reconcileMonthCounts = async (tenantId, projectId, month) => {
+  const query = `
+    WITH submission_counts AS (
+      SELECT
+        tenant_id,
+        project_id,
+        node_id,
+        COUNT(*)::int AS actual_count
+      FROM form_submissions
+      WHERE tenant_id = $1
+        AND project_id = $2
+        AND month = $3
+        AND status != 'deleted'
+      GROUP BY tenant_id, project_id, node_id
+    )
+    UPDATE event_compliance_tracking ect
+    SET submitted_count = sc.actual_count,
+        total_events_submitted = sc.actual_count,
+        updated_at = NOW(),
+        last_calculated_at = NOW()
+    FROM submission_counts sc
+    WHERE ect.tenant_id = sc.tenant_id
+      AND ect.project_id = sc.project_id
+      AND ect.node_id = sc.node_id
+      AND ect.month = $3
+      AND (
+        COALESCE(ect.submitted_count, 0) <> sc.actual_count OR
+        COALESCE(ect.total_events_submitted, 0) <> sc.actual_count
+      )
+    RETURNING ect.node_id, ect.submitted_count;
+  `;
+
+  const result = await postgresPool.query(query, [tenantId, projectId, month]);
+  return result.rows.length;
+};
+
 /**
  * Get previous month info
  */
@@ -42,7 +78,7 @@ const getSubmissionsToLock = async (tenantId, projectId, month) => {
       fs.id,
       fs.node_id,
       fs.user_id,
-      fs.compliance_percentage,
+      fs.event_compliance_percentage,
       fs.is_locked,
       u.email as user_email,
       u.firstname as user_name
@@ -91,7 +127,7 @@ const lockMonthSubmissions = async (
       AND month = $3
       AND perm_enabled = true
       AND (is_locked = false OR is_locked IS NULL)
-    RETURNING id, node_id, compliance_percentage;
+    RETURNING id, node_id, event_compliance_percentage;
   `;
 
   try {
@@ -115,10 +151,10 @@ const getComplianceSummary = async (tenantId, projectId, month) => {
   const query = `
     SELECT 
       COUNT(*) as total_nodes,
-      COUNT(CASE WHEN compliance_percentage = 100 THEN 1 END) as complete_nodes,
-      COUNT(CASE WHEN compliance_percentage > 0 AND compliance_percentage < 100 THEN 1 END) as partial_nodes,
-      COUNT(CASE WHEN compliance_percentage = 0 OR compliance_percentage IS NULL THEN 1 END) as incomplete_nodes,
-      AVG(COALESCE(compliance_percentage, 0)) as overall_percentage
+      COUNT(CASE WHEN event_compliance_percentage = 100 THEN 1 END) as complete_nodes,
+      COUNT(CASE WHEN event_compliance_percentage > 0 AND event_compliance_percentage < 100 THEN 1 END) as partial_nodes,
+      COUNT(CASE WHEN event_compliance_percentage = 0 OR event_compliance_percentage IS NULL THEN 1 END) as incomplete_nodes,
+      AVG(COALESCE(event_compliance_percentage, 0)) as overall_percentage
     FROM form_submissions
     WHERE tenant_id = $1
       AND project_id = $2
@@ -217,6 +253,10 @@ const processProjectMonthEnd = async (project, monthInfo) => {
     logger.info(
       `🔒 Locking ${submissionsToLock.length} submissions for ${project_name}`
     );
+
+    // Reconcile compliance counters first, then lock submissions.
+    const repairedRows = await reconcileMonthCounts(tenant_id, project_id, month);
+    logger.info(`🧮 Reconciled ${repairedRows} drifted compliance rows`);
 
     // Lock all submissions
     const lockedSubmissions = await lockMonthSubmissions(

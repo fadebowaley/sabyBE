@@ -52,6 +52,8 @@ const unifiedSubmissionRoute = require('./unifiedSubmission.route');
 const eventCalendarRoute = require('./eventCalendar.route');
 const eventComplianceRoute = require('./eventCompliance.route');
 const permSubmissionRoute = require('./permSubmission.route');
+// Workflow
+const workflowRoute = require('./workflow.route');
 
 // declare rest of the routes: nodeLevel, nodeStructure, node etc.
 const config = require('../../config/config');
@@ -218,6 +220,11 @@ const defaultRoutes = [
   {
     path: '/submissions',
     route: unifiedSubmissionRoute,
+  },
+  // Workflow inbox (approval/review queue)
+  {
+    path: '/workflows',
+    route: workflowRoute,
   },
   // {
   //   path: '/perm/submissions',

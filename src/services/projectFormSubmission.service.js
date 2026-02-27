@@ -23,7 +23,7 @@ const createSubmission = async (
       deletedAt: null,
     });
     if (!projectForm) {
-      throw new ApiError(httpStatus.NOT_FOUND, 'Project form not found');
+      throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
     }
     tenantId = projectForm.tenantId;
   }
@@ -144,6 +144,40 @@ const updateSubmissionStatus = async (
     await submission.save();
   }
 
+  return submission;
+};
+
+/**
+ * Update submission payload and/or status
+ * @param {ObjectId|string} submissionId - The submission ID
+ * @param {Object} updateBody - Update payload
+ * @param {ObjectId} updatedBy - User updating the submission
+ * @returns {Promise<ProjectFormSubmission>}
+ */
+const updateSubmissionById = async (
+  submissionId,
+  updateBody = {},
+  updatedBy = null
+) => {
+  const submission = await getSubmissionById(submissionId);
+
+  if (updateBody.submissionData) {
+    submission.submissionData = updateBody.submissionData;
+  }
+
+  if (updateBody.status) {
+    submission.status = updateBody.status;
+  }
+
+  if (updateBody.status || updateBody.notes) {
+    submission.processing = {
+      processedAt: new Date(),
+      processedBy: updatedBy || submission.processing?.processedBy || null,
+      notes: updateBody.notes || submission.processing?.notes || '',
+    };
+  }
+
+  await submission.save();
   return submission;
 };
 
@@ -372,6 +406,7 @@ module.exports = {
   getSubmissionsByProject,
   getSubmissionsByTenant,
   updateSubmissionStatus,
+  updateSubmissionById,
   deleteSubmissionById,
   getSubmissionStats,
   exportSubmissions,

@@ -1,20 +1,19 @@
-
 services:
   # Production Backend Service
   halobe:
-    # build:
-      # context: .
-      # dockerfile: Dockerfile.prod
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
     container_name: halo-prod-backend
     image: halo-halobe:production
     ports:
-      - "4000:4000"
+      - '4000:4000'
     environment:
       - NODE_ENV=production
       - PORT=4000
       - MONGODB_URL=mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-password}@mongodb:27017/halo-prod?authSource=admin
       # Remote PostgreSQL configuration
-      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_HOST=postgres
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - POSTGRES_USER=${POSTGRES_USER:-halograph_user}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-local_test_password_2025}
@@ -52,7 +51,13 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:4000/', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://127.0.0.1:4000/', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -73,7 +78,11 @@ services:
       - halo-prod-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-halograph_user} -d ${POSTGRES_DB:-halograph}"]
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-halograph_user} -d ${POSTGRES_DB:-halograph}',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -84,7 +93,7 @@ services:
     image: mongo:6.0
     container_name: halo-prod-mongodb
     ports:
-      - "27017:27017"
+      - '27017:27017'
     environment:
       MONGO_INITDB_DATABASE: halo-prod
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
@@ -95,7 +104,7 @@ services:
       - halo-prod-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -106,7 +115,7 @@ services:
     image: redis:7-alpine
     container_name: halo-prod-redis
     ports:
-      - "6379:6379"
+      - '6379:6379'
     command: redis-server --requirepass ${REDIS_PASSWORD:-redispassword2025}
     volumes:
       - redis_prod_data:/data
@@ -114,7 +123,15 @@ services:
       - halo-prod-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-redispassword2025}", "ping"]
+      test:
+        [
+          'CMD',
+          'redis-cli',
+          '--no-auth-warning',
+          '-a',
+          '${REDIS_PASSWORD:-redispassword2025}',
+          'ping',
+        ]
       interval: 30s
       timeout: 10s
       retries: 3

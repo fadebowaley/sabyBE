@@ -101,6 +101,25 @@ const updateSubmissionStatus = {
   }),
 };
 
+const updateSubmission = {
+  params: Joi.object().keys({
+    submissionId: Joi.string().custom(objectId).required(),
+  }),
+  body: Joi.object()
+    .keys({
+      submissionData: Joi.object(),
+      status: Joi.string().valid(
+        'submitted',
+        'processing',
+        'completed',
+        'failed',
+        'archived'
+      ),
+      notes: Joi.string().allow(''),
+    })
+    .min(1),
+};
+
 const deleteSubmission = {
   params: Joi.object().keys({
     submissionId: Joi.string().custom(objectId).required(),
@@ -129,6 +148,7 @@ module.exports = {
   getSubmissionsByTenant,
   getSubmission,
   updateSubmissionStatus,
+  updateSubmission,
   deleteSubmission,
   getSubmissionStats,
   exportSubmissions,

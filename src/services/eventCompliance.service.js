@@ -568,6 +568,120 @@ const getComplianceStatus = (percentage) => {
   return 'incomplete';
 };
 
+/**
+ * Return the full set of scheduled months for a project, enriched with
+ * lock status per node.
+ *
+ * Source of truth (two tables, joined in memory):
+ *
+ *  1. `event_calendar` (tenant_id, project_id)
+ *     — The definitive list of months for which this project has calendar
+ *       entries.  Seeded when the module is published (full current year).
+ *     — If this table has no rows for the project yet (module never published,
+ *       or calendar generation failed), we fall back to generating the 12
+ *       months of the current calendar year so the UI is never empty.
+ *
+ *  2. `event_compliance_tracking` (tenant_id, project_id, node_id)
+ *     — Tracks compliance per node. `is_locked = true` means the period is
+ *       closed for that specific node.
+ *     — A month in the calendar that has no compliance row for this node is
+ *       considered UNLOCKED (the node hasn't submitted yet).
+ *
+ * @param {string} tenantId
+ * @param {string} projectId
+ * @param {string} nodeId
+ * @returns {{
+ *   allowedDates:      string[],  // "YYYY-MM" — open for submission
+ *   lockedDates:       string[],  // "YYYY-MM" — locked for this node
+ *   allDates:          string[],  // "YYYY-MM" — every scheduled month
+ *   hasComplianceData: boolean,
+ *   fallback:          boolean    // true when event_calendar had no rows
+ * }}
+ */
+const getAllowedMonths = async (tenantId, projectId, nodeId) => {
+  // ── Step 1: calendar months ────────────────────────────────────────────
+  const calResult = await postgresPool.query(
+    `SELECT DISTINCT TO_CHAR(month, 'YYYY-MM') AS month_key
+     FROM event_calendar
+     WHERE tenant_id = $1 AND project_id = $2
+     ORDER BY month_key ASC`,
+    [tenantId, projectId]
+  );
+
+  let allDates = calResult.rows.map((r) => r.month_key);
+  let fallback  = false;
+
+  if (allDates.length === 0) {
+    // Fallback: build 12 months for the current calendar year
+    fallback = true;
+    const year = new Date().getFullYear();
+    allDates = Array.from({ length: 12 }, (_, i) =>
+      `${year}-${String(i + 1).padStart(2, '0')}`
+    );
+  }
+
+  // ── Step 2: lock status for this node ─────────────────────────────────
+  const lockResult = await postgresPool.query(
+    `SELECT TO_CHAR(month, 'YYYY-MM') AS month_key, is_locked
+     FROM event_compliance_tracking
+     WHERE tenant_id = $1 AND project_id = $2 AND node_id = $3`,
+    [tenantId, projectId, nodeId]
+  );
+
+  // month_key → is_locked (only rows that exist)
+  const lockMap = new Map(
+    lockResult.rows.map((r) => [r.month_key, r.is_locked === true])
+  );
+
+  // ── Step 3: categorise ────────────────────────────────────────────────
+  const allowedDates = [];
+  const lockedDates  = [];
+
+  for (const m of allDates) {
+    if (lockMap.get(m) === true) {
+      lockedDates.push(m);
+    } else {
+      allowedDates.push(m);
+    }
+  }
+
+  return {
+    allowedDates,
+    lockedDates,
+    allDates,
+    hasComplianceData: !fallback,
+    fallback,
+  };
+};
+
+/**
+ * Check whether a specific month is locked for submission.
+ *
+ * Returns null when no compliance tracking row exists (not locked).
+ * Returns true  when the row exists and is_locked = true.
+ * Returns false when the row exists and is_locked = false.
+ *
+ * @param {string} tenantId
+ * @param {string} projectId
+ * @param {string} nodeId
+ * @param {string} month  "YYYY-MM"
+ */
+const isMonthLocked = async (tenantId, projectId, nodeId, month) => {
+  // Accept both "YYYY-MM" and "YYYY-MM-DD"
+  const monthDate =
+    typeof month === 'string' && /^\d{4}-\d{2}$/.test(month)
+      ? `${month}-01`
+      : month;
+  const result = await postgresPool.query(
+    `SELECT is_locked FROM event_compliance_tracking
+     WHERE tenant_id = $1 AND project_id = $2 AND node_id = $3 AND month = $4`,
+    [tenantId, projectId, nodeId, monthDate]
+  );
+
+  if (!result.rows.length) return null;
+  return result.rows[0].is_locked === true;
+};
+
 module.exports = {
   getComplianceTracking,
   getComplianceById,
@@ -580,9 +694,10 @@ module.exports = {
   markEventSubmitted,
   resetCompliance,
   deleteComplianceTracking,
-  // ✨ NEW: Flexible tracking mode compliance calculators
   calculateCompliance,
   calculateMonthOnlyCompliance,
   calculateDailyCompliance,
   calculateWeeklyCompliance,
+  getAllowedMonths,
+  isMonthLocked,
 };

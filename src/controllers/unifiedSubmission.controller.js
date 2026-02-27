@@ -17,9 +17,36 @@ const { logActivity } = require('../utils/activityLogger');
 const SubmissionModel = require('../models/submission.model');
 const ActivityLogModel = require('../models/activityLog.model');
 const ProjectForm = require('../models/projectForm.model');
-const { eventCalendarService } = require('../services');
+const { eventCalendarService, eventComplianceService } = require('../services');
+const { getAllowedDates } = require('../services/calendarEnforcement.service');
 const Nodes = require('../models/node.model');
 const { postgresPool } = require('../config/postgres');
+const { buildDeterministicIdempotencyKey } = require('../utils/idempotency');
+
+const resolveNodeIdToObjectId = async (tenantId, nodeIdOrObjectId) => {
+  if (!nodeIdOrObjectId) return null;
+  if (mongoose.Types.ObjectId.isValid(nodeIdOrObjectId)) {
+    return {
+      objectId: nodeIdOrObjectId,
+      nodeRef: null,
+      nodeName: null,
+    };
+  }
+
+  const nodeDoc = await Nodes.findOne({ tenantId, nodeId: nodeIdOrObjectId })
+    .select('_id nodeId name')
+    .lean();
+
+  if (!nodeDoc) {
+    throw new ApiError(httpStatus.BAD_REQUEST, `Unknown nodeId: ${nodeIdOrObjectId}`);
+  }
+
+  return {
+    objectId: nodeDoc._id.toString(),
+    nodeRef: nodeDoc.nodeId || nodeIdOrObjectId,
+    nodeName: nodeDoc.name || null,
+  };
+};
 
 /**
  * Universal submission endpoint - handles ALL submission types
@@ -41,14 +68,18 @@ const submitData = catchAsync(async (req, res) => {
     'project_category',
     'formId',
     'nodeId',
+    'node_id', // snake_case alias from clients
     'userId',
     'payload',
     'source',
     'meta',
     'status',
+    'idempotency_key',
     'month', // PERM field
     'year', // PERM field
     'perm_enabled', // PERM field
+    'event_date', // PERM per-date field
+    'submission_date', // PERM per-date alias
     // Submitter Blueprint
     'user_name',
     'user_email',
@@ -63,54 +94,169 @@ const submitData = catchAsync(async (req, res) => {
   submissionBody.userId = userInfo.userId || submissionBody.userId;
   submissionBody.source = submissionBody.source || userInfo.source;
 
-  // Validate required fields
-  if (
-    !submissionBody.tenantId ||
-    !submissionBody.projectId ||
-    !submissionBody.formId ||
-    !submissionBody.payload
-  ) {
+  // Normalise nodeId from either camelCase or snake_case (for activity log node_id)
+  const nodeId = (submissionBody.nodeId || submissionBody.node_id || '').trim() || null;
+  submissionBody.nodeId = nodeId;
+  if (submissionBody.node_id !== undefined) delete submissionBody.node_id;
+  logger.info(
+    `[Submit] nodeId resolved: ${nodeId || 'null'} (from body.nodeId=${req.body?.nodeId ?? 'undefined'}, body.node_id=${req.body?.node_id ?? 'undefined'})`
+  );
+
+  // Validate required fields (projectId, formId, payload)
+  if (!submissionBody.projectId || !submissionBody.formId || !submissionBody.payload) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      'Missing required fields: tenantId, projectId, formId, payload'
+      'Missing required fields: projectId, formId, payload'
     );
   }
 
-  // ✨ NEW: Fetch form to check PERM settings
+  // Fetch form to check PERM settings and resolve tenantId
   const form = await ProjectForm.findOne({
     projectId: submissionBody.projectId,
-  }).select('permSettings formId projectId');
+  }).select('permSettings formId projectId tenantId');
 
   if (!form) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Form not found');
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
   }
 
-  // Auto-detect PERM submission (now also checks form settings)
+  // Resolve tenantId: user/body first, fallback to form
+  if (!submissionBody.tenantId && form.tenantId) {
+    submissionBody.tenantId = form.tenantId;
+  }
+  if (!submissionBody.tenantId) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Missing required field: tenantId (ensure user is authenticated or form has tenant)'
+    );
+  }
+
+  // Accept business nodeId (reference code) from clients and resolve to DB object id.
+  if (submissionBody.nodeId) {
+    const resolvedNode = await resolveNodeIdToObjectId(
+      submissionBody.tenantId,
+      submissionBody.nodeId
+    );
+    if (resolvedNode) {
+      submissionBody.nodeId = resolvedNode.objectId;
+      submissionBody.node_reference =
+        submissionBody.node_reference || resolvedNode.nodeRef || undefined;
+      submissionBody.node_name =
+        submissionBody.node_name || resolvedNode.nodeName || undefined;
+    }
+  }
+
+  // Generate deterministic idempotency key when client does not provide one.
+  if (!submissionBody.idempotency_key) {
+    const effectiveEventDate =
+      submissionBody.event_date ||
+      submissionBody.submission_date ||
+      null;
+    submissionBody.idempotency_key = buildDeterministicIdempotencyKey({
+      tenant_id: submissionBody.tenantId,
+      project_id: submissionBody.projectId,
+      form_id: submissionBody.formId,
+      node_id: submissionBody.nodeId,
+      event_date: effectiveEventDate,
+      submitter_id: submissionBody.userId,
+      payload: submissionBody.payload,
+    });
+  }
+
+  // Determine whether this is a PERM submission.
+  //
+  // The source of truth is the FORM's own configuration: if the form owner
+  // has set permSettings.enabled = true the submission is PERM regardless of
+  // what the caller sends.  A caller may also explicitly opt-in by sending
+  // perm_enabled: true (e.g. sabyFrontend PERM flows).
+  //
+  // This keeps the flag predictable: a form is either a PERM form or it isn't.
+  // Non-PERM forms that happen to carry a nodeId (for analytics/tracing) are
+  // not accidentally promoted to PERM mode.
   const isPERM =
-    form.permSettings?.enabled ||
-    submissionBody.perm_enabled ||
-    submissionBody.month ||
-    (submissionBody.payload && submissionBody.payload.month);
+    form.permSettings?.enabled === true ||
+    submissionBody.perm_enabled === true;
 
   if (isPERM) {
-    submissionBody.perm_enabled = true; // Ensure flag is set
+    submissionBody.perm_enabled = true; // Normalise the flag
+    const trackingMode =
+      form?.permSettings?.trackingMode ||
+      form?.permSettings?.tracking_mode ||
+      'none';
 
-    // ✨ NEW: Validate based on form's PERM settings
+    // Validate required PERM fields based on the form's explicit settings
     if (form.permSettings?.requireNodeId && !submissionBody.nodeId) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
-        'nodeId is required for this PERM-enabled form'
+        '"nodeId" is required for this PERM-enabled form'
       );
     }
 
     if (form.permSettings?.requireMonth && !submissionBody.month) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
-        'month is required for this PERM-enabled form'
+        '"month" is required for this PERM-enabled form — please select a reporting month before submitting'
       );
     }
 
-    // ✨ NEW: Check if calendar is required
+    // For daily/weekly tracking, a specific event date is required.
+    if (
+      (trackingMode === 'daily' || trackingMode === 'weekly') &&
+      !submissionBody.event_date &&
+      !submissionBody.submission_date
+    ) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        '"event_date" is required for date-tracked PERM submissions'
+      );
+    }
+
+    // ── Compliance window check ───────────────────────────────────────────
+    // Only enforced when the form requires a month AND a nodeId is present,
+    // meaning we have a fully-keyed compliance row to check against.
+    if (submissionBody.month && submissionBody.nodeId) {
+      try {
+        const lockedStatus = await eventComplianceService.isMonthLocked(
+          submissionBody.tenantId,
+          submissionBody.projectId,
+          submissionBody.nodeId,
+          submissionBody.month
+        );
+
+        // lockedStatus === null  → no compliance row yet (fresh module) → allow
+        // lockedStatus === false → row exists, not locked               → allow
+        // lockedStatus === true  → row exists and locked                → reject
+        if (lockedStatus === true) {
+          throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            `The submission window for ${submissionBody.month} is closed. This period has been locked.`
+          );
+        }
+
+        // If compliance rows DO exist, also verify the selected month is in
+        // the allowed list (not just any arbitrary past month).
+        if (lockedStatus === false) {
+          const { allowedDates, hasComplianceData } =
+            await eventComplianceService.getAllowedMonths(
+              submissionBody.tenantId,
+              submissionBody.projectId,
+              submissionBody.nodeId
+            );
+
+          if (hasComplianceData && !allowedDates.includes(submissionBody.month)) {
+            throw new ApiError(
+              httpStatus.BAD_REQUEST,
+              `Selected month (${submissionBody.month}) is not in the compliance-approved window for this module. Allowed months: ${allowedDates.join(', ')}`
+            );
+          }
+        }
+      } catch (error) {
+        if (error.statusCode) throw error;
+        // DB or unexpected error: log but don't block the submission
+        logger.warn('Compliance window check failed — skipping:', error.message);
+      }
+    }
+
+    // Validate calendar lock when calendarRequired is set
     if (form.permSettings?.calendarRequired && submissionBody.month) {
       try {
         const calendar = await eventCalendarService.getCalendar(
@@ -126,30 +272,10 @@ const submitData = catchAsync(async (req, res) => {
           );
         }
       } catch (error) {
-        // If calendar check fails, log warning but don't fail submission
-        // (calendar might be optional for some tracking modes)
-        if (error.statusCode === httpStatus.BAD_REQUEST) {
-          throw error;
-        }
-        // Log other errors but continue
+        if (error.statusCode === httpStatus.BAD_REQUEST) throw error;
         // eslint-disable-next-line no-console
         console.warn('Calendar check warning:', error.message);
       }
-    }
-
-    // Legacy validation (keep for backward compatibility)
-    if (!submissionBody.nodeId) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        'nodeId is required for PERM submissions'
-      );
-    }
-
-    if (!submissionBody.month) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        'month is required for PERM submissions'
-      );
     }
   }
 
@@ -201,57 +327,155 @@ const submitData = catchAsync(async (req, res) => {
  */
 const retrySubmission = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const submission = await SubmissionModel.getSubmissionById(id);
 
-  if (!submission) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
+  const uuidV4Regex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const isUuidId = uuidV4Regex.test(id);
+
+  // ── Path A: regular retry by submission UUID (existing behavior) ─────────
+  if (isUuidId) {
+    const submission = await SubmissionModel.getSubmissionById(id);
+
+    if (!submission) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
+    }
+
+    if (submission.status !== 'failed') {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'Only failed submissions can be retried'
+      );
+    }
+
+    // Re-queue with a fresh retry idempotency key so BullMQ does not reuse
+    // an exhausted failed job id.
+    const retryStamp = Date.now();
+    const retryKey = `retry-${id}-${retryStamp}`;
+    const submissionBody = {
+      tenantId: submission.tenant_id,
+      projectId: submission.project_id,
+      project_name: submission.project_name,
+      project_category: submission.project_category,
+      formId: submission.form_id,
+      nodeId: submission.node_id,
+      userId: submission.user_id,
+      payload: submission.data,
+      source: submission.source,
+      perm_enabled: submission.perm_enabled,
+      month: submission.month,
+      year: submission.year,
+      event_date: submission.event_date,
+      submission_date: submission.submission_date,
+      idempotency_key: retryKey,
+      meta: {
+        ...(submission.meta || {}),
+        retry_of_submission_id: id,
+        original_idempotency_key: submission.idempotency_key || null,
+        retried_at: new Date().toISOString(),
+      },
+    };
+
+    const result = await queueSubmission(submissionBody);
+
+    // Log retry activity
+    await logActivity({
+      tenant_id: submission.tenant_id,
+      project_id: submission.project_id,
+      project_name: submission.project_name,
+      project_category: submission.project_category,
+      form_id: submission.form_id,
+      node_id: submission.node_id,
+      user_id: submission.user_id,
+      action: 'retried',
+      status: 'queued',
+      job_id: result.jobId,
+      message: `Retrying failed submission ${id}`,
+    });
+
+    return res.send({
+      success: true,
+      message: 'Submission retried successfully',
+      jobId: result.jobId,
+      retriedSubmissionId: id,
+    });
   }
 
-  if (submission.status !== 'failed') {
+  // ── Path B: retry by failed job ID hash (log-dashboard compatibility) ────
+  // Some failed jobs never persisted to form_submissions (e.g. validation failure
+  // before insert), so we recover original payload from dead_letter_queue.
+  const { rows: dlqRows } = await postgresPool.query(
+    `
+      SELECT *
+      FROM dead_letter_queue
+      WHERE job_id = $1
+      ORDER BY failed_at DESC
+      LIMIT 1
+    `,
+    [id]
+  );
+
+  if (!dlqRows.length) {
     throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'Only failed submissions can be retried'
+      httpStatus.NOT_FOUND,
+      'Failed job not found in DLQ. Retry requires a submission UUID or a DLQ-backed job ID.'
     );
   }
 
-  // Re-queue with all original data
-  const submissionBody = {
-    tenantId: submission.tenant_id,
-    projectId: submission.project_id,
-    project_name: submission.project_name,
-    project_category: submission.project_category,
-    formId: submission.form_id,
-    nodeId: submission.node_id,
-    userId: submission.user_id,
-    payload: submission.data,
-    source: submission.source,
-    perm_enabled: submission.perm_enabled,
-    month: submission.month,
-    year: submission.year,
+  const dlqRecord = dlqRows[0];
+  const jobData =
+    typeof dlqRecord.job_data === 'string'
+      ? JSON.parse(dlqRecord.job_data)
+      : dlqRecord.job_data;
+
+  if (!jobData || typeof jobData !== 'object') {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'DLQ record has invalid job payload; cannot retry this job'
+    );
+  }
+
+  const retryStamp = Date.now();
+  const retryKey = `retry-${id}-${retryStamp}`;
+  const retryJobData = {
+    ...jobData,
+    idempotency_key: retryKey,
+    meta: {
+      ...(jobData.meta || {}),
+      retry_of_job_id: id,
+      original_idempotency_key: jobData.idempotency_key || null,
+      retried_at: new Date().toISOString(),
+    },
   };
 
-  const result = await queueSubmission(submissionBody);
+  const result = await queueSubmission(retryJobData);
 
-  // Log retry activity
   await logActivity({
-    tenant_id: submission.tenant_id,
-    project_id: submission.project_id,
-    project_name: submission.project_name,
-    project_category: submission.project_category,
-    form_id: submission.form_id,
-    node_id: submission.node_id,
-    user_id: submission.user_id,
+    tenant_id:
+      retryJobData.tenantId || dlqRecord.tenant_id || req.user?.tenantId,
+    project_id: retryJobData.projectId || dlqRecord.project_id || null,
+    project_name: retryJobData.project_name || null,
+    project_category: retryJobData.project_category || null,
+    form_id: retryJobData.formId || null,
+    node_id: retryJobData.nodeId || null,
+    user_id: retryJobData.userId || req.user?._id || null,
     action: 'retried',
     status: 'queued',
     job_id: result.jobId,
-    message: `Retrying failed submission ${id}`,
+    message: `Retrying failed job ${id} from DLQ`,
+    source: retryJobData.source || 'api',
+    user_name: retryJobData.user_name,
+    user_email: retryJobData.user_email,
+    user_phone: retryJobData.user_phone,
+    node_name: retryJobData.node_name,
+    node_reference: retryJobData.node_reference,
+    form_reference: retryJobData.form_reference,
   });
 
-  res.send({
+  return res.send({
     success: true,
-    message: 'Submission retried successfully',
+    message: 'Failed job retried successfully',
     jobId: result.jobId,
-    retriedSubmissionId: id,
+    retriedJobId: id,
   });
 });
 
@@ -527,6 +751,12 @@ const getActivityLogs = catchAsync(async (req, res) => {
   if (filters.limit) filters.limit = parseInt(filters.limit, 10);
   if (filters.offset) filters.offset = parseInt(filters.offset, 10);
 
+  // Enforce tenant isolation by default.
+  // Only Saby users can view cross-tenant activity logs.
+  if (!req.user?.isSaby) {
+    filters.tenantId = req.user?.tenantId;
+  }
+
   const { results, total } = await getActivityLogsService(filters);
 
   // Debug: Log first result to see what fields we're returning
@@ -558,7 +788,12 @@ const getActivityLogs = catchAsync(async (req, res) => {
  * @route GET /v1/submissions/activity-log/summary
  */
 const getActivityLogSummary = catchAsync(async (req, res) => {
-  const summary = await getActivityLogSummaryService();
+  const filters = {};
+  if (!req.user?.isSaby) {
+    filters.tenantId = req.user?.tenantId;
+  }
+
+  const summary = await getActivityLogSummaryService(filters);
 
   res.send({
     success: true,
@@ -585,6 +820,12 @@ const getEnhancedActivityLogs = catchAsync(async (req, res) => {
   if (filters.limit) filters.limit = parseInt(filters.limit, 10);
   if (filters.offset) filters.offset = parseInt(filters.offset, 10);
 
+  // Enforce tenant isolation by default.
+  // Only Saby users can view cross-tenant activity logs.
+  if (!req.user?.isSaby) {
+    filters.tenantId = req.user?.tenantId;
+  }
+
   const { results, total } = await getEnhancedActivityLogsService(filters);
 
   res.send({
@@ -606,6 +847,7 @@ const listSubmissions = catchAsync(async (req, res) => {
     'project_id',
     'form_id',
     'node_id',
+    'nodeId',
     'user_id',
     'status',
     'source',
@@ -621,6 +863,11 @@ const listSubmissions = catchAsync(async (req, res) => {
 
   if (!filters.tenant_id && req.user?.tenantId) {
     filters.tenant_id = req.user.tenantId;
+  }
+
+  // Allow client-side nodeId (reference) as canonical filter key.
+  if (!filters.node_id && filters.nodeId) {
+    filters.node_id = filters.nodeId;
   }
 
   if (filters.limit) {
@@ -874,7 +1121,7 @@ const bulkDeleteActivityLogs = catchAsync(async (req, res) => {
  */
 const updateSubmission = catchAsync(async (req, res) => {
   const { id: submissionId } = req.params;
-  const { data, payload, status, meta } = req.body;
+  const { data, payload, status, meta, force } = req.body;
   const userId = req.user?._id;
   const tenantId = req.user?.tenantId;
 
@@ -895,6 +1142,30 @@ const updateSubmission = catchAsync(async (req, res) => {
     throw new ApiError(
       httpStatus.FORBIDDEN,
       'Not authorized to update this submission'
+    );
+  }
+
+  // ── Lock guard ─────────────────────────────────────────────────────────
+  // A submission becomes locked when its compliance period is closed
+  // (is_locked set by monthEndProcessor or via admin action).
+  // Regular users are blocked entirely.
+  // Admin / sabyUser can override by passing `force: true` in the body.
+  if (existing.is_locked === true || existing.is_locked === 'true') {
+    const isPrivileged =
+      req.user?.role === 'admin' || req.user?.role === 'sabyUser';
+
+    if (!isPrivileged || !force) {
+      throw new ApiError(
+        httpStatus.LOCKED,   // 423
+        isPrivileged
+          ? 'Submission period is locked. Send `force: true` to override.'
+          : 'Submission period is locked and cannot be edited. Contact an administrator.'
+      );
+    }
+
+    // Privileged + force — log the override
+    logger.warn(
+      `[updateSubmission] Admin override on locked submission ${submissionId} by user ${userId}`
     );
   }
 
@@ -940,6 +1211,14 @@ const deleteSubmission = catchAsync(async (req, res) => {
     throw new ApiError(
       httpStatus.FORBIDDEN,
       'Not authorized to delete this submission'
+    );
+  }
+
+  // Locked submissions cannot be deleted unless privileged override policy is introduced.
+  if (existing.is_locked === true || existing.is_locked === 'true') {
+    throw new ApiError(
+      httpStatus.LOCKED,
+      'Submission period is locked and this submission cannot be deleted.'
     );
   }
 
@@ -1089,6 +1368,160 @@ const cleanupTestData = catchAsync(async (req, res) => {
   });
 });
 
+/**
+ * Return the compliance-approved months for a given project + node.
+ *
+ * @route  GET /v1/submissions/allowed-months
+ * @query  projectId  (required)
+ * @query  nodeId     (required)
+ *
+ * Response shape:
+ * {
+ *   allowedDates:      ["2026-01", "2026-02"],  // YYYY-MM, unlocked
+ *   lockedDates:       ["2025-12"],              // YYYY-MM, locked
+ *   hasComplianceData: true,
+ *   fallback:          false,
+ *   message:           "2 month(s) open for submission"
+ * }
+ *
+ * When hasComplianceData is false the compliance table has no rows for this
+ * project/node yet (fresh module).  The frontend falls back to its rolling
+ * N-month window in that case.
+ */
+const getAllowedMonths = catchAsync(async (req, res) => {
+  const tenantId  = req.user?.tenantId;
+  const { projectId, nodeId } = req.query;
+
+  if (!tenantId || !projectId || !nodeId) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Missing required query params: projectId, nodeId'
+    );
+  }
+
+  const resolvedNode = await resolveNodeIdToObjectId(tenantId, nodeId);
+  const nodeObjectId = resolvedNode?.objectId || nodeId;
+
+  const { allowedDates, lockedDates, allDates, hasComplianceData, fallback } =
+    await eventComplianceService.getAllowedMonths(tenantId, projectId, nodeObjectId);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    allowedDates,
+    lockedDates,
+    allDates,
+    hasComplianceData,
+    fallback,
+    message: fallback
+      ? 'Calendar not yet seeded — showing current year as default window'
+      : allowedDates.length === 0
+      ? 'No open submission periods — all months are locked'
+      : `${allowedDates.length} month(s) open for submission`,
+  });
+});
+
+/**
+ * GET /v1/submissions/allowed-dates
+ *
+ * Returns every scheduled submission date for a given month, enriched with
+ * how many submissions this node has already made for each date.
+ *
+ * For trackingMode = 'none' (month-only modules) → dates: null
+ * For 'daily' / 'weekly'                         → dates: [{ date, required, submitted, remaining, isFull, isPast, dayLabel }]
+ *
+ * @query  projectId  (required)
+ * @query  nodeId     (required)
+ * @query  month      (required) "YYYY-MM"
+ */
+const getAllowedDatesHandler = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const { projectId, nodeId, month } = req.query;
+
+  if (!tenantId || !projectId || !nodeId) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Missing required query params: projectId, nodeId'
+    );
+  }
+
+  const resolvedNode = await resolveNodeIdToObjectId(tenantId, nodeId);
+  const nodeObjectId = resolvedNode?.objectId || nodeId;
+
+  const {
+    allowedDates: allowedMonths = [],
+    lockedDates: lockedMonths = [],
+    allDates: allMonths = [],
+    hasComplianceData = false,
+    fallback = false,
+  } = await eventComplianceService.getAllowedMonths(
+    tenantId,
+    projectId,
+    nodeObjectId
+  );
+
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const requestedMonth = month ? String(month).slice(0, 7) : null;
+  const effectiveMonth =
+    requestedMonth ||
+    (allowedMonths.includes(currentMonth) ? currentMonth : null) ||
+    allowedMonths[0] ||
+    allMonths[0] ||
+    currentMonth;
+
+  // Normalise "YYYY-MM" -> "YYYY-MM-01" for DB
+  const monthKey =
+    effectiveMonth.length === 7 ? `${effectiveMonth}-01` : effectiveMonth;
+
+  const result = await getAllowedDates({
+    tenantId,
+    projectId,
+    nodeId: nodeObjectId,
+    month: monthKey,
+  });
+
+  const isLocked = await eventComplianceService.isMonthLocked(
+    tenantId,
+    projectId,
+    nodeObjectId,
+    monthKey
+  );
+
+  const dates = Array.isArray(result.dates)
+    ? result.dates.map((d) => {
+        let status = 'available';
+        if (isLocked === true) {
+          status = 'locked';
+        } else if (d.isFull) {
+          status = 'full';
+        } else if ((d.submitted || 0) > 0) {
+          status = 'partial';
+        }
+        return {
+          ...d,
+          quota_total: d.required,
+          submitted_count: d.submitted,
+          remaining_count: d.remaining,
+          locked: isLocked === true,
+          status,
+        };
+      })
+    : result.dates;
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    ...result,
+    dates,
+    locked: isLocked === true,
+    month: String(effectiveMonth).slice(0, 7),
+    requestedMonth,
+    allowedMonths,
+    lockedMonths,
+    allMonths,
+    hasComplianceData,
+    fallback,
+  });
+});
+
 module.exports = {
   submitData,
   retrySubmission,
@@ -1101,6 +1534,8 @@ module.exports = {
   deleteSubmission,
   bulkDeleteByJobIds,
   cleanupTestData,
+  getAllowedMonths,
+  getAllowedDatesHandler,
   // Enhanced activity log endpoints
   getActivityLogsByUser,
   getActivityLogsByAction,

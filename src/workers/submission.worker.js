@@ -8,6 +8,7 @@
  */
 
 const { Worker, QueueEvents } = require('bullmq');
+const httpStatus = require('http-status');
 const { postgresPool } = require('../config/postgres');
 const { getRedisConnectionOptions } = require('../config/redis');
 const logger = require('../config/logger');
@@ -26,9 +27,45 @@ const emailService = require('../services/email.service');
 const User = require('../models/user.model');
 const Node = require('../models/node.model');
 const submissionRollupService = require('../services/submissionRollup.service');
+const workflowService = require('../services/workflow.service');
+const ProjectForm = require('../models/projectForm.model');
+const ApiError = require('../utils/ApiError');
 
 const SUBMISSION_QUEUE_NAME = 'submissionQueue';
 let factsTableEnsured = false;
+let formSubmissionColumnsCache = null;
+
+const resolveSlotCapacityForDate = (calendarRow, targetDate) => {
+  if (!calendarRow || !targetDate) return null;
+
+  const daily = calendarRow.daily_config || {};
+  if (Array.isArray(daily.dates) && daily.dates.includes(targetDate)) {
+    return daily.frequency_per_day || daily.count || 1;
+  }
+
+  const weekly = calendarRow.weekly_config || {};
+  if (Array.isArray(weekly.days)) {
+    for (const day of weekly.days) {
+      if (Array.isArray(day.dates) && day.dates.includes(targetDate)) {
+        return day.count || day.frequency_per_day || 1;
+      }
+    }
+  }
+
+  return null;
+};
+
+const normalizeMonthDate = (month, eventDate) => {
+  if (month) {
+    const monthStr = String(month);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(monthStr)) return monthStr;
+    if (/^\d{4}-\d{2}$/.test(monthStr)) return `${monthStr}-01`;
+  }
+  if (eventDate && /^\d{4}-\d{2}-\d{2}$/.test(String(eventDate))) {
+    return `${String(eventDate).slice(0, 7)}-01`;
+  }
+  return null;
+};
 
 async function ensureFactsTable() {
   if (factsTableEnsured) {
@@ -36,6 +73,24 @@ async function ensureFactsTable() {
   }
   await createFactsTableIfNeeded();
   factsTableEnsured = true;
+}
+
+async function getFormSubmissionColumns() {
+  if (formSubmissionColumnsCache) {
+    return formSubmissionColumnsCache;
+  }
+
+  const { rows } = await postgresPool.query(
+    `
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'form_submissions'
+    `
+  );
+
+  formSubmissionColumnsCache = new Set(rows.map((row) => row.column_name));
+  return formSubmissionColumnsCache;
 }
 
 /**
@@ -97,6 +152,8 @@ const createSubmissionWorker = () => {
       month,
       year,
       perm_enabled,
+      event_date,
+      submission_date,
       // Submitter Blueprint
       user_name,
       user_email,
@@ -104,6 +161,7 @@ const createSubmissionWorker = () => {
       node_name,
       node_reference,
       form_reference,
+      idempotency_key,
     } = job.data;
 
     const isPERMSubmission =
@@ -164,6 +222,13 @@ const createSubmissionWorker = () => {
       month: month || (payload && payload.month),
       year: year || (payload && payload.year) || new Date().getFullYear(),
       perm_enabled: isPERMSubmission,
+      event_date: event_date || (payload && payload.event_date) || null,
+      submission_date:
+        submission_date ||
+        event_date ||
+        (payload && (payload.submission_date || payload.event_date)) ||
+        null,
+      idempotency_key: idempotency_key || null,
     };
 
     logger.info(
@@ -226,11 +291,112 @@ const createSubmissionWorker = () => {
             `status: ${permResult.compliance.compliance_status})`
         );
       } else {
-        result = await SubmissionModel.createSubmission(submissionPayload);
+        const eventDate =
+          submissionPayload.event_date || submissionPayload.submission_date;
+        const monthDate = normalizeMonthDate(submissionPayload.month, eventDate);
+        const client = await postgresPool.connect();
+        try {
+          await client.query('BEGIN');
+
+          if (monthDate && submissionPayload.node_id) {
+            const lockRow = await client.query(
+              `
+                SELECT is_locked
+                FROM event_compliance_tracking
+                WHERE tenant_id = $1
+                  AND project_id = $2
+                  AND node_id = $3
+                  AND month = $4
+                FOR UPDATE
+              `,
+              [
+                submissionPayload.tenant_id,
+                submissionPayload.project_id,
+                submissionPayload.node_id,
+                monthDate,
+              ]
+            );
+
+            if (lockRow.rows[0]?.is_locked === true) {
+              throw new ApiError(
+                httpStatus.FORBIDDEN,
+                'Submission period is locked'
+              );
+            }
+          }
+
+          if (eventDate && monthDate && submissionPayload.node_id) {
+            const calendars = await eventCalendarService.getCalendar(
+              submissionPayload.tenant_id,
+              submissionPayload.project_id,
+              monthDate
+            );
+            const calendar = calendars?.[0] || null;
+            const quota = resolveSlotCapacityForDate(calendar, eventDate);
+
+            if (quota !== null) {
+              await client.query(
+                `
+                  INSERT INTO event_compliance_daily_tracking (
+                    tenant_id, project_id, node_id, event_date, submitted_count, updated_at, created_at
+                  ) VALUES ($1, $2, $3, $4, 0, NOW(), NOW())
+                  ON CONFLICT (tenant_id, project_id, node_id, event_date) DO NOTHING
+                `,
+                [
+                  submissionPayload.tenant_id,
+                  submissionPayload.project_id,
+                  submissionPayload.node_id,
+                  eventDate,
+                ]
+              );
+
+              const dailyRow = await client.query(
+                `
+                  SELECT submitted_count
+                  FROM event_compliance_daily_tracking
+                  WHERE tenant_id = $1
+                    AND project_id = $2
+                    AND node_id = $3
+                    AND event_date = $4
+                  FOR UPDATE
+                `,
+                [
+                  submissionPayload.tenant_id,
+                  submissionPayload.project_id,
+                  submissionPayload.node_id,
+                  eventDate,
+                ]
+              );
+              const used = Number(dailyRow.rows[0]?.submitted_count || 0);
+              if (used >= quota) {
+                throw new ApiError(
+                  httpStatus.TOO_MANY_REQUESTS,
+                  'Daily submission quota reached for this date'
+                );
+              }
+            }
+          }
+
+          result = await SubmissionModel.createSubmission({
+            ...submissionPayload,
+            month: monthDate || submissionPayload.month || null,
+            event_date: eventDate || null,
+            submitted_by: submissionPayload.user_id || null,
+            submitted_at: new Date(),
+            client,
+          });
+          await client.query('COMMIT');
+        } catch (txError) {
+          await client.query('ROLLBACK');
+          throw txError;
+        } finally {
+          client.release();
+        }
         logger.info(`[Worker] Regular submission created - ${result.id}`);
       }
 
       if (result) {
+        // ── Analytics facts ──────────────────────────────────────────────
         try {
           const catalog =
             await SubmissionCatalogService.getCatalogByProject(projectId);
@@ -242,9 +408,34 @@ const createSubmissionWorker = () => {
             submissionRollupService.scheduleRefresh();
           }
         } catch (catalogError) {
-          // Don't fail submission if catalog processing fails
           logger.warn(
             `[Worker] Catalog processing failed for submission ${result.id}: ${catalogError.message}`
+          );
+        }
+
+        // ── Workflow init — fire-and-forget ───────────────────────────────
+        try {
+          const form = await ProjectForm.findOne({ projectId })
+            .select('workflows')
+            .lean();
+          const activeWorkflows = (form?.workflows || []).filter(
+            (wf) => wf.enabled !== false && wf.triggerOn !== 'manual'
+          );
+          if (activeWorkflows.length > 0) {
+            const submitter = {
+              userId: userId || null,
+              userName: user_name || null,
+              userEmail: user_email || null,
+            };
+            await workflowService.initWorkflows(result, activeWorkflows, submitter);
+            logger.info(
+              `[Worker] Initialised ${activeWorkflows.length} workflow(s) for submission ${result.id}`
+            );
+          }
+        } catch (wfError) {
+          // Workflow init must never block or fail a submission
+          logger.error(
+            `[Worker] Workflow init failed for submission ${result.id}: ${wfError.message}`
           );
         }
       }
@@ -373,102 +564,136 @@ const createSubmissionWorker = () => {
     const { submissionId, updates, userId, tenantId } = job.data;
 
     logger.info(`[Worker] Processing update for submission: ${submissionId}`);
+    let existing;
 
-    // 1. Get existing submission
-    const existing = await SubmissionModel.getSubmissionById(submissionId);
-    if (!existing) {
-      throw new Error(`Submission not found: ${submissionId}`);
-    }
-
-    // 2. Build update query dynamically
-    const setClauses = [];
-    const values = [];
-    let idx = 1;
-
-    if (updates.data || updates.payload) {
-      setClauses.push(`data = $${idx++}`);
-      values.push(JSON.stringify(updates.data || updates.payload));
-    }
-
-    if (updates.status) {
-      setClauses.push(`status = $${idx++}`);
-      values.push(updates.status);
-    }
-
-    if (updates.meta) {
-      setClauses.push(`meta = $${idx++}`);
-      values.push(JSON.stringify(updates.meta));
-    }
-
-    // Add edit tracking
-    setClauses.push(`edited_by = $${idx++}`);
-    values.push(userId);
-    setClauses.push(`edited_at = $${idx++}`);
-    values.push(new Date());
-
-    values.push(submissionId);
-
-    // 3. Execute update
-    const query = `
-      UPDATE form_submissions 
-      SET ${setClauses.join(', ')}
-      WHERE id = $${idx}
-      RETURNING *
-    `;
-
-    const result = await postgresPool.query(query, values);
-    const updated = result.rows[0];
-
-    // 4. If PERM, update compliance tracking
-    if (existing.perm_enabled && (updates.data || updates.payload)) {
-      try {
-        await updatePERMCompliance(
-          tenantId,
-          existing.project_id,
-          existing.node_id,
-          existing.month
-        );
-      } catch (permError) {
-        logger.warn(
-          `[Worker] PERM compliance update failed: ${permError.message}`
-        );
+    try {
+      // 1. Get existing submission
+      existing = await SubmissionModel.getSubmissionById(submissionId);
+      if (!existing) {
+        throw new Error(`Submission not found: ${submissionId}`);
       }
-    }
 
-    // 5. Log activity
-    await logActivity({
-      tenant_id: tenantId,
-      project_id: existing.project_id,
-      form_id: existing.form_id,
-      node_id: existing.node_id,
-      user_id: userId,
-      action: 'updated',
-      status: 'success',
-      job_id: job.id,
-      message: 'Submission updated successfully',
-    });
+      await logActivity({
+        tenant_id: tenantId,
+        project_id: existing.project_id,
+        form_id: existing.form_id,
+        node_id: existing.node_id,
+        user_id: userId,
+        action: 'processing',
+        status: 'in progress',
+        job_id: job.id,
+        message: 'Processing submission update',
+      });
 
-    // 6. Refresh facts if data changed
-    if (updates.data || updates.payload) {
+      // 2. Build update query dynamically
+      const setClauses = [];
+      const values = [];
+      let idx = 1;
+      const columns = await getFormSubmissionColumns();
+
+      if (updates?.data || updates?.payload) {
+        setClauses.push(`data = $${idx++}`);
+        values.push(JSON.stringify(updates.data || updates.payload));
+      }
+
+      if (updates?.status) {
+        setClauses.push(`status = $${idx++}`);
+        values.push(updates.status);
+      }
+
+      if (updates?.meta) {
+        setClauses.push(`meta = $${idx++}`);
+        values.push(JSON.stringify(updates.meta));
+      }
+
+      // Add edit tracking only when those columns exist in the current DB.
+      if (columns.has('edited_by')) {
+        setClauses.push(`edited_by = $${idx++}`);
+        values.push(userId || null);
+      }
+      if (columns.has('edited_at')) {
+        setClauses.push(`edited_at = $${idx++}`);
+        values.push(new Date());
+      }
+      if (columns.has('updated_at')) {
+        setClauses.push(`updated_at = NOW()`);
+      }
+
+      if (setClauses.length === 0) {
+        throw new Error('No updateable fields were provided');
+      }
+
+      values.push(submissionId);
+
+      // 3. Execute update in transaction (triggers handle counter moves)
+      const query = `
+        UPDATE form_submissions
+        SET ${setClauses.join(', ')}
+        WHERE id = $${idx}
+        RETURNING *
+      `;
+      const client = await postgresPool.connect();
+      let updated;
       try {
-        const catalog = await SubmissionCatalogService.getCatalogByProject(
-          existing.project_id
-        );
-        const facts = await SubmissionModel.buildFactsFromSubmission(
-          updated,
-          catalog
-        );
-        if (facts?.length > 0) {
-          await insertFacts(facts);
-          submissionRollupService.scheduleRefresh();
-        }
+        await client.query('BEGIN');
+        const result = await client.query(query, values);
+        updated = result.rows[0];
+        await client.query('COMMIT');
       } catch (e) {
-        logger.warn(`[Worker] Facts refresh failed: ${e.message}`);
+        await client.query('ROLLBACK');
+        throw e;
+      } finally {
+        client.release();
       }
-    }
 
-    logger.info(`[Worker] Submission ${submissionId} updated successfully`);
-    return updated;
+      // 5. Log activity
+      await logActivity({
+        tenant_id: tenantId,
+        project_id: existing.project_id,
+        form_id: existing.form_id,
+        node_id: existing.node_id,
+        user_id: userId,
+        action: 'updated',
+        status: 'success',
+        job_id: job.id,
+        message: 'Submission updated successfully',
+      });
+
+      // 6. Refresh facts if data changed
+      if (updates?.data || updates?.payload) {
+        try {
+          const catalog = await SubmissionCatalogService.getCatalogByProject(
+            existing.project_id
+          );
+          const facts = await SubmissionModel.buildFactsFromSubmission(
+            updated,
+            catalog
+          );
+          if (facts?.length > 0) {
+            await insertFacts(facts);
+            submissionRollupService.scheduleRefresh();
+          }
+        } catch (e) {
+          logger.warn(`[Worker] Facts refresh failed: ${e.message}`);
+        }
+      }
+
+      logger.info(`[Worker] Submission ${submissionId} updated successfully`);
+      return updated;
+    } catch (error) {
+      await logActivity({
+        tenant_id: tenantId,
+        project_id: existing?.project_id,
+        form_id: existing?.form_id,
+        node_id: existing?.node_id,
+        user_id: userId,
+        action: 'updated',
+        status: 'failed',
+        job_id: job.id,
+        message: `Submission update failed: ${error.message}`,
+      });
+      throw error;
+    }
   }
 
   // ============================================================
@@ -487,11 +712,12 @@ const createSubmissionWorker = () => {
       throw new Error(`Submission not found: ${submissionId}`);
     }
 
-    if (permanent) {
-      // Permanent delete - cascade
-      const client = await postgresPool.connect();
-      try {
-        await client.query('BEGIN');
+    // Soft + permanent delete both run inside a transaction.
+    const client = await postgresPool.connect();
+    try {
+      await client.query('BEGIN');
+      if (permanent) {
+        // Permanent delete - cascade
 
         // Delete facts
         await client.query('DELETE FROM facts WHERE submission_id = $1', [
@@ -509,39 +735,22 @@ const createSubmissionWorker = () => {
           submissionId,
         ]);
 
-        await client.query('COMMIT');
-
         logger.info(`[Worker] Permanently deleted submission: ${submissionId}`);
-      } catch (e) {
-        await client.query('ROLLBACK');
-        throw e;
-      } finally {
-        client.release();
-      }
-    } else {
-      // Soft delete
-      await postgresPool.query(
-        `UPDATE form_submissions 
-         SET deleted_at = NOW(), deleted_by = $1, status = 'deleted'
-         WHERE id = $2`,
-        [userId, submissionId]
-      );
-    }
-
-    // 2. If PERM, update compliance
-    if (existing.perm_enabled) {
-      try {
-        await updatePERMCompliance(
-          tenantId,
-          existing.project_id,
-          existing.node_id,
-          existing.month
-        );
-      } catch (permError) {
-        logger.warn(
-          `[Worker] PERM compliance update failed: ${permError.message}`
+      } else {
+        // Soft delete
+        await client.query(
+          `UPDATE form_submissions
+           SET status = 'deleted', updated_at = NOW()
+           WHERE id = $1`,
+          [submissionId]
         );
       }
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
     }
 
     // 3. Log activity
@@ -560,13 +769,6 @@ const createSubmissionWorker = () => {
     });
 
     return { deleted: true, permanent, submissionId };
-  }
-
-  // Helper: Update PERM compliance after changes
-  async function updatePERMCompliance(tenantId, projectId, nodeId, month) {
-    logger.info(
-      `[Worker] Recalculating PERM compliance for ${projectId}/${nodeId}/${month}`
-    );
   }
 
   submissionWorker.on('completed', (job) => {

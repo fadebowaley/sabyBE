@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS form_submissions (
     submitted_at TIMESTAMPTZ DEFAULT NOW(),
     node_name VARCHAR(128),
     node_reference VARCHAR(128),
+    idempotency_key TEXT,
 
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -75,10 +76,34 @@ CREATE INDEX IF NOT EXISTS idx_form_submissions_project_category ON form_submiss
 CREATE INDEX IF NOT EXISTS idx_form_submissions_event_date ON form_submissions(event_date);
 CREATE INDEX IF NOT EXISTS idx_form_submissions_submission_date ON form_submissions(tenant_id, project_id, node_id, submission_date);
 CREATE INDEX IF NOT EXISTS idx_form_submissions_submission_week ON form_submissions(tenant_id, project_id, node_id, submission_week);
+CREATE INDEX IF NOT EXISTS idx_form_submissions_node_reference ON form_submissions(node_reference);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_form_submissions_tenant_idempotency
+ON form_submissions(tenant_id, idempotency_key)
+WHERE idempotency_key IS NOT NULL;
 
 -- GIN index for JSONB data field (optimizes JSON queries)
 CREATE INDEX IF NOT EXISTS idx_form_submissions_data 
 ON form_submissions USING gin (data jsonb_path_ops);
+
+-- =============================================================================
+-- DAILY COMPLIANCE TRACKING TABLE
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS event_compliance_daily_tracking (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id VARCHAR(64) NOT NULL,
+    project_id VARCHAR(64) NOT NULL,
+    node_id VARCHAR(64) NOT NULL,
+    event_date DATE NOT NULL,
+    submitted_count INTEGER NOT NULL DEFAULT 0,
+    last_submission_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_daily_tracking_unique UNIQUE (tenant_id, project_id, node_id, event_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_tracking_lookup ON event_compliance_daily_tracking(tenant_id, project_id, node_id, event_date);
+CREATE INDEX IF NOT EXISTS idx_daily_tracking_tenant_event_date ON event_compliance_daily_tracking(tenant_id, event_date);
 
 -- =============================================================================
 -- SUBMISSION ACTIVITY LOG TABLE

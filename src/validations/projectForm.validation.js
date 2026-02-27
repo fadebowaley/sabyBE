@@ -172,6 +172,41 @@ const permSettingsSchema = Joi.object({
   autoLockMonthEnd: false,
 });
 
+// ── Workflow Schemas ─────────────────────────────────────────────────────────
+// Mirrors ProjectForm.workflows[] in the Mongoose model.
+
+const workflowStepSchema = Joi.object({
+  id: Joi.string().optional(),
+  name: Joi.string().required().trim().min(1).max(100),
+  stepOrder: Joi.number().integer().min(0).default(0),
+  actionType: Joi.string()
+    .valid('SUBMIT', 'REVIEW', 'APPROVE', 'REJECT', 'ESCALATE', 'NOTIFY')
+    .required(),
+  // Multi-role assignment (preferred)
+  assigneeRoles: Joi.array().items(Joi.string()).default([]),
+  // Legacy single-role (kept for backward compat)
+  assigneeRole: Joi.string().allow('', null).optional(),
+  assigneeType: Joi.string().valid('role', 'user', 'dynamic_field').default('role'),
+  assigneeUsers: Joi.array().items(Joi.string()).default([]),
+  sla: Joi.object({
+    hours: Joi.number().integer().min(1).default(48),
+    escalateTo: Joi.string().allow('', null).optional(),
+  }).optional(),
+  type: Joi.string().optional(),
+  description: Joi.string().allow('', null).optional(),
+}).unknown(true);
+
+const workflowSchema = Joi.object({
+  id: Joi.string().optional(),
+  name: Joi.string().required().trim().min(1).max(100),
+  enabled: Joi.boolean().default(true),
+  type: Joi.string().valid('approval', 'review', 'notification', 'custom').default('approval'),
+  triggerOn: Joi.string().valid('submit', 'update', 'manual').default('submit'),
+  steps: Joi.array().items(workflowStepSchema).min(1).required(),
+  metadata: Joi.object().unknown(true).optional(),
+  description: Joi.string().allow('', null).optional(),
+}).unknown(true);
+
 // Validation schemas
 const createProjectForm = {
   body: Joi.object().keys({
@@ -181,8 +216,9 @@ const createProjectForm = {
     wizardMode: Joi.boolean().default(false),
     columnSpans: Joi.object().default({}),
     userSettings: userSettingsSchema,
-    permSettings: permSettingsSchema, // ✨ NEW: PERM settings support
+    permSettings: permSettingsSchema,
     metadata: metadataSchema,
+    workflows: Joi.array().items(workflowSchema).default([]),
   }),
 };
 
@@ -276,9 +312,10 @@ const updateProjectForm = {
       wizardMode: Joi.boolean(),
       columnSpans: Joi.object(),
       userSettings: userSettingsSchema,
-      permSettings: permSettingsSchema, // ✨ NEW: PERM settings support
+      permSettings: permSettingsSchema,
       metadata: metadataSchema,
       status: Joi.string().valid('active', 'inactive', 'archived'),
+      workflows: Joi.array().items(workflowSchema).default([]),
     })
     .min(1),
   query: Joi.object().keys({
@@ -298,8 +335,10 @@ const updateProjectFormByProjectId = {
       wizardMode: Joi.boolean(),
       columnSpans: Joi.object(),
       userSettings: userSettingsSchema,
+      permSettings: permSettingsSchema,
       metadata: metadataSchema,
       status: Joi.string().valid('active', 'inactive', 'archived'),
+      workflows: Joi.array().items(workflowSchema).default([]),
     })
     .min(1),
   query: Joi.object().keys({

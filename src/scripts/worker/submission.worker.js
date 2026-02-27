@@ -110,13 +110,14 @@ const submissionWorker = new Worker(
         );
       }
 
-      // Log activity: processed
+      // Log activity: processed (include node_id for per-node tracking)
       const activityLog = {
         tenant_id: tenantId,
         project_id: projectId,
         project_name,
         project_category,
         form_id: formId,
+        node_id: nodeId ?? null,
         user_id: userId,
         action: 'processed',
         status: 'success',
@@ -126,14 +127,15 @@ const submissionWorker = new Worker(
       };
 
       await postgresPool.query(
-        `INSERT INTO submission_activity_log (tenant_id, project_id, project_name, project_category, form_id, user_id, action, status, job_id, message)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        `INSERT INTO submission_activity_log (tenant_id, project_id, project_name, project_category, form_id, node_id, user_id, action, status, job_id, message)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
         [
           activityLog.tenant_id,
           activityLog.project_id,
           activityLog.project_name,
           activityLog.project_category,
           activityLog.form_id,
+          activityLog.node_id,
           activityLog.user_id,
           activityLog.action,
           activityLog.status,
@@ -148,13 +150,14 @@ const submissionWorker = new Worker(
       console.log('[Worker] Error:', err.message);
       logger.error(`[Worker] Error inserting submission: ${err.message}`);
 
-      // Log activity: failed
+      // Log activity: failed (include node_id for per-node tracking)
       const activityLog = {
         tenant_id: tenantId,
         project_id: projectId,
         project_name,
         project_category,
         form_id: formId,
+        node_id: nodeId ?? null,
         user_id: userId,
         action: 'processed',
         status: 'failed',
@@ -164,14 +167,15 @@ const submissionWorker = new Worker(
       };
 
       await postgresPool.query(
-        `INSERT INTO submission_activity_log (tenant_id, project_id, project_name, project_category, form_id, user_id, action, status, job_id, message)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        `INSERT INTO submission_activity_log (tenant_id, project_id, project_name, project_category, form_id, node_id, user_id, action, status, job_id, message)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
         [
           activityLog.tenant_id,
           activityLog.project_id,
           activityLog.project_name,
           activityLog.project_category,
           activityLog.form_id,
+          activityLog.node_id,
           activityLog.user_id,
           activityLog.action,
           activityLog.status,

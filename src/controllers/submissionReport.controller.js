@@ -53,6 +53,64 @@ const getSubmissions = catchAsync(async (req, res) => {
 });
 
 /**
+ * GET /v1/submission-reports/module-table
+ * Get module-specific report in table format (dynamic columns per form fields).
+ *
+ * Access rules:
+ * - owner/super/saby: tenant-based scope
+ * - non-owner: tenant + node scope
+ */
+const getModuleReportTable = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const isOwnerScoped =
+    Boolean(req.user?.isOwner) ||
+    Boolean(req.user?.isSuper) ||
+    Boolean(req.user?.isSaby);
+
+  const filters = pick(req.query, [
+    'project_id',
+    'month',
+    'start_date',
+    'end_date',
+    'limit',
+    'offset',
+    'node_id',
+    'nodeId',
+  ]);
+
+  const nodeFilter =
+    filters.node_id ||
+    filters.nodeId ||
+    req.user?.nodeId ||
+    req.user?.node_id ||
+    null;
+
+  if (!isOwnerScoped && !nodeFilter) {
+    return res.status(httpStatus.BAD_REQUEST).send({
+      success: false,
+      message: 'node_id is required for non-owner users',
+    });
+  }
+
+  const report = await submissionReportService.getModuleReportTable({
+    tenant_id: tenantId,
+    project_id: filters.project_id,
+    month: filters.month,
+    start_date: filters.start_date,
+    end_date: filters.end_date,
+    limit: filters.limit,
+    offset: filters.offset,
+    node_filter: isOwnerScoped ? nodeFilter || null : nodeFilter,
+  });
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    message: 'Module report table retrieved successfully',
+    ...report,
+  });
+});
+
+/**
  * GET /v1/submission-reports/:id
  * Get submission by ID
  */
@@ -551,6 +609,7 @@ const bulkUpdateMetadata = catchAsync(async (req, res) => {
 });
 
 module.exports = {
+  getModuleReportTable,
   getSubmissions,
   getSubmissionById,
   getComplianceReport,

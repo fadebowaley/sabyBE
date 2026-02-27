@@ -6,7 +6,8 @@ const submitData = {
     tenantId: Joi.string().required().description('Tenant identifier'),
     projectId: Joi.string().required().description('Project identifier'),
     formId: Joi.string().required().description('Form identifier'),
-    nodeId: Joi.string().optional().description('Node identifier'),
+    nodeId: Joi.string().optional().allow('').description('Node identifier'),
+    node_id: Joi.string().optional().allow('').description('Node identifier (snake_case alias)'),
     userId: Joi.string().optional().description('User identifier'),
     source: Joi.string()
       .valid(
@@ -24,16 +25,22 @@ const submitData = {
       .description('Origin of data'),
     payload: Joi.object()
       .required()
+      .unknown(true)
       .description('Submitted data (form fields, etc.)'),
     meta: Joi.object().optional().description('Additional metadata'),
     status: Joi.string().optional().description('Submission status'),
-    project_name: Joi.string().max(128),
-    project_category: Joi.string().max(64),
+    idempotency_key: Joi.string()
+      .max(255)
+      .optional()
+      .description('Client-provided idempotency key'),
+    project_name: Joi.string().max(128).allow('').optional(),
+    project_category: Joi.string().max(64).allow('').optional(),
     // Submitter Blueprint (Required for all submissions)
     user_name: Joi.string().max(255).optional().description('User full name'),
     user_email: Joi.string()
       .email()
       .max(255)
+      .allow('')
       .optional()
       .description('User email'),
     user_phone: Joi.string()
@@ -63,6 +70,19 @@ const submitData = {
     perm_enabled: Joi.boolean()
       .optional()
       .description('Flag to indicate PERM submission'),
+    // Per-date tracking (daily / weekly modes)
+    // The specific calendar date this submission is FOR, e.g. "2026-02-09".
+    // Validated by calendarEnforcement at processing time.
+    event_date: Joi.string()
+      .optional()
+      .pattern(/^\d{4}-\d{2}-\d{2}$/)
+      .description('Specific event date for daily/weekly tracked modules (YYYY-MM-DD)'),
+    // Alias accepted from the frontend (same value as event_date).
+    // The backend ignores it after storing; the generated column takes precedence.
+    submission_date: Joi.string()
+      .optional()
+      .pattern(/^\d{4}-\d{2}-\d{2}$/)
+      .description('Date the submission is recorded for (YYYY-MM-DD)'),
     // Audit fields
     submitted_by: Joi.string()
       .optional()
@@ -97,11 +117,13 @@ const listSubmissions = {
     project_id: Joi.string(),
     form_id: Joi.string(),
     node_id: Joi.string(),
+    nodeId: Joi.string(),
     user_id: Joi.string(),
     status: Joi.string(),
     source: Joi.string(),
-    project_name: Joi.string().max(128),
-    project_category: Joi.string().max(64),
+    idempotency_key: Joi.string(),
+    project_name: Joi.string().max(128).allow('').optional(),
+    project_category: Joi.string().max(64).allow('').optional(),
   }),
 };
 
@@ -119,8 +141,10 @@ const updateSubmission = {
         .description('Updated submission data/payload'),
       status: Joi.string().optional().description('Updated status'),
       meta: Joi.object().optional().description('Updated metadata'),
+      // Admin override for locked submissions (requires admin/sabyUser role)
+      force: Joi.boolean().optional().description('Force-update a locked submission (admin only)'),
     })
-    .min(1), // At least one field must be provided
+    .min(1),
 };
 
 const deleteSubmissionById = {

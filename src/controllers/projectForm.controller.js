@@ -16,9 +16,9 @@ const createProjectForm = catchAsync(async (req, res) => {
     tenantId,
     createdBy
   );
-  console.log('🔍 [SERVER DATA] Project Form Created:', req.body);
+  console.log('🔍 [SERVER DATA] Module Created:', req.body);
   res.status(httpStatus.CREATED).send({
-    message: 'Project form created successfully',
+    message: 'Module created successfully',
     projectForm,
     formId: projectForm.projectId,
   });
@@ -149,6 +149,17 @@ const getProjectFormByProjectId = catchAsync(async (req, res) => {
 });
 
 /**
+ * Get (or create) canonical storage folder for a module
+ */
+const getProjectStorageFolder = catchAsync(async (req, res) => {
+  const { projectId } = req.params;
+  const folder =
+    await projectFormService.getProjectStorageFolderByProjectId(projectId);
+
+  res.send(folder);
+});
+
+/**
  * Update a project form by ID
  */
 const updateProjectForm = catchAsync(async (req, res) => {
@@ -162,7 +173,7 @@ const updateProjectForm = catchAsync(async (req, res) => {
   );
 
   res.send({
-    message: 'Project form updated successfully',
+    message: 'Module updated successfully',
     projectForm,
   });
 });
@@ -181,7 +192,7 @@ const updateProjectFormByProjectId = catchAsync(async (req, res) => {
   );
 
   res.send({
-    message: 'Project form updated successfully',
+    message: 'Module updated successfully',
     projectForm,
   });
 });
@@ -199,7 +210,7 @@ const softDeleteProjectForm = catchAsync(async (req, res) => {
   );
 
   res.send({
-    message: 'Project form deleted successfully',
+    message: 'Module deleted successfully',
     projectForm,
   });
 });
@@ -226,7 +237,7 @@ const publishProjectForm = catchAsync(async (req, res) => {
   );
 
   res.send({
-    message: 'Project form published successfully',
+    message: 'Module published successfully',
     projectForm,
     calendarGenerated: calendarGeneration ? true : false,
   });
@@ -243,7 +254,7 @@ const archiveProjectForm = catchAsync(async (req, res) => {
   );
 
   res.send({
-    message: 'Project form archived successfully',
+    message: 'Module archived successfully',
     projectForm,
   });
 });
@@ -282,7 +293,7 @@ const restoreProjectForm = catchAsync(async (req, res) => {
   const projectForm = await projectFormService.restoreProjectFormById(projectFormId);
 
   res.send({
-    message: 'Form restored successfully',
+    message: 'Module restored successfully',
     projectForm,
   });
 });
@@ -311,7 +322,7 @@ const updatePaymentConfig = catchAsync(async (req, res) => {
   const projectForm = await projectFormService.getProjectFormByProjectId(projectId);
 
   if (!projectForm) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Form not found');
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
   }
 
   // Check if form has financial tag
@@ -322,7 +333,7 @@ const updatePaymentConfig = catchAsync(async (req, res) => {
   if (!hasFinancial) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      'Payment channels only available for forms with financial tag'
+      'Payment channels are only available for modules with a financial tag'
     );
   }
 
@@ -447,6 +458,7 @@ module.exports = {
   getProjectFormsByUser,
   getProjectForm,
   getProjectFormByProjectId,
+  getProjectStorageFolder,
   updateProjectForm,
   updateProjectFormByProjectId,
   deleteProjectForm,

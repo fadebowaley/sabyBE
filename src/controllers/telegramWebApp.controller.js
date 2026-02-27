@@ -136,7 +136,7 @@ const getForm = catchAsync(async (req, res) => {
     );
 
     if (!projectForm) {
-      throw new ApiError(httpStatus.NOT_FOUND, 'Project form not found');
+      throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
     }
 
     // Validate that the project belongs to the user's tenant
@@ -161,7 +161,7 @@ const getForm = catchAsync(async (req, res) => {
       `❌ Web App failed to load form for project ${projectId}:`,
       error.message
     );
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to load form');
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to load module');
   }
 });
 
@@ -179,7 +179,7 @@ const submitForm = catchAsync(async (req, res) => {
     );
 
     if (!projectForm) {
-      throw new ApiError(httpStatus.NOT_FOUND, 'Project form not found');
+      throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
     }
 
     // Validate that the project belongs to the user's tenant

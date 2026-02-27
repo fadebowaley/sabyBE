@@ -21,6 +21,14 @@ router.get(
   complianceController.getComplianceSummary
 );
 
+// Get compliance dates with quota/status for calendar UI
+router.get(
+  '/dates',
+  auth(),
+  validate(complianceValidation.getComplianceDates),
+  complianceController.getComplianceDates
+);
+
 // Update user compliance
 router.patch(
   '/user/:userId',

@@ -171,7 +171,7 @@ ProjectFormSubmissionSchema.statics.createSubmission = async function (
   });
 
   if (!projectForm) {
-    throw new Error('Project form not found or is not available');
+    throw new Error('Module not found or is not available');
   }
 
   // Check if form is published and active
@@ -179,7 +179,7 @@ ProjectFormSubmissionSchema.statics.createSubmission = async function (
     projectForm.metadata.deploymentStatus !== 'published' ||
     projectForm.status !== 'active'
   ) {
-    throw new Error('This form is not currently accepting submissions');
+    throw new Error('This module is not currently accepting submissions');
   }
 
   const submissionPayload = {

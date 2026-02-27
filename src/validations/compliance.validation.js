@@ -17,6 +17,16 @@ const getComplianceSummary = {
   query: Joi.object().keys({}),
 };
 
+const getComplianceDates = {
+  query: Joi.object().keys({
+    projectId: Joi.string().required(),
+    nodeId: Joi.string().required(),
+    month: Joi.string()
+      .pattern(/^\d{4}-\d{2}(-\d{2})?$/)
+      .required(),
+  }),
+};
+
 const updateUserCompliance = {
   params: Joi.object().keys({
     userId: Joi.string().required().custom(objectId),
@@ -47,6 +57,7 @@ const getUserComplianceScore = {
 module.exports = {
   getComplianceTable,
   getComplianceSummary,
+  getComplianceDates,
   updateUserCompliance,
   updateNodeCompliance,
   getUserComplianceScore,

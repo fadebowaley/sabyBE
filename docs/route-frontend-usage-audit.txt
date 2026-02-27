@@ -1,0 +1,197 @@
+# Frontend Route Usage Audit
+
+Generated: 2026-02-21T11:16:42.893Z
+
+## Scope
+
+- `/Users/fadebowaley/saby/sabyFrontend/apps/isomorphic/src`
+- `/Users/fadebowaley/saby/sabyFrontend/packages/isomorphic-core/src`
+- `/Users/fadebowaley/sodzo-webclient/src`
+
+## Summary
+
+- Total mounted backend routes: 45
+- Routes with frontend API references: 25
+- Routes with no frontend API reference (candidates): 20
+
+## Candidate Routes (No Frontend API Reference)
+
+- `/admin`
+- `/api-submit`
+- `/app`
+- `/baseline/jobs`
+- `/capture`
+- `/collections`
+- `/data`
+- `/department`
+- `/docs`
+- `/event`
+- `/eventConfig`
+- `/report`
+- `/rollups`
+- `/settings`
+- `/statement`
+- `/submission-reports`
+- `/telegram`
+- `/trend-analysis`
+- `/validation-reports`
+- `/waitlist`
+
+## Routes With Frontend References (Evidence)
+
+### `/analytics`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/analytics.ts` -> `/analytics/submissions/summary`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/analytics.ts` -> `/analytics/submissions/by-status`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/analytics.ts` -> `/analytics/submissions/by-month`
+
+### `/api-key-approvals`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/apiKeys.ts` -> `/api-key-approvals/${approvalId}/approve`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/apiKeys.ts` -> `/api-key-approvals/${approvalId}/reject`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/apiKeys.ts` -> `/api-key-approvals/pending`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/apiKeys.ts` -> `/api-key-approvals`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/apiKeys.ts` -> `/api-key-approvals/production/live`
+
+### `/api-keys`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/apiKeys.ts` -> `/api-keys/${keyId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/apiKeys.ts` -> `/api-keys/${keyId}/analytics`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/apiKeys.ts` -> `/api-keys/${keyId}/regenerate`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/apiKeys.ts` -> `/api-keys`
+
+### `/auth`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/auth.ts` -> `/auth/reset-password?token=${token}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/auth.ts` -> `/auth/user-role?email=${encodeURIComponent(email)}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/auth.ts` -> `/auth/login`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/auth.ts` -> `/auth/register`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/auth.ts` -> `/auth/forgot-password`
+
+### `/baseline`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/baselineIntelligence.ts` -> `/baseline/node/${nodeId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/baselineIntelligence.ts` -> `/baseline/node/${nodeId}/insights`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/baselineIntelligence.ts` -> `/baseline/node/${nodeId}/recompute`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/baselineIntelligence.ts` -> `/baseline/network/top-nodes?type=${type}&limit=${limit}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/baselineIntelligence.ts` -> `/baseline/network`
+
+### `/baseline-analysis-config`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/baselineAnalysisConfig.ts` -> `/baseline-analysis-config/${entityType}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/baselineAnalysisConfig.ts` -> `/baseline-analysis-config/${entityType}/essential-metrics`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/baselineAnalysisConfig.ts` -> `/baseline-analysis-config/${entityType}/custom-fields/${fieldId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/baselineAnalysisConfig.ts` -> `/baseline-analysis-config/${entityType}/global-settings`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/baselineAnalysisConfig.ts` -> `/baseline-analysis-config/${entityType}/sync`
+
+### `/compliance`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/compliance.ts` -> `/compliance/table?${params.toString()}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/compliance.ts` -> `/compliance/user/${userId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/compliance.ts` -> `/compliance/node/${nodeId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/compliance.ts` -> `/compliance/user/${userId}/score?${params.toString()}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/compliance.ts` -> `/compliance/summary`
+
+### `/custom-field-config`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/baselineIntelligence.ts` -> `/custom-field-config/${entityType}`
+
+### `/event-calendar`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/calendar-management/page.tsx` -> `/event-calendar/regenerate/${calendarId}`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/calendar-management/page.tsx` -> `/event-calendar/${calendar.id}/dates`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/calendar-management/page.tsx` -> `/event-calendar`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/form/[projectId]/components/testbed/SubmissionSimulator.tsx` -> `/v1/event-calendar`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/eventCalendar.ts` -> `/event-calendar/preview`
+
+### `/form-submissions`
+- `sabyFrontend/apps/isomorphic/src/app/api/form-submissions/route.ts` -> `/form-submissions`
+
+### `/inmail`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/inmail.ts` -> `/inmail/${id}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/inmail.ts` -> `/inmail`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/inmail.ts` -> `/inmail/send`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/inmail.ts` -> `/inmail/draft`
+
+### `/level`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/node/create/add-child-node.tsx` -> `/level/next?currentRank=${parentNode.level.rank}&tenantId=${session.user.tenantId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/level.ts` -> `/level/${levelId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/level.ts` -> `/level/${levelId}/parent`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/level.ts` -> `/level/${levelId}/children`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/level.ts` -> `/level/${levelId}/activate`
+
+### `/node`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/node.ts` -> `/node/${id}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/node.ts` -> `/node/${id}/hard`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/node.ts` -> `/node/${id}/hierarchy`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/node.ts` -> `/node/${nodeId}/assign-users`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/node.ts` -> `/node/${nodeId}/restore`
+
+### `/perm-report`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/permReport.ts` -> `/perm-report`
+
+### `/permissions`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/permissions.ts` -> `/permissions/${permissionName}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/permissions.ts` -> `/permissions`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/permissions.ts` -> `/permissions/bulk`
+
+### `/project-forms`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/apis/components/FormProjectMonitoring.tsx` -> `/v1/project-forms/tenant/${tenantId}`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/apis/components/FormProjectMonitoring.tsx` -> `/v1/project-forms/${id}/delete`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/apis/components/FormProjectMonitoring.tsx` -> `/v1/project-forms/${id}/publish`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/apis/components/FormProjectMonitoring.tsx` -> `/v1/project-forms/${id}/archive`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/apis/components/FormProjectMonitoring.tsx` -> `/v1/project-forms/project/${projectId}/analytics`
+
+### `/roles`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/roles.ts` -> `/roles/${roleId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/roles.ts` -> `/roles/${roleId}/permissions`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/roles.ts` -> `/roles/templates`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/roles.ts` -> `/roles`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/roles.ts` -> `/roles/bulk`
+
+### `/schema`
+- `../sodzo-webclient/src/pages/NodeProfileClean.tsx` -> `/schema/node`
+- `../sodzo-webclient/src/pages/Settings.tsx` -> `/schema/user`
+
+### `/storage`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/storage.ts` -> `/storage/${fileId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/storage.ts` -> `/storage/${fileId}/share`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/storage.ts` -> `/storage/${fileId}/move`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/storage.ts` -> `/storage/${fileId}/copy`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/storage.ts` -> `/storage/folders/${folderId}`
+
+### `/storage/folders`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/storage.ts` -> `/storage/folders/${folderId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/storage.ts` -> `/storage/folders/${folderId}/contents`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/storage.ts` -> `/storage/folders/${folderId}/share`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/storage.ts` -> `/storage/folders/${folderId}/move`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/storage.ts` -> `/storage/folders/shared/${shareToken}`
+
+### `/structure`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/node/create/add-child-node.tsx` -> `/structure?level=${nextLevelData.id}&tenantId=${session.user.tenantId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/structure.ts` -> `/structure/${structureId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/structure.ts` -> `/structure`
+- `../sodzo-webclient/src/components/Modals/Network/CreateNodeModal.tsx` -> `/structure`
+- `../sodzo-webclient/src/components/Modals/Network/EditNodeModal.tsx` -> `/structure`
+
+### `/submissions`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/form/[projectId]/components/testbed/SubmissionSimulator.tsx` -> `/v1/submissions`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/form/[projectId]/components/testbed/SubmissionSimulator.tsx` -> `/submissions`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/form/[projectId]/components/testbed/TestControlPanel.tsx` -> `/submissions/bulk-delete-by-jobs`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/form/[projectId]/components/testbed/TestControlPanel.tsx` -> `/submissions/cleanup-test-data`
+- `sabyFrontend/apps/isomorphic/src/app/(berrylium)/form/[projectId]/components/testbed/TestDataCleaner.tsx` -> `/submissions/cleanup-test-data`
+
+### `/tenant-config`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/tenantConfig.ts` -> `/tenant-config/${entityType}/fields/${fieldId}/analytics`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/tenantConfig.ts` -> `/tenant-config/${entityType}/analytics/summary`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/tenantConfig.ts` -> `/tenant-config/user`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/tenantConfig.ts` -> `/tenant-config/node`
+
+### `/user-form-settings`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/forms.ts` -> `/user-form-settings/${settingsId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/forms.ts` -> `/user-form-settings/user/${userId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/forms.ts` -> `/user-form-settings`
+
+### `/users`
+- `sabyFrontend/apps/isomorphic/src/app/api/users/route.ts` -> `/users`
+- `sabyFrontend/apps/isomorphic/src/app/api/users/search/route.ts` -> `/users/search`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/userProfile.ts` -> `/users/${userId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/users.ts` -> `/users/${userId}`
+- `sabyFrontend/apps/isomorphic/src/app/lib/api/users.ts` -> `/users/restore/${userId}`
+
+## Notes
+
+- This audit matches string-based endpoint usage in frontend network-call files.
+- Keep externally consumed routes (integrations, bots, admin scripts) even if not used by current frontends.
+- Re-run this script before deleting any route to avoid regressions.

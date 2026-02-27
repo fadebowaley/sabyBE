@@ -96,7 +96,11 @@ const getRedisConnectionOptions = () => ({
 });
 
 module.exports = {
-  redisClient,
+  // Use a getter so callers always receive the live reference, not the
+  // undefined snapshot that existed when this module was first loaded.
+  get redisClient() {
+    return redisClient;
+  },
   connectRedis,
   testRedisConnection,
   closeRedis,

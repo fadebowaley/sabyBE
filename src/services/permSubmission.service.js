@@ -18,10 +18,13 @@ const { v4: uuidv4 } = require('uuid');
 const { postgresPool } = require('../config/postgres');
 const logger = require('../config/logger');
 const ApiError = require('../utils/ApiError');
+const { buildDeterministicIdempotencyKey } = require('../utils/idempotency');
 // Direct imports to avoid circular dependency
 const eventCalendarService = require('./eventCalendar.service');
 const eventComplianceService = require('./eventCompliance.service');
 const calendarEnforcementService = require('./calendarEnforcement.service');
+
+const MAX_BACKDATE_DAYS_WITHOUT_OVERRIDE = 7;
 
 /**
  * Calculate compliance metrics based on event data
@@ -54,6 +57,28 @@ const calculateComplianceMetrics = (data) => {
     total_events_required: totalEventsRequired,
     total_events_submitted: totalEventsSubmitted,
   };
+};
+
+const resolveSlotCapacityForDate = (calendarRow, targetDate) => {
+  if (!calendarRow || !targetDate) {
+    return 1;
+  }
+
+  const daily = calendarRow.daily_config || {};
+  if (Array.isArray(daily.dates) && daily.dates.includes(targetDate)) {
+    return daily.frequency_per_day || daily.count || 1;
+  }
+
+  const weekly = calendarRow.weekly_config || {};
+  if (Array.isArray(weekly.days)) {
+    for (const day of weekly.days) {
+      if (Array.isArray(day.dates) && day.dates.includes(targetDate)) {
+        return day.count || day.frequency_per_day || 1;
+      }
+    }
+  }
+
+  return 1;
 };
 
 /**
@@ -134,6 +159,8 @@ const submitPERMData = async (payload) => {
     tenant_id,
     project_id,
     node_id,
+    node_reference,
+    node_name,
     month,
     year,
     data,
@@ -143,7 +170,9 @@ const submitPERMData = async (payload) => {
     project_name,
     project_category,
     source = 'api',
+    event_date,
     submission_date: submission_date_raw,
+    idempotency_key,
   } = payload;
 
 // CamelCase aliases for downstream consumers
@@ -247,21 +276,43 @@ const nodeId = node_id;
 
     const submission_date =
       submission_date_raw ||
+      event_date ||
+      payload.event_date ||
       payload.date ||
+      payload.payload?.event_date ||
+      payload.payload?.submission_date ||
       payload.payload?.date ||
       new Date().toISOString().split('T')[0];
+
+    const computedIdempotencyKey =
+      idempotency_key ||
+      buildDeterministicIdempotencyKey({
+        tenant_id,
+        project_id,
+        form_id: form_id || project_id,
+        node_id,
+        event_date: submission_date,
+        submitter_id: user_id || submitted_by,
+        payload: data,
+      });
 
     // Validate backdating and calendar existence BEFORE transaction
     // (quota check will be done inside transaction with locking)
     if (calendar) {
       const submissionDateObj = new Date(submission_date);
-      const today = new Date();
       const allowBackdating = calendar.permSettings?.allowBackdating || false;
 
-      if (!allowBackdating && submissionDateObj < today.setHours(0, 0, 0, 0)) {
+      const todayUtc = new Date();
+      todayUtc.setUTCHours(0, 0, 0, 0);
+      const maxBackdatedAllowedUtc = new Date(todayUtc);
+      maxBackdatedAllowedUtc.setUTCDate(
+        maxBackdatedAllowedUtc.getUTCDate() - MAX_BACKDATE_DAYS_WITHOUT_OVERRIDE
+      );
+
+      if (!allowBackdating && submissionDateObj < maxBackdatedAllowedUtc) {
         throw new ApiError(
           httpStatus.UNPROCESSABLE_ENTITY,
-          'Backdated submissions are not allowed for this form'
+          `Backdated submissions older than ${MAX_BACKDATE_DAYS_WITHOUT_OVERRIDE} days are not allowed for this form`
         );
       }
     }
@@ -289,42 +340,41 @@ const nodeId = node_id;
     try {
       await client.query('BEGIN');
 
-      // Re-check quota with row-level lock to prevent race conditions
-      // Lock rows first, then count to prevent concurrent modifications
-      const lockQuery = `
-        SELECT id
-        FROM form_submissions
-        WHERE tenant_id = $1
-          AND project_id = $2
-          AND node_id IS NOT DISTINCT FROM $3
-          AND submission_date = $4
-          AND status != 'deleted'
-        FOR UPDATE
-      `;
-      await client.query(lockQuery, [
+      await client.query(
+        `
+          INSERT INTO event_compliance_daily_tracking (
+            tenant_id, project_id, node_id, event_date, submitted_count, updated_at, created_at
+          )
+          VALUES ($1, $2, $3, $4, 0, NOW(), NOW())
+          ON CONFLICT (tenant_id, project_id, node_id, event_date) DO NOTHING
+        `,
+        [
+          tenant_id,
+          project_id,
+          node_id || null,
+          submission_date,
+        ]
+      );
+
+      // Lock the daily counter row so quota checks are concurrency safe.
+      const dailyCountResult = await client.query(
+        `
+          SELECT submitted_count
+          FROM event_compliance_daily_tracking
+          WHERE tenant_id = $1
+            AND project_id = $2
+            AND node_id IS NOT DISTINCT FROM $3
+            AND event_date = $4
+          FOR UPDATE
+        `,
+        [
         tenant_id,
         project_id,
         node_id || null,
         submission_date,
-      ]);
-      
-      // Now count the locked rows
-      const quotaCheckQuery = `
-        SELECT COUNT(*) AS count
-        FROM form_submissions
-        WHERE tenant_id = $1
-          AND project_id = $2
-          AND node_id IS NOT DISTINCT FROM $3
-          AND submission_date = $4
-          AND status != 'deleted'
-      `;
-      const quotaResult = await client.query(quotaCheckQuery, [
-        tenant_id,
-        project_id,
-        node_id || null,
-        submission_date,
-      ]);
-      const usedSlots = Number(quotaResult.rows[0]?.count || 0);
+      ]
+      );
+      const usedSlots = Number(dailyCountResult.rows[0]?.submitted_count || 0);
 
       // Get calendar slot to check quota limit
       const calendarRows = await eventCalendarService.getCalendar(
@@ -340,14 +390,8 @@ const nodeId = node_id;
       }
 
       const slot = calendarRows[0];
-      const config = slot.daily_config || slot.weekly_config || {};
-      const dates = config.dates || [];
       const submissionDateStr = submission_date;
-      let totalSlots = 1;
-
-      if (dates.includes(submissionDateStr)) {
-        totalSlots = config.frequency_per_day || config.count || 1;
-      }
+      const totalSlots = resolveSlotCapacityForDate(slot, submissionDateStr);
 
       if (usedSlots >= totalSlots) {
         await client.query('ROLLBACK');
@@ -361,18 +405,24 @@ const nodeId = node_id;
     const insertQuery = `
       INSERT INTO form_submissions (
         id, tenant_id, project_id, node_id, form_id,
+        node_name, node_reference,
         project_name, project_category, user_id,
         data, source, status,
+        event_date,
         month, year, perm_enabled,
+        idempotency_key,
         event_compliance_percentage, completeness_status,
         total_events_required, total_events_submitted,
         validation_status, validation_errors, validation_warnings,
         submitted_by, submitted_at, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
-        $12, $13, $14, $15, $16, $17, $18, $19, $20,
-        $21, $22, $23, NOW(), NOW()
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+        $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,
+        $23, $24, $25, $26, $27, NOW(), NOW()
       )
+      ON CONFLICT (tenant_id, idempotency_key)
+      WHERE idempotency_key IS NOT NULL
+      DO UPDATE SET updated_at = form_submissions.updated_at
       RETURNING *
     `;
 
@@ -384,15 +434,19 @@ const nodeId = node_id;
       project_id,
       node_id,
       form_id || project_id,
+      node_name || null,
+      node_reference || null,
       project_name || 'PERM Project',
-      project_category || 'perm',
+      project_category || null,
       user_id || submitted_by,
       JSON.stringify(data),
       source,
       'completed',
+      submission_date,
       month,
       year,
       true,
+      computedIdempotencyKey,
       compliancePercentage,
       complianceStatus,
       totalRequired,
@@ -425,6 +479,9 @@ const nodeId = node_id;
     }
   } catch (error) {
     logger.error('❌ Error submitting PERM data:', error.message);
+    if (error instanceof ApiError) {
+      throw error;
+    }
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       `Failed to submit PERM data: ${error.message}`

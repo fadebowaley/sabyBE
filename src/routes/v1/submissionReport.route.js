@@ -80,6 +80,15 @@ router
   );
 
 router
+  .route('/module-table')
+  .get(
+    hybridAuth(),
+    requireAccess('submission:read'),
+    validate(submissionReportValidation.getModuleReportTable),
+    submissionReportController.getModuleReportTable
+  );
+
+router
   .route('/:id')
   .get(
     hybridAuth(),

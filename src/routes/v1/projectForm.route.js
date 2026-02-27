@@ -3,6 +3,7 @@ const auth = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
 const projectFormValidation = require('../../validations/projectForm.validation');
 const projectFormController = require('../../controllers/projectForm.controller');
+const workflowController = require('../../controllers/workflow.controller');
 
 const router = express.Router();
 
@@ -277,6 +278,14 @@ router.get(
   projectFormController.getProjectFormByProjectId
 );
 
+// Get canonical storage folder for a project/module
+router.get(
+  '/project/:projectId/storage-folder',
+  auth('view:project-form'),
+  validate(projectFormValidation.getProjectFormByProjectId),
+  projectFormController.getProjectStorageFolder
+);
+
 // Public route for accessing forms (no auth required)
 router.get(
   '/public/:projectId',
@@ -544,5 +553,9 @@ router.post(
  *                 results:
  *                   type: object
  */
+
+// ── Workflow definitions on a module ─────────────────────────────────────
+router.get('/project/:projectId/workflows', auth(), workflowController.getModuleWorkflows);
+router.put('/project/:projectId/workflows', auth(), workflowController.updateModuleWorkflows);
 
 module.exports = router;

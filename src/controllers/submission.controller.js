@@ -53,13 +53,14 @@ const submitData = catchAsync(async (req, res) => {
 
   const result = await queueSubmission(submissionBody);
 
-  // Log activity: queued
+  // Log activity: queued (include node_id for per-node tracking)
   const activityLog = {
     tenant_id: submissionBody.tenantId,
     project_id: submissionBody.projectId,
     project_name: submissionBody.project_name,
     project_category: submissionBody.project_category,
     form_id: submissionBody.formId,
+    node_id: submissionBody.nodeId ?? null,
     user_id: submissionBody.userId,
     action: 'queued',
     status: 'queued',
@@ -69,14 +70,15 @@ const submitData = catchAsync(async (req, res) => {
   };
 
   await postgresPool.query(
-    `INSERT INTO submission_activity_log (tenant_id, project_id, project_name, project_category, form_id, user_id, action, status, job_id, message)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+    `INSERT INTO submission_activity_log (tenant_id, project_id, project_name, project_category, form_id, node_id, user_id, action, status, job_id, message)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
     [
       activityLog.tenant_id,
       activityLog.project_id,
       activityLog.project_name,
       activityLog.project_category,
       activityLog.form_id,
+      activityLog.node_id,
       activityLog.user_id,
       activityLog.action,
       activityLog.status,

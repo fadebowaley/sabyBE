@@ -170,7 +170,14 @@ const logActivity = async (activityData) => {
       } - ${message}`
     );
   } catch (error) {
-    logger.error('[Activity] Failed to log activity:', error);
+    logger.error(
+      '[Activity] Failed to log activity:',
+      error.message,
+      '| node_id:',
+      node_id,
+      '| stack:',
+      error.stack
+    );
     // Don't throw - logging failure shouldn't break submission
   }
 };

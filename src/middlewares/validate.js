@@ -29,12 +29,15 @@ const validate = (schema) => async (req, res, next) => {
     // Only log if authenticated (req.user exists)
     if (req.user) {
       try {
+        const body = req.body || {};
+        const nodeId = body.nodeId ?? body.node_id ?? null;
         await postgresPool.query(
-          `INSERT INTO submission_activity_log (tenant_id, user_id, action, status, job_id, message, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          `INSERT INTO submission_activity_log (tenant_id, user_id, node_id, action, status, job_id, message, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
           [
             req.user.tenantId || null,
             req.user._id || null,
+            nodeId,
             'rejected',
             'rejected',
             uuidv4(),

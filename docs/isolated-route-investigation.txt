@@ -1,0 +1,185 @@
+# Isolated Route Investigation
+
+Generated: 2026-02-21T11:16:57.302Z
+
+## Summary
+
+- Candidate routes investigated: 20
+- Routes with external/internal evidence: 20
+- External-client route groups not currently mounted: 4
+
+## Route Classification
+
+### `/admin`
+- Disposition: NO CONSUMER EVIDENCE (candidate for removal)
+- Evidence count: 5
+- Evidence classes: backend-route-module:4, mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:154` -> `/admin`
+- `sabyBackend/src/routes/v1/waitlist.route.js:19` -> `/admin`
+- `sabyBackend/src/routes/v1/waitlist.route.js:27` -> `/admin/stats`
+- `sabyBackend/src/routes/v1/waitlist.route.js:31` -> `/admin/export`
+- `sabyBackend/src/routes/v1/waitlist.route.js:39` -> `/admin/:id`
+
+### `/api-submit`
+- Disposition: KEEP (internal integration/runtime dependency)
+- Evidence count: 2
+- Evidence classes: internal-integration:1, mount-definition:1
+- `sabyBackend/src/ingestion/email/utils/submission.client.js:31` -> `/api-submit`
+- `sabyBackend/src/routes/v1/index.js:72` -> `/api-submit`
+
+### `/app`
+- Disposition: NO CONSUMER EVIDENCE (candidate for removal)
+- Evidence count: 1
+- Evidence classes: mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:133` -> `/app`
+
+### `/baseline/jobs`
+- Disposition: BACKEND-ONLY (confirm module owner before removal)
+- Evidence count: 29
+- Evidence classes: backend-script:28, mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:84` -> `/baseline/jobs`
+- `sabyBackend/scripts/test-baseline-endpoints.js:120` -> `/baseline/jobs/stats`
+- `sabyBackend/scripts/test-baseline-endpoints.js:127` -> `/baseline/jobs/stats (${duration}ms)`
+- `sabyBackend/scripts/test-baseline-endpoints.js:132` -> `/baseline/jobs/stats`
+- `sabyBackend/scripts/test-baseline-endpoints.js:135` -> `/baseline/jobs/stats failed`
+
+### `/capture`
+- Disposition: NO CONSUMER EVIDENCE (candidate for removal)
+- Evidence count: 1
+- Evidence classes: mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:158` -> `/capture`
+
+### `/collections`
+- Disposition: NO CONSUMER EVIDENCE (candidate for removal)
+- Evidence count: 1
+- Evidence classes: mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:186` -> `/collections`
+
+### `/data`
+- Disposition: NO CONSUMER EVIDENCE (candidate for removal)
+- Evidence count: 1
+- Evidence classes: mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:129` -> `/data`
+
+### `/department`
+- Disposition: NO CONSUMER EVIDENCE (candidate for removal)
+- Evidence count: 1
+- Evidence classes: mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:162` -> `/department`
+
+### `/docs`
+- Disposition: BACKEND-ONLY (confirm module owner before removal)
+- Evidence count: 3
+- Evidence classes: backend-source:1, backend-route-module:1, mount-definition:1
+- `sabyBackend/src/models/projectForm.model.js:795` -> `/docs/javascript-sdk`
+- `sabyBackend/src/routes/v1/docs.route.js:12` -> `/docs/*.yml`
+- `sabyBackend/src/routes/v1/index.js:273` -> `/docs`
+
+### `/event`
+- Disposition: NO CONSUMER EVIDENCE (candidate for removal)
+- Evidence count: 2
+- Evidence classes: backend-route-module:1, mount-definition:1
+- `sabyBackend/src/routes/v1/eventConfig.route.js:49` -> `/event/:eventId`
+- `sabyBackend/src/routes/v1/index.js:166` -> `/event`
+
+### `/eventConfig`
+- Disposition: NO CONSUMER EVIDENCE (candidate for removal)
+- Evidence count: 1
+- Evidence classes: mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:170` -> `/eventConfig`
+
+### `/report`
+- Disposition: NO CONSUMER EVIDENCE (candidate for removal)
+- Evidence count: 2
+- Evidence classes: backend-route-module:1, mount-definition:1
+- `sabyBackend/src/routes/v1/eventCompliance.route.js:52` -> `/report/:nodeId/:month`
+- `sabyBackend/src/routes/v1/index.js:174` -> `/report`
+
+### `/rollups`
+- Disposition: NO CONSUMER EVIDENCE (candidate for removal)
+- Evidence count: 1
+- Evidence classes: mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:264` -> `/rollups`
+
+### `/settings`
+- Disposition: NO CONSUMER EVIDENCE (candidate for removal)
+- Evidence count: 1
+- Evidence classes: mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:178` -> `/settings`
+
+### `/statement`
+- Disposition: NO CONSUMER EVIDENCE (candidate for removal)
+- Evidence count: 1
+- Evidence classes: mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:182` -> `/statement`
+
+### `/submission-reports`
+- Disposition: KEEP (external consumer detected)
+- Evidence count: 15
+- Evidence classes: external-client:14, mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:236` -> `/submission-reports`
+- `sabyAgentic/app/clients/backend_api_client.py:296` -> `/submission-reports`
+- `sabyAgentic/app/clients/backend_api_client.py:310` -> `/submission-reports/{submission_id}`
+- `sabyAgentic/app/clients/backend_api_client.py:335` -> `/submission-reports/stats`
+- `sabyAgentic/app/clients/backend_api_client.py:356` -> `/submission-reports/by-status`
+
+### `/telegram`
+- Disposition: KEEP (internal integration/runtime dependency)
+- Evidence count: 2
+- Evidence classes: mount-definition:1, internal-integration:1
+- `sabyBackend/src/routes/v1/index.js:210` -> `/telegram`
+- `sabyBackend/public/telegram-webapp/app.js:19` -> `/v1/telegram`
+
+### `/trend-analysis`
+- Disposition: KEEP (external consumer detected)
+- Evidence count: 6
+- Evidence classes: external-client:5, mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:256` -> `/trend-analysis`
+- `sabyAgentic/app/clients/backend_api_client.py:996` -> `/trend-analysis/submissions/timeline`
+- `sabyAgentic/app/clients/backend_api_client.py:1014` -> `/trend-analysis/compliance/timeline`
+- `sabyAgentic/app/clients/backend_api_client.py:1032` -> `/trend-analysis/seasonal/patterns`
+- `sabyAgentic/app/clients/backend_api_client.py:1050` -> `/trend-analysis/growth/metrics`
+
+### `/validation-reports`
+- Disposition: KEEP (external consumer detected)
+- Evidence count: 4
+- Evidence classes: external-client:3, mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:244` -> `/validation-reports`
+- `sabyAgentic/app/clients/backend_api_client.py:1090` -> `/validation-reports`
+- `sabyAgentic/app/clients/backend_api_client.py:1108` -> `/validation-reports/failed`
+- `sabyAgentic/app/clients/backend_api_client.py:1128` -> `/validation-reports/{validation_id}/resolve`
+
+### `/waitlist`
+- Disposition: KEEP (external consumer detected)
+- Evidence count: 3
+- Evidence classes: external-app:2, mount-definition:1
+- `sabyBackend/src/routes/v1/index.js:214` -> `/waitlist`
+- `waiting-list-app/src/app/api/waitlist/route.ts:44` -> `/waitlist`
+- `waiting-list-app/src/app/api/waitlist/route.ts:44` -> `/v1/waitlist`
+
+## External Client Routes Not Mounted
+
+- `/compliance-reports` (9 endpoint references)
+  - `/compliance-reports`
+  - `/compliance-reports/summary`
+  - `/compliance-reports/trends`
+  - `/compliance-reports/by-node`
+  - `/compliance-reports/history`
+- `/export` (4 endpoint references)
+  - `/export/submissions/csv`
+  - `/export/submissions/json`
+  - `/export/compliance/csv`
+  - `/export/combined/csv`
+- `/health` (1 endpoint references)
+  - `/health`
+- `/notification-reports` (4 endpoint references)
+  - `/notification-reports`
+  - `/notification-reports/pending`
+  - `/notification-reports/failed`
+  - `/notification-reports/{notification_id}/retry`
+
+## Notes
+
+- Frontend-no-reference does not mean safe-to-delete.
+- External clients and internal ingestion/webhook integrations are separate consumers.
+- Validate live traffic before removal (server access logs + API metrics).

@@ -22,7 +22,9 @@ const queueSubmission = async (submissionBody) => {
   // Accept form_id, node_id, user_id in submissionBody
   try {
     const job = await submissionQueue.add('submit:data', submissionBody, {
-      jobId: `${submissionBody.tenantId}-${Date.now()}`,
+      jobId:
+        submissionBody.idempotency_key ||
+        `${submissionBody.tenantId}-${Date.now()}`,
       removeOnComplete: true,
       removeOnFail: false,
       attempts: 3,
@@ -36,12 +38,54 @@ const queueSubmission = async (submissionBody) => {
       `📥 Submission enqueued - Job ID: ${job.id} | Tenant: ${submissionBody.tenantId}`
     );
     return { jobId: job.id, status: 'queued' };
-  } catch (error) {
-    logger.error('❌ Submission queue failed:', error);
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      'Submission queue failed'
+  } catch (queueError) {
+    if (
+      submissionBody.idempotency_key &&
+      String(queueError?.message || '').toLowerCase().includes('job')
+    ) {
+      logger.info(
+        `📥 Duplicate idempotent queue request detected for key ${submissionBody.idempotency_key}`
+      );
+      return { jobId: submissionBody.idempotency_key, status: 'queued' };
+    }
+
+    // Fallback: if the BullMQ queue is unavailable (e.g. Redis not ready)
+    // save the submission directly to PostgreSQL so data is never lost.
+    logger.warn(
+      `⚠️ Queue unavailable — falling back to direct DB save. Error: ${queueError.message}`
     );
+    try {
+      const saved = await SubmissionModel.createSubmission({
+        tenant_id: submissionBody.tenantId,
+        project_id: submissionBody.projectId,
+        project_name: submissionBody.project_name,
+        project_category: submissionBody.project_category,
+        form_id: submissionBody.formId,
+        node_id: submissionBody.nodeId,
+        node_name: submissionBody.node_name,
+        node_reference: submissionBody.node_reference,
+        user_id: submissionBody.userId,
+        source: submissionBody.source || 'web',
+        data: submissionBody.payload,
+        meta: submissionBody.meta || {},
+        status: 'submitted',
+        event_date: submissionBody.event_date || null,
+        month: submissionBody.month || null,
+        year: submissionBody.year || null,
+        perm_enabled: Boolean(submissionBody.perm_enabled),
+        submitted_by: submissionBody.userId || null,
+        submitted_at: new Date(),
+        idempotency_key: submissionBody.idempotency_key || null,
+      });
+      logger.info(`💾 Submission saved directly to DB — ID: ${saved.id}`);
+      return { jobId: saved.id, status: 'submitted' };
+    } catch (dbError) {
+      logger.error('❌ Direct DB save also failed:', dbError);
+      throw new ApiError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        'Submission failed — queue and direct save both unavailable'
+      );
+    }
   }
 };
 
@@ -319,7 +363,18 @@ const getActivityLogs = async (filters = {}) => {
  * Get a summary of unique jobs and their latest status counts
  * @returns {Promise<{total_jobs: number, success: number, failed: number, queued: number, in_progress: number, rejected: number}>}
  */
-const getActivityLogSummary = async () => {
+const getActivityLogSummary = async (filters = {}) => {
+  const { tenantId } = filters;
+  const where = [];
+  const values = [];
+
+  if (tenantId) {
+    where.push('tenant_id = $1');
+    values.push(tenantId);
+  }
+
+  const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
   // Get the latest status for each job_id using a window function
   const sql = `
     SELECT job_id, status
@@ -327,10 +382,11 @@ const getActivityLogSummary = async () => {
       SELECT job_id, status,
              ROW_NUMBER() OVER (PARTITION BY job_id ORDER BY created_at DESC) as rn
       FROM submission_activity_log
+      ${whereClause}
     ) t
     WHERE rn = 1
   `;
-  const { rows } = await postgresPool.query(sql);
+  const { rows } = await postgresPool.query(sql, values);
   const summary = {
     total_jobs: 0,
     success: 0,

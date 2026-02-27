@@ -21,6 +21,14 @@ const SubmissionModel = {
       data,
       meta = {},
       status = 'submitted',
+      event_date = null,
+      month = null,
+      year = null,
+      perm_enabled = false,
+      submitted_by = null,
+      submitted_at = null,
+      idempotency_key = null,
+      client = null,
     } = payload;
 
     const query = `
@@ -39,11 +47,23 @@ const SubmissionModel = {
         data,
         meta,
         status,
+        event_date,
+        month,
+        year,
+        perm_enabled,
+        submitted_by,
+        submitted_at,
+        idempotency_key,
         created_at,
         updated_at
       ) VALUES (
-        gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW()
-      ) RETURNING *;
+        gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+        $14, $15, $16, $17, $18, $19, $20, NOW(), NOW()
+      )
+      ON CONFLICT (tenant_id, idempotency_key)
+      WHERE idempotency_key IS NOT NULL
+      DO UPDATE SET updated_at = form_submissions.updated_at
+      RETURNING *;
     `;
 
     const values = [
@@ -60,10 +80,18 @@ const SubmissionModel = {
       data,
       meta,
       status,
+      event_date,
+      month,
+      year,
+      perm_enabled,
+      submitted_by,
+      submitted_at,
+      idempotency_key,
     ];
 
     try {
-      const result = await postgresPool.query(query, values);
+      const db = client || postgresPool;
+      const result = await db.query(query, values);
       return result.rows[0];
     } catch (err) {
       console.error('❌ Error saving submission:', err.message);
@@ -295,11 +323,14 @@ const SubmissionModel = {
       project_id,
       form_id,
       node_id,
+      nodeId,
       user_id,
       status,
       source,
       perm_enabled,
       month,
+      start_date,
+      end_date,
     } = filters;
     const clauses = [];
     const values = [];
@@ -318,8 +349,12 @@ const SubmissionModel = {
         values.push(project_id);
     if (form_id)
       clauses.push(`form_id = $${values.length + 1}`) && values.push(form_id);
-    if (node_id)
-      clauses.push(`node_id = $${values.length + 1}`) && values.push(node_id);
+    const nodeFilter = nodeId || node_id;
+    if (nodeFilter) {
+      clauses.push(
+        `(node_id = $${values.length + 1} OR node_reference = $${values.length + 1})`
+      ) && values.push(nodeFilter);
+    }
     if (user_id)
       clauses.push(`user_id = $${values.length + 1}`) && values.push(user_id);
     if (status)
@@ -332,6 +367,12 @@ const SubmissionModel = {
         values.push(perm_enabled);
     if (month)
       clauses.push(`month = $${values.length + 1}`) && values.push(month);
+    if (start_date)
+      clauses.push(`submission_date >= $${values.length + 1}`) &&
+        values.push(start_date);
+    if (end_date)
+      clauses.push(`submission_date <= $${values.length + 1}`) &&
+        values.push(end_date);
 
     const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
     const query = `SELECT * FROM form_submissions ${whereClause} ORDER BY created_at DESC`;

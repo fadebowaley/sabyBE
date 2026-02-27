@@ -227,6 +227,14 @@ router.get(
   projectFormSubmissionController.getSubmission
 );
 
+// Update submission payload and/or status
+router.patch(
+  '/:submissionId',
+  auth('update:form-submission'),
+  validate(projectFormSubmissionValidation.updateSubmission),
+  projectFormSubmissionController.updateSubmission
+);
+
 /**
  * @swagger
  * /form-submissions/{submissionId}:

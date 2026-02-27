@@ -272,13 +272,13 @@ const previewCalendar = catchAsync(async (req, res) => {
   );
 
   if (!form) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Form not found');
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
   }
 
   if (!form.permSettings?.enabled) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      'PERM is not enabled for this form'
+      'PERM is not enabled for this module'
     );
   }
 
@@ -340,7 +340,7 @@ const regenerateCalendar = catchAsync(async (req, res) => {
   }).select('permSettings projectId tenantId formId');
 
   if (!form) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Form not found');
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
   }
 
   // Regenerate calendar

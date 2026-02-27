@@ -49,7 +49,7 @@ check_docker() {
 check_containers() {
     print_header "Container Status Check"
 
-    local containers=("halo-local-backend" "halo-local-postgres" "halo-local-mongodb" "halo-local-redis")
+    local containers=("saby-backend-production" "saby-prod-postgres" "saby-prod-mongodb" "saby-prod-redis")
     local all_running=true
 
     for container in "${containers[@]}"; do
@@ -71,7 +71,7 @@ check_containers() {
 
 # Function to show container logs
 show_logs() {
-    local container=${1:-"halo-local-backend"}
+    local container=${1:-"saby-backend-production"}
     local lines=${2:-50}
 
     print_header "Container Logs: $container (last $lines lines)"
@@ -85,7 +85,7 @@ show_logs() {
 
 # Function to show real-time logs
 follow_logs() {
-    local container=${1:-"halo-local-backend"}
+    local container=${1:-"saby-backend-production"}
 
     print_header "Following logs for: $container (Ctrl+C to stop)"
 
@@ -109,7 +109,7 @@ show_resources() {
 
 # Function to show container details
 show_details() {
-    local container=${1:-"halo-local-backend"}
+    local container=${1:-"saby-backend-production"}
 
     print_header "Container Details: $container"
 
@@ -164,9 +164,9 @@ check_databases() {
     print_header "Database Connection Check"
 
     # Check PostgreSQL
-    if docker ps | grep -q "halo-local-postgres"; then
+    if docker ps | grep -q "saby-prod-postgres"; then
         print_status "Testing PostgreSQL connection..."
-        if docker exec halo-local-postgres pg_isready -U postgres > /dev/null 2>&1; then
+        if docker exec saby-prod-postgres pg_isready -U postgres > /dev/null 2>&1; then
             print_status "PostgreSQL: ✅ Connected"
         else
             print_error "PostgreSQL: ❌ Connection failed"
@@ -174,9 +174,9 @@ check_databases() {
     fi
 
     # Check MongoDB
-    if docker ps | grep -q "halo-local-mongodb"; then
+    if docker ps | grep -q "saby-prod-mongodb"; then
         print_status "Testing MongoDB connection..."
-        if docker exec halo-local-postgres pg_isready -U postgres > /dev/null 2>&1; then
+        if docker exec saby-prod-postgres pg_isready -U postgres > /dev/null 2>&1; then
             print_status "MongoDB: ✅ Connected"
         else
             print_error "MongoDB: ❌ Connection failed"
@@ -184,9 +184,9 @@ check_databases() {
     fi
 
     # Check Redis
-    if docker ps | grep -q "halo-local-redis"; then
+    if docker ps | grep -q "saby-prod-redis"; then
         print_status "Testing Redis connection..."
-        if docker exec halo-local-redis redis-cli ping > /dev/null 2>&1; then
+        if docker exec saby-prod-redis redis-cli ping > /dev/null 2>&1; then
             print_status "Redis: ✅ Connected"
         else
             print_error "Redis: ❌ Connection failed"
@@ -198,7 +198,7 @@ check_databases() {
 check_api_health() {
     print_header "API Health Check"
 
-    if docker ps | grep -q "halo-local-backend"; then
+    if docker ps | grep -q "saby-backend-production"; then
         print_status "Testing API endpoint..."
         if curl -s http://localhost:4000/ > /dev/null 2>&1; then
             print_status "API: ✅ Responding at http://localhost:4000/"
@@ -216,7 +216,7 @@ check_api_health() {
 
 # Function to show PM2 status
 show_pm2_status() {
-    local container=${1:-"halo-local-backend"}
+    local container=${1:-"saby-backend-production"}
 
     print_header "PM2 Process Status: $container"
 
@@ -231,7 +231,7 @@ show_pm2_status() {
 show_logs_summary() {
     print_header "Recent Logs Summary"
 
-    local containers=("halo-local-backend" "halo-local-postgres" "halo-local-mongodb" "halo-local-redis")
+    local containers=("saby-backend-production" "saby-prod-postgres" "saby-prod-mongodb" "saby-prod-redis")
 
     for container in "${containers[@]}"; do
         if docker ps | grep -q "$container"; then
@@ -283,15 +283,15 @@ show_help() {
 
     echo -e "\n${GREEN}Usage Examples:${NC}"
     echo -e "  ${CYAN}./docker-monitor.sh status${NC}"
-    echo -e "  ${CYAN}./docker-monitor.sh logs halo-local-postgres 100${NC}"
-    echo -e "  ${CYAN}./docker-monitor.sh follow halo-local-backend${NC}"
-    echo -e "  ${CYAN}./docker-monitor.sh details halo-local-redis${NC}"
+    echo -e "  ${CYAN}./docker-monitor.sh logs saby-prod-postgres 100${NC}"
+    echo -e "  ${CYAN}./docker-monitor.sh follow saby-backend-production${NC}"
+    echo -e "  ${CYAN}./docker-monitor.sh details saby-prod-redis${NC}"
 
     echo -e "\n${GREEN}Container Names:${NC}"
-    echo -e "  - ${CYAN}halo-local-backend${NC}    (Main API server)"
-    echo -e "  - ${CYAN}halo-local-postgres${NC}   (PostgreSQL database)"
-    echo -e "  - ${CYAN}halo-local-mongodb${NC}    (MongoDB database)"
-    echo -e "  - ${CYAN}halo-local-redis${NC}      (Redis cache)"
+    echo -e "  - ${CYAN}saby-backend-production${NC}    (Main API server)"
+    echo -e "  - ${CYAN}saby-prod-postgres${NC}   (PostgreSQL database)"
+    echo -e "  - ${CYAN}saby-prod-mongodb${NC}    (MongoDB database)"
+    echo -e "  - ${CYAN}saby-prod-redis${NC}      (Redis cache)"
 }
 
 # Main script logic

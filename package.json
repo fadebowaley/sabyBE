@@ -34,6 +34,7 @@
     "list-users": "node src/scripts/list-users.js",
     "create-table": "node scripts/create-tables.js",
     "verify-tables": "node scripts/verify-tables.js",
+    "backfill:compliance-tracking": "node src/scripts/backfill-compliance-tracking.js",
     "node-sync:backfill": "node scripts/backfill_node_dimension.js",
     "whatsapp": "cross-env NODE_ENV=development node src/ingestion/whatsapp/server.js",
     "whatsapp:prod": "cross-env NODE_ENV=production node src/ingestion/whatsapp/server.js",

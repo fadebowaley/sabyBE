@@ -144,6 +144,23 @@ const updateSubmissionStatus = catchAsync(async (req, res) => {
 });
 
 /**
+ * Update submission payload and/or status
+ */
+const updateSubmission = catchAsync(async (req, res) => {
+  const { submissionId } = req.params;
+  const submission = await projectFormSubmissionService.updateSubmissionById(
+    submissionId,
+    req.body,
+    req.user?._id || null
+  );
+
+  res.send({
+    message: 'Submission updated successfully',
+    submission,
+  });
+});
+
+/**
  * Delete a submission (soft delete)
  */
 const deleteSubmission = catchAsync(async (req, res) => {
@@ -193,6 +210,7 @@ module.exports = {
   getSubmissionsByProject,
   getSubmissionsByTenant,
   getSubmission,
+  updateSubmission,
   updateSubmissionStatus,
   deleteSubmission,
   exportSubmissions,

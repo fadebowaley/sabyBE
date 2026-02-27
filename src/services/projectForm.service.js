@@ -1,7 +1,97 @@
 const httpStatus = require('http-status');
-const { ProjectForm } = require('../models');
+const { ProjectForm, StorageFolder } = require('../models');
 const ApiError = require('../utils/ApiError');
 const fieldCatalogService = require('./fieldCatalog.service');
+
+const hasFileUploadElement = (elements = []) =>
+  Array.isArray(elements) &&
+  elements.some((element) => {
+    const type = String(element?.type || '').toLowerCase();
+    if (type.includes('file') || type.includes('upload')) {
+      return true;
+    }
+
+    const properties = element?.properties || {};
+    return Boolean(properties.accept || properties.acceptedTypes);
+  });
+
+const normalizeModuleFolderName = (projectName = '') => {
+  const trimmed = String(projectName || '').trim();
+  if (!trimmed) return 'module';
+  return trimmed.slice(0, 120);
+};
+
+const ensureModuleStorageFolder = async (projectForm, { userId } = {}) => {
+  if (!projectForm || !hasFileUploadElement(projectForm.elements)) {
+    return null;
+  }
+
+  const folderName = normalizeModuleFolderName(
+    projectForm?.configuration?.projectName
+  );
+  const ownerId =
+    userId || projectForm?.createdBy?._id || projectForm?.createdBy || null;
+
+  if (!projectForm.tenantId || !ownerId) {
+    return null;
+  }
+
+  const existing = await StorageFolder.findOne({
+    tenantId: projectForm.tenantId,
+    name: folderName,
+    parentFolder: null,
+    status: 'active',
+  }).sort({ createdAt: 1 });
+
+  if (existing) {
+    return existing;
+  }
+
+  return StorageFolder.create({
+    tenantId: projectForm.tenantId,
+    userId: ownerId,
+    name: folderName,
+    parentFolder: null,
+    metadata: {
+      description: `Auto-created folder for module: ${folderName}`,
+      moduleProjectId: projectForm.projectId,
+    },
+  });
+};
+
+const getProjectStorageFolderByProjectId = async (projectId) => {
+  const projectForm = await getProjectFormByProjectId(projectId);
+  const folderName = normalizeModuleFolderName(
+    projectForm?.configuration?.projectName
+  );
+
+  const existing = await StorageFolder.findOne({
+    tenantId: projectForm.tenantId,
+    name: folderName,
+    parentFolder: null,
+    status: 'active',
+  }).sort({ createdAt: 1 });
+
+  if (existing) {
+    return existing;
+  }
+
+  const ownerId = projectForm?.createdBy?._id || projectForm?.createdBy || null;
+  if (!ownerId) {
+    return null;
+  }
+
+  return StorageFolder.create({
+    tenantId: projectForm.tenantId,
+    userId: ownerId,
+    name: folderName,
+    parentFolder: null,
+    metadata: {
+      description: `Auto-created folder for module: ${folderName}`,
+      moduleProjectId: projectForm.projectId,
+    },
+  });
+};
 
 /**
  * Create a project form
@@ -19,7 +109,7 @@ const createProjectForm = async (projectFormBody, tenantId, createdBy) => {
   if (isNameTaken) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      'A project with this name already exists in your workspace'
+      'A module with this name already exists in your workspace'
     );
   }
   const projectForm = await ProjectForm.createProjectForm(
@@ -29,6 +119,7 @@ const createProjectForm = async (projectFormBody, tenantId, createdBy) => {
   );
 
   await fieldCatalogService.syncCatalogFromForm(projectForm);
+  await ensureModuleStorageFolder(projectForm, { userId: createdBy });
   return projectForm;
 };
 
@@ -68,7 +159,7 @@ const getProjectFormById = async (id, options = {}) => {
   const projectForm = await ProjectForm.findById(id).populate(populateFields);
 
   if (!projectForm || projectForm.deletedAt) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Project form not found');
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
   }
 
   return projectForm;
@@ -88,7 +179,7 @@ const getProjectFormByProjectId = async (projectId, options = {}) => {
   }).populate(populateFields);
 
   if (!projectForm) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Project form not found');
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
   }
 
   return projectForm;
@@ -158,7 +249,7 @@ const updateProjectFormById = async (
     if (isNameTaken) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
-        'A project with this name already exists in your workspace'
+        'A module with this name already exists in your workspace'
       );
     }
   }
@@ -176,6 +267,7 @@ const updateProjectFormById = async (
   }
 
   await fieldCatalogService.syncCatalogFromForm(projectForm);
+  await ensureModuleStorageFolder(projectForm);
   return projectForm;
 };
 
@@ -231,7 +323,7 @@ const deleteProjectForm = async (projectId, userId, permanent = false) => {
   if (!projectForm) {
     throw new ApiError(
       httpStatus.NOT_FOUND,
-      'Form not found or already deleted'
+      'Module not found or already deleted'
     );
   }
 
@@ -263,10 +355,10 @@ const restoreProjectFormById = async (projectFormId) => {
   const projectForm = await ProjectForm.findById(projectFormId);
 
   if (!projectForm) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Project form not found');
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
   }
   if (!projectForm.deletedAt) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Project form is not deleted');
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Module is not deleted');
   }
   return projectForm.restore();
 };
@@ -436,4 +528,5 @@ module.exports = {
   getProjectAnalytics,
   bulkOperations,
   searchProjectForms,
+  getProjectStorageFolderByProjectId,
 };
