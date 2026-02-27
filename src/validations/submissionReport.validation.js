@@ -58,6 +58,8 @@ const getModuleReportTable = {
     project_id: Joi.string().required(),
     node_id: Joi.string(),
     nodeId: Joi.string(),
+    search: Joi.string().allow('').max(200),
+    debug: Joi.alternatives().try(Joi.boolean(), Joi.string()),
     month: Joi.string().pattern(/^\d{4}-\d{2}(-01)?$/),
     start_date: Joi.date().iso(),
     end_date: Joi.date().iso(),

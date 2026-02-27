@@ -74,6 +74,8 @@ const getModuleReportTable = catchAsync(async (req, res) => {
     'end_date',
     'limit',
     'offset',
+    'search',
+    'debug',
     'node_id',
     'nodeId',
   ]);
@@ -98,6 +100,8 @@ const getModuleReportTable = catchAsync(async (req, res) => {
     month: filters.month,
     start_date: filters.start_date,
     end_date: filters.end_date,
+    search: filters.search,
+    debug: filters.debug,
     limit: filters.limit,
     offset: filters.offset,
     node_filter: isOwnerScoped ? nodeFilter || null : nodeFilter,

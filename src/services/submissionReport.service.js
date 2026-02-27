@@ -22,6 +22,12 @@ const { postgresPool } = require('../config/postgres');
 
 const DEFAULT_TABLE_LIMIT = 100;
 const MAX_TABLE_LIMIT = 500;
+const FIXED_COLUMN_LABELS = {
+  node_name: 'Node Name',
+  nodeid: 'NodeId',
+  status: 'Status',
+  submitted_at: 'Submitted At',
+};
 
 const toSnakeCase = (value = '') =>
   String(value)
@@ -58,25 +64,33 @@ const unwrapValue = (value) => {
   return value;
 };
 
+const isTruthyDebugFlag = (value) => {
+  if (value === true) return true;
+  if (typeof value === 'string') {
+    return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
+  }
+  return false;
+};
+
 const buildDynamicColumns = (catalogRows = [], submissionRows = []) => {
-  const columns = [
-    { key: 'sn', label: 'S/N', pinned: true },
-    { key: 'submission_id', label: 'Submission ID', pinned: true },
-    { key: 'nodeid', label: 'NodeId', pinned: true },
-    { key: 'node_name', label: 'Node Name' },
-    { key: 'status', label: 'Status' },
-    { key: 'submitted_at', label: 'Submitted At' },
-  ];
+  const dynamicColumns = [];
+  const usedKeys = new Set(['node_name', 'nodeid', 'status', 'submitted_at']);
+  const sourceKeyToColumnKey = new Map([
+    ['node_name', 'node_name'],
+    ['node_id', 'nodeid'],
+    ['node_reference', 'nodeid'],
+    ['status', 'status'],
+    ['created_at', 'submitted_at'],
+    ['submitted_at', 'submitted_at'],
+  ]);
 
-  const usedKeys = new Set(columns.map((column) => column.key));
-  const sourceKeyToColumnKey = new Map();
-
-  const register = (sourceKey, labelHint) => {
+  const register = (sourceKey, labelHint, preferredKey = null) => {
     if (!sourceKey) return;
     if (sourceKeyToColumnKey.has(sourceKey)) return;
 
     const label = labelHint || prettifyKey(sourceKey);
-    let candidate = toSnakeCase(label) || toSnakeCase(sourceKey) || 'field';
+    let candidate =
+      preferredKey || toSnakeCase(label) || toSnakeCase(sourceKey) || 'field';
     let suffix = 2;
     while (usedKeys.has(candidate)) {
       candidate = `${toSnakeCase(label) || 'field'}_${suffix}`;
@@ -84,17 +98,25 @@ const buildDynamicColumns = (catalogRows = [], submissionRows = []) => {
     }
     usedKeys.add(candidate);
     sourceKeyToColumnKey.set(sourceKey, candidate);
-    columns.push({ key: candidate, label, source_key: sourceKey });
+    dynamicColumns.push({ key: candidate, label, source_key: sourceKey });
   };
 
   catalogRows.forEach((row) => {
-    register(row.field_key, row.field_label);
+    register(row.field_key, row.field_label, toSnakeCase(row.field_key || ''));
   });
 
   submissionRows.forEach((row) => {
     const payload = row.data && typeof row.data === 'object' ? row.data : {};
     Object.keys(payload).forEach((key) => register(key, null));
   });
+
+  const columns = [
+    { key: 'node_name', label: FIXED_COLUMN_LABELS.node_name, pinned: true },
+    { key: 'nodeid', label: FIXED_COLUMN_LABELS.nodeid, pinned: true },
+    ...dynamicColumns,
+    { key: 'status', label: FIXED_COLUMN_LABELS.status },
+    { key: 'submitted_at', label: FIXED_COLUMN_LABELS.submitted_at },
+  ];
 
   return { columns, sourceKeyToColumnKey };
 };
@@ -109,6 +131,8 @@ const getModuleReportTable = async (filters = {}) => {
     tenant_id,
     project_id,
     node_filter,
+    search,
+    debug,
     start_date,
     end_date,
     month,
@@ -122,8 +146,12 @@ const getModuleReportTable = async (filters = {}) => {
   if (!project_id) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'project_id is required');
   }
+  const includeDebug = isTruthyDebugFlag(debug);
 
-  const safeLimit = Math.min(Math.max(Number(limit) || DEFAULT_TABLE_LIMIT, 1), MAX_TABLE_LIMIT);
+  const safeLimit = Math.min(
+    Math.max(Number(limit) || DEFAULT_TABLE_LIMIT, 1),
+    MAX_TABLE_LIMIT
+  );
   const safeOffset = Math.max(Number(offset) || 0, 0);
 
   const where = ['tenant_id = $1', 'project_id = $2'];
@@ -148,6 +176,17 @@ const getModuleReportTable = async (filters = {}) => {
   if (end_date) {
     where.push(`created_at <= $${index}`);
     values.push(end_date);
+    index += 1;
+  }
+  if (search && String(search).trim() !== '') {
+    where.push(`(
+      CAST(id AS TEXT) ILIKE $${index}
+      OR COALESCE(node_name, '') ILIKE $${index}
+      OR COALESCE(node_reference, '') ILIKE $${index}
+      OR COALESCE(node_id, '') ILIKE $${index}
+      OR COALESCE(status, '') ILIKE $${index}
+    )`);
+    values.push(`%${String(search).trim()}%`);
     index += 1;
   }
 
@@ -177,6 +216,24 @@ const getModuleReportTable = async (filters = {}) => {
   const countResult = await postgresPool.query(countQuery, values);
   const total = Number(countResult.rows[0]?.total || 0);
 
+  const summaryQuery = `
+    SELECT
+      COUNT(*)::bigint AS total_rows,
+      COUNT(DISTINCT COALESCE(node_reference, node_id))::bigint AS unique_nodes,
+      MIN(created_at) AS first_submission_at,
+      MAX(created_at) AS latest_submission_at,
+      COUNT(*) FILTER (WHERE status = 'submitted')::bigint AS submitted_count,
+      COUNT(*) FILTER (WHERE status = 'approved')::bigint AS approved_count,
+      COUNT(*) FILTER (WHERE status = 'pending')::bigint AS pending_count,
+      COUNT(*) FILTER (WHERE status = 'rejected')::bigint AS rejected_count,
+      COUNT(*) FILTER (WHERE status = 'completed')::bigint AS completed_count,
+      COUNT(*) FILTER (WHERE status = 'failed')::bigint AS failed_count
+    FROM form_submissions
+    ${whereClause}
+  `;
+  const summaryResult = await postgresPool.query(summaryQuery, values);
+  const summaryRow = summaryResult.rows[0] || {};
+
   let catalogRows = [];
   try {
     const catalogQuery = `
@@ -186,7 +243,10 @@ const getModuleReportTable = async (filters = {}) => {
         AND project_id = $2
       ORDER BY field_label ASC, field_key ASC
     `;
-    const catalogResult = await postgresPool.query(catalogQuery, [tenant_id, project_id]);
+    const catalogResult = await postgresPool.query(catalogQuery, [
+      tenant_id,
+      project_id,
+    ]);
     catalogRows = catalogResult.rows || [];
   } catch (_catalogError) {
     // Fail-safe: reporting still works even when catalog entries are missing.
@@ -219,13 +279,49 @@ const getModuleReportTable = async (filters = {}) => {
     return reportRow;
   });
 
-  return {
+  const response = {
     total,
     limit: safeLimit,
     offset: safeOffset,
+    display_order: columns.map((column) => column.key),
+    summary: {
+      total_rows: Number(summaryRow.total_rows || 0),
+      unique_nodes: Number(summaryRow.unique_nodes || 0),
+      first_submission_at: summaryRow.first_submission_at || null,
+      latest_submission_at: summaryRow.latest_submission_at || null,
+      submitted_count: Number(summaryRow.submitted_count || 0),
+      approved_count: Number(summaryRow.approved_count || 0),
+      pending_count: Number(summaryRow.pending_count || 0),
+      rejected_count: Number(summaryRow.rejected_count || 0),
+      completed_count: Number(summaryRow.completed_count || 0),
+      failed_count: Number(summaryRow.failed_count || 0),
+    },
     columns,
     rows,
   };
+  if (includeDebug) {
+    response.debug = {
+      filters: {
+        tenant_id,
+        project_id,
+        node_filter: node_filter || null,
+        month: month || null,
+        search: search || null,
+        start_date: start_date || null,
+        end_date: end_date || null,
+        limit: safeLimit,
+        offset: safeOffset,
+      },
+      catalog_count: catalogRows.length,
+      catalog_rows: catalogRows,
+      columns_count: columns.length,
+      columns,
+      display_order: response.display_order,
+      sample_input_row: rowsResult.rows[0] || null,
+      sample_mapped_row: rows[0] || null,
+    };
+  }
+  return response;
 };
 
 /**
