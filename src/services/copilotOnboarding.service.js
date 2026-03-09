@@ -1,0 +1,970 @@
+const httpStatus = require('http-status');
+const {
+  Structures,
+  Level,
+  Nodes,
+  Role,
+  User,
+} = require('../models');
+const ApiError = require('../utils/ApiError');
+const structureService = require('./structure.service');
+const levelService = require('./level.service');
+const nodeService = require('./node.service');
+const roleService = require('./role.service');
+const userService = require('./user.service');
+
+const ALLOWED_RECORD_TYPES = new Set([
+  'structure',
+  'level',
+  'node',
+  'role',
+  'user',
+  'user_role',
+  'user_node',
+]);
+
+const REQUIRED_BY_TYPE = {
+  structure: ['structure_name'],
+  level: ['level_name', 'level_rank', 'structure_name'],
+  node: ['node_name', 'level_name', 'structure_name'],
+  role: ['role_name'],
+  user: ['user_email', 'first_name', 'last_name'],
+  user_role: ['user_email', 'role_name'],
+  user_node: ['user_email', 'node_name'],
+};
+
+const norm = (value) => String(value || '').trim().toLowerCase();
+const getSafe = (row, key) => String(row?.[key] || '').trim();
+const getUserNodeName = (row) => getSafe(row, 'node_name') || getSafe(row, 'parent_node_name');
+
+const parseCsvLine = (line) => {
+  const out = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (ch === '"') {
+      const next = line[i + 1];
+      if (inQuotes && next === '"') {
+        cur += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      out.push(cur);
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  out.push(cur);
+  return out.map((v) => v.trim());
+};
+
+const parseCsvText = (csvText) => {
+  const raw = String(csvText || '')
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (raw.length < 2) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'CSV must include header and at least one data row'
+    );
+  }
+
+  const headers = parseCsvLine(raw[0]).map((h) => norm(h));
+  if (!headers.includes('record_type')) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'CSV header must include record_type column'
+    );
+  }
+
+  const rows = [];
+  for (let i = 1; i < raw.length; i += 1) {
+    const values = parseCsvLine(raw[i]);
+    const row = {};
+    headers.forEach((h, idx) => {
+      row[h] = String(values[idx] || '').trim();
+    });
+    rows.push({
+      lineNumber: i + 1,
+      row,
+    });
+  }
+
+  return { headers, rows };
+};
+
+const loadTenantReferenceSets = async (tenantId) => {
+  const [structures, levels, nodes, roles, users] = await Promise.all([
+    Structures.find({ tenantId }).select('name').lean(),
+    Level.find({ tenantId, deletedAt: null }).select('name rank').lean(),
+    Nodes.find({ tenantId, deletedAt: null }).select('name').lean(),
+    Role.find({ tenantId, deletedAt: null }).select('name').lean(),
+    User.find({ tenantId, deletedAt: null }).select('email').lean(),
+  ]);
+
+  return {
+    structures: new Set(structures.map((x) => norm(x.name))),
+    levels: new Set(levels.map((x) => norm(x.name))),
+    nodes: new Set(nodes.map((x) => norm(x.name))),
+    roles: new Set(roles.map((x) => norm(x.name))),
+    users: new Set(users.map((x) => norm(x.email))),
+  };
+};
+
+const validateOnboardingCsvDryRun = async ({ tenantId, csvText }) => {
+  if (!tenantId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId is required');
+  }
+  if (!String(csvText || '').trim()) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'csvText is required');
+  }
+
+  const { rows } = parseCsvText(csvText);
+  const refs = await loadTenantReferenceSets(tenantId);
+
+  const errors = [];
+  const warnings = [];
+  const seenKeys = new Set();
+
+  const fileRefs = {
+    structures: new Set(),
+    levels: new Set(),
+    nodes: new Set(),
+    roles: new Set(),
+    users: new Set(),
+  };
+
+  rows.forEach(({ lineNumber, row }) => {
+    const type = norm(row.record_type);
+    const userNodeName = getUserNodeName(row);
+    const keyBase =
+      type === 'structure'
+        ? row.structure_name
+        : type === 'level'
+          ? `${row.level_name}|${row.structure_name}`
+          : type === 'node'
+            ? `${row.node_name}|${row.parent_node_name || ''}`
+            : type === 'role'
+              ? row.role_name
+              : type === 'user'
+                ? row.user_email
+                : type === 'user_role'
+                  ? `${row.user_email}|${row.role_name}`
+                  : type === 'user_node'
+                    ? `${row.user_email}|${userNodeName}`
+                    : '';
+    const dedupeKey = `${type}|${norm(keyBase)}`;
+    if (type && keyBase && !seenKeys.has(dedupeKey)) {
+      seenKeys.add(dedupeKey);
+    } else if (type && keyBase) {
+      warnings.push({
+        line: lineNumber,
+        code: 'duplicate_row',
+        message: `Duplicate ${type} row for key "${keyBase}"`,
+      });
+    }
+  });
+
+  rows.forEach(({ lineNumber, row }) => {
+    const type = norm(row.record_type);
+    if (!ALLOWED_RECORD_TYPES.has(type)) {
+      errors.push({
+        line: lineNumber,
+        code: 'invalid_record_type',
+        message: `Unsupported record_type "${row.record_type}"`,
+      });
+      return;
+    }
+
+    const required = REQUIRED_BY_TYPE[type] || [];
+    required.forEach((col) => {
+      if (!String(row[col] || '').trim()) {
+        errors.push({
+          line: lineNumber,
+          code: 'missing_required_column',
+          message: `Missing required value for ${col} (${type})`,
+        });
+      }
+    });
+
+    if (type === 'level' && row.level_rank && !/^\d+$/.test(String(row.level_rank))) {
+      errors.push({
+        line: lineNumber,
+        code: 'invalid_level_rank',
+        message: `level_rank must be an integer, got "${row.level_rank}"`,
+      });
+    }
+
+    if (type === 'structure') fileRefs.structures.add(norm(row.structure_name));
+    if (type === 'level') fileRefs.levels.add(norm(row.level_name));
+    if (type === 'node') fileRefs.nodes.add(norm(row.node_name));
+    if (type === 'role') fileRefs.roles.add(norm(row.role_name));
+    if (type === 'user') fileRefs.users.add(norm(row.user_email));
+  });
+
+  rows.forEach(({ lineNumber, row }) => {
+    const type = norm(row.record_type);
+    if (!ALLOWED_RECORD_TYPES.has(type)) return;
+
+    const hasStructure = (name) =>
+      refs.structures.has(norm(name)) || fileRefs.structures.has(norm(name));
+    const hasLevel = (name) =>
+      refs.levels.has(norm(name)) || fileRefs.levels.has(norm(name));
+    const hasNode = (name) => refs.nodes.has(norm(name)) || fileRefs.nodes.has(norm(name));
+    const hasRole = (name) => refs.roles.has(norm(name)) || fileRefs.roles.has(norm(name));
+    const hasUser = (email) => refs.users.has(norm(email)) || fileRefs.users.has(norm(email));
+
+    if (type === 'level' && row.structure_name && !hasStructure(row.structure_name)) {
+      errors.push({
+        line: lineNumber,
+        code: 'missing_structure_reference',
+        message: `Referenced structure "${row.structure_name}" not found in file or DB`,
+      });
+    }
+
+    if (type === 'node') {
+      if (row.structure_name && !hasStructure(row.structure_name)) {
+        errors.push({
+          line: lineNumber,
+          code: 'missing_structure_reference',
+          message: `Referenced structure "${row.structure_name}" not found in file or DB`,
+        });
+      }
+      if (row.level_name && !hasLevel(row.level_name)) {
+        errors.push({
+          line: lineNumber,
+          code: 'missing_level_reference',
+          message: `Referenced level "${row.level_name}" not found in file or DB`,
+        });
+      }
+      if (row.parent_node_name && !hasNode(row.parent_node_name)) {
+        errors.push({
+          line: lineNumber,
+          code: 'missing_parent_node_reference',
+          message: `Referenced parent node "${row.parent_node_name}" not found in file or DB`,
+        });
+      }
+    }
+
+    if (type === 'user_role') {
+      if (!hasUser(row.user_email)) {
+        errors.push({
+          line: lineNumber,
+          code: 'missing_user_reference',
+          message: `Referenced user "${row.user_email}" not found in file or DB`,
+        });
+      }
+      if (!hasRole(row.role_name)) {
+        errors.push({
+          line: lineNumber,
+          code: 'missing_role_reference',
+          message: `Referenced role "${row.role_name}" not found in file or DB`,
+        });
+      }
+    }
+
+    if (type === 'user_node') {
+      const nodeName = getUserNodeName(row);
+      if (!hasUser(row.user_email)) {
+        errors.push({
+          line: lineNumber,
+          code: 'missing_user_reference',
+          message: `Referenced user "${row.user_email}" not found in file or DB`,
+        });
+      }
+      if (!hasNode(nodeName)) {
+        errors.push({
+          line: lineNumber,
+          code: 'missing_node_reference',
+          message: `Referenced node "${nodeName}" not found in file or DB`,
+        });
+      }
+    }
+  });
+
+  const byType = rows.reduce((acc, { row }) => {
+    const type = norm(row.record_type);
+    if (!type) return acc;
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {});
+
+  return {
+    dryRun: true,
+    ok: errors.length === 0,
+    summary: {
+      rowCount: rows.length,
+      byRecordType: byType,
+      errors: errors.length,
+      warnings: warnings.length,
+    },
+    errors,
+    warnings,
+    nextStep: errors.length
+      ? 'Fix errors, then rerun dryRun'
+      : 'Dry-run passed. Next: enable staged execution mode',
+  };
+};
+
+const resolveActorUserId = (actorUser = {}) =>
+  actorUser.id || actorUser._id || actorUser.userId || null;
+
+const buildRoleActor = (tenantId, actorUser = {}) => ({
+  tenantId,
+  userId: actorUser.userId || actorUser.id || actorUser._id,
+  isOwner: Boolean(actorUser.isOwner),
+  isSuper: Boolean(actorUser.isSuper),
+  isSaby: Boolean(actorUser.isSaby),
+  hasPermissionToCreateRoles: Boolean(actorUser.hasPermissionToCreateRoles),
+});
+
+const preloadReferenceMaps = async (tenantId) => {
+  const [structures, levels, nodes, roles, users] = await Promise.all([
+    Structures.find({ tenantId }).lean(),
+    Level.find({ tenantId, deletedAt: null }).lean(),
+    Nodes.find({ tenantId, deletedAt: null }).lean(),
+    Role.find({ tenantId, deletedAt: null }).lean(),
+    User.find({ tenantId, deletedAt: null }).lean(),
+  ]);
+
+  return {
+    structuresByName: new Map(structures.map((x) => [norm(x.name), x])),
+    levelsByName: new Map(levels.map((x) => [norm(x.name), x])),
+    nodesByName: new Map(nodes.map((x) => [norm(x.name), x])),
+    rolesByName: new Map(roles.map((x) => [norm(x.name), x])),
+    usersByEmail: new Map(users.map((x) => [norm(x.email), x])),
+  };
+};
+
+const summarizeRows = (rows = []) => {
+  const out = {
+    created: 0,
+    updated: 0,
+    assigned: 0,
+    skipped: 0,
+    failed: 0,
+  };
+  rows.forEach((r) => {
+    const a = String(r.action || '').toLowerCase();
+    if (a === 'created') out.created += 1;
+    else if (a === 'updated') out.updated += 1;
+    else if (a === 'assigned') out.assigned += 1;
+    else if (a === 'failed') out.failed += 1;
+    else out.skipped += 1;
+  });
+  return out;
+};
+
+const importOnboardingCsv = async ({ tenantId, csvText, actorUser = {} }) => {
+  const validation = await validateOnboardingCsvDryRun({ tenantId, csvText });
+  if (!validation.ok) {
+    return {
+      dryRun: false,
+      executed: false,
+      ok: false,
+      summary: validation.summary,
+      validationErrors: validation.errors,
+      warnings: validation.warnings,
+      rows: [],
+      nextStep: 'Fix validation errors, then rerun execution mode',
+    };
+  }
+
+  const actorUserId = resolveActorUserId(actorUser);
+  if (!actorUserId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'actor user id is required');
+  }
+
+  const roleActor = buildRoleActor(tenantId, actorUser);
+  const { rows } = parseCsvText(csvText);
+  const refs = await preloadReferenceMaps(tenantId);
+  const undoStack = [];
+  const rowResults = [];
+  const stageResults = [];
+  const warnings = [...(validation.warnings || [])];
+  const defaultPassword = 'SabyTemp123!';
+
+  const levelRows = rows.filter((x) => norm(x.row.record_type) === 'level');
+  const structureRows = rows.filter((x) => norm(x.row.record_type) === 'structure');
+  const nodeRows = rows.filter((x) => norm(x.row.record_type) === 'node');
+  const roleRows = rows.filter((x) => norm(x.row.record_type) === 'role');
+  const userRows = rows.filter((x) => norm(x.row.record_type) === 'user');
+  const userRoleRows = rows.filter((x) => norm(x.row.record_type) === 'user_role');
+  const userNodeRows = rows.filter((x) => norm(x.row.record_type) === 'user_node');
+
+  const failed = [];
+  let rolledBack = false;
+  const rollbackErrors = [];
+
+  const runStage = async (name, items, handler) => {
+    const startCount = rowResults.length;
+    try {
+      // eslint-disable-next-line no-restricted-syntax
+      for (const item of items) {
+        // eslint-disable-next-line no-await-in-loop
+        await handler(item);
+      }
+      stageResults.push({
+        stage: name,
+        status: 'completed',
+        ...summarizeRows(rowResults.slice(startCount)),
+      });
+    } catch (error) {
+      stageResults.push({
+        stage: name,
+        status: 'failed',
+        error: error.message,
+        ...summarizeRows(rowResults.slice(startCount)),
+      });
+      throw error;
+    }
+  };
+
+  try {
+    await runStage('stage_1_levels', levelRows, async ({ lineNumber, row }) => {
+      const levelName = getSafe(row, 'level_name');
+      const levelRank = Number(getSafe(row, 'level_rank'));
+      const key = norm(levelName);
+      const existing = refs.levelsByName.get(key);
+
+      if (existing) {
+        const updates = {};
+        if (Number(existing.rank) !== levelRank) updates.rank = levelRank;
+        if (existing.deletedAt) updates.deletedAt = null;
+        if (Object.keys(updates).length === 0) {
+          rowResults.push({
+            line: lineNumber,
+            recordType: 'level',
+            action: 'skipped',
+            status: 'ok',
+            entityId: String(existing._id),
+            reason: 'already_exists',
+          });
+          return;
+        }
+
+        const before = { ...existing };
+        const updated = await levelService.updateLevelById(existing._id, {
+          ...updates,
+          tenantId,
+        });
+        refs.levelsByName.set(key, updated.toObject ? updated.toObject() : updated);
+        undoStack.push(async () => {
+          await levelService.updateLevelById(existing._id, {
+            tenantId,
+            name: before.name,
+            rank: before.rank,
+            description: before.description || '',
+            isSpecial: Boolean(before.isSpecial),
+            isActive: before.isActive !== false,
+          });
+        });
+        rowResults.push({
+          line: lineNumber,
+          recordType: 'level',
+          action: 'updated',
+          status: 'ok',
+          entityId: String(existing._id),
+        });
+        return;
+      }
+
+      const created = await levelService.createLevel({
+        tenantId,
+        name: levelName,
+        rank: levelRank,
+        description: '',
+        isSpecial: false,
+        isActive: true,
+      });
+      refs.levelsByName.set(key, created.toObject ? created.toObject() : created);
+      undoStack.push(async () => {
+        await Level.deleteOne({ _id: created._id });
+      });
+      rowResults.push({
+        line: lineNumber,
+        recordType: 'level',
+        action: 'created',
+        status: 'ok',
+        entityId: String(created._id),
+      });
+    });
+
+    const structurePreferredLevel = new Map();
+    levelRows.forEach(({ row }) => {
+      const structKey = norm(row.structure_name);
+      const levelKey = norm(row.level_name);
+      if (!structKey || !levelKey) return;
+      if (!structurePreferredLevel.has(structKey)) {
+        structurePreferredLevel.set(structKey, levelKey);
+      }
+    });
+    nodeRows.forEach(({ row }) => {
+      const structKey = norm(row.structure_name);
+      const levelKey = norm(row.level_name);
+      if (!structKey || !levelKey) return;
+      if (!structurePreferredLevel.has(structKey)) {
+        structurePreferredLevel.set(structKey, levelKey);
+      }
+    });
+
+    await runStage(
+      'stage_1_structures',
+      structureRows,
+      async ({ lineNumber, row }) => {
+        const structureName = getSafe(row, 'structure_name');
+        const structureKey = norm(structureName);
+        const levelKey =
+          norm(row.level_name) || structurePreferredLevel.get(structureKey);
+        const level = refs.levelsByName.get(levelKey);
+        if (!level) {
+          throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            `line ${lineNumber}: structure "${structureName}" has no resolvable level`
+          );
+        }
+
+        const existing = refs.structuresByName.get(structureKey);
+        if (existing) {
+          const needsLevelUpdate =
+            String(existing.level || '') !== String(level._id || '');
+          if (!needsLevelUpdate) {
+            rowResults.push({
+              line: lineNumber,
+              recordType: 'structure',
+              action: 'skipped',
+              status: 'ok',
+              entityId: String(existing._id),
+              reason: 'already_exists',
+            });
+            return;
+          }
+
+          const before = { ...existing };
+          const updated = await structureService.updateStructureById(existing._id, {
+            level: level._id,
+          });
+          refs.structuresByName.set(
+            structureKey,
+            updated.toObject ? updated.toObject() : updated
+          );
+          undoStack.push(async () => {
+            await structureService.updateStructureById(existing._id, {
+              name: before.name,
+              level: before.level,
+              code: before.code || '',
+              description: before.description || '',
+              isSpecial: Boolean(before.isSpecial),
+              isActive: before.isActive !== false,
+            });
+          });
+          rowResults.push({
+            line: lineNumber,
+            recordType: 'structure',
+            action: 'updated',
+            status: 'ok',
+            entityId: String(existing._id),
+          });
+          return;
+        }
+
+        const created = await structureService.createStructure({
+          tenantId,
+          name: structureName,
+          code: getSafe(row, 'structure_code') || '',
+          description: getSafe(row, 'structure_description') || '',
+          level: level._id,
+          createdBy: actorUserId,
+          isActive: true,
+          isSpecial: false,
+          type: 'administrative',
+        });
+        refs.structuresByName.set(
+          structureKey,
+          created.toObject ? created.toObject() : created
+        );
+        undoStack.push(async () => {
+          await Structures.deleteOne({ _id: created._id });
+        });
+        rowResults.push({
+          line: lineNumber,
+          recordType: 'structure',
+          action: 'created',
+          status: 'ok',
+          entityId: String(created._id),
+        });
+      }
+    );
+
+    await runStage('stage_2_nodes', nodeRows, async ({ lineNumber, row }) => {
+      const nodeName = getSafe(row, 'node_name');
+      const level = refs.levelsByName.get(norm(row.level_name));
+      const structure = refs.structuresByName.get(norm(row.structure_name));
+      const parentName = getSafe(row, 'parent_node_name');
+      const parent = parentName ? refs.nodesByName.get(norm(parentName)) : null;
+
+      if (!level || !structure) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          `line ${lineNumber}: node "${nodeName}" has unresolved level/structure`
+        );
+      }
+      if (parentName && !parent) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          `line ${lineNumber}: node "${nodeName}" has unresolved parent "${parentName}"`
+        );
+      }
+
+      const key = norm(nodeName);
+      const existing = refs.nodesByName.get(key);
+      if (existing) {
+        const before = { ...existing };
+        const updated = await nodeService.updateNodeById(existing._id, {
+          name: nodeName,
+          level: level._id,
+          structure: structure._id,
+          parent: parent?._id || null,
+        });
+        refs.nodesByName.set(key, updated.toObject ? updated.toObject() : updated);
+        undoStack.push(async () => {
+          await nodeService.updateNodeById(existing._id, {
+            name: before.name,
+            level: before.level,
+            structure: before.structure,
+            parent: before.parent || null,
+          });
+        });
+        rowResults.push({
+          line: lineNumber,
+          recordType: 'node',
+          action: 'updated',
+          status: 'ok',
+          entityId: String(existing._id),
+        });
+        return;
+      }
+
+      const created = await nodeService.createNode({
+        tenantId,
+        name: nodeName,
+        level: level._id,
+        structure: structure._id,
+        parent: parent?._id || null,
+        isActive: true,
+      });
+      refs.nodesByName.set(key, created.toObject ? created.toObject() : created);
+      undoStack.push(async () => {
+        await Nodes.deleteOne({ _id: created._id });
+      });
+      rowResults.push({
+        line: lineNumber,
+        recordType: 'node',
+        action: 'created',
+        status: 'ok',
+        entityId: String(created._id),
+      });
+    });
+
+    await runStage('stage_3_roles', roleRows, async ({ lineNumber, row }) => {
+      const roleName = getSafe(row, 'role_name');
+      const roleDesc = getSafe(row, 'role_description');
+      const key = norm(roleName);
+      const existing = refs.rolesByName.get(key);
+
+      if (existing) {
+        if (!roleDesc || String(existing.description || '') === roleDesc) {
+          rowResults.push({
+            line: lineNumber,
+            recordType: 'role',
+            action: 'skipped',
+            status: 'ok',
+            entityId: String(existing._id),
+            reason: 'already_exists',
+          });
+          return;
+        }
+        const before = { ...existing };
+        const updated = await roleService.updateRoleById(
+          existing._id,
+          { description: roleDesc },
+          roleActor
+        );
+        refs.rolesByName.set(key, updated.toObject ? updated.toObject() : updated);
+        undoStack.push(async () => {
+          await roleService.updateRoleById(
+            existing._id,
+            { description: before.description || '' },
+            roleActor
+          );
+        });
+        rowResults.push({
+          line: lineNumber,
+          recordType: 'role',
+          action: 'updated',
+          status: 'ok',
+          entityId: String(existing._id),
+        });
+        return;
+      }
+
+      const created = await roleService.createRole(
+        {
+          roleName,
+          roleDescription: roleDesc || '',
+        },
+        roleActor
+      );
+      refs.rolesByName.set(key, created.toObject ? created.toObject() : created);
+      undoStack.push(async () => {
+        await Role.deleteOne({ _id: created._id });
+      });
+      rowResults.push({
+        line: lineNumber,
+        recordType: 'role',
+        action: 'created',
+        status: 'ok',
+        entityId: String(created._id),
+      });
+    });
+
+    await runStage('stage_4_users', userRows, async ({ lineNumber, row }) => {
+      const email = getSafe(row, 'user_email').toLowerCase();
+      const firstName = getSafe(row, 'first_name');
+      const lastName = getSafe(row, 'last_name');
+      const phoneNumber = getSafe(row, 'phone_number') || null;
+      const password = getSafe(row, 'user_password') || defaultPassword;
+      const key = norm(email);
+
+      if (!getSafe(row, 'user_password')) {
+        warnings.push({
+          line: lineNumber,
+          code: 'default_password_used',
+          message: `No user_password for "${email}". Default temporary password applied.`,
+        });
+      }
+
+      const existing = refs.usersByEmail.get(key);
+      if (existing) {
+        const before = { ...existing };
+        const updated = await userService.updateUserById(existing._id, {
+          firstname: firstName || before.firstname,
+          lastname: lastName || before.lastname,
+          phoneNumber: phoneNumber || before.phoneNumber || null,
+        });
+        refs.usersByEmail.set(key, updated.toObject ? updated.toObject() : updated);
+        undoStack.push(async () => {
+          await userService.updateUserById(existing._id, {
+            firstname: before.firstname,
+            lastname: before.lastname,
+            phoneNumber: before.phoneNumber || null,
+          });
+        });
+        rowResults.push({
+          line: lineNumber,
+          recordType: 'user',
+          action: 'updated',
+          status: 'ok',
+          entityId: String(existing._id),
+        });
+        return;
+      }
+
+      const created = await userService.ownerCreate({
+        email,
+        firstname: firstName,
+        lastname: lastName,
+        phoneNumber,
+        password,
+        createdBy: actorUserId,
+        isOwner: false,
+        isSuper: false,
+        isAdmin: false,
+        isSaby: false,
+      });
+      refs.usersByEmail.set(key, created.toObject ? created.toObject() : created);
+      undoStack.push(async () => {
+        await User.deleteOne({ _id: created._id });
+      });
+      rowResults.push({
+        line: lineNumber,
+        recordType: 'user',
+        action: 'created',
+        status: 'ok',
+        entityId: String(created._id),
+      });
+    });
+
+    const userRoleUndoGuard = new Set();
+    await runStage('stage_5_user_roles', userRoleRows, async ({ lineNumber, row }) => {
+      const user = refs.usersByEmail.get(norm(row.user_email));
+      const role = refs.rolesByName.get(norm(row.role_name));
+      if (!user || !role) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          `line ${lineNumber}: unresolved user/role for binding`
+        );
+      }
+
+      const userId = String(user._id);
+      const roleId = String(role._id);
+      const currentRoles = (user.roles || []).map((x) => String(x));
+
+      if (currentRoles.includes(roleId)) {
+        rowResults.push({
+          line: lineNumber,
+          recordType: 'user_role',
+          action: 'skipped',
+          status: 'ok',
+          entityId: userId,
+          reason: 'already_assigned',
+        });
+        return;
+      }
+
+      if (!userRoleUndoGuard.has(userId)) {
+        const snapshot = [...currentRoles];
+        undoStack.push(async () => {
+          await User.updateOne({ _id: userId }, { $set: { roles: snapshot } });
+        });
+        userRoleUndoGuard.add(userId);
+      }
+
+      const updated = await userService.assignRoles(userId, [roleId]);
+      refs.usersByEmail.set(
+        norm(updated.email || row.user_email),
+        updated.toObject ? updated.toObject() : updated
+      );
+      rowResults.push({
+        line: lineNumber,
+        recordType: 'user_role',
+        action: 'assigned',
+        status: 'ok',
+        entityId: userId,
+      });
+    });
+
+    const nodeUserUndoGuard = new Set();
+    await runStage('stage_5_user_nodes', userNodeRows, async ({ lineNumber, row }) => {
+      const user = refs.usersByEmail.get(norm(row.user_email));
+      const nodeName = getUserNodeName(row);
+      const node = refs.nodesByName.get(norm(nodeName));
+      if (!user || !node) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          `line ${lineNumber}: unresolved user/node for posting`
+        );
+      }
+
+      const nodeDoc = await nodeService.getNodeById(node._id);
+      const currentUsers = (nodeDoc.users || []).map((x) => String(x));
+      const userId = String(user._id);
+      if (currentUsers.includes(userId)) {
+        rowResults.push({
+          line: lineNumber,
+          recordType: 'user_node',
+          action: 'skipped',
+          status: 'ok',
+          entityId: String(node._id),
+          reason: 'already_posted',
+        });
+        return;
+      }
+
+      if (!nodeUserUndoGuard.has(String(node._id))) {
+        const snapshot = [...currentUsers];
+        undoStack.push(async () => {
+          await nodeService.assignUsersToNode(String(node._id), snapshot);
+        });
+        nodeUserUndoGuard.add(String(node._id));
+      }
+
+      const merged = [...currentUsers, userId];
+      const updated = await nodeService.assignUsersToNode(String(node._id), merged);
+      refs.nodesByName.set(
+        norm(updated.name || nodeName),
+        updated.toObject ? updated.toObject() : updated
+      );
+      rowResults.push({
+        line: lineNumber,
+        recordType: 'user_node',
+        action: 'assigned',
+        status: 'ok',
+        entityId: String(node._id),
+      });
+    });
+  } catch (error) {
+    failed.push({
+      line: null,
+      recordType: 'system',
+      action: 'failed',
+      status: 'failed',
+      reason: error.message,
+    });
+  }
+
+  if (failed.length > 0) {
+    rolledBack = true;
+    for (let i = undoStack.length - 1; i >= 0; i -= 1) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await undoStack[i]();
+      } catch (rollbackError) {
+        rollbackErrors.push({
+          step: i,
+          message: rollbackError.message,
+        });
+      }
+    }
+  }
+
+  const byType = rows.reduce((acc, { row }) => {
+    const type = norm(row.record_type);
+    if (!type) return acc;
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {});
+
+  const counters = summarizeRows(rowResults);
+  return {
+    dryRun: false,
+    executed: true,
+    ok: failed.length === 0,
+    summary: {
+      rowCount: rows.length,
+      byRecordType: byType,
+      created: counters.created,
+      updated: counters.updated,
+      assigned: counters.assigned,
+      skipped: counters.skipped,
+      failed: counters.failed + failed.length,
+      rolledBack,
+      rollbackErrors: rollbackErrors.length,
+    },
+    rows: rowResults,
+    failures: failed,
+    stageResults,
+    warnings,
+    nextStep:
+      failed.length === 0
+        ? 'Onboarding import completed'
+        : 'Import failed and rollback attempted. Fix errors and rerun.',
+  };
+};
+
+module.exports = {
+  validateOnboardingCsvDryRun,
+  importOnboardingCsv,
+  __private: {
+    parseCsvText,
+    parseCsvLine,
+    getUserNodeName,
+  },
+};

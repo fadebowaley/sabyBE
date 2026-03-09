@@ -22,6 +22,7 @@ const { getAllowedDates } = require('../services/calendarEnforcement.service');
 const Nodes = require('../models/node.model');
 const { postgresPool } = require('../config/postgres');
 const { buildDeterministicIdempotencyKey } = require('../utils/idempotency');
+const copilotActionService = require('../services/copilotAction.service');
 
 const resolveNodeIdToObjectId = async (tenantId, nodeIdOrObjectId) => {
   if (!nodeIdOrObjectId) return null;
@@ -1177,6 +1178,34 @@ const updateSubmission = catchAsync(async (req, res) => {
     tenantId,
   });
 
+  const normalizedStatus = (status || '').toLowerCase().trim();
+  if (normalizedStatus) {
+    const statusToActionType = {
+      approved: 'approve_submission',
+      rejected: 'reject_submission',
+      reopened: 'reopen_submission',
+      reopen: 'reopen_submission',
+    };
+
+    const actionType = statusToActionType[normalizedStatus];
+    if (actionType) {
+      await copilotActionService.recordExistingAction({
+        tenantId,
+        actorUserId: userId,
+        actionType,
+        entityType: 'submission',
+        entityId: submissionId,
+        payload: {
+          source: 'unifiedSubmission.controller.updateSubmission',
+          requestedStatus: status,
+          jobId: result.jobId,
+        },
+        source: 'existing-service',
+        priority: normalizedStatus === 'rejected' ? 9 : 7,
+      });
+    }
+  }
+
   res.status(httpStatus.ACCEPTED).send({
     success: true,
     message: 'Submission update queued for processing',
@@ -1240,6 +1269,21 @@ const deleteSubmission = catchAsync(async (req, res) => {
     userId,
     tenantId,
     permanent: permanent || false,
+  });
+
+  await copilotActionService.recordExistingAction({
+    tenantId,
+    actorUserId: userId,
+    actionType: permanent ? 'delete_submission' : 'withdraw_submission',
+    entityType: 'submission',
+    entityId: submissionId,
+    payload: {
+      source: 'unifiedSubmission.controller.deleteSubmission',
+      permanent: !!permanent,
+      jobId: result.jobId,
+    },
+    source: 'existing-service',
+    priority: permanent ? 10 : 8,
   });
 
   res.status(httpStatus.ACCEPTED).send({

@@ -3,6 +3,7 @@ const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { nodeService } = require('../services');
+const copilotActionService = require('../services/copilotAction.service');
 
 const MAX_NODE_QUERY_LIMIT = 500;
 const DEFAULT_NODE_QUERY_LIMIT = 50;
@@ -27,6 +28,20 @@ const createNode = catchAsync(async (req, res) => {
   // SECURITY: Add tenantId from authenticated user
   req.body.tenantId = req.user.tenantId;
   const node = await nodeService.createNode(req.body);
+  await copilotActionService.recordExistingAction({
+    tenantId: req.user.tenantId,
+    actorUserId: req.user._id || req.user.id,
+    actionType: 'create_node',
+    entityType: 'node',
+    entityId: String(node._id || node.id || node.nodeId || ''),
+    payload: {
+      source: 'node.controller.createNode',
+      nodeName: node.name || req.body.name || null,
+      parent: req.body.parent || null,
+    },
+    source: 'existing-service',
+    priority: 8,
+  });
   res.status(httpStatus.CREATED).send(nodeService.buildNodeResponse(node));
 });
 
@@ -67,10 +82,31 @@ const updateNodeById = catchAsync(async (req, res) => {
       'Access denied - node belongs to different tenant'
     );
   }
+  const previousParent = node.parent ? String(node.parent) : null;
   const updatedNode = await nodeService.updateNodeById(
     req.params.nodeId,
     req.body
   );
+
+  if (Object.prototype.hasOwnProperty.call(req.body, 'parent')) {
+    const nextParent = updatedNode.parent ? String(updatedNode.parent) : null;
+    if (previousParent !== nextParent) {
+      await copilotActionService.recordExistingAction({
+        tenantId: req.user.tenantId,
+        actorUserId: req.user._id || req.user.id,
+        actionType: 'move_node',
+        entityType: 'node',
+        entityId: String(req.params.nodeId),
+        payload: {
+          source: 'node.controller.updateNodeById',
+          previousParent,
+          nextParent,
+        },
+        source: 'existing-service',
+        priority: 7,
+      });
+    }
+  }
   res.send(nodeService.buildNodeResponse(updatedNode));
 });
 
@@ -119,12 +155,41 @@ const deleteNodeById = catchAsync(async (req, res) => {
     );
   }
   await nodeService.deleteNodeById(req.params.nodeId);
+  await copilotActionService.recordExistingAction({
+    tenantId: req.user.tenantId,
+    actorUserId: req.user._id || req.user.id,
+    actionType: 'delete_node',
+    entityType: 'node',
+    entityId: String(req.params.nodeId),
+    payload: {
+      source: 'node.controller.deleteNodeById',
+      mode: 'soft',
+      nodeName: node.name || null,
+    },
+    source: 'existing-service',
+    priority: 9,
+  });
   res.status(httpStatus.NO_CONTENT).send();
 });
 
 const deleteNodeHardById = catchAsync(async (req, res) => {
+  const node = await nodeService.getNodeById(req.params.nodeId);
   await nodeService.deleteNodeById(req.params.nodeId, true, {
     includeDeleted: true,
+  });
+  await copilotActionService.recordExistingAction({
+    tenantId: req.user.tenantId || node?.tenantId,
+    actorUserId: req.user._id || req.user.id,
+    actionType: 'delete_node',
+    entityType: 'node',
+    entityId: String(req.params.nodeId),
+    payload: {
+      source: 'node.controller.deleteNodeHardById',
+      mode: 'hard',
+      nodeName: node?.name || null,
+    },
+    source: 'existing-service',
+    priority: 10,
   });
   res.status(httpStatus.NO_CONTENT).send();
 });
@@ -134,6 +199,19 @@ const restoreNodeById = catchAsync(async (req, res) => {
     req.params.nodeId,
     req.body || {}
   );
+  await copilotActionService.recordExistingAction({
+    tenantId: req.user.tenantId || restoredNode.tenantId,
+    actorUserId: req.user._id || req.user.id,
+    actionType: 'restore_node',
+    entityType: 'node',
+    entityId: String(restoredNode._id || restoredNode.id || req.params.nodeId),
+    payload: {
+      source: 'node.controller.restoreNodeById',
+      nodeName: restoredNode.name || null,
+    },
+    source: 'existing-service',
+    priority: 8,
+  });
   res.send(nodeService.buildNodeResponse(restoredNode));
 });
 
@@ -214,10 +292,25 @@ const getChildNodes = catchAsync(async (req, res) => {
 
 // Move node to a new parent
 const moveNodeToParent = catchAsync(async (req, res) => {
+  const currentNode = await nodeService.getNodeById(req.params.nodeId);
   const updatedNode = await nodeService.moveNodeToParent(
     req.params.nodeId,
     req.body.parentId
   );
+  await copilotActionService.recordExistingAction({
+    tenantId: req.user.tenantId || currentNode.tenantId,
+    actorUserId: req.user._id || req.user.id,
+    actionType: 'move_node',
+    entityType: 'node',
+    entityId: String(req.params.nodeId),
+    payload: {
+      source: 'node.controller.moveNodeToParent',
+      previousParent: currentNode.parent ? String(currentNode.parent) : null,
+      nextParent: req.body.parentId || null,
+    },
+    source: 'existing-service',
+    priority: 7,
+  });
   res.send(nodeService.buildNodeResponse(updatedNode));
 });
 
@@ -241,10 +334,52 @@ const deactivateNode = catchAsync(async (req, res) => {
 
 // Assign users to a node
 const assignUsersToNode = catchAsync(async (req, res) => {
+  const existingNode = await nodeService.getNodeById(req.params.nodeId);
+  const previousUsers = new Set(
+    (existingNode?.users || []).map((userRef) => String(userRef))
+  );
+  const requestedUsers = new Set((req.body.userIds || []).map((id) => String(id)));
+
   const updatedNode = await nodeService.assignUsersToNode(
     req.params.nodeId,
     req.body.userIds
   );
+
+  const assignedUsers = [...requestedUsers].filter((id) => !previousUsers.has(id));
+  const unassignedUsers = [...previousUsers].filter((id) => !requestedUsers.has(id));
+
+  if (assignedUsers.length > 0) {
+    await copilotActionService.recordExistingAction({
+      tenantId: req.user.tenantId || existingNode?.tenantId,
+      actorUserId: req.user._id || req.user.id,
+      actionType: 'assign_user_to_node',
+      entityType: 'node_user',
+      entityId: String(req.params.nodeId),
+      payload: {
+        source: 'node.controller.assignUsersToNode',
+        assignedUsers,
+      },
+      source: 'existing-service',
+      priority: 6,
+    });
+  }
+
+  if (unassignedUsers.length > 0) {
+    await copilotActionService.recordExistingAction({
+      tenantId: req.user.tenantId || existingNode?.tenantId,
+      actorUserId: req.user._id || req.user.id,
+      actionType: 'unassign_user_from_node',
+      entityType: 'node_user',
+      entityId: String(req.params.nodeId),
+      payload: {
+        source: 'node.controller.assignUsersToNode',
+        unassignedUsers,
+      },
+      source: 'existing-service',
+      priority: 6,
+    });
+  }
+
   res.send(nodeService.buildNodeResponse(updatedNode));
 });
 

@@ -42,11 +42,69 @@ const formElementSchema = Joi.object({
   }).unknown(true),
   metadata: Joi.object().unknown(true).optional(),
   aliases: Joi.array().items(Joi.string()).optional(),
+  semantic: Joi.object({
+    role: Joi.string()
+      .valid('measure', 'dimension', 'status', 'label', 'ignore')
+      .optional(),
+    valueType: Joi.string()
+      .valid(
+        'number',
+        'currency',
+        'percent',
+        'boolean',
+        'text',
+        'enum',
+        'date',
+        'datetime',
+        'time',
+        'unknown'
+      )
+      .optional(),
+    aggregationAllowed: Joi.array()
+      .items(
+        Joi.string().valid(
+          'sum',
+          'avg',
+          'min',
+          'max',
+          'count',
+          'count_distinct',
+          'ratio',
+          'trend'
+        )
+      )
+      .optional(),
+  }).optional(),
 }).unknown(true);
+
+const projectAnalysisProfileSchema = Joi.object({
+  dataNature: Joi.string()
+    .valid('qualitative', 'quantitative', 'hybrid')
+    .default('qualitative'),
+  domain: Joi.string()
+    .valid('finance', 'attendance', 'hr', 'operations', 'custom')
+    .default('custom'),
+  primaryTimeField: Joi.string().allow('', null).default('event_date'),
+  defaultMeasureFieldKeys: Joi.array().items(Joi.string()).default([]),
+  defaultDimensionFieldKeys: Joi.array().items(Joi.string()).default([]),
+  currency: Joi.string().allow('', null).default(null),
+  scoreStrategy: Joi.string()
+    .valid('rule_based', 'trend_based', 'custom')
+    .default('rule_based'),
+  inferredAt: Joi.date().optional(),
+  fieldStats: Joi.object({
+    totalFields: Joi.number().integer().min(0).default(0),
+    numericFields: Joi.number().integer().min(0).default(0),
+    categoricalFields: Joi.number().integer().min(0).default(0),
+    dateFields: Joi.number().integer().min(0).default(0),
+    textFields: Joi.number().integer().min(0).default(0),
+  }).optional(),
+}).optional();
 
 const projectConfigurationSchema = Joi.object({
   projectName: Joi.string().required().trim().min(1).max(100),
   tags: Joi.array().items(Joi.string().trim()).default([]),
+  analysisProfile: projectAnalysisProfileSchema,
   accessibility: Joi.array()
     .items(Joi.string().valid('api', 'embedded', 'javascript', 'mobile'))
     .default([]),
@@ -392,6 +450,12 @@ const getProjectAnalytics = {
   }),
 };
 
+const getProjectSchemaProfile = {
+  params: Joi.object().keys({
+    projectId: Joi.string().required(),
+  }),
+};
+
 const incrementSubmissions = {
   params: Joi.object().keys({
     projectId: Joi.string().required(),
@@ -439,6 +503,7 @@ module.exports = {
   publishProjectForm,
   archiveProjectForm,
   getProjectAnalytics,
+  getProjectSchemaProfile,
   incrementSubmissions,
   bulkOperations,
   searchProjectForms,

@@ -1,7 +1,161 @@
 const httpStatus = require('http-status');
 const { ProjectForm, StorageFolder } = require('../models');
+const { postgresPool } = require('../config/postgres');
 const ApiError = require('../utils/ApiError');
 const fieldCatalogService = require('./fieldCatalog.service');
+
+const BLOCK_TYPES = new Set([
+  'header',
+  'paragraph',
+  'description',
+  'spacer',
+  'divider',
+]);
+const NUMERIC_TYPES = new Set(['number', 'currency', 'rating', 'slider']);
+const DATE_TYPES = new Set(['date', 'datetime', 'time', 'datepicker', 'date-picker']);
+const CATEGORICAL_TYPES = new Set([
+  'select',
+  'dropdown',
+  'radio',
+  'checkbox',
+  'multiselect',
+  'multi-select',
+  'tags',
+]);
+const TEXT_TYPES = new Set(['text', 'textarea', 'email', 'phone', 'url']);
+
+const normalizeTags = (tags = []) =>
+  Array.from(
+    new Set(
+      (Array.isArray(tags) ? tags : [])
+        .map((tag) => String(tag || '').trim().toLowerCase())
+        .filter(Boolean)
+    )
+  );
+
+const inferDomainFromTags = (tags = []) => {
+  const set = new Set(tags);
+  if (
+    ['finance', 'financial', 'payment', 'collection', 'offering', 'tithe', 'subscription'].some((t) =>
+      set.has(t)
+    )
+  ) {
+    return 'finance';
+  }
+  if (
+    ['attendance', 'members', 'member', 'worship', 'church-attendance'].some((t) => set.has(t))
+  ) {
+    return 'attendance';
+  }
+  if (['hr', 'staff', 'employee', 'people'].some((t) => set.has(t))) {
+    return 'hr';
+  }
+  if (['operations', 'ops', 'compliance', 'workflow'].some((t) => set.has(t))) {
+    return 'operations';
+  }
+  return 'custom';
+};
+
+const isCatalogCandidate = (element) => {
+  const type = String(element?.type || '').toLowerCase();
+  if (!element?.id) return false;
+  if (BLOCK_TYPES.has(type)) return false;
+  return true;
+};
+
+const inferAnalysisProfile = ({ configuration = {}, elements = [] }) => {
+  const tags = normalizeTags(configuration.tags || []);
+  const candidates = (Array.isArray(elements) ? elements : []).filter(isCatalogCandidate);
+  let numericFields = 0;
+  let categoricalFields = 0;
+  let dateFields = 0;
+  let textFields = 0;
+  const defaultMeasureFieldKeys = [];
+  const defaultDimensionFieldKeys = [];
+  let primaryTimeField = null;
+
+  candidates.forEach((element) => {
+    const type = String(element?.type || '').toLowerCase();
+    const key = element?.id;
+    const role = String(element?.semantic?.role || '').toLowerCase();
+
+    if (DATE_TYPES.has(type)) {
+      dateFields += 1;
+      if (!primaryTimeField && key) primaryTimeField = key;
+    }
+    if (NUMERIC_TYPES.has(type)) {
+      numericFields += 1;
+    } else if (CATEGORICAL_TYPES.has(type)) {
+      categoricalFields += 1;
+    } else if (TEXT_TYPES.has(type)) {
+      textFields += 1;
+    }
+
+    if (key) {
+      if (role === 'measure' || NUMERIC_TYPES.has(type)) {
+        defaultMeasureFieldKeys.push(key);
+      }
+      if (role === 'dimension' || CATEGORICAL_TYPES.has(type) || DATE_TYPES.has(type)) {
+        defaultDimensionFieldKeys.push(key);
+      }
+    }
+  });
+
+  const hasNumeric = numericFields > 0;
+  const hasNonNumeric = categoricalFields + dateFields + textFields > 0;
+  const dataNature = hasNumeric && hasNonNumeric ? 'hybrid' : hasNumeric ? 'quantitative' : 'qualitative';
+
+  return {
+    dataNature,
+    domain: inferDomainFromTags(tags),
+    primaryTimeField: primaryTimeField || 'event_date',
+    defaultMeasureFieldKeys: Array.from(new Set(defaultMeasureFieldKeys)).slice(0, 20),
+    defaultDimensionFieldKeys: Array.from(new Set(defaultDimensionFieldKeys)).slice(0, 20),
+    currency: tags.some((t) => ['finance', 'financial', 'payment', 'collection', 'offering', 'tithe'].includes(t))
+      ? 'NGN'
+      : null,
+    scoreStrategy: 'rule_based',
+    inferredAt: new Date(),
+    fieldStats: {
+      totalFields: candidates.length,
+      numericFields,
+      categoricalFields,
+      dateFields,
+      textFields,
+    },
+  };
+};
+
+const enrichConfigurationWithAnalysisProfile = ({
+  configuration = {},
+  elements = [],
+  existingProfile = null,
+}) => {
+  const inferred = inferAnalysisProfile({ configuration, elements });
+  const explicit = configuration.analysisProfile || {};
+  const base = existingProfile || {};
+  const merged = {
+    ...inferred,
+    ...base,
+    ...explicit,
+    defaultMeasureFieldKeys:
+      Array.isArray(explicit.defaultMeasureFieldKeys) &&
+      explicit.defaultMeasureFieldKeys.length > 0
+        ? explicit.defaultMeasureFieldKeys
+        : inferred.defaultMeasureFieldKeys,
+    defaultDimensionFieldKeys:
+      Array.isArray(explicit.defaultDimensionFieldKeys) &&
+      explicit.defaultDimensionFieldKeys.length > 0
+        ? explicit.defaultDimensionFieldKeys
+        : inferred.defaultDimensionFieldKeys,
+    inferredAt: explicit.inferredAt || new Date(),
+  };
+  return {
+    ...configuration,
+    tags: normalizeTags(configuration.tags || []),
+    analysisProfile: merged,
+  };
+};
 
 const hasFileUploadElement = (elements = []) =>
   Array.isArray(elements) &&
@@ -101,9 +255,15 @@ const getProjectStorageFolderByProjectId = async (projectId) => {
  * @returns {Promise<ProjectForm>}
  */
 const createProjectForm = async (projectFormBody, tenantId, createdBy) => {
+  const normalizedBody = { ...projectFormBody };
+  normalizedBody.configuration = enrichConfigurationWithAnalysisProfile({
+    configuration: projectFormBody.configuration || {},
+    elements: projectFormBody.elements || [],
+  });
+
   // Check if project name is already taken within the tenant
   const isNameTaken = await ProjectForm.isProjectNameTaken(
-    projectFormBody.configuration.projectName,
+    normalizedBody.configuration.projectName,
     tenantId
   );
   if (isNameTaken) {
@@ -113,7 +273,7 @@ const createProjectForm = async (projectFormBody, tenantId, createdBy) => {
     );
   }
   const projectForm = await ProjectForm.createProjectForm(
-    projectFormBody,
+    normalizedBody,
     tenantId,
     createdBy
   );
@@ -259,6 +419,21 @@ const updateProjectFormById = async (
     updateBody.metadata.lastModified = new Date();
   }
 
+  const mergedElements = Array.isArray(updateBody.elements)
+    ? updateBody.elements
+    : projectForm.elements || [];
+  const mergedConfiguration = enrichConfigurationWithAnalysisProfile({
+    configuration: {
+      ...(projectForm.configuration?.toObject
+        ? projectForm.configuration.toObject()
+        : projectForm.configuration || {}),
+      ...(updateBody.configuration || {}),
+    },
+    elements: mergedElements,
+    existingProfile: projectForm?.configuration?.analysisProfile || null,
+  });
+  updateBody.configuration = mergedConfiguration;
+
   Object.assign(projectForm, updateBody);
   await projectForm.save();
 
@@ -385,7 +560,17 @@ const getDeletedProjectForms = async (tenantId) => {
  */
 const publishProjectForm = async (projectFormId, options = {}) => {
   const projectForm = await getProjectFormById(projectFormId);
-  return projectForm.publish(options);
+  await projectForm.publish(options);
+  projectForm.configuration = enrichConfigurationWithAnalysisProfile({
+    configuration: projectForm.configuration?.toObject
+      ? projectForm.configuration.toObject()
+      : projectForm.configuration || {},
+    elements: projectForm.elements || [],
+    existingProfile: projectForm?.configuration?.analysisProfile || null,
+  });
+  projectForm.markModified('configuration');
+  await projectForm.save();
+  return projectForm;
 };
 
 /**
@@ -433,6 +618,122 @@ const getProjectAnalytics = async (projectId) => {
     status: projectForm.status,
     createdAt: projectForm.createdAt,
     publishedAt: projectForm.publishedAt,
+  };
+};
+
+/**
+ * Get schema profile for a project/module
+ * Combines Mongo form configuration with Postgres field catalog.
+ * @param {string} projectId
+ * @returns {Promise<Object>}
+ */
+const getProjectSchemaProfile = async (projectId) => {
+  const projectForm = await getProjectFormByProjectId(projectId);
+  const configuration = projectForm.configuration?.toObject
+    ? projectForm.configuration.toObject()
+    : projectForm.configuration || {};
+  const analysisProfile =
+    configuration.analysisProfile &&
+    Object.keys(configuration.analysisProfile).length > 0
+      ? configuration.analysisProfile
+      : inferAnalysisProfile({
+          configuration,
+          elements: projectForm.elements || [],
+        });
+
+  let catalogFields = [];
+  try {
+    const result = await postgresPool.query(
+      `SELECT field_key, field_label, field_type, is_required, aliases, transformations, metadata
+       FROM form_field_catalog
+       WHERE project_id = $1
+       ORDER BY field_label ASC`,
+      [projectId]
+    );
+    catalogFields = result.rows || [];
+  } catch (error) {
+    if (error?.code !== '42P01') {
+      throw error;
+    }
+    catalogFields = [];
+  }
+
+  const elementMap = new Map();
+  (Array.isArray(projectForm.elements) ? projectForm.elements : []).forEach((element) => {
+    if (element?.id) {
+      elementMap.set(String(element.id), element);
+    }
+  });
+
+  const fromCatalog = catalogFields.map((field) => {
+    const element = elementMap.get(String(field.field_key));
+    const semantic = element?.semantic || {};
+    return {
+      key: field.field_key,
+      label: field.field_label,
+      type: field.field_type,
+      required: Boolean(field.is_required),
+      aliases: Array.isArray(field.aliases) ? field.aliases : [],
+      transformations: Array.isArray(field.transformations)
+        ? field.transformations
+        : [],
+      semantic: {
+        role: semantic.role || null,
+        valueType: semantic.valueType || null,
+        aggregationAllowed: Array.isArray(semantic.aggregationAllowed)
+          ? semantic.aggregationAllowed
+          : [],
+      },
+      metadata: field.metadata || {},
+    };
+  });
+
+  const inferValueType = (type = '') => {
+    const t = String(type || '').toLowerCase();
+    if (NUMERIC_TYPES.has(t)) return t === 'currency' ? 'currency' : 'number';
+    if (DATE_TYPES.has(t)) return t;
+    if (CATEGORICAL_TYPES.has(t)) return 'enum';
+    if (TEXT_TYPES.has(t)) return 'text';
+    return 'unknown';
+  };
+
+  const fromElements = (Array.isArray(projectForm.elements) ? projectForm.elements : [])
+    .filter(isCatalogCandidate)
+    .map((element) => {
+      const type = String(element.type || 'text').toLowerCase();
+      const semantic = element.semantic || {};
+      return {
+        key: element.id,
+        label: element?.properties?.label || element.id,
+        type,
+        required: Boolean(element?.properties?.validation?.required),
+        aliases: Array.isArray(element.aliases) ? element.aliases : [],
+        transformations: [],
+        semantic: {
+          role:
+            semantic.role ||
+            (NUMERIC_TYPES.has(type) ? 'measure' : CATEGORICAL_TYPES.has(type) ? 'dimension' : null),
+          valueType: semantic.valueType || inferValueType(type),
+          aggregationAllowed: Array.isArray(semantic.aggregationAllowed)
+            ? semantic.aggregationAllowed
+            : [],
+        },
+        metadata: element.metadata || {},
+      };
+    });
+
+  const fields = fromCatalog.length > 0 ? fromCatalog : fromElements;
+
+  return {
+    projectId: projectForm.projectId,
+    tenantId: projectForm.tenantId,
+    projectName: configuration.projectName,
+    status: projectForm.status,
+    deploymentStatus: projectForm.metadata?.deploymentStatus || null,
+    tags: Array.isArray(configuration.tags) ? configuration.tags : [],
+    analysisProfile,
+    formFieldCount: fields.length,
+    fields,
   };
 };
 
@@ -526,6 +827,7 @@ module.exports = {
   incrementProjectViews,
   incrementProjectSubmissions,
   getProjectAnalytics,
+  getProjectSchemaProfile,
   bulkOperations,
   searchProjectForms,
   getProjectStorageFolderByProjectId,

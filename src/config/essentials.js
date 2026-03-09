@@ -15,6 +15,7 @@ const USER_ESSENTIAL_FIELDS = [
   'isSaby',
   'isAdmin',
   'isPhoneVerified',
+  'otpVerified',
   'isEmailVerified',
   'roles',
   'profile',
@@ -56,4 +57,3 @@ module.exports = {
   USER_ESSENTIAL_FIELDS,
   NODE_ESSENTIAL_FIELDS,
 };
-

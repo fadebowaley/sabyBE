@@ -3,10 +3,24 @@ const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { roleService } = require('../services');
+const copilotActionService = require('../services/copilotAction.service');
 
 // Controller to create Roles
 const createRole = catchAsync(async (req, res) => {
   const role = await roleService.createRole(req.body, req.user);
+  await copilotActionService.recordExistingAction({
+    tenantId: req.user.tenantId,
+    actorUserId: req.user._id || req.user.id,
+    actionType: 'create_role',
+    entityType: 'role',
+    entityId: String(role._id || role.id || ''),
+    payload: {
+      source: 'role.controller.createRole',
+      roleName: role.name || req.body.name || null,
+    },
+    source: 'existing-service',
+    priority: 8,
+  });
   res.status(httpStatus.CREATED).send(role);
 });
 
@@ -60,7 +74,20 @@ const updateRole = catchAsync(async (req, res) => {
 });
 
 const deleteRole = catchAsync(async (req, res) => {
-  await roleService.deleteRoleById(req.params.roleId, req.user);
+  const deletedRole = await roleService.deleteRoleById(req.params.roleId, req.user);
+  await copilotActionService.recordExistingAction({
+    tenantId: req.user.tenantId || deletedRole.tenantId,
+    actorUserId: req.user._id || req.user.id,
+    actionType: 'delete_role',
+    entityType: 'role',
+    entityId: String(req.params.roleId),
+    payload: {
+      source: 'role.controller.deleteRole',
+      roleName: deletedRole.name || null,
+    },
+    source: 'existing-service',
+    priority: 9,
+  });
   res.status(httpStatus.NO_CONTENT).send();
 });
 
@@ -69,6 +96,19 @@ const assignPermissions = catchAsync(async (req, res) => {
     req.params.roleId,
     req.body.permissionIds
   );
+  await copilotActionService.recordExistingAction({
+    tenantId: req.user.tenantId,
+    actorUserId: req.user._id || req.user.id,
+    actionType: 'grant_permission',
+    entityType: 'role_permission',
+    entityId: String(req.params.roleId),
+    payload: {
+      source: 'role.controller.assignPermissions',
+      permissionIds: req.body.permissionIds || [],
+    },
+    source: 'existing-service',
+    priority: 7,
+  });
   res.send(updatedRole);
 });
 
@@ -93,6 +133,19 @@ const removePermissionsFromRole = catchAsync(async (req, res) => {
     roleId,
     permissions
   );
+  await copilotActionService.recordExistingAction({
+    tenantId: req.user.tenantId,
+    actorUserId: req.user._id || req.user.id,
+    actionType: 'revoke_permission',
+    entityType: 'role_permission',
+    entityId: String(roleId),
+    payload: {
+      source: 'role.controller.removePermissionsFromRole',
+      permissionIds: permissions || [],
+    },
+    source: 'existing-service',
+    priority: 7,
+  });
   res.status(httpStatus.OK).send({
     message: 'Permissions removed successfully',
     role: updatedRole,

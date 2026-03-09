@@ -4,21 +4,14 @@ const { Queue } = require('bullmq');
 const fs = require('fs');
 const path = require('path');
 const { getRedisConnectionOptions } = require('../config/redis');
+const { JOB_POLICY } = require('../queues/queueDefaults');
 
 const LOG_FILE = path.join(__dirname, 'queue_stats.log');
 
 // Central job queue for form submissions
 const submissionQueue = new Queue('submissionQueue', {
   connection: getRedisConnectionOptions(),
-  defaultJobOptions: {
-    attempts: 5,
-    backoff: {
-      type: 'exponential',
-      delay: 5000,
-    },
-    removeOnComplete: true,
-    removeOnFail: false,
-  },
+  defaultJobOptions: JOB_POLICY.critical,
 });
 
 // Simple job processing log

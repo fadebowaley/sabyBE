@@ -364,6 +364,15 @@ const getProjectAnalytics = catchAsync(async (req, res) => {
 });
 
 /**
+ * Get schema profile by project ID
+ */
+const getProjectSchemaProfile = catchAsync(async (req, res) => {
+  const { projectId } = req.params;
+  const profile = await projectFormService.getProjectSchemaProfile(projectId);
+  res.send(profile);
+});
+
+/**
  * Increment project submissions (for form responses)
  */
 const incrementSubmissions = catchAsync(async (req, res) => {
@@ -469,6 +478,7 @@ module.exports = {
   archiveProjectForm,
   updatePaymentConfig,
   getProjectAnalytics,
+  getProjectSchemaProfile,
   incrementSubmissions,
   bulkOperations,
   searchProjectForms,

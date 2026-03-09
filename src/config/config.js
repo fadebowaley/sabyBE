@@ -163,6 +163,41 @@ const envVarsSchema = Joi.object()
       .try(Joi.number(), Joi.string().pattern(/^\d+/))
       .default(60000)
       .description('Email ingestion polling interval in milliseconds'),
+    // Payment Webhook Configuration
+    PAYMENT_WEBHOOK_SECRET: Joi.string()
+      .allow('')
+      .description('Shared secret used to validate payment webhooks'),
+    PAYMENT_WEBHOOK_TOLERANCE_SEC: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(300)
+      .description('Max allowed webhook timestamp skew in seconds'),
+    PAYMENT_RECONCILIATION_CRON: Joi.string()
+      .default('*/5 * * * *')
+      .description('Cron schedule for payment reconciliation worker'),
+    PAYMENT_RECON_STUCK_MINUTES: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(45)
+      .description('Minutes before a processing payment is considered stuck'),
+    PAYMENT_RECON_BATCH_SIZE: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(200)
+      .description('Max payments processed per reconciliation sweep'),
+    COPILOT_WORKER_INTERVAL_MS: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(3000)
+      .description('Polling interval for copilot action outbox worker'),
+    COPILOT_WORKER_BATCH_SIZE: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(20)
+      .description('Batch size per copilot action worker tick'),
+    COPILOT_TOOL_TIMEOUT_MS: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(30000)
+      .description('Default timeout for copilot tool execution'),
+    COPILOT_TOOL_LOCK_TTL_SEC: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(120)
+      .description('Default lock TTL for copilot critical tool calls'),
   })
   .unknown();
 
@@ -296,5 +331,20 @@ module.exports = {
   nodeSync: {
     enabled: envVars.NODE_SYNC_ENABLED,
     batchSize: Number(envVars.NODE_SYNC_BATCH_SIZE),
+  },
+  payment: {
+    webhookSecret: envVars.PAYMENT_WEBHOOK_SECRET,
+    webhookToleranceSec: Number(envVars.PAYMENT_WEBHOOK_TOLERANCE_SEC),
+    reconciliation: {
+      cron: envVars.PAYMENT_RECONCILIATION_CRON,
+      stuckMinutes: Number(envVars.PAYMENT_RECON_STUCK_MINUTES),
+      batchSize: Number(envVars.PAYMENT_RECON_BATCH_SIZE),
+    },
+  },
+  copilot: {
+    workerIntervalMs: Number(envVars.COPILOT_WORKER_INTERVAL_MS),
+    workerBatchSize: Number(envVars.COPILOT_WORKER_BATCH_SIZE),
+    toolTimeoutMs: Number(envVars.COPILOT_TOOL_TIMEOUT_MS),
+    toolLockTtlSec: Number(envVars.COPILOT_TOOL_LOCK_TTL_SEC),
   },
 };

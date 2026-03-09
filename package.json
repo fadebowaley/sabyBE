@@ -35,6 +35,7 @@
     "create-table": "node scripts/create-tables.js",
     "verify-tables": "node scripts/verify-tables.js",
     "backfill:compliance-tracking": "node src/scripts/backfill-compliance-tracking.js",
+    "seed:copilot-actions": "node src/scripts/seed-copilot-action-catalog.js",
     "node-sync:backfill": "node scripts/backfill_node_dimension.js",
     "whatsapp": "cross-env NODE_ENV=development node src/ingestion/whatsapp/server.js",
     "whatsapp:prod": "cross-env NODE_ENV=production node src/ingestion/whatsapp/server.js",

@@ -1,0 +1,227 @@
+const express = require('express');
+const auth = require('../../middlewares/auth');
+const validate = require('../../middlewares/validate');
+const copilotValidation = require('../../validations/copilot.validation');
+const copilotController = require('../../controllers/copilot.controller');
+
+const router = express.Router();
+
+router.post(
+  '/actions',
+  auth(),
+  validate(copilotValidation.createAction),
+  copilotController.createAction
+);
+router.post(
+  '/actions/:eventId/reverse',
+  auth(),
+  validate(copilotValidation.reverseAction),
+  copilotController.reverseAction
+);
+router.patch(
+  '/items/:actionItemId/status',
+  auth(),
+  validate(copilotValidation.updateActionItemStatus),
+  copilotController.updateActionItemStatus
+);
+
+router.get(
+  '/feed',
+  auth(),
+  validate(copilotValidation.getFeed),
+  copilotController.getFeed
+);
+router.get(
+  '/actions/:eventId',
+  auth(),
+  validate(copilotValidation.getActionById),
+  copilotController.getActionById
+);
+router.post(
+  '/audit-exports',
+  auth(),
+  validate(copilotValidation.createAuditExportJob),
+  copilotController.createAuditExportJob
+);
+router.get(
+  '/audit-exports',
+  auth(),
+  validate(copilotValidation.listAuditExportJobs),
+  copilotController.listAuditExportJobs
+);
+router.get(
+  '/audit-exports/:jobId',
+  auth(),
+  validate(copilotValidation.getAuditExportJobById),
+  copilotController.getAuditExportJobById
+);
+router.post(
+  '/projects/:projectId/rules',
+  auth(),
+  validate(copilotValidation.createProjectRules),
+  copilotController.createProjectRules
+);
+router.get(
+  '/projects/:projectId/rules',
+  auth(),
+  validate(copilotValidation.getProjectRules),
+  copilotController.getProjectRules
+);
+router.get(
+  '/projects/:projectId/rules/versions',
+  auth(),
+  validate(copilotValidation.listProjectRuleVersions),
+  copilotController.listProjectRuleVersions
+);
+router.post(
+  '/projects/:projectId/rules/:version/activate',
+  auth(),
+  validate(copilotValidation.activateProjectRuleVersion),
+  copilotController.activateProjectRuleVersion
+);
+router.post(
+  '/projects/:projectId/scoreboard/recompute',
+  auth(),
+  validate(copilotValidation.recomputeProjectScoreboard),
+  copilotController.recomputeProjectScoreboard
+);
+router.get(
+  '/projects/:projectId/scoreboard',
+  auth(),
+  validate(copilotValidation.getProjectScoreboard),
+  copilotController.getProjectScoreboard
+);
+router.get(
+  '/projects/:projectId/scoreboard/history',
+  auth(),
+  validate(copilotValidation.getProjectScoreboardHistory),
+  copilotController.getProjectScoreboardHistory
+);
+router.get(
+  '/projects/:projectId/rules-analysis',
+  auth(),
+  validate(copilotValidation.getProjectRulesAnalysis),
+  copilotController.getProjectRulesAnalysis
+);
+router.get(
+  '/projects/:projectId/node-comparison',
+  auth(),
+  validate(copilotValidation.compareProjectNodes),
+  copilotController.compareProjectNodes
+);
+router.get(
+  '/projects/:projectId/node-comparison/export',
+  auth(),
+  validate(copilotValidation.exportProjectNodeComparison),
+  copilotController.exportProjectNodeComparison
+);
+router.get(
+  '/projects/:projectId/node-rankings',
+  auth(),
+  validate(copilotValidation.getProjectNodeRankings),
+  copilotController.getProjectNodeRankings
+);
+router.get(
+  '/projects/:projectId/node-rankings/export',
+  auth(),
+  validate(copilotValidation.exportProjectNodeRankings),
+  copilotController.exportProjectNodeRankings
+);
+router.get(
+  '/tools',
+  auth(),
+  validate(copilotValidation.listTools),
+  copilotController.listTools
+);
+router.post(
+  '/tools/:toolName/call',
+  auth(),
+  validate(copilotValidation.callTool),
+  copilotController.callTool
+);
+router.get(
+  '/tools/calls',
+  auth(),
+  validate(copilotValidation.listToolCallLogs),
+  copilotController.listToolCallLogs
+);
+router.get(
+  '/context',
+  auth(),
+  validate(copilotValidation.getSessionContext),
+  copilotController.getSessionContext
+);
+router.patch(
+  '/context',
+  auth(),
+  validate(copilotValidation.updateSessionContext),
+  copilotController.updateSessionContext
+);
+router.get(
+  '/focus',
+  auth(),
+  validate(copilotValidation.getFocusState),
+  copilotController.getFocusState
+);
+router.put(
+  '/focus',
+  auth(),
+  validate(copilotValidation.updateFocusState),
+  copilotController.updateFocusState
+);
+router.delete(
+  '/focus',
+  auth(),
+  validate(copilotValidation.clearFocusState),
+  copilotController.clearFocusState
+);
+router.post(
+  '/search',
+  auth(),
+  validate(copilotValidation.searchEntities),
+  copilotController.searchEntities
+);
+router.post(
+  '/resolve',
+  auth(),
+  validate(copilotValidation.resolveEntityReference),
+  copilotController.resolveEntityReference
+);
+router.post(
+  '/project-wizard/generate',
+  auth(),
+  validate(copilotValidation.generateProjectWizardDraft),
+  copilotController.generateProjectWizardDraft
+);
+router.post(
+  '/project-wizard/finalize',
+  auth(),
+  validate(copilotValidation.finalizeProjectWizardDraft),
+  copilotController.finalizeProjectWizardDraft
+);
+router.post(
+  '/project-wizard/draft',
+  auth(),
+  validate(copilotValidation.saveProjectWizardDraft),
+  copilotController.saveProjectWizardDraft
+);
+router.get(
+  '/project-wizard/draft',
+  auth(),
+  validate(copilotValidation.getProjectWizardDraft),
+  copilotController.getProjectWizardDraft
+);
+router.delete(
+  '/project-wizard/draft',
+  auth(),
+  validate(copilotValidation.clearProjectWizardDraft),
+  copilotController.clearProjectWizardDraft
+);
+router.post(
+  '/onboarding/import-csv',
+  auth(),
+  validate(copilotValidation.importOnboardingCsv),
+  copilotController.importOnboardingCsv
+);
+
+module.exports = router;

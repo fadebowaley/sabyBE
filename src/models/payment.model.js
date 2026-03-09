@@ -1,6 +1,15 @@
 const mongoose = require('mongoose');
 const { toJSON, paginate } = require('./plugins');
 
+const PAYMENT_STATUSES = [
+  'pending',
+  'processing',
+  'completed',
+  'failed',
+  'cancelled',
+  'refunded',
+];
+
 const paymentSchema = mongoose.Schema(
   {
     tenantId: {
@@ -36,13 +45,46 @@ const paymentSchema = mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'completed', 'failed', 'refunded'],
+      enum: PAYMENT_STATUSES,
       default: 'pending',
+      index: true,
+    },
+    purpose: {
+      type: String,
+      enum: ['subscription', 'collection'],
+      required: true,
+      index: true,
+    },
+    beneficiaryType: {
+      type: String,
+      enum: ['saby', 'tenant'],
+      required: true,
+      index: true,
+    },
+    submissionId: {
+      type: String,
+      index: true,
+    },
+    moduleId: {
+      type: String,
+      index: true,
+    },
+    remittanceConfigId: {
+      type: String,
+    },
+    providerRef: {
+      type: String,
+      index: true,
+    },
+    idempotencyKey: {
+      type: String,
+      index: true,
     },
     reference: {
       type: String,
       required: true,
       unique: true,
+      index: true,
     },
     paymentMethod: {
       type: String,
@@ -57,9 +99,60 @@ const paymentSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
+    paymentDetails: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    completionDetails: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    refundDetails: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    processedAt: {
+      type: Date,
+    },
+    completedAt: {
+      type: Date,
+    },
+    cancelledAt: {
+      type: Date,
+    },
+    refundedAt: {
+      type: Date,
+    },
+    failedAt: {
+      type: Date,
+    },
+    cancellationReason: {
+      type: String,
+    },
+    failureReason: {
+      type: String,
+    },
+    metadata: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
   },
   { timestamps: true }
 );
+
+paymentSchema.index(
+  { tenantId: 1, idempotencyKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      idempotencyKey: { $type: 'string' },
+    },
+  }
+);
+
+paymentSchema.index({ tenantId: 1, status: 1, purpose: 1, createdAt: -1 });
+paymentSchema.index({ tenantId: 1, submissionId: 1 });
+paymentSchema.index({ tenantId: 1, moduleId: 1 });
 
 // add plugin that converts mongoose to json
 paymentSchema.plugin(toJSON);
@@ -104,5 +197,6 @@ paymentSchema.statics.updatePaymentStatus = async function (reference, status) {
  * @typedef Payment
  */
 const Payment = mongoose.model('Payment', paymentSchema);
+Payment.PAYMENT_STATUSES = PAYMENT_STATUSES;
 
 module.exports = Payment;

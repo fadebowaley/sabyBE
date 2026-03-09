@@ -48,6 +48,10 @@ MIGRATIONS=(
   "${SCRIPT_DIR}/../src/scripts/migrations/011_create_form_submission_enriched_view.sql"
   "${SCRIPT_DIR}/../src/scripts/migrations/012_optimize_module_report_table_indexes.sql"
   "${SCRIPT_DIR}/../src/scripts/migrations/add_workflow_tables.sql"
+  "${SCRIPT_DIR}/../src/scripts/migrations/013_create_copilot_tables.sql"
+  "${SCRIPT_DIR}/../src/scripts/migrations/014_create_copilot_entity_resolution_logs.sql"
+  "${SCRIPT_DIR}/../src/scripts/migrations/015_create_copilot_node_dimensions.sql"
+  "${SCRIPT_DIR}/../src/scripts/migrations/016_add_action_event_result_json.sql"
 )
 
 while [[ $# -gt 0 ]]; do
@@ -113,42 +117,32 @@ echo "User: ${REMOTE_USER}"
 echo "Postgres container: ${POSTGRES_CONTAINER}"
 echo "Backend container: ${BACKEND_CONTAINER}"
 
-echo "[1/6] Checking docker connectivity and container presence"
+echo "[1/4] Checking docker connectivity and container presence"
 "${SSH_CMD[@]}" "docker ps --format '{{.Names}}' | grep -Fx '${POSTGRES_CONTAINER}' >/dev/null && docker ps --format '{{.Names}}' | grep -Fx '${BACKEND_CONTAINER}' >/dev/null"
 
 if [[ "${CREATE_BACKUP}" == "1" ]]; then
-  echo "[2/6] Creating backup from ${POSTGRES_CONTAINER}"
+  echo "[2/4] Creating backup from ${POSTGRES_CONTAINER}"
   TS="$(date +%Y%m%d_%H%M%S)"
   BACKUP_PATH="${HOME}/saby_pg_pre_migration_${TS}.sql"
   "${SSH_CMD[@]}" "docker exec -e PGPASSWORD=\"\${POSTGRES_PASSWORD}\" ${POSTGRES_CONTAINER} sh -lc 'pg_dump -U \"\${POSTGRES_USER}\" -d \"\${POSTGRES_DB}\"'" > "${BACKUP_PATH}"
   echo "Backup saved locally: ${BACKUP_PATH}"
 else
-  echo "[2/6] Backup skipped (CREATE_BACKUP=0)"
+  echo "[2/4] Backup skipped (CREATE_BACKUP=0)"
 fi
 
-echo "[3/6] Applying 008_submission_activity_log_columns.sql"
-cat "${MIGRATIONS[0]}" | "${SSH_CMD[@]}" \
-  "docker exec -i -e PGPASSWORD=\"\${POSTGRES_PASSWORD}\" ${POSTGRES_CONTAINER} sh -lc 'psql -v ON_ERROR_STOP=1 -U \"\${POSTGRES_USER}\" -d \"\${POSTGRES_DB}\"'"
-
-echo "[4/6] Applying 009_add_node_reference_to_form_submissions.sql"
-cat "${MIGRATIONS[1]}" | "${SSH_CMD[@]}" \
-  "docker exec -i -e PGPASSWORD=\"\${POSTGRES_PASSWORD}\" ${POSTGRES_CONTAINER} sh -lc 'psql -v ON_ERROR_STOP=1 -U \"\${POSTGRES_USER}\" -d \"\${POSTGRES_DB}\"'"
-
-echo "[5/6] Applying 010, 011 and workflow migrations"
-cat "${MIGRATIONS[2]}" | "${SSH_CMD[@]}" \
-  "docker exec -i -e PGPASSWORD=\"\${POSTGRES_PASSWORD}\" ${POSTGRES_CONTAINER} sh -lc 'psql -v ON_ERROR_STOP=1 -U \"\${POSTGRES_USER}\" -d \"\${POSTGRES_DB}\"'"
-cat "${MIGRATIONS[3]}" | "${SSH_CMD[@]}" \
-  "docker exec -i -e PGPASSWORD=\"\${POSTGRES_PASSWORD}\" ${POSTGRES_CONTAINER} sh -lc 'psql -v ON_ERROR_STOP=1 -U \"\${POSTGRES_USER}\" -d \"\${POSTGRES_DB}\"'"
-cat "${MIGRATIONS[4]}" | "${SSH_CMD[@]}" \
-  "docker exec -i -e PGPASSWORD=\"\${POSTGRES_PASSWORD}\" ${POSTGRES_CONTAINER} sh -lc 'psql -v ON_ERROR_STOP=1 -U \"\${POSTGRES_USER}\" -d \"\${POSTGRES_DB}\"'"
-cat "${MIGRATIONS[5]}" | "${SSH_CMD[@]}" \
-  "docker exec -i -e PGPASSWORD=\"\${POSTGRES_PASSWORD}\" ${POSTGRES_CONTAINER} sh -lc 'psql -v ON_ERROR_STOP=1 -U \"\${POSTGRES_USER}\" -d \"\${POSTGRES_DB}\"'"
+echo "[3/4] Applying Postgres migrations"
+for migration in "${MIGRATIONS[@]}"; do
+  migration_name="$(basename "${migration}")"
+  echo "  - Applying ${migration_name}"
+  cat "${migration}" | "${SSH_CMD[@]}" \
+    "docker exec -i -e PGPASSWORD=\"\${POSTGRES_PASSWORD}\" ${POSTGRES_CONTAINER} sh -lc 'psql -v ON_ERROR_STOP=1 -U \"\${POSTGRES_USER}\" -d \"\${POSTGRES_DB}\"'"
+done
 
 if [[ "${RUN_BACKFILL}" == "1" ]]; then
-  echo "[6/6] Running compliance backfill in ${BACKEND_CONTAINER}"
+  echo "[4/4] Running compliance backfill in ${BACKEND_CONTAINER}"
   "${SSH_CMD[@]}" "docker exec -i ${BACKEND_CONTAINER} node src/scripts/backfill-compliance-tracking.js"
 else
-  echo "[6/6] Backfill skipped (RUN_BACKFILL=0)"
+  echo "[4/4] Backfill skipped (RUN_BACKFILL=0)"
 fi
 
 echo "=== Production DB migration finished successfully ==="

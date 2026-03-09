@@ -1,0 +1,5 @@
+structure_name,level_name,level_rank
+National Structure,National,1
+National Structure,Region,2
+National Structure,Zone,3
+National Structure,Branch,4

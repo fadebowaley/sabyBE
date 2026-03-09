@@ -8,6 +8,7 @@
 const { Queue } = require('bullmq');
 const { getRedisConnectionOptions } = require('../config/redis');
 const logger = require('../config/logger');
+const { buildJobOptions } = require('./queueDefaults');
 
 // ============================================================================
 // QUEUE DEFINITIONS
@@ -20,12 +21,9 @@ const logger = require('../config/logger');
  */
 const nodeBaselineQueue = new Queue('baseline-node', {
   connection: getRedisConnectionOptions(),
-  defaultJobOptions: {
+  defaultJobOptions: buildJobOptions('standard', {
     attempts: 3, // Retry 3 times on failure
-    backoff: {
-      type: 'exponential',
-      delay: 5000, // Start with 5s, then 10s, then 20s
-    },
+    backoff: { type: 'exponential', delay: 5000 }, // Start with 5s, then 10s, then 20s
     removeOnComplete: {
       age: 3600, // Keep completed jobs for 1 hour
       count: 1000, // Keep last 1000 completed jobs
@@ -34,7 +32,7 @@ const nodeBaselineQueue = new Queue('baseline-node', {
       age: 86400, // Keep failed jobs for 24 hours
       count: 5000, // Keep last 5000 failed jobs
     },
-  },
+  }),
 });
 
 /**
@@ -44,12 +42,9 @@ const nodeBaselineQueue = new Queue('baseline-node', {
  */
 const networkBaselineQueue = new Queue('baseline-network', {
   connection: getRedisConnectionOptions(),
-  defaultJobOptions: {
+  defaultJobOptions: buildJobOptions('standard', {
     attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 10000, // Start with 10s
-    },
+    backoff: { type: 'exponential', delay: 10000 }, // Start with 10s
     removeOnComplete: {
       age: 3600,
       count: 100,
@@ -58,7 +53,7 @@ const networkBaselineQueue = new Queue('baseline-network', {
       age: 86400,
       count: 500,
     },
-  },
+  }),
 });
 
 /**
@@ -68,12 +63,9 @@ const networkBaselineQueue = new Queue('baseline-network', {
  */
 const batchChangeQueue = new Queue('baseline-batch', {
   connection: getRedisConnectionOptions(),
-  defaultJobOptions: {
+  defaultJobOptions: buildJobOptions('standard', {
     attempts: 2,
-    backoff: {
-      type: 'fixed',
-      delay: 3000,
-    },
+    backoff: { type: 'fixed', delay: 3000 },
     removeOnComplete: {
       age: 1800, // 30 minutes
       count: 500,
@@ -82,7 +74,7 @@ const batchChangeQueue = new Queue('baseline-batch', {
       age: 7200, // 2 hours
       count: 1000,
     },
-  },
+  }),
 });
 
 // ============================================================================

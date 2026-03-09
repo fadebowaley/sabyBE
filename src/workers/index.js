@@ -13,8 +13,6 @@
  * @module workers
  */
 
-const { Worker, QueueEvents } = require('bullmq');
-const { getRedisConnectionOptions } = require('../config/redis');
 const logger = require('../config/logger');
 const config = require('../config/config');
 
@@ -22,6 +20,12 @@ const config = require('../config/config');
 const { createSubmissionWorker } = require('./submission.worker');
 const { createPermNotificationWorker } = require('./permNotification.worker');
 const { createNotificationWorker } = require('./notification.worker');
+const { createCopilotActionWorker } = require('./copilotAction.worker');
+const { createCopilotScoreboardWorker } = require('./copilotScoreboard.worker');
+const { createPaymentRemittanceWorker } = require('./paymentRemittance.worker');
+const {
+  createPaymentReconciliationWorker,
+} = require('./paymentReconciliation.worker');
 const { initializeBaselineWorkers, shutdownBaselineWorkers } = require('./baseline.worker');
 
 // Email ingestor is optional (requires imap-simple)
@@ -36,6 +40,10 @@ try {
 let submissionWorker = null;
 let permNotificationWorker = null;
 let notificationWorker = null;
+let copilotActionWorker = null;
+let copilotScoreboardWorker = null;
+let paymentRemittanceWorker = null;
+let paymentReconciliationWorker = null;
 let emailIngestorWorker = null;
 let baselineWorkersInitialized = false;
 
@@ -58,6 +66,22 @@ const initializeWorkers = async () => {
     notificationWorker = await createNotificationWorker();
     logger.info('✅ Notification worker started');
 
+    // Start copilot action worker
+    copilotActionWorker = await createCopilotActionWorker();
+    logger.info('✅ Copilot action worker started');
+
+    // Start copilot scoreboard worker
+    copilotScoreboardWorker = await createCopilotScoreboardWorker();
+    logger.info('✅ Copilot scoreboard worker started');
+
+    // Start payment remittance worker
+    paymentRemittanceWorker = await createPaymentRemittanceWorker();
+    logger.info('✅ Payment remittance worker started');
+
+    // Start payment reconciliation worker
+    paymentReconciliationWorker = await createPaymentReconciliationWorker();
+    logger.info('✅ Payment reconciliation worker started');
+
     // Start email ingestor worker (if enabled and available)
     if (createEmailIngestorWorker && config.email?.enabled) {
       emailIngestorWorker = await createEmailIngestorWorker();
@@ -77,6 +101,19 @@ const initializeWorkers = async () => {
       logger.error('❌ Failed to initialize baseline workers:', error);
       // Non-critical - continue without baseline workers
     }
+
+    const activeWorkers = [
+      submissionWorker ? 'submission' : null,
+      permNotificationWorker ? 'perm-notification' : null,
+      notificationWorker ? 'notification' : null,
+      copilotActionWorker ? 'copilot-action' : null,
+      copilotScoreboardWorker ? 'copilot-scoreboard' : null,
+      paymentRemittanceWorker ? 'payment-remittance' : null,
+      paymentReconciliationWorker ? 'payment-reconciliation' : null,
+      emailIngestorWorker ? 'email-ingestor' : null,
+      baselineWorkersInitialized ? 'baseline' : null,
+    ].filter(Boolean);
+    logger.info(`[Workers] Active at boot: ${activeWorkers.join(', ') || 'none'}`);
 
     logger.info('🎉 All workers initialized successfully');
   } catch (error) {
@@ -114,6 +151,38 @@ const shutdownWorkers = async () => {
       notificationWorker
         .close()
         .then(() => logger.info('✅ Notification worker stopped'))
+    );
+  }
+
+  if (copilotActionWorker) {
+    shutdownPromises.push(
+      copilotActionWorker
+        .close()
+        .then(() => logger.info('✅ Copilot action worker stopped'))
+    );
+  }
+
+  if (copilotScoreboardWorker) {
+    shutdownPromises.push(
+      copilotScoreboardWorker
+        .close()
+        .then(() => logger.info('✅ Copilot scoreboard worker stopped'))
+    );
+  }
+
+  if (paymentRemittanceWorker) {
+    shutdownPromises.push(
+      paymentRemittanceWorker
+        .close()
+        .then(() => logger.info('✅ Payment remittance worker stopped'))
+    );
+  }
+
+  if (paymentReconciliationWorker) {
+    shutdownPromises.push(
+      paymentReconciliationWorker
+        .close()
+        .then(() => logger.info('✅ Payment reconciliation worker stopped'))
     );
   }
 

@@ -19,8 +19,7 @@ const {
   insertFacts,
 } = require('../models/factWriter');
 const { logActivity } = require('../utils/activityLogger');
-const notificationQueueService = require('../services/notificationQueue.service');
-const { eventCalendarService, eventComplianceService } = require('../services');
+const { eventCalendarService } = require('../services');
 const permSubmissionService = require('../services/permSubmission.service');
 const dlqService = require('../services/dlq.service');
 const emailService = require('../services/email.service');
@@ -136,7 +135,6 @@ const createSubmissionWorker = () => {
   // SUBMIT JOB HANDLER
   // ============================================================
   async function handleSubmitJob(job) {
-    const startTime = Date.now();
     const {
       tenantId,
       projectId,

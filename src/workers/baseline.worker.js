@@ -7,10 +7,8 @@
 
 const { Worker } = require('bullmq');
 const { getRedisConnectionOptions } = require('../config/redis');
-const {
-  baselineIntelligenceService,
-  nodeAccessService,
-} = require('../services');
+const { baselineIntelligenceService } = require('../services');
+const { Nodes } = require('../models');
 const { getIO } = require('../config/socket');
 const logger = require('../config/logger');
 
@@ -23,7 +21,7 @@ const createNodeBaselineWorker = () => {
   const worker = new Worker(
     'baseline-node',
     async (job) => {
-      const { nodeId, tenantId, triggeredBy, metadata } = job.data;
+      const { nodeId, tenantId, triggeredBy } = job.data;
       const startTime = Date.now();
 
       try {
@@ -250,7 +248,6 @@ const createBatchChangeWorker = () => {
 
         await job.updateProgress(10);
 
-        const { Nodes, User } = require('../models');
         const affectedNodeIds = new Set();
 
         if (changeType === 'user') {

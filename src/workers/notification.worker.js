@@ -1,25 +1,21 @@
 /**
- * Notification Worker (Stub)
- * 
- * Processes notification jobs from the queue
- * This is a stub - implement notification logic as needed
+ * Notification Worker
+ *
+ * Processes notification jobs from notificationQueue.
  */
 
 const { Worker } = require('bullmq');
 const { getRedisConnectionOptions } = require('../config/redis');
 const logger = require('../config/logger');
+const notificationQueueService = require('../services/notificationQueue.service');
 
 const createNotificationWorker = () => {
   const notificationWorker = new Worker(
     'notificationQueue',
     async (job) => {
       logger.info(`[Notification Worker] Processing notification job: ${job.id}`);
-      
-      // TODO: Implement notification logic (push, SMS, etc.)
-      const { userId, message, type } = job.data;
-      logger.info(`[Notification Worker] Would send ${type} notification to user ${userId}`);
-      
-      return { success: true, jobId: job.id };
+      const result = await notificationQueueService.processNotificationJob(job);
+      return result || { success: true, jobId: job.id };
     },
     {
       connection: getRedisConnectionOptions(),
@@ -36,7 +32,7 @@ const createNotificationWorker = () => {
   });
 
   logger.info('🔔 Notification worker initialized');
-  
+
   return notificationWorker;
 };
 

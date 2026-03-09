@@ -275,6 +275,7 @@ const restoreUsersByTenantId = async (tenantId) => {
       try {
         // Restore the user
         user.deletedAt = null; // Nullify the deletedAt field to restore the user
+        user.status = true; // Reactivation should mark account active
         await user.save();
         restoredUsers.push(user);
       } catch (error) {
@@ -304,6 +305,7 @@ const restoreUserByUserId = async (userId) => {
 
     // Restore the user by nullifying the deletedAt field
     user.deletedAt = null;
+    user.status = true; // Reactivation should mark account active
 
     // Save the user back to the database
     await user.save();
@@ -530,6 +532,17 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     delete updateBody.customFields;
   }
 
+  // Normalize legacy phone payloads to canonical top-level user.phoneNumber.
+  if (
+    Object.prototype.hasOwnProperty.call(updateBody, 'phone') &&
+    !Object.prototype.hasOwnProperty.call(updateBody, 'phoneNumber')
+  ) {
+    updateBody.phoneNumber = updateBody.phone;
+  }
+  if (Object.prototype.hasOwnProperty.call(updateBody, 'phone')) {
+    delete updateBody.phone;
+  }
+
   const user = await User.findById(userId);
 
   if (!user) {
@@ -715,15 +728,19 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     'firstname',
     'lastname',
     'email',
-    'phone',
+    'phoneNumber',
     'password',
     'userId',
     'isSaby',
     'isSuper',
     'isOwner',
     'isAdmin',
+    'status',
     'isActive',
     'isEmailVerified',
+    'otpVerified',
+    'otp',
+    'otpExpires',
     'roles',
     'tenantId',
     'profileUpdateCompliant',
@@ -736,7 +753,6 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
   const profileFields = [
     'title',
     'otherName',
-    'phoneNumber',
     'gender',
     'dateOfBirth',
     'highestQualification',

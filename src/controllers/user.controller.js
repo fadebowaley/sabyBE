@@ -3,18 +3,47 @@ const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { userService } = require('../services');
+const copilotActionService = require('../services/copilotAction.service');
 const { User } = require('../models');
 
 // Function to create users by owner Profile
 const ownerCreate = catchAsync(async (req, res) => {
   req.body.createdBy = req.user._id; // 🔐 enforce ownership context
   const user = await userService.ownerCreate(req.body);
+  await copilotActionService.recordExistingAction({
+    tenantId: req.user.tenantId,
+    actorUserId: req.user._id || req.user.id,
+    actionType: 'create_user',
+    entityType: 'user',
+    entityId: String(user._id || user.id || user.userId || ''),
+    payload: {
+      source: 'user.controller.ownerCreate',
+      email: user.email || null,
+    },
+    source: 'existing-service',
+    priority: 10,
+  });
   res.status(httpStatus.CREATED).send(userService.buildUserResponse(user));
 });
 
 // Function to create SabyUser (Global Admin)
 const createSabyUser = catchAsync(async (req, res) => {
   const user = await userService.createSabyUser(req.body);
+  if (req.user?.tenantId) {
+    await copilotActionService.recordExistingAction({
+      tenantId: req.user.tenantId,
+      actorUserId: req.user._id || req.user.id,
+      actionType: 'create_user',
+      entityType: 'user',
+      entityId: String(user._id || user.id || user.userId || ''),
+      payload: {
+        source: 'user.controller.createSabyUser',
+        email: user.email || null,
+      },
+      source: 'existing-service',
+      priority: 10,
+    });
+  }
   res.status(httpStatus.CREATED).send(userService.buildUserResponse(user));
 });
 
@@ -100,6 +129,23 @@ const restoreUsers = catchAsync(async (req, res) => {
     );
   }
 
+  await Promise.all(
+    restoredUsers.map((restoredUser) =>
+      copilotActionService.recordExistingAction({
+        tenantId: req.user.tenantId || tenantId,
+        actorUserId: req.user._id || req.user.id,
+        actionType: 'reactivate_user',
+        entityType: 'user',
+        entityId: String(restoredUser._id || restoredUser.id || ''),
+        payload: {
+          source: 'user.controller.restoreUsers',
+        },
+        source: 'existing-service',
+        priority: 8,
+      })
+    )
+  );
+
   // Return success response with detailed report
   res.status(httpStatus.OK).send({
     message: `${restoredUsers.length} users restored successfully`,
@@ -128,6 +174,19 @@ const restoreUser = catchAsync(async (req, res) => {
   if (error) {
     throw new ApiError(httpStatus.NOT_FOUND, error);
   }
+
+  await copilotActionService.recordExistingAction({
+    tenantId: req.user.tenantId || restoredUser.tenantId,
+    actorUserId: req.user._id || req.user.id,
+    actionType: 'reactivate_user',
+    entityType: 'user',
+    entityId: String(restoredUser._id || restoredUser.id || userId),
+    payload: {
+      source: 'user.controller.restoreUser',
+    },
+    source: 'existing-service',
+    priority: 8,
+  });
 
   // Return success response with the restored user data
   res.status(httpStatus.OK).send({
@@ -212,6 +271,18 @@ const updateUser = catchAsync(async (req, res) => {
 
 const deleteUser = catchAsync(async (req, res) => {
   await userService.deleteUserById(req.params.userId);
+  await copilotActionService.recordExistingAction({
+    tenantId: req.user.tenantId,
+    actorUserId: req.user._id || req.user.id,
+    actionType: 'delete_user',
+    entityType: 'user',
+    entityId: String(req.params.userId),
+    payload: {
+      source: 'user.controller.deleteUser',
+    },
+    source: 'existing-service',
+    priority: 10,
+  });
   res.status(httpStatus.NO_CONTENT).send();
 });
 
@@ -291,6 +362,19 @@ const softDeleteUser = catchAsync(async (req, res) => {
   if (error) {
     throw new ApiError(httpStatus.NOT_FOUND, error);
   }
+  await copilotActionService.recordExistingAction({
+    tenantId: req.user.tenantId || deletedUser.tenantId,
+    actorUserId: req.user._id || req.user.id,
+    actionType: 'deactivate_user',
+    entityType: 'user',
+    entityId: String(deletedUser._id || deletedUser.id || userId),
+    payload: {
+      source: 'user.controller.softDeleteUser',
+    },
+    source: 'existing-service',
+    priority: 9,
+  });
+
   // Return a success response
   res.status(httpStatus.OK).send({
     message: 'User soft deleted successfully',
@@ -300,6 +384,19 @@ const softDeleteUser = catchAsync(async (req, res) => {
 
 const assignRoles = catchAsync(async (req, res) => {
   const userRole = await userService.assignRoles(req.params.id, req.body.roles);
+  await copilotActionService.recordExistingAction({
+    tenantId: req.user.tenantId,
+    actorUserId: req.user._id || req.user.id,
+    actionType: 'assign_role',
+    entityType: 'user_role',
+    entityId: String(req.params.id),
+    payload: {
+      source: 'user.controller.assignRoles',
+      roles: req.body.roles || [],
+    },
+    source: 'existing-service',
+    priority: 5,
+  });
   res.send(userRole);
 });
 
@@ -378,7 +475,11 @@ const changePhone = catchAsync(async (req, res) => {
   const userId = req.user._id;
 
   // Update user phone
-  const user = await userService.updateUserById(userId, { phone }, req.user);
+  const user = await userService.updateUserById(
+    userId,
+    { phoneNumber: phone },
+    req.user
+  );
 
   res.status(httpStatus.OK).json({
     success: true,

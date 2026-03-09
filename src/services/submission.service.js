@@ -4,6 +4,7 @@ const logger = require('../config/logger');
 const { submissionQueue } = require('../middlewares/queues');
 const SubmissionModel = require('../models/submission.model');
 const { postgresPool } = require('../config/postgres');
+const { buildJobOptions } = require('../queues/queueDefaults');
 
 /**
  * Enqueue a new submission for async processing
@@ -21,17 +22,13 @@ const queueSubmission = async (submissionBody) => {
 
   // Accept form_id, node_id, user_id in submissionBody
   try {
-    const job = await submissionQueue.add('submit:data', submissionBody, {
+    const jobOptions = buildJobOptions('standard', {
       jobId:
         submissionBody.idempotency_key ||
         `${submissionBody.tenantId}-${Date.now()}`,
-      removeOnComplete: true,
-      removeOnFail: false,
-      attempts: 3,
-      backoff: {
-        type: 'exponential',
-        delay: 3000,
-      },
+    });
+    const job = await submissionQueue.add('submit:data', submissionBody, {
+      ...jobOptions,
     });
 
     logger.info(
@@ -105,6 +102,9 @@ const queueUpdateSubmission = async (updateBody) => {
   }
 
   try {
+    const jobOptions = buildJobOptions('standard', {
+      jobId: `update-${submissionId}-${Date.now()}`,
+    });
     const job = await submissionQueue.add(
       'update:data',
       {
@@ -114,14 +114,7 @@ const queueUpdateSubmission = async (updateBody) => {
         tenantId,
       },
       {
-        jobId: `update-${submissionId}-${Date.now()}`,
-        removeOnComplete: true,
-        removeOnFail: false,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 3000,
-        },
+        ...jobOptions,
       }
     );
 
@@ -154,6 +147,9 @@ const queueDeleteSubmission = async (deleteBody) => {
   }
 
   try {
+    const jobOptions = buildJobOptions('standard', {
+      jobId: `delete-${submissionId}-${Date.now()}`,
+    });
     const job = await submissionQueue.add(
       'delete:data',
       {
@@ -163,14 +159,7 @@ const queueDeleteSubmission = async (deleteBody) => {
         permanent,
       },
       {
-        jobId: `delete-${submissionId}-${Date.now()}`,
-        removeOnComplete: true,
-        removeOnFail: false,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 3000,
-        },
+        ...jobOptions,
       }
     );
 

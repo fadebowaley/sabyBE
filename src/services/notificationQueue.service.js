@@ -2,6 +2,7 @@ const { Queue } = require('bullmq');
 const { getRedisConnectionOptions } = require('../config/redis');
 const simpleNotificationService = require('./simpleNotification.service');
 const logger = require('../config/logger');
+const { JOB_POLICY } = require('../queues/queueDefaults');
 
 const NOTIFICATION_QUEUE_NAME = 'notificationQueue';
 
@@ -9,15 +10,7 @@ class NotificationQueueService {
   constructor() {
     this.queue = new Queue(NOTIFICATION_QUEUE_NAME, {
       connection: getRedisConnectionOptions(),
-      defaultJobOptions: {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000,
-        },
-        removeOnComplete: 100,
-        removeOnFail: 50,
-      },
+      defaultJobOptions: JOB_POLICY.notification,
     });
   }
 

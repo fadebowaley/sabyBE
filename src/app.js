@@ -9,17 +9,29 @@ const mongoose = require('mongoose');
 const http = require('http');
 const httpStatus = require('http-status');
 const path = require('path');
+const { Queue } = require('bullmq');
 const config = require('./config/config');
 const morgan = require('./config/morgan');
 const packageJson = require('../package.json');
 const { jwtStrategy } = require('./config/passport');
 const { postgresPool } = require('./config/postgres');
-const { testRedisConnection } = require('./config/redis');
+const { testRedisConnection, getRedisConnectionOptions } = require('./config/redis');
 const User = require('./models/user.model');
 const Nodes = require('./models/node.model');
 const Role = require('./models/role.model');
 const Report = require('./models/reports.model');
 const Storage = require('./models/storage.model');
+const { submissionQueue } = require('./middlewares/queues');
+const notificationQueueService = require('./services/notificationQueue.service');
+const {
+  nodeBaselineQueue,
+  networkBaselineQueue,
+  batchChangeQueue,
+} = require('./queues/baseline.queue');
+const { paymentRemittanceQueue } = require('./queues/paymentRemittance.queue');
+const {
+  paymentReconciliationQueue,
+} = require('./queues/paymentReconciliation.queue');
 const { authLimiter } = require('./middlewares/rateLimiter');
 const routes = require('./routes/v1');
 const { errorConverter, errorHandler } = require('./middlewares/error');
@@ -53,6 +65,10 @@ const statusSummaryCache = {
   generatedAt: 0,
   expiresAt: 0,
 };
+
+const permNotificationQueue = new Queue('permNotificationQueue', {
+  connection: getRedisConnectionOptions(),
+});
 
 const formatUptime = (uptimeSeconds) => {
   const safeSeconds = Math.max(0, Math.floor(uptimeSeconds || 0));
@@ -213,6 +229,72 @@ const buildTrafficSnapshot = () => {
 const countModelSafely = async (model) =>
   withTimeout(() => model.estimatedDocumentCount(), 2500, null);
 
+const getQueueSnapshot = async (queue) => {
+  const counts = await withTimeout(
+    async () => {
+      const [waiting, active, delayed, failed, completed] = await Promise.all([
+        queue.getWaitingCount(),
+        queue.getActiveCount(),
+        queue.getDelayedCount(),
+        queue.getFailedCount(),
+        queue.getCompletedCount(),
+      ]);
+      return { waiting, active, delayed, failed, completed };
+    },
+    2500,
+    null
+  );
+
+  if (!counts) {
+    return {
+      status: 'error',
+      waiting: null,
+      active: null,
+      delayed: null,
+      failed: null,
+      completed: null,
+    };
+  }
+
+  return {
+    status: 'connected',
+    ...counts,
+  };
+};
+
+const getQueueHealth = async () => {
+  const [
+    submission,
+    notification,
+    permNotification,
+    baselineNode,
+    baselineNetwork,
+    baselineBatch,
+    paymentRemittance,
+    paymentReconciliation,
+  ] = await Promise.all([
+    getQueueSnapshot(submissionQueue),
+    getQueueSnapshot(notificationQueueService.queue),
+    getQueueSnapshot(permNotificationQueue),
+    getQueueSnapshot(nodeBaselineQueue),
+    getQueueSnapshot(networkBaselineQueue),
+    getQueueSnapshot(batchChangeQueue),
+    getQueueSnapshot(paymentRemittanceQueue),
+    getQueueSnapshot(paymentReconciliationQueue),
+  ]);
+
+  return {
+    submission,
+    notification,
+    permNotification,
+    baselineNode,
+    baselineNetwork,
+    baselineBatch,
+    paymentRemittance,
+    paymentReconciliation,
+  };
+};
+
 const getPostgresTableEstimates = async () => {
   const tables = ['form_submissions', 'submission_activity_log', 'dead_letter_queue'];
   const rows = await withTimeout(
@@ -251,6 +333,164 @@ const getPostgresTableEstimates = async () => {
   return estimates;
 };
 
+const getCopilotOperationalMetrics = async () => {
+  const hasResolutionLogs = await withTimeout(
+    async () => {
+      const result = await postgresPool.query(
+        `SELECT to_regclass('copilot.entity_resolution_logs')::text AS table_name`
+      );
+      return Boolean(result.rows[0]?.table_name);
+    },
+    1000,
+    false
+  );
+
+  const resolutionCte = hasResolutionLogs
+    ? `,
+         resolutions AS (
+           SELECT
+             COUNT(*)::bigint AS total_24h,
+             COUNT(*) FILTER (WHERE status = 'resolved')::bigint AS resolved_24h,
+             COUNT(*) FILTER (WHERE status = 'ambiguous')::bigint AS ambiguous_24h,
+             COUNT(*) FILTER (WHERE status = 'not_found')::bigint AS not_found_24h,
+             COALESCE(
+               PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latency_ms),
+               0
+             ) AS p95_latency_ms
+           FROM copilot.entity_resolution_logs
+           WHERE created_at >= NOW() - INTERVAL '24 hours'
+         )`
+    : '';
+  const resolutionSelect = hasResolutionLogs
+    ? `,
+           (SELECT total_24h FROM resolutions) AS resolutions_total_24h,
+           (SELECT resolved_24h FROM resolutions) AS resolutions_resolved_24h,
+           (SELECT ambiguous_24h FROM resolutions) AS resolutions_ambiguous_24h,
+           (SELECT not_found_24h FROM resolutions) AS resolutions_not_found_24h,
+           (SELECT p95_latency_ms FROM resolutions) AS resolutions_p95_latency_ms`
+    : `,
+           NULL::bigint AS resolutions_total_24h,
+           NULL::bigint AS resolutions_resolved_24h,
+           NULL::bigint AS resolutions_ambiguous_24h,
+           NULL::bigint AS resolutions_not_found_24h,
+           NULL::numeric AS resolutions_p95_latency_ms`;
+
+  const row = await withTimeout(
+    async () => {
+      const result = await postgresPool.query(
+        `WITH outbox AS (
+           SELECT
+             COALESCE(EXTRACT(EPOCH FROM (NOW() - MIN(created_at))), 0) AS lag_seconds,
+             COUNT(*)::bigint AS pending_count
+           FROM copilot.action_outbox
+           WHERE status = 'pending'
+         ),
+         dlq AS (
+           SELECT
+             COUNT(*)::bigint AS total,
+             COUNT(*) FILTER (
+               WHERE created_at >= NOW() - INTERVAL '24 hours'
+             )::bigint AS last_24h
+           FROM copilot.action_dlq
+         ),
+         latency AS (
+           SELECT
+             COALESCE(AVG(minutes), 0) AS avg_minutes,
+             COALESCE(
+               PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY minutes),
+               0
+             ) AS p95_minutes
+           FROM (
+             SELECT
+               EXTRACT(EPOCH FROM (completed_at - created_at)) / 60.0 AS minutes
+             FROM copilot.action_events
+             WHERE status = 'completed'
+               AND completed_at IS NOT NULL
+               AND created_at IS NOT NULL
+               AND completed_at >= NOW() - INTERVAL '24 hours'
+           ) durations
+         ),
+         deliveries AS (
+           SELECT
+             COUNT(*)::bigint AS total,
+             COUNT(*) FILTER (
+               WHERE delivery_status IN ('sent', 'delivered')
+             )::bigint AS success
+           FROM copilot.notification_deliveries
+           WHERE created_at >= NOW() - INTERVAL '24 hours'
+         )${resolutionCte}
+         SELECT
+           (SELECT lag_seconds FROM outbox) AS outbox_lag_seconds,
+           (SELECT pending_count FROM outbox) AS outbox_pending,
+           (SELECT total FROM dlq) AS dlq_total,
+           (SELECT last_24h FROM dlq) AS dlq_last_24h,
+           (SELECT avg_minutes FROM latency) AS action_latency_avg_minutes,
+           (SELECT p95_minutes FROM latency) AS action_latency_p95_minutes,
+           (SELECT total FROM deliveries) AS deliveries_total_24h,
+           (SELECT success FROM deliveries) AS deliveries_success_24h
+           ${resolutionSelect}`
+      );
+      return result.rows[0] || null;
+    },
+    2500,
+    null
+  );
+
+  if (!row) {
+    return {
+      status: 'error',
+      outboxLagSeconds: null,
+      outboxPending: null,
+      dlqTotal: null,
+      dlqLast24h: null,
+      actionLatencyAvgMinutes: null,
+      actionLatencyP95Minutes: null,
+      notificationDeliverySuccessRate24h: null,
+      entityResolutionTotal24h: null,
+      entityResolutionResolved24h: null,
+      entityResolutionAmbiguous24h: null,
+      entityResolutionNotFound24h: null,
+      entityResolutionAutoResolveRate24h: null,
+      entityResolutionP95LatencyMs: null,
+    };
+  }
+
+  const deliveriesTotal = Number(row.deliveries_total_24h || 0);
+  const deliveriesSuccess = Number(row.deliveries_success_24h || 0);
+  const deliveryRate =
+    deliveriesTotal > 0
+      ? Number(((deliveriesSuccess / deliveriesTotal) * 100).toFixed(2))
+      : null;
+  const resolutionsTotal = Number(row.resolutions_total_24h || 0);
+  const resolutionsResolved = Number(row.resolutions_resolved_24h || 0);
+  const resolutionsAmbiguous = Number(row.resolutions_ambiguous_24h || 0);
+  const resolutionsNotFound = Number(row.resolutions_not_found_24h || 0);
+  const resolutionAutoRate =
+    resolutionsTotal > 0
+      ? Number(((resolutionsResolved / resolutionsTotal) * 100).toFixed(2))
+      : null;
+
+  return {
+    status: 'connected',
+    outboxLagSeconds: Number(row.outbox_lag_seconds || 0),
+    outboxPending: Number(row.outbox_pending || 0),
+    dlqTotal: Number(row.dlq_total || 0),
+    dlqLast24h: Number(row.dlq_last_24h || 0),
+    actionLatencyAvgMinutes: Number(row.action_latency_avg_minutes || 0),
+    actionLatencyP95Minutes: Number(row.action_latency_p95_minutes || 0),
+    notificationDeliverySuccessRate24h: deliveryRate,
+    entityResolutionTotal24h: resolutionsTotal,
+    entityResolutionResolved24h: resolutionsResolved,
+    entityResolutionAmbiguous24h: resolutionsAmbiguous,
+    entityResolutionNotFound24h: resolutionsNotFound,
+    entityResolutionAutoResolveRate24h: resolutionAutoRate,
+    entityResolutionP95LatencyMs:
+      row.resolutions_p95_latency_ms === null
+        ? null
+        : Number(row.resolutions_p95_latency_ms || 0),
+  };
+};
+
 const collectStatusSummary = async () => {
   const generatedAt = Date.now();
   const [mongodb, postgresql, redis] = await Promise.all([
@@ -260,7 +500,16 @@ const collectStatusSummary = async () => {
   ]);
 
   const dependencies = { mongodb, postgresql, redis };
-  const [users, roles, nodes, reports, storageFiles, postgresTables] =
+  const [
+    users,
+    roles,
+    nodes,
+    reports,
+    storageFiles,
+    postgresTables,
+    queues,
+    copilotOperational,
+  ] =
     await Promise.all([
       countModelSafely(User),
       countModelSafely(Role),
@@ -268,6 +517,8 @@ const collectStatusSummary = async () => {
       countModelSafely(Report),
       countModelSafely(Storage),
       getPostgresTableEstimates(),
+      getQueueHealth(),
+      getCopilotOperationalMetrics(),
     ]);
 
   const memoryUsage = process.memoryUsage();
@@ -296,6 +547,7 @@ const collectStatusSummary = async () => {
     },
     dependencies,
     traffic: buildTrafficSnapshot(),
+    queues,
     metrics: {
       users,
       roles,
@@ -305,6 +557,7 @@ const collectStatusSummary = async () => {
       formSubmissionsEstimate: postgresTables.formSubmissions,
       submissionActivityEstimate: postgresTables.submissionActivityLog,
       deadLetterQueueEstimate: postgresTables.deadLetterQueue,
+      copilotOperational,
     },
     links: {
       docs: '/v1/docs',
@@ -327,7 +580,19 @@ if (config.env !== 'test') {
 app.use(helmet());
 
 // parse json request body
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, res, buf) => {
+      if (
+        req.originalUrl &&
+        (req.originalUrl.startsWith('/v1/payment/webhook') ||
+          req.originalUrl.startsWith('/v1/payments/webhook'))
+      ) {
+        req.rawBody = buf.toString('utf8');
+      }
+    },
+  })
+);
 
 // parse urlencoded request body
 app.use(express.urlencoded({ extended: true }));
@@ -467,6 +732,29 @@ app.get('/api/health', async (req, res) => {
       arch: process.arch,
     },
   });
+});
+
+// Status summary with dependency and queue insights.
+app.get('/api/status/summary', async (req, res, next) => {
+  try {
+    const now = Date.now();
+    if (
+      statusSummaryCache.payload &&
+      statusSummaryCache.expiresAt &&
+      statusSummaryCache.expiresAt > now
+    ) {
+      return res.status(200).json(statusSummaryCache.payload);
+    }
+
+    const payload = await collectStatusSummary();
+    statusSummaryCache.payload = payload;
+    statusSummaryCache.generatedAt = now;
+    statusSummaryCache.expiresAt = now + STATUS_SUMMARY_CACHE_TTL_MS;
+
+    return res.status(200).json(payload);
+  } catch (error) {
+    return next(error);
+  }
 });
 
 // v1 api routes

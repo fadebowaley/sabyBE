@@ -1,0 +1,5 @@
+structure_name,level_name,node_name,parent_node_name
+National Structure,National,National Headquarters,
+National Structure,Region,South West Region,National Headquarters
+National Structure,Zone,Ibadan Zone,South West Region
+National Structure,Branch,Onideure Branch,Ibadan Zone

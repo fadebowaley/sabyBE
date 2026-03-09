@@ -3,6 +3,9 @@
  * 
  * This module manages all background workers and ensures they start/stop
  * properly with the main application.
+ *
+ * NOTE: Runtime bootstrap currently uses src/workers/index.js from src/index.js.
+ * Keep this module for legacy/manual use only unless bootstrap is switched back.
  */
 
 const logger = require('../config/logger');
@@ -229,4 +232,3 @@ class WorkerManager {
 const workerManager = new WorkerManager();
 
 module.exports = workerManager;
-

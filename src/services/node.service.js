@@ -277,6 +277,11 @@ const updateNodeById = async (nodeId, updateBody) => {
   }
 
   if (parentProvided) {
+    if (newParentId) {
+      const movingNode = await getNodeById(node._id, { populate: 'level' });
+      const targetParent = await getNodeById(newParentId, { populate: 'level' });
+      validateNodeParentMoveConstraints(movingNode, targetParent);
+    }
     await Nodes.updateNodeParent(node._id, newParentId);
     node = await getNodeById(node._id);
   }
@@ -495,6 +500,44 @@ const getParentNode = async (nodeId) => {
  */
 const getChildNodes = async (nodeId) => Nodes.find({ parent: nodeId });
 
+const validateNodeParentMoveConstraints = (node, newParent) => {
+  if (String(node._id) === String(newParent._id)) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Cannot move a node under itself'
+    );
+  }
+
+  if (node.tenantId && newParent.tenantId && node.tenantId !== newParent.tenantId) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Cannot move node across tenants'
+    );
+  }
+
+  const nodePath = String(node.path || '');
+  const newParentPath = String(newParent.path || '');
+  if (newParentPath === nodePath || newParentPath.startsWith(`${nodePath}/`)) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Cannot move a node under its own descendant'
+    );
+  }
+
+  const nodeRank =
+    typeof node?.level?.rank === 'number' ? Number(node.level.rank) : null;
+  const parentRank =
+    typeof newParent?.level?.rank === 'number'
+      ? Number(newParent.level.rank)
+      : null;
+  if (nodeRank != null && parentRank != null && parentRank >= nodeRank) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Target parent must be higher in hierarchy than the node being moved'
+    );
+  }
+};
+
 /**
  * Move node to new parent
  * @param {ObjectId} nodeId
@@ -502,14 +545,13 @@ const getChildNodes = async (nodeId) => Nodes.find({ parent: nodeId });
  * @returns {Promise<Node>}
  */
 const moveNodeToParent = async (nodeId, newParentId) => {
-  const node = await getNodeById(nodeId);
-  const newParent = await getNodeById(newParentId);
+  const node = await getNodeById(nodeId, { populate: 'level' });
+  const newParent = await getNodeById(newParentId, { populate: 'level' });
+  validateNodeParentMoveConstraints(node, newParent);
 
-  node.parent = newParentId;
-  node.path = `${newParent.path}/${node.name}`;
-
-  await node.save();
-  return node;
+  // Use model hierarchy update so node + descendants keep consistent identity/path.
+  await Nodes.updateNodeParent(node._id, newParent._id);
+  return getNodeById(node._id);
 };
 
 /**

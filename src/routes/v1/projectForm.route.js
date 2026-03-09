@@ -326,6 +326,14 @@ router.get(
   projectFormController.getProjectAnalytics
 );
 
+// Get project schema profile by project ID
+router.get(
+  '/project/:projectId/schema-profile',
+  auth('view:project-form'),
+  validate(projectFormValidation.getProjectSchemaProfile),
+  projectFormController.getProjectSchemaProfile
+);
+
 // Update payment configuration
 router.patch(
   '/project/:projectId/payment-config',

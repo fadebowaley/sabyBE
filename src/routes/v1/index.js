@@ -26,6 +26,7 @@ const captureRoute = require('./capture.route');
 const departmentRoute = require('./department.route');
 const eventRoute = require('./event.route');
 const eventConfigRoute = require('./eventConfig.route');
+const paymentRoute = require('./payment.route');
 const reportRoute = require('./report.route');
 const settingsRoute = require('./settings.route');
 const statementRoute = require('./statement.route');
@@ -54,6 +55,7 @@ const eventComplianceRoute = require('./eventCompliance.route');
 const permSubmissionRoute = require('./permSubmission.route');
 // Workflow
 const workflowRoute = require('./workflow.route');
+const copilotRoute = require('./copilot.route');
 
 // declare rest of the routes: nodeLevel, nodeStructure, node etc.
 const config = require('../../config/config');
@@ -173,6 +175,14 @@ const defaultRoutes = [
     route: eventConfigRoute,
   },
   {
+    path: '/payment',
+    route: paymentRoute,
+  },
+  {
+    path: '/payments',
+    route: paymentRoute,
+  },
+  {
     path: '/report', // Example: /report/123, /report/info
     route: reportRoute,
   },
@@ -225,6 +235,10 @@ const defaultRoutes = [
   {
     path: '/workflows',
     route: workflowRoute,
+  },
+  {
+    path: '/copilot',
+    route: copilotRoute,
   },
   // {
   //   path: '/perm/submissions',

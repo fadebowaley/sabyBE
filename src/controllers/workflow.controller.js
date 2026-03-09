@@ -15,6 +15,7 @@ const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const ApiError = require('../utils/ApiError');
 const workflowService = require('../services/workflow.service');
+const copilotActionService = require('../services/copilotAction.service');
 const ProjectForm = require('../models/projectForm.model');
 
 // ---------------------------------------------------------------------------
@@ -73,6 +74,26 @@ const actionWorkflowStep = catchAsync(async (req, res) => {
     comments,
     workflowDef
   );
+
+  if (action === 'approved' || action === 'rejected') {
+    await copilotActionService.recordExistingAction({
+      tenantId,
+      actorUserId: actor.userId,
+      actionType:
+        action === 'approved' ? 'approve_submission' : 'reject_submission',
+      entityType: 'submission',
+      entityId: submissionId,
+      payload: {
+        source: 'workflow.controller.actionWorkflowStep',
+        workflowId: wfId,
+        stepDefId,
+        workflowStatus: result.workflowStatus,
+        stepStatus: result.stepStatus || action,
+      },
+      source: 'existing-service',
+      priority: action === 'rejected' ? 9 : 7,
+    });
+  }
 
   res.status(httpStatus.OK).json({
     submissionId,

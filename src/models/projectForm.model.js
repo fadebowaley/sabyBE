@@ -30,6 +30,75 @@ const FormElementSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: undefined,
     },
+    semantic: {
+      role: {
+        type: String,
+        enum: ['measure', 'dimension', 'status', 'label', 'ignore'],
+      },
+      valueType: {
+        type: String,
+        enum: [
+          'number',
+          'currency',
+          'percent',
+          'boolean',
+          'text',
+          'enum',
+          'date',
+          'datetime',
+          'time',
+          'unknown',
+        ],
+      },
+      aggregationAllowed: [
+        {
+          type: String,
+          enum: [
+            'sum',
+            'avg',
+            'min',
+            'max',
+            'count',
+            'count_distinct',
+            'ratio',
+            'trend',
+          ],
+        },
+      ],
+    },
+  },
+  { _id: false }
+);
+
+const ProjectAnalysisProfileSchema = new mongoose.Schema(
+  {
+    dataNature: {
+      type: String,
+      enum: ['qualitative', 'quantitative', 'hybrid'],
+      default: 'qualitative',
+    },
+    domain: {
+      type: String,
+      enum: ['finance', 'attendance', 'hr', 'operations', 'custom'],
+      default: 'custom',
+    },
+    primaryTimeField: { type: String, default: 'event_date' },
+    defaultMeasureFieldKeys: [{ type: String }],
+    defaultDimensionFieldKeys: [{ type: String }],
+    currency: { type: String, default: null },
+    scoreStrategy: {
+      type: String,
+      enum: ['rule_based', 'trend_based', 'custom'],
+      default: 'rule_based',
+    },
+    inferredAt: { type: Date, default: Date.now },
+    fieldStats: {
+      totalFields: { type: Number, default: 0 },
+      numericFields: { type: Number, default: 0 },
+      categoricalFields: { type: Number, default: 0 },
+      dateFields: { type: Number, default: 0 },
+      textFields: { type: Number, default: 0 },
+    },
   },
   { _id: false }
 );
@@ -38,6 +107,10 @@ const FormElementSchema = new mongoose.Schema(
 const ProjectConfigurationSchema = new mongoose.Schema({
   projectName: { type: String, required: true, trim: true },
   tags: [{ type: String, trim: true }], // Categories like CRM, Sales, etc.
+  analysisProfile: {
+    type: ProjectAnalysisProfileSchema,
+    default: undefined,
+  },
   accessibility: [
     {
       type: String,
@@ -412,6 +485,9 @@ const ProjectFormSchema = new mongoose.Schema(
 ProjectFormSchema.plugin(toJSON);
 ProjectFormSchema.plugin(paginate);
 ProjectFormSchema.plugin(tenantPlugin);
+ProjectFormSchema.index({ tenantId: 1, 'configuration.tags': 1 });
+ProjectFormSchema.index({ tenantId: 1, 'configuration.analysisProfile.domain': 1 });
+ProjectFormSchema.index({ tenantId: 1, 'configuration.analysisProfile.dataNature': 1 });
 
 /**
  * Generate a unique projectId

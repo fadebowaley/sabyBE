@@ -62,3 +62,6 @@ module.exports.rollupReportService = require('./rollupReport.service');
 module.exports.tenantConfigService = require('./tenantConfig.service');
 module.exports.customFieldService = require('./customField.service');
 module.exports.schemaService = require('./schema.service');
+module.exports.copilotNodeDimensionSyncService = require('./copilotNodeDimensionSync.service');
+module.exports.copilotNodeComparisonService = require('./copilotNodeComparison.service');
+module.exports.copilotNodeRankingService = require('./copilotNodeRanking.service');
