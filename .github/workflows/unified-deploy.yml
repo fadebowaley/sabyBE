@@ -179,7 +179,7 @@ jobs:
             echo "🛡️ Enforcing production backend env policy..."
             if [ -f "env/backend.env" ]; then
               sed -i -E 's#^NODE_ENV=.*#NODE_ENV=production#' env/backend.env
-              sed -i -E 's#^MONGODB_URL=.*#MONGODB_URL=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/halo-prod?authSource=admin#' env/backend.env
+              sed -i -E 's#^MONGODB_URL=.*#MONGODB_URL=mongodb://admin:\\${MONGO_ROOT_PASSWORD}@mongodb:27017/halo-prod?authSource=admin#' env/backend.env
               if ! grep -q '^JWT_SECRET=' env/backend.env; then
                 echo "❌ JWT_SECRET missing in env/backend.env"
                 exit 1
