@@ -176,6 +176,20 @@ jobs:
             echo "🏷️ Tagging backend image for compose compatibility..."
             docker tag "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$IMAGE_TAG" "saby-backend:production-local"
 
+            echo "🛡️ Enforcing production backend env policy..."
+            if [ -f "env/backend.env" ]; then
+              sed -i -E 's#^NODE_ENV=.*#NODE_ENV=production#' env/backend.env
+              sed -i -E 's#^MONGODB_URL=.*#MONGODB_URL=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/halo-prod?authSource=admin#' env/backend.env
+              if ! grep -q '^JWT_SECRET=' env/backend.env; then
+                echo "❌ JWT_SECRET missing in env/backend.env"
+                exit 1
+              fi
+            fi
+
+            if grep -q 'MONGODB_URL: .*replicaSet=rs0' "$COMPOSE_FILE"; then
+              sed -i -E 's#(MONGODB_URL: mongodb://[^ ]+\\?authSource=admin)(&replicaSet=rs0)?#\\1#' "$COMPOSE_FILE"
+            fi
+
             echo "🚀 Recreating backend (no build)..."
             \$DC -f "\$COMPOSE_FILE" up -d --no-build --force-recreate backend
 
