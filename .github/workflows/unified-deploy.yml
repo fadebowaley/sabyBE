@@ -31,6 +31,10 @@ jobs:
   test:
     name: ✅ Test
     runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      MONGODB_URL: mongodb://127.0.0.1:27017/saby_ci
+      JWT_SECRET: ci-test-jwt-secret
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
