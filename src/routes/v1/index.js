@@ -56,6 +56,7 @@ const permSubmissionRoute = require('./permSubmission.route');
 // Workflow
 const workflowRoute = require('./workflow.route');
 const copilotRoute = require('./copilot.route');
+const whatsappRoute = require('./whatsapp.route');
 
 // declare rest of the routes: nodeLevel, nodeStructure, node etc.
 const config = require('../../config/config');
@@ -239,6 +240,10 @@ const defaultRoutes = [
   {
     path: '/copilot',
     route: copilotRoute,
+  },
+  {
+    path: '/whatsapp',
+    route: whatsappRoute,
   },
   // {
   //   path: '/perm/submissions',

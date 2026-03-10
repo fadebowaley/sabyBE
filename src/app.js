@@ -6,7 +6,6 @@ const compression = require('compression');
 const cors = require('cors');
 const passport = require('passport');
 const mongoose = require('mongoose');
-const http = require('http');
 const httpStatus = require('http-status');
 const path = require('path');
 const { Queue } = require('bullmq');
@@ -37,6 +36,7 @@ const routes = require('./routes/v1');
 const { errorConverter, errorHandler } = require('./middlewares/error');
 const ApiError = require('./utils/ApiError');
 const logger = require('./config/logger');
+const whatsappBot = require('./ingestion/whatsapp/bot');
 
 const app = express();
 
@@ -64,6 +64,29 @@ const statusSummaryCache = {
   payload: null,
   generatedAt: 0,
   expiresAt: 0,
+};
+
+const extractHubQueryParams = (req) => {
+  const fromQuery = {
+    mode: req.query?.['hub.mode'] || req.query?.hub?.mode,
+    token:
+      req.query?.['hub.verify_token'] || req.query?.hub?.verify_token,
+    challenge:
+      req.query?.['hub.challenge'] || req.query?.hub?.challenge,
+  };
+  if (fromQuery.mode || fromQuery.token || fromQuery.challenge) {
+    return fromQuery;
+  }
+  try {
+    const parsed = new URL(req.originalUrl, 'http://localhost');
+    return {
+      mode: parsed.searchParams.get('hub.mode'),
+      token: parsed.searchParams.get('hub.verify_token'),
+      challenge: parsed.searchParams.get('hub.challenge'),
+    };
+  } catch (error) {
+    return fromQuery;
+  }
 };
 
 const permNotificationQueue = new Queue('permNotificationQueue', {
@@ -760,72 +783,24 @@ app.get('/api/status/summary', async (req, res, next) => {
 // v1 api routes
 app.use('/v1', routes);
 
-// WhatsApp webhook forwarding to separate bot
+// WhatsApp webhook endpoint (served by the main backend process)
 app.get('/whatsapp/webhook', (req, res) => {
-  logger.info('WhatsApp webhook query params:', req.query);
-
-  // Build query string manually
-  const queryParams = new URLSearchParams();
-  if (req.query['hub.mode'])
-    queryParams.append('hub.mode', req.query['hub.mode']);
-  if (req.query['hub.verify_token'])
-    queryParams.append('hub.verify_token', req.query['hub.verify_token']);
-  if (req.query['hub.challenge'])
-    queryParams.append('hub.challenge', req.query['hub.challenge']);
-
-  const url = `http://localhost:4001/webhook?${queryParams.toString()}`;
-  logger.info('Proxying to:', url);
-
-  // Proxy the request instead of redirecting
-  const proxyReq = http.request(url, (proxyRes) => {
-    let data = '';
-    proxyRes.on('data', (chunk) => {
-      data += chunk;
-    });
-    proxyRes.on('end', () => {
-      res.status(proxyRes.statusCode).send(data);
-    });
-  });
-
-  proxyReq.on('error', (error) => {
-    logger.error('Error proxying to WhatsApp bot:', error);
-    res.status(500).send('Internal Server Error');
-  });
-
-  proxyReq.end();
+  const { mode, token, challenge } = extractHubQueryParams(req);
+  const verificationResult = whatsappBot.verifyWebhook(mode, token, challenge);
+  if (verificationResult) {
+    return res.status(200).send(verificationResult);
+  }
+  return res.status(403).send('Forbidden');
 });
 
-app.post('/whatsapp/webhook', (req, res) => {
-  // Forward the request to the WhatsApp bot
-  const postData = JSON.stringify(req.body);
-  const options = {
-    hostname: 'localhost',
-    port: 4001,
-    path: '/webhook',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(postData),
-    },
-  };
-
-  const request = http.request(options, (response) => {
-    let data = '';
-    response.on('data', (chunk) => {
-      data += chunk;
-    });
-    response.on('end', () => {
-      res.status(response.statusCode).send(data);
-    });
-  });
-
-  request.on('error', (error) => {
-    logger.error('Error forwarding to WhatsApp bot:', error);
-    res.status(500).send('Internal Server Error');
-  });
-
-  request.write(postData);
-  request.end();
+app.post('/whatsapp/webhook', async (req, res) => {
+  try {
+    await whatsappBot.handleWebhook(req.body);
+    return res.status(200).send('OK');
+  } catch (error) {
+    logger.error('Error handling WhatsApp webhook:', error);
+    return res.status(500).send('Internal Server Error');
+  }
 });
 
 // Serve static files

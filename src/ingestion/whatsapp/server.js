@@ -10,13 +10,32 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const extractHubQueryParams = (req) => {
+  const fromQuery = {
+    mode: req.query?.['hub.mode'] || req.query?.hub?.mode,
+    token:
+      req.query?.['hub.verify_token'] || req.query?.hub?.verify_token,
+    challenge:
+      req.query?.['hub.challenge'] || req.query?.hub?.challenge,
+  };
+  if (fromQuery.mode || fromQuery.token || fromQuery.challenge) {
+    return fromQuery;
+  }
+  try {
+    const parsed = new URL(req.originalUrl, 'http://localhost');
+    return {
+      mode: parsed.searchParams.get('hub.mode'),
+      token: parsed.searchParams.get('hub.verify_token'),
+      challenge: parsed.searchParams.get('hub.challenge'),
+    };
+  } catch (error) {
+    return fromQuery;
+  }
+};
+
 // WhatsApp webhook routes
 app.get('/webhook', (req, res) => {
-  const {
-    'hub.mode': mode,
-    'hub.verify_token': token,
-    'hub.challenge': challenge,
-  } = req.query;
+  const { mode, token, challenge } = extractHubQueryParams(req);
   logger.info(
     `🔍 WhatsApp webhook verification - Mode: ${mode}, Token: ${token}, Expected: ${whatsappBot.VERIFY_TOKEN}`
   );

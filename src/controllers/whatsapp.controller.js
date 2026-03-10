@@ -5,17 +5,36 @@ const whatsappBot = require('../ingestion/whatsapp/bot');
 const sessionManager = require('../ingestion/whatsapp/session');
 const logger = require('../config/logger');
 
+const extractHubQueryParams = (req) => {
+  const fromQuery = {
+    mode: req.query?.['hub.mode'] || req.query?.hub?.mode,
+    token:
+      req.query?.['hub.verify_token'] || req.query?.hub?.verify_token,
+    challenge:
+      req.query?.['hub.challenge'] || req.query?.hub?.challenge,
+  };
+  if (fromQuery.mode || fromQuery.token || fromQuery.challenge) {
+    return fromQuery;
+  }
+  try {
+    const parsed = new URL(req.originalUrl, 'http://localhost');
+    return {
+      mode: parsed.searchParams.get('hub.mode'),
+      token: parsed.searchParams.get('hub.verify_token'),
+      challenge: parsed.searchParams.get('hub.challenge'),
+    };
+  } catch (error) {
+    return fromQuery;
+  }
+};
+
 /**
  * Verify WhatsApp webhook
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const verifyWebhook = catchAsync(async (req, res) => {
-  const {
-    'hub.mode': mode,
-    'hub.verify_token': token,
-    'hub.challenge': challenge,
-  } = req.query;
+  const { mode, token, challenge } = extractHubQueryParams(req);
 
   logger.info(`🔍 Controller received - Query: ${JSON.stringify(req.query)}`);
   logger.info(
