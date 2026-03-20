@@ -433,6 +433,14 @@ const getCopilotOperationalMetrics = async () => {
                AND completed_at >= NOW() - INTERVAL '24 hours'
            ) durations
          ),
+         state_drift AS (
+           SELECT
+             COUNT(*)::bigint AS queued_dead_letter_count
+           FROM copilot.action_events e
+           JOIN copilot.action_outbox o ON o.event_id = e.id
+           WHERE e.status = 'queued'
+             AND o.status = 'dead_letter'
+         ),
          deliveries AS (
            SELECT
              COUNT(*)::bigint AS total,
@@ -449,6 +457,7 @@ const getCopilotOperationalMetrics = async () => {
            (SELECT last_24h FROM dlq) AS dlq_last_24h,
            (SELECT avg_minutes FROM latency) AS action_latency_avg_minutes,
            (SELECT p95_minutes FROM latency) AS action_latency_p95_minutes,
+           (SELECT queued_dead_letter_count FROM state_drift) AS action_state_drift_queued_dead_letter,
            (SELECT total FROM deliveries) AS deliveries_total_24h,
            (SELECT success FROM deliveries) AS deliveries_success_24h
            ${resolutionSelect}`
@@ -468,6 +477,7 @@ const getCopilotOperationalMetrics = async () => {
       dlqLast24h: null,
       actionLatencyAvgMinutes: null,
       actionLatencyP95Minutes: null,
+      actionStateDriftQueuedDeadLetter: null,
       notificationDeliverySuccessRate24h: null,
       entityResolutionTotal24h: null,
       entityResolutionResolved24h: null,
@@ -501,6 +511,9 @@ const getCopilotOperationalMetrics = async () => {
     dlqLast24h: Number(row.dlq_last_24h || 0),
     actionLatencyAvgMinutes: Number(row.action_latency_avg_minutes || 0),
     actionLatencyP95Minutes: Number(row.action_latency_p95_minutes || 0),
+    actionStateDriftQueuedDeadLetter: Number(
+      row.action_state_drift_queued_dead_letter || 0
+    ),
     notificationDeliverySuccessRate24h: deliveryRate,
     entityResolutionTotal24h: resolutionsTotal,
     entityResolutionResolved24h: resolutionsResolved,

@@ -95,7 +95,8 @@ const readRows = (filePath) => {
 
 const inputDir = process.argv[2] || path.join(process.cwd(), 'docs', 'onboarding-tables');
 const outputPath =
-  process.argv[3] || path.join(process.cwd(), 'docs', 'copilot-onboarding-template.csv');
+  process.argv[3] ||
+  path.join(process.cwd(), 'artifacts', 'onboarding-wide-template.csv');
 
 const outputRows = [];
 
@@ -120,6 +121,7 @@ const lines = [
   ...outputRows.map((row) => WIDE_HEADER.map((h) => escapeCsv(row[h])).join(',')),
 ];
 
+fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 fs.writeFileSync(outputPath, `${lines.join('\n')}\n`, 'utf8');
 console.log(`Built onboarding CSV: ${outputPath}`);
 console.log(`Rows: ${outputRows.length}`);

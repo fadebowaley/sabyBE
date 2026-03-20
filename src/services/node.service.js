@@ -149,6 +149,7 @@ const updateNodeById = async (nodeId, updateBody) => {
     'level',
     'parent',
     'name',
+    'nodeStructures',
     'address',
     'city',
     'state',

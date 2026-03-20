@@ -134,4 +134,53 @@ describe('copilot action worker projection flow', () => {
     );
     expect(client.release).toHaveBeenCalled();
   });
+
+  test('processOutboxRecord dead-letters terminal create_user error and marks event failed', async () => {
+    const err = new Error('Email already taken');
+    err.statusCode = 409;
+    mockExecuteActionEvent.mockRejectedValue(err);
+
+    const client = makeClient(async (sql) => {
+      if (sql.includes('BEGIN')) return { rows: [] };
+      if (sql.includes('FROM copilot.action_events') && sql.includes('FOR UPDATE')) {
+        return {
+          rows: [
+            {
+              id: 'event-3',
+              tenant_id: 'tenant-1',
+              action_type: 'create_user',
+              entity_type: 'user',
+              payload_json: { userBody: { email: 'taken@example.com' } },
+              source: 'api',
+            },
+          ],
+        };
+      }
+      if (sql.includes('ROLLBACK')) return { rows: [] };
+      return { rows: [] };
+    });
+
+    mockPostgresPool.connect.mockResolvedValue(client);
+    mockPostgresPool.query.mockResolvedValue({ rows: [] });
+
+    await __private.processOutboxRecord({
+      id: 'outbox-3',
+      event_id: 'event-3',
+      retry_count: 1,
+      max_retries: 10,
+    });
+
+    expect(mockPostgresPool.query).toHaveBeenCalledWith(
+      expect.stringContaining("SET status = 'dead_letter'"),
+      expect.any(Array)
+    );
+    expect(mockPostgresPool.query).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO copilot.action_dlq'),
+      expect.any(Array)
+    );
+    expect(mockPostgresPool.query).toHaveBeenCalledWith(
+      expect.stringContaining("SET status = 'failed'"),
+      expect.any(Array)
+    );
+  });
 });

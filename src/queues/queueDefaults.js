@@ -15,6 +15,12 @@ const JOB_POLICY = {
     removeOnComplete: true,
     removeOnFail: false,
   },
+  onboarding: {
+    attempts: 4,
+    backoff: { type: 'exponential', delay: 5000 },
+    removeOnComplete: 1000,
+    removeOnFail: false,
+  },
   notification: {
     attempts: 3,
     backoff: { type: 'exponential', delay: 2000 },

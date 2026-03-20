@@ -144,4 +144,38 @@ describe('copilotAction.service', () => {
     expect(client.query).toHaveBeenCalledWith('ROLLBACK');
     expect(client.release).toHaveBeenCalled();
   });
+
+  test('reconciles queued event to failed when outbox is dead_letter', async () => {
+    mockPostgresPool.query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'event-1',
+            tenant_id: 'tenant-1',
+            status: 'queued',
+            error_message: null,
+            result_json: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [{ status: 'dead_letter', last_error: 'Email already taken' }],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'event-1',
+            tenant_id: 'tenant-1',
+            status: 'failed',
+            error_message: 'Email already taken',
+          },
+        ],
+      });
+
+    const result = await copilotActionService.getActionById('tenant-1', 'event-1');
+
+    expect(result.status).toBe('failed');
+    expect(result.error_message).toContain('Email already taken');
+    expect(mockPostgresPool.query).toHaveBeenCalledTimes(3);
+  });
 });

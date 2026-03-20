@@ -26,6 +26,10 @@ const { createPaymentRemittanceWorker } = require('./paymentRemittance.worker');
 const {
   createPaymentReconciliationWorker,
 } = require('./paymentReconciliation.worker');
+const { createOnboardingImportWorker } = require('./onboardingImport.worker');
+const {
+  createOnboardingMaintenanceWorker,
+} = require('./onboardingMaintenance.worker');
 const { initializeBaselineWorkers, shutdownBaselineWorkers } = require('./baseline.worker');
 
 // Email ingestor is optional (requires imap-simple)
@@ -44,6 +48,8 @@ let copilotActionWorker = null;
 let copilotScoreboardWorker = null;
 let paymentRemittanceWorker = null;
 let paymentReconciliationWorker = null;
+let onboardingImportWorker = null;
+let onboardingMaintenanceWorker = null;
 let emailIngestorWorker = null;
 let baselineWorkersInitialized = false;
 
@@ -82,6 +88,14 @@ const initializeWorkers = async () => {
     paymentReconciliationWorker = await createPaymentReconciliationWorker();
     logger.info('✅ Payment reconciliation worker started');
 
+    // Start onboarding import worker
+    onboardingImportWorker = await createOnboardingImportWorker();
+    logger.info('✅ Onboarding import worker started');
+
+    // Start onboarding maintenance worker
+    onboardingMaintenanceWorker = await createOnboardingMaintenanceWorker();
+    logger.info('✅ Onboarding maintenance worker started');
+
     // Start email ingestor worker (if enabled and available)
     if (createEmailIngestorWorker && config.email?.enabled) {
       emailIngestorWorker = await createEmailIngestorWorker();
@@ -110,6 +124,8 @@ const initializeWorkers = async () => {
       copilotScoreboardWorker ? 'copilot-scoreboard' : null,
       paymentRemittanceWorker ? 'payment-remittance' : null,
       paymentReconciliationWorker ? 'payment-reconciliation' : null,
+      onboardingImportWorker ? 'onboarding-import' : null,
+      onboardingMaintenanceWorker ? 'onboarding-maintenance' : null,
       emailIngestorWorker ? 'email-ingestor' : null,
       baselineWorkersInitialized ? 'baseline' : null,
     ].filter(Boolean);
@@ -183,6 +199,22 @@ const shutdownWorkers = async () => {
       paymentReconciliationWorker
         .close()
         .then(() => logger.info('✅ Payment reconciliation worker stopped'))
+    );
+  }
+
+  if (onboardingImportWorker) {
+    shutdownPromises.push(
+      onboardingImportWorker
+        .close()
+        .then(() => logger.info('✅ Onboarding import worker stopped'))
+    );
+  }
+
+  if (onboardingMaintenanceWorker) {
+    shutdownPromises.push(
+      onboardingMaintenanceWorker
+        .close()
+        .then(() => logger.info('✅ Onboarding maintenance worker stopped'))
     );
   }
 

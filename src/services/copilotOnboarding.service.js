@@ -33,9 +33,35 @@ const REQUIRED_BY_TYPE = {
   user_node: ['user_email', 'node_name'],
 };
 
+const MASTER_TEMPLATE_HEADERS = [
+  'level',
+  'structure',
+  'church name',
+  'role',
+  'pastors name',
+  'email',
+  'phone no',
+  'church address',
+  'password',
+];
+const MASTER_ROW_REQUIRED_HEADERS = ['level', 'structure', 'church name'];
+const MASTER_STRUCTURE_NAME =
+  process.env.COPILOT_ONBOARDING_MASTER_STRUCTURE_NAME || 'Master Structure';
+
 const norm = (value) => String(value || '').trim().toLowerCase();
 const getSafe = (row, key) => String(row?.[key] || '').trim();
 const getUserNodeName = (row) => getSafe(row, 'node_name') || getSafe(row, 'parent_node_name');
+const HEADER_ALIAS = {
+  'phone no.': 'phone no',
+  phone: 'phone no',
+  'churchname': 'church name',
+  'pastor name': 'pastors name',
+  'pastor s name': 'pastors name',
+};
+const normalizeHeader = (value) => {
+  const base = norm(value).replace(/\s+/g, ' ');
+  return HEADER_ALIAS[base] || base;
+};
 
 const parseCsvLine = (line) => {
   const out = [];
@@ -62,6 +88,290 @@ const parseCsvLine = (line) => {
   return out.map((v) => v.trim());
 };
 
+const isMasterTemplateHeaders = (headers = []) => {
+  const set = new Set(headers.map(normalizeHeader));
+  return MASTER_TEMPLATE_HEADERS.every((header) => set.has(header));
+};
+
+const normalizeParsedRows = (parsedRows = []) =>
+  parsedRows.map((entry, index) => {
+    const lineNumber = Number(entry?.lineNumber || index + 2);
+    const rawRow = entry?.row && typeof entry.row === 'object' ? entry.row : {};
+    const row = Object.keys(rawRow).reduce((acc, key) => {
+      acc[normalizeHeader(key)] = String(rawRow[key] || '').trim();
+      return acc;
+    }, {});
+    return { lineNumber, row };
+  });
+
+const toTitle = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  return text
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join(' ');
+};
+
+const splitPersonName = (rawName, email = '') => {
+  const stripped = String(rawName || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const titleWords = new Set([
+    'pst',
+    'pst.',
+    'pastor',
+    'mr',
+    'mr.',
+    'mrs',
+    'mrs.',
+    'dr',
+    'dr.',
+    'rev',
+    'rev.',
+    'bro',
+    'bro.',
+    'sis',
+    'sis.',
+  ]);
+
+  let parts = stripped
+    .split(' ')
+    .map((x) => x.trim())
+    .filter(Boolean);
+  while (parts.length > 0 && titleWords.has(parts[0].toLowerCase())) {
+    parts = parts.slice(1);
+  }
+
+  if (parts.length === 0 && email) {
+    parts = email
+      .split('@')[0]
+      .replace(/[^a-zA-Z0-9._-]/g, '')
+      .split(/[._-]/)
+      .filter(Boolean);
+  }
+
+  if (parts.length === 0) {
+    return { firstName: 'Member', lastName: 'Unknown' };
+  }
+  if (parts.length === 1) {
+    return { firstName: toTitle(parts[0]), lastName: 'Member' };
+  }
+
+  return {
+    firstName: toTitle(parts[0]),
+    lastName: toTitle(parts.slice(1).join(' ')),
+  };
+};
+
+const parseLevelRank = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  if (!/^\d+$/.test(raw)) return null;
+  return Number(raw);
+};
+
+const canonicalizeMasterRows = (rows = []) => {
+  const canonicalRows = [];
+  const levelsByName = new Map();
+  const structuresByLevel = new Map();
+  const roles = new Set();
+  const usersByEmail = new Map();
+  const userRoleBindings = new Set();
+  const userNodeBindings = new Set();
+  const nodeRows = [];
+  const structureForLevel = (levelName) => {
+    const key = norm(levelName) || 'unknown';
+    if (!structuresByLevel.has(key)) {
+      const suffix = String(levelName || 'Unknown Level').trim();
+      structuresByLevel.set(key, `${MASTER_STRUCTURE_NAME} - ${suffix}`);
+    }
+    return structuresByLevel.get(key);
+  };
+
+  rows.forEach(({ lineNumber, row }) => {
+    const levelName = getSafe(row, 'structure');
+    const levelRank = getSafe(row, 'level');
+    const nodeName = getSafe(row, 'church name');
+    const nodeAddress = getSafe(row, 'church address');
+    const roleName = getSafe(row, 'role');
+    const email = getSafe(row, 'email').toLowerCase();
+    const pastorsName = getSafe(row, 'pastors name');
+    const phoneNumber = getSafe(row, 'phone no');
+    const password = getSafe(row, 'password');
+
+    if (levelName) {
+      if (!levelsByName.has(norm(levelName))) {
+        levelsByName.set(norm(levelName), {
+          lineNumber,
+          levelName,
+          levelRank,
+        });
+      }
+    }
+
+    if (nodeName) {
+      nodeRows.push({
+        lineNumber,
+        levelName,
+        levelRank,
+        nodeName,
+        nodeAddress,
+      });
+    }
+
+    if (roleName) {
+      roles.add(roleName);
+    }
+
+    if (email) {
+      if (!usersByEmail.has(email)) {
+        const { firstName, lastName } = splitPersonName(pastorsName, email);
+        usersByEmail.set(email, {
+          lineNumber,
+          email,
+          firstName,
+          lastName,
+          phoneNumber,
+          password,
+        });
+      }
+      if (roleName) {
+        userRoleBindings.add(`${email}|||${roleName}|||${lineNumber}`);
+      }
+      if (nodeName) {
+        userNodeBindings.add(`${email}|||${nodeName}|||${lineNumber}`);
+      }
+    }
+  });
+
+  const orderedLevels = [...levelsByName.values()].sort((a, b) => {
+    const aRank = parseLevelRank(a.levelRank);
+    const bRank = parseLevelRank(b.levelRank);
+    if (aRank == null && bRank == null) return a.levelName.localeCompare(b.levelName);
+    if (aRank == null) return 1;
+    if (bRank == null) return -1;
+    return aRank - bRank;
+  });
+
+  orderedLevels.forEach((entry) => {
+    canonicalRows.push({
+      lineNumber: entry.lineNumber,
+      row: {
+        record_type: 'structure',
+        structure_name: structureForLevel(entry.levelName),
+      },
+    });
+  });
+
+  orderedLevels.forEach((entry) => {
+      canonicalRows.push({
+        lineNumber: entry.lineNumber,
+        row: {
+          record_type: 'level',
+          structure_name: structureForLevel(entry.levelName),
+          level_name: entry.levelName,
+          level_rank: entry.levelRank,
+        },
+      });
+  });
+
+  const stack = [];
+  nodeRows.forEach((entry) => {
+    const numericRank = parseLevelRank(entry.levelRank);
+    let parentNodeName = '';
+    if (numericRank != null) {
+      while (stack.length > 0 && stack[stack.length - 1].rank >= numericRank) {
+        stack.pop();
+      }
+      parentNodeName = stack.length > 0 ? stack[stack.length - 1].nodeName : '';
+      stack.push({ rank: numericRank, nodeName: entry.nodeName });
+    }
+
+    canonicalRows.push({
+      lineNumber: entry.lineNumber,
+      row: {
+        record_type: 'node',
+        structure_name: structureForLevel(entry.levelName),
+        level_name: entry.levelName,
+        node_name: entry.nodeName,
+        parent_node_name: parentNodeName,
+        node_address: entry.nodeAddress,
+      },
+    });
+  });
+
+  [...roles].sort((a, b) => a.localeCompare(b)).forEach((roleName) => {
+    canonicalRows.push({
+      lineNumber: 1,
+      row: {
+        record_type: 'role',
+        role_name: roleName,
+      },
+    });
+  });
+
+  [...usersByEmail.values()].forEach((userEntry) => {
+    canonicalRows.push({
+      lineNumber: userEntry.lineNumber,
+      row: {
+        record_type: 'user',
+        user_email: userEntry.email,
+        first_name: userEntry.firstName,
+        last_name: userEntry.lastName,
+        phone_number: userEntry.phoneNumber,
+        user_password: userEntry.password,
+      },
+    });
+  });
+
+  [...userRoleBindings].forEach((binding) => {
+    const [userEmail, roleName, lineNumber] = binding.split('|||');
+    canonicalRows.push({
+      lineNumber: Number(lineNumber || 1),
+      row: {
+        record_type: 'user_role',
+        user_email: userEmail,
+        role_name: roleName,
+      },
+    });
+  });
+
+  [...userNodeBindings].forEach((binding) => {
+    const [userEmail, nodeName, lineNumber] = binding.split('|||');
+    canonicalRows.push({
+      lineNumber: Number(lineNumber || 1),
+      row: {
+        record_type: 'user_node',
+        user_email: userEmail,
+        node_name: nodeName,
+      },
+    });
+  });
+
+  return canonicalRows;
+};
+
+const normalizeOnboardingRows = (rows = []) => {
+  const firstRow = rows[0]?.row || {};
+  const headers = Object.keys(firstRow).map(normalizeHeader);
+
+  if (headers.includes('record_type')) {
+    return { rows, schema: 'copilot' };
+  }
+
+  if (isMasterTemplateHeaders(headers)) {
+    const mapped = canonicalizeMasterRows(rows);
+    return { rows: mapped, schema: 'master' };
+  }
+
+  throw new ApiError(
+    httpStatus.BAD_REQUEST,
+    'CSV header must either include record_type or match the approved onboarding master template columns'
+  );
+};
+
 const parseCsvText = (csvText) => {
   const raw = String(csvText || '')
     .replace(/^\uFEFF/, '')
@@ -76,14 +386,7 @@ const parseCsvText = (csvText) => {
     );
   }
 
-  const headers = parseCsvLine(raw[0]).map((h) => norm(h));
-  if (!headers.includes('record_type')) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'CSV header must include record_type column'
-    );
-  }
-
+  const headers = parseCsvLine(raw[0]).map((h) => normalizeHeader(h));
   const rows = [];
   for (let i = 1; i < raw.length; i += 1) {
     const values = parseCsvLine(raw[i]);
@@ -97,7 +400,18 @@ const parseCsvText = (csvText) => {
     });
   }
 
-  return { headers, rows };
+  const requiredMasterMissing = MASTER_ROW_REQUIRED_HEADERS.filter(
+    (header) => isMasterTemplateHeaders(headers) && !headers.includes(header)
+  );
+  if (requiredMasterMissing.length > 0) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `Master template missing required columns: ${requiredMasterMissing.join(', ')}`
+    );
+  }
+
+  const normalized = normalizeOnboardingRows(rows);
+  return { headers, rows: normalized.rows, schema: normalized.schema };
 };
 
 const loadTenantReferenceSets = async (tenantId) => {
@@ -118,15 +432,18 @@ const loadTenantReferenceSets = async (tenantId) => {
   };
 };
 
-const validateOnboardingCsvDryRun = async ({ tenantId, csvText }) => {
+const validateOnboardingCsvDryRun = async ({ tenantId, csvText, parsedRows }) => {
   if (!tenantId) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId is required');
   }
-  if (!String(csvText || '').trim()) {
+  const hasParsedRows = Array.isArray(parsedRows) && parsedRows.length > 0;
+  if (!hasParsedRows && !String(csvText || '').trim()) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'csvText is required');
   }
 
-  const { rows } = parseCsvText(csvText);
+  const rows = hasParsedRows
+    ? normalizeOnboardingRows(normalizeParsedRows(parsedRows)).rows
+    : parseCsvText(csvText).rows;
   const refs = await loadTenantReferenceSets(tenantId);
 
   const errors = [];
@@ -140,6 +457,7 @@ const validateOnboardingCsvDryRun = async ({ tenantId, csvText }) => {
     roles: new Set(),
     users: new Set(),
   };
+  const userEmailLines = new Map();
 
   rows.forEach(({ lineNumber, row }) => {
     const type = norm(row.record_type);
@@ -206,8 +524,40 @@ const validateOnboardingCsvDryRun = async ({ tenantId, csvText }) => {
     if (type === 'level') fileRefs.levels.add(norm(row.level_name));
     if (type === 'node') fileRefs.nodes.add(norm(row.node_name));
     if (type === 'role') fileRefs.roles.add(norm(row.role_name));
-    if (type === 'user') fileRefs.users.add(norm(row.user_email));
+    if (type === 'user') {
+      const userEmailKey = norm(row.user_email);
+      if (userEmailKey) {
+        fileRefs.users.add(userEmailKey);
+        if (!userEmailLines.has(userEmailKey)) {
+          userEmailLines.set(userEmailKey, []);
+        }
+        userEmailLines.get(userEmailKey).push(lineNumber);
+      }
+    }
   });
+
+  if (fileRefs.users.size > 0) {
+    const existingUsers = await User.find({
+      email: { $in: [...fileRefs.users] },
+      deletedAt: null,
+    })
+      .select('email tenantId')
+      .lean();
+
+    existingUsers.forEach((existingUser) => {
+      const emailKey = norm(existingUser.email);
+      if (!emailKey) return;
+      if (String(existingUser.tenantId || '') === String(tenantId || '')) return;
+      const lines = userEmailLines.get(emailKey) || [];
+      lines.forEach((line) => {
+        errors.push({
+          line,
+          code: 'email_registered_in_other_tenant',
+          message: `User email "${existingUser.email}" already exists in another tenant (${existingUser.tenantId}). Use another email.`,
+        });
+      });
+    });
+  }
 
   rows.forEach(({ lineNumber, row }) => {
     const type = norm(row.record_type);
@@ -337,7 +687,10 @@ const preloadReferenceMaps = async (tenantId) => {
   return {
     structuresByName: new Map(structures.map((x) => [norm(x.name), x])),
     levelsByName: new Map(levels.map((x) => [norm(x.name), x])),
+    levelsById: new Map(levels.map((x) => [String(x._id), x])),
+    levelsByRank: new Map(levels.map((x) => [String(x.rank), x])),
     nodesByName: new Map(nodes.map((x) => [norm(x.name), x])),
+    rootNode: nodes.find((x) => !x.parent) || null,
     rolesByName: new Map(roles.map((x) => [norm(x.name), x])),
     usersByEmail: new Map(users.map((x) => [norm(x.email), x])),
   };
@@ -362,8 +715,17 @@ const summarizeRows = (rows = []) => {
   return out;
 };
 
-const importOnboardingCsv = async ({ tenantId, csvText, actorUser = {} }) => {
-  const validation = await validateOnboardingCsvDryRun({ tenantId, csvText });
+const importOnboardingCsv = async ({
+  tenantId,
+  csvText,
+  parsedRows,
+  actorUser = {},
+}) => {
+  const validation = await validateOnboardingCsvDryRun({
+    tenantId,
+    csvText,
+    parsedRows,
+  });
   if (!validation.ok) {
     return {
       dryRun: false,
@@ -383,7 +745,10 @@ const importOnboardingCsv = async ({ tenantId, csvText, actorUser = {} }) => {
   }
 
   const roleActor = buildRoleActor(tenantId, actorUser);
-  const { rows } = parseCsvText(csvText);
+  const rows =
+    Array.isArray(parsedRows) && parsedRows.length > 0
+      ? normalizeOnboardingRows(normalizeParsedRows(parsedRows)).rows
+      : parseCsvText(csvText).rows;
   const refs = await preloadReferenceMaps(tenantId);
   const undoStack = [];
   const rowResults = [];
@@ -398,6 +763,36 @@ const importOnboardingCsv = async ({ tenantId, csvText, actorUser = {} }) => {
   const userRows = rows.filter((x) => norm(x.row.record_type) === 'user');
   const userRoleRows = rows.filter((x) => norm(x.row.record_type) === 'user_role');
   const userNodeRows = rows.filter((x) => norm(x.row.record_type) === 'user_node');
+  const levelRankByName = new Map();
+  levelRows.forEach(({ row }) => {
+    const levelKey = norm(row.level_name);
+    const levelRank = Number(getSafe(row, 'level_rank'));
+    if (levelKey && Number.isInteger(levelRank)) {
+      levelRankByName.set(levelKey, levelRank);
+    }
+  });
+  const csvHasRootRankLevel = [...levelRankByName.values()].some((rank) => rank === 0);
+  if (csvHasRootRankLevel && refs.rootNode && !refs.levelsByRank.has('0')) {
+    const rootLevel = refs.levelsById.get(String(refs.rootNode.level));
+    if (rootLevel && Number(rootLevel.rank) !== 0) {
+      const updatedRootLevel = await levelService.updateLevelById(rootLevel._id, {
+        tenantId,
+        rank: 0,
+      });
+      const updatedLevel = updatedRootLevel.toObject
+        ? updatedRootLevel.toObject()
+        : updatedRootLevel;
+      refs.levelsByRank.delete(String(rootLevel.rank));
+      refs.levelsByRank.set('0', updatedLevel);
+      refs.levelsByName.set(norm(updatedLevel.name), updatedLevel);
+      refs.levelsById.set(String(updatedLevel._id), updatedLevel);
+      warnings.push({
+        line: 1,
+        code: 'root_level_rebased',
+        message: `Existing root level "${updatedLevel.name}" rebased to rank 0 before import`,
+      });
+    }
+  }
 
   const failed = [];
   let rolledBack = false;
@@ -433,8 +828,27 @@ const importOnboardingCsv = async ({ tenantId, csvText, actorUser = {} }) => {
       const levelRank = Number(getSafe(row, 'level_rank'));
       const key = norm(levelName);
       const existing = refs.levelsByName.get(key);
+      const byRank = refs.levelsByRank.get(String(levelRank));
+      const canReuseByRank = levelRank === 0 && byRank;
 
       if (existing) {
+        if (canReuseByRank && String(byRank._id) !== String(existing._id)) {
+          refs.levelsByName.set(key, byRank);
+          rowResults.push({
+            line: lineNumber,
+            recordType: 'level',
+            action: 'skipped',
+            status: 'ok',
+            entityId: String(byRank._id),
+            reason: 'rank_mapped_to_existing',
+          });
+          warnings.push({
+            line: lineNumber,
+            code: 'level_rank_reused',
+            message: `Level "${levelName}" mapped to existing level "${byRank.name}" at rank ${levelRank}`,
+          });
+          return;
+        }
         const updates = {};
         if (Number(existing.rank) !== levelRank) updates.rank = levelRank;
         if (existing.deletedAt) updates.deletedAt = null;
@@ -455,7 +869,10 @@ const importOnboardingCsv = async ({ tenantId, csvText, actorUser = {} }) => {
           ...updates,
           tenantId,
         });
-        refs.levelsByName.set(key, updated.toObject ? updated.toObject() : updated);
+        const updatedLevel = updated.toObject ? updated.toObject() : updated;
+        refs.levelsByName.set(key, updatedLevel);
+        refs.levelsByRank.set(String(updatedLevel.rank), updatedLevel);
+        refs.levelsById.set(String(updatedLevel._id), updatedLevel);
         undoStack.push(async () => {
           await levelService.updateLevelById(existing._id, {
             tenantId,
@@ -476,6 +893,24 @@ const importOnboardingCsv = async ({ tenantId, csvText, actorUser = {} }) => {
         return;
       }
 
+      if (canReuseByRank) {
+        refs.levelsByName.set(key, byRank);
+        rowResults.push({
+          line: lineNumber,
+          recordType: 'level',
+          action: 'skipped',
+          status: 'ok',
+          entityId: String(byRank._id),
+          reason: 'rank_mapped_to_existing',
+        });
+        warnings.push({
+          line: lineNumber,
+          code: 'level_rank_reused',
+          message: `Level "${levelName}" mapped to existing level "${byRank.name}" at rank ${levelRank}`,
+        });
+        return;
+      }
+
       const created = await levelService.createLevel({
         tenantId,
         name: levelName,
@@ -484,7 +919,10 @@ const importOnboardingCsv = async ({ tenantId, csvText, actorUser = {} }) => {
         isSpecial: false,
         isActive: true,
       });
-      refs.levelsByName.set(key, created.toObject ? created.toObject() : created);
+      const createdLevel = created.toObject ? created.toObject() : created;
+      refs.levelsByName.set(key, createdLevel);
+      refs.levelsByRank.set(String(levelRank), createdLevel);
+      refs.levelsById.set(String(createdLevel._id), createdLevel);
       undoStack.push(async () => {
         await Level.deleteOne({ _id: created._id });
       });
@@ -609,6 +1047,14 @@ const importOnboardingCsv = async ({ tenantId, csvText, actorUser = {} }) => {
       const structure = refs.structuresByName.get(norm(row.structure_name));
       const parentName = getSafe(row, 'parent_node_name');
       const parent = parentName ? refs.nodesByName.get(norm(parentName)) : null;
+      const key = norm(nodeName);
+      const existing = refs.nodesByName.get(key);
+      const rankFromMap = levelRankByName.get(norm(row.level_name));
+      const rankValue =
+        Number.isInteger(rankFromMap) ? rankFromMap : Number(level?.rank);
+      const isRootCsvRow = !parentName && rankValue === 0;
+      const nodeAddress =
+        getSafe(row, 'node_address') || getSafe(row, 'address') || '';
 
       if (!level || !structure) {
         throw new ApiError(
@@ -623,8 +1069,72 @@ const importOnboardingCsv = async ({ tenantId, csvText, actorUser = {} }) => {
         );
       }
 
-      const key = norm(nodeName);
-      const existing = refs.nodesByName.get(key);
+      if (isRootCsvRow && refs.rootNode) {
+        const rootTarget = refs.rootNode;
+        const before = { ...rootTarget };
+        const updatePayload = {
+          name: nodeName,
+          level: level._id,
+          structure: structure._id,
+          parent: null,
+        };
+        if (nodeAddress) {
+          updatePayload.address = nodeAddress;
+        }
+        const needsUpdate =
+          String(rootTarget.name || '') !== String(nodeName || '') ||
+          String(rootTarget.level || '') !== String(level._id || '') ||
+          String(rootTarget.structure || '') !== String(structure._id || '') ||
+          String(rootTarget.parent || '') !== '' ||
+          (nodeAddress && String(rootTarget.address || '') !== String(nodeAddress));
+
+        if (!needsUpdate) {
+          refs.nodesByName.set(key, rootTarget);
+          rowResults.push({
+            line: lineNumber,
+            recordType: 'node',
+            action: 'skipped',
+            status: 'ok',
+            entityId: String(rootTarget._id),
+            reason: 'root_reused',
+          });
+          return;
+        }
+
+        const updatedRoot = await nodeService.updateNodeById(
+          rootTarget._id,
+          updatePayload
+        );
+        const updatedRootObject = updatedRoot.toObject ? updatedRoot.toObject() : updatedRoot;
+        refs.rootNode = updatedRootObject;
+        refs.nodesByName.set(norm(before.name), updatedRootObject);
+        refs.nodesByName.set(norm(updatedRootObject.name), updatedRootObject);
+        refs.nodesByName.set(key, updatedRootObject);
+        undoStack.push(async () => {
+          await nodeService.updateNodeById(rootTarget._id, {
+            name: before.name,
+            level: before.level,
+            structure: before.structure,
+            parent: before.parent || null,
+            ...(before.address ? { address: before.address } : {}),
+          });
+        });
+        rowResults.push({
+          line: lineNumber,
+          recordType: 'node',
+          action: 'updated',
+          status: 'ok',
+          entityId: String(rootTarget._id),
+          reason: 'root_reused',
+        });
+        warnings.push({
+          line: lineNumber,
+          code: 'root_node_reused',
+          message: `Root node reused and updated to "${nodeName}"`,
+        });
+        return;
+      }
+
       if (existing) {
         const before = { ...existing };
         const updated = await nodeService.updateNodeById(existing._id, {
@@ -632,6 +1142,7 @@ const importOnboardingCsv = async ({ tenantId, csvText, actorUser = {} }) => {
           level: level._id,
           structure: structure._id,
           parent: parent?._id || null,
+          ...(nodeAddress ? { address: nodeAddress } : {}),
         });
         refs.nodesByName.set(key, updated.toObject ? updated.toObject() : updated);
         undoStack.push(async () => {
@@ -659,8 +1170,13 @@ const importOnboardingCsv = async ({ tenantId, csvText, actorUser = {} }) => {
         structure: structure._id,
         parent: parent?._id || null,
         isActive: true,
+        ...(nodeAddress ? { address: nodeAddress } : {}),
       });
-      refs.nodesByName.set(key, created.toObject ? created.toObject() : created);
+      const createdNode = created.toObject ? created.toObject() : created;
+      refs.nodesByName.set(key, createdNode);
+      if (isRootCsvRow || (!parentName && !refs.rootNode)) {
+        refs.rootNode = createdNode;
+      }
       undoStack.push(async () => {
         await Nodes.deleteOne({ _id: created._id });
       });

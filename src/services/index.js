@@ -60,6 +60,7 @@ module.exports.exportReportService = require('./exportReport.service');
 module.exports.trendAnalysisService = require('./trendAnalysis.service');
 module.exports.rollupReportService = require('./rollupReport.service');
 module.exports.tenantConfigService = require('./tenantConfig.service');
+module.exports.tenantOnboardingService = require('./tenantOnboarding.service');
 module.exports.customFieldService = require('./customField.service');
 module.exports.schemaService = require('./schema.service');
 module.exports.copilotNodeDimensionSyncService = require('./copilotNodeDimensionSync.service');

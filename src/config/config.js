@@ -60,8 +60,12 @@ const envVarsSchema = Joi.object()
     EMAIL_FROM: Joi.string()
       .allow('')
       .description('the from field in the emails sent by the app'),
+    SMS_SENDER_ID: Joi.string().allow('').description('Termii sender ID'),
     SMS_BASE_URL: Joi.string().allow('').description('Termii API base URL'),
     SMS_API_KEY: Joi.string().allow('').description('Termii API key'),
+    SOCIAL_AUTH_SHARED_SECRET: Joi.string()
+      .allow('')
+      .description('Shared secret for trusted social-login exchange'),
     REDIS_HOST: Joi.string().default('127.0.0.1').description('Redis host'),
     REDIS_PORT: Joi.number().default(6379).description('Redis port'),
     REDIS_PASSWORD: Joi.string()
@@ -198,6 +202,42 @@ const envVarsSchema = Joi.object()
       .try(Joi.number(), Joi.string().pattern(/^\d+/))
       .default(120)
       .description('Default lock TTL for copilot critical tool calls'),
+    COPILOT_ONBOARDING_WORKER_CONCURRENCY: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(2)
+      .description('Concurrency for onboarding import worker'),
+    COPILOT_ONBOARDING_MAX_ROWS: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(200000)
+      .description('Maximum onboarding CSV rows allowed per upload'),
+    COPILOT_ONBOARDING_QUEUE_ATTEMPTS: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(4)
+      .description('Retry attempts for onboarding import queue jobs'),
+    COPILOT_ONBOARDING_QUEUE_BACKOFF_MS: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(5000)
+      .description('Initial exponential backoff delay for onboarding import retries'),
+    COPILOT_ONBOARDING_CLEANUP_INTERVAL_MS: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(3600000)
+      .description('Interval for onboarding cleanup maintenance worker'),
+    COPILOT_ONBOARDING_FILE_TTL_HOURS: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(72)
+      .description('Hours to retain uploaded onboarding files after terminal job status'),
+    COPILOT_ONBOARDING_ORPHAN_FILE_TTL_HOURS: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(168)
+      .description('Hours to retain orphan onboarding files in temp directory'),
+    COPILOT_ONBOARDING_JOB_RETENTION_DAYS: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(30)
+      .description('Days to retain completed/failed/cancelled onboarding jobs before purge'),
+    COPILOT_ONBOARDING_MAX_ACTIVE_JOBS_PER_TENANT: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(3)
+      .description('Max concurrent active onboarding jobs per tenant'),
   })
   .unknown();
 
@@ -261,7 +301,7 @@ module.exports = {
     smtp: {
       host: envVars.SMTP_HOST,
       port: envVars.SMTP_PORT,
-      secure: envVars.SMTP_SECURE || false,
+      secure: envVars.SMTP_SECURE === 'true',
       auth: {
         user: envVars.SMTP_USERNAME,
         pass: envVars.SMTP_PASSWORD,
@@ -277,6 +317,10 @@ module.exports = {
   sms: {
     sms_api_key: envVars.SMS_API_KEY,
     sms_base_url: envVars.SMS_BASE_URL,
+    senderId: envVars.SMS_SENDER_ID,
+  },
+  socialAuth: {
+    sharedSecret: envVars.SOCIAL_AUTH_SHARED_SECRET,
   },
 
   socket: {
@@ -346,5 +390,20 @@ module.exports = {
     workerBatchSize: Number(envVars.COPILOT_WORKER_BATCH_SIZE),
     toolTimeoutMs: Number(envVars.COPILOT_TOOL_TIMEOUT_MS),
     toolLockTtlSec: Number(envVars.COPILOT_TOOL_LOCK_TTL_SEC),
+    onboardingWorkerConcurrency: Number(
+      envVars.COPILOT_ONBOARDING_WORKER_CONCURRENCY
+    ),
+    onboarding: {
+      maxRows: Number(envVars.COPILOT_ONBOARDING_MAX_ROWS),
+      queueAttempts: Number(envVars.COPILOT_ONBOARDING_QUEUE_ATTEMPTS),
+      queueBackoffMs: Number(envVars.COPILOT_ONBOARDING_QUEUE_BACKOFF_MS),
+      cleanupIntervalMs: Number(envVars.COPILOT_ONBOARDING_CLEANUP_INTERVAL_MS),
+      fileTtlHours: Number(envVars.COPILOT_ONBOARDING_FILE_TTL_HOURS),
+      orphanFileTtlHours: Number(envVars.COPILOT_ONBOARDING_ORPHAN_FILE_TTL_HOURS),
+      jobRetentionDays: Number(envVars.COPILOT_ONBOARDING_JOB_RETENTION_DAYS),
+      maxActiveJobsPerTenant: Number(
+        envVars.COPILOT_ONBOARDING_MAX_ACTIVE_JOBS_PER_TENANT
+      ),
+    },
   },
 };

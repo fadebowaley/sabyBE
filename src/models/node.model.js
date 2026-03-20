@@ -32,6 +32,7 @@ const nodeSchema = mongoose.Schema(
       default: null,
     },
     name: { type: String, required: true },
+    nodeStructures: { type: Boolean, default: false },
     isMain: { type: Boolean, default: false },
     address: { type: String },
     city: { type: String },

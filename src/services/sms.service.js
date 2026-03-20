@@ -7,8 +7,9 @@ const DEFAULT_SENDER_ID = 'N-Alert';
 const DEFAULT_CHANNEL = 'dnd';
 const DEFAULT_TYPE = 'plain';
 const NIGERIA_COUNTRY_CODE = '234';
+const SMS_HTTP_TIMEOUT_MS = 15000;
 const OTP_MESSAGE_TEMPLATE =
-  'Your Saby verification Pin is: {otp}. It expires in 30 minutes.';
+  'Your Saby verification Pin is: {otp}. It expires in 10 minutes.';
 
 // Configuration check
 const hasSmsConfig = config.sms.sms_api_key && config.sms.sms_base_url;
@@ -63,6 +64,7 @@ const makeApiRequest = async (endpoint, data = null, method = 'POST') => {
   const options = {
     method,
     url,
+    timeout: SMS_HTTP_TIMEOUT_MS,
     headers: {
       'Content-Type': 'application/json',
     },

@@ -5,6 +5,7 @@ const ApiError = require('../utils/ApiError');
 const { validateCustomFields } = require('./customField.service');
 const { USER_ESSENTIAL_FIELDS } = require('../config/essentials');
 const { getUsersInAdminNodeDescendants } = require('./nodeAccess.service');
+const { postgresPool } = require('../config/postgres');
 
 const buildUserResponse = (userDoc) => {
   if (!userDoc) {
@@ -221,6 +222,7 @@ const bulkSoftDeleteByTenantId = async (tenantId) => {
   // Initialize an array to store success and error results
   const successReport = [];
   const errorReport = [];
+  const deletedActorIds = [];
 
   // Fetch users by tenantId, excluding those already soft-deleted
   const usersToDelete = await User.find({
@@ -240,6 +242,7 @@ const bulkSoftDeleteByTenantId = async (tenantId) => {
       if (result.modifiedCount > 0) {
         // If the user was successfully soft deleted, add to the success report
         successReport.push({ userId: user.userId, email: user.email });
+        deletedActorIds.push(String(user._id));
       } else {
         // If no user was deleted, add to the error report
         errorReport.push({
@@ -256,6 +259,13 @@ const bulkSoftDeleteByTenantId = async (tenantId) => {
         error: error.message,
       });
     }
+  }
+
+  if (deletedActorIds.length > 0) {
+    await cleanupCopilotChatLogsForUsers({
+      tenantId,
+      actorIds: deletedActorIds,
+    });
   }
 
   return { successReport, errorReport };
@@ -939,6 +949,61 @@ const getUserNodes = async (userId) => {
   return nodes;
 };
 
+const cleanupCopilotChatLogsForUsers = async ({ tenantId, actorIds = [] }) => {
+  if (!tenantId) return { threadsDeleted: 0, turnsDeleted: 0, skipped: true };
+  const normalizedActorIds = Array.isArray(actorIds)
+    ? actorIds
+        .map((value) => String(value || '').trim())
+        .filter((value) => Boolean(value))
+    : [];
+
+  try {
+    if (normalizedActorIds.length > 0) {
+      const threadDelete = await postgresPool.query(
+        `DELETE FROM copilot.chat_threads
+          WHERE tenant_id = $1
+            AND actor_id = ANY($2::text[])`,
+        [String(tenantId), normalizedActorIds]
+      );
+      const turnDelete = await postgresPool.query(
+        `DELETE FROM copilot.chat_turn_logs
+          WHERE tenant_id = $1
+            AND actor_id = ANY($2::text[])`,
+        [String(tenantId), normalizedActorIds]
+      );
+      return {
+        threadsDeleted: Number(threadDelete.rowCount || 0),
+        turnsDeleted: Number(turnDelete.rowCount || 0),
+        skipped: false,
+      };
+    }
+
+    const threadDelete = await postgresPool.query(
+      `DELETE FROM copilot.chat_threads WHERE tenant_id = $1`,
+      [String(tenantId)]
+    );
+    const turnDelete = await postgresPool.query(
+      `DELETE FROM copilot.chat_turn_logs WHERE tenant_id = $1`,
+      [String(tenantId)]
+    );
+    return {
+      threadsDeleted: Number(threadDelete.rowCount || 0),
+      turnsDeleted: Number(turnDelete.rowCount || 0),
+      skipped: false,
+    };
+  } catch (error) {
+    const message = String(error?.message || '').toLowerCase();
+    if (message.includes('relation') && message.includes('does not exist')) {
+      return { threadsDeleted: 0, turnsDeleted: 0, skipped: true };
+    }
+    console.warn(
+      '[UserService.cleanupCopilotChatLogsForUsers] Failed to cleanup chat logs:',
+      error?.message || error
+    );
+    return { threadsDeleted: 0, turnsDeleted: 0, skipped: true };
+  }
+};
+
 /**
  * Delete user by id
  * @param {ObjectId} userId
@@ -951,6 +1016,10 @@ const deleteUserById = async (userId) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
   await user.remove();
+  await cleanupCopilotChatLogsForUsers({
+    tenantId: user.tenantId,
+    actorIds: [user._id || userId],
+  });
   return user;
 };
 
@@ -974,6 +1043,11 @@ const softDeleteUserById = async (userId) => {
 
     // Save the updated user
     await user.save();
+
+    await cleanupCopilotChatLogsForUsers({
+      tenantId: user.tenantId,
+      actorIds: [user._id || userId],
+    });
 
     return { deletedUser: user };
   } catch (error) {

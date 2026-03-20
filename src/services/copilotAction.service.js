@@ -414,7 +414,47 @@ const getActionById = async (tenantId, eventId) => {
   if (result.rows.length === 0) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Action event not found');
   }
-  return result.rows[0];
+
+  const event = result.rows[0];
+  if (event.status !== 'queued') {
+    return event;
+  }
+
+  // Safety reconciliation:
+  // If an outbox record has already dead-lettered, the API should not keep returning
+  // queued forever. This prevents client-side "timeout/still processing" loops.
+  const driftResult = await postgresPool.query(
+    `SELECT status, last_error
+     FROM copilot.action_outbox
+     WHERE event_id = $1
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [eventId]
+  );
+  const outbox = driftResult.rows[0];
+  if (!outbox || outbox.status !== 'dead_letter') {
+    return event;
+  }
+
+  const reconciled = await postgresPool.query(
+    `UPDATE copilot.action_events
+     SET status = 'failed',
+         error_message = COALESCE($2, error_message),
+         result_json = COALESCE(result_json, '{}'::jsonb) || jsonb_build_object(
+           'error',
+           COALESCE($2, error_message, 'Action moved to dead_letter'),
+           'deadLettered',
+           true
+         ),
+         updated_at = NOW()
+     WHERE tenant_id = $1
+       AND id = $3
+       AND status = 'queued'
+     RETURNING *`,
+    [tenantId, outbox.last_error || null, eventId]
+  );
+
+  return reconciled.rows[0] || event;
 };
 
 const getFeed = async ({

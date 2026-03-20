@@ -61,6 +61,14 @@ const mockCopilotOnboardingService = {
   validateOnboardingCsvDryRun: jest.fn(),
   importOnboardingCsv: jest.fn(),
 };
+const mockCopilotOnboardingJobService = {
+  createOnboardingJob: jest.fn(),
+  markOnboardingJobQueued: jest.fn(),
+  getOnboardingJobById: jest.fn(),
+  listOnboardingJobs: jest.fn(),
+  cancelOnboardingJob: jest.fn(),
+};
+const mockQueueOnboardingImportJob = jest.fn();
 
 jest.mock('../middlewares/auth', () => () => (req, res, next) => {
   req.user = {
@@ -83,6 +91,10 @@ jest.mock('../services/copilotToolRuntime.service', () => mockCopilotToolRuntime
 jest.mock('../services/copilotSessionContext.service', () => mockCopilotSessionContextService);
 jest.mock('../services/copilotEntityResolver.service', () => mockCopilotEntityResolverService);
 jest.mock('../services/copilotOnboarding.service', () => mockCopilotOnboardingService);
+jest.mock('../services/copilotOnboardingJob.service', () => mockCopilotOnboardingJobService);
+jest.mock('../queues/onboardingImport.queue', () => ({
+  queueOnboardingImportJob: (...args) => mockQueueOnboardingImportJob(...args),
+}));
 
 const app = require('../app');
 
@@ -702,5 +714,170 @@ describe('copilot routes api', () => {
         }),
       })
     );
+  });
+
+  test('POST /v1/copilot/onboarding/jobs uploads CSV and queues onboarding job', async () => {
+    const jobId = '7a4ee88a-c2e0-4efe-b9c3-105c8f8c7fc3';
+    mockCopilotOnboardingJobService.createOnboardingJob.mockResolvedValue({
+      deduped: false,
+      job: {
+        id: jobId,
+        tenant_id: 'tenant-1',
+        status: 'uploaded',
+        stage: 'uploaded',
+        progress_pct: 1,
+      },
+    });
+
+    const res = await request(app)
+      .post('/v1/copilot/onboarding/jobs')
+      .set('x-idempotency-key', 'onboarding-job-1')
+      .field('mode', 'import')
+      .attach(
+        'file',
+        Buffer.from('record_type,role_name\nrole,Pastor\n'),
+        'onboarding.csv'
+      );
+
+    expect(res.status).toBe(202);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        ok: true,
+        deduped: false,
+        message: 'Onboarding upload accepted',
+        job: expect.objectContaining({
+          id: jobId,
+          status: 'queued',
+          stage: 'queued',
+          progress_pct: 5,
+        }),
+      })
+    );
+    expect(mockCopilotOnboardingJobService.createOnboardingJob).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        actorUserId: 'user-1',
+        mode: 'import',
+        idempotencyKey: 'onboarding-job-1',
+      })
+    );
+    expect(mockCopilotOnboardingJobService.markOnboardingJobQueued).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      jobId,
+      actorUserId: 'user-1',
+    });
+    expect(mockQueueOnboardingImportJob).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        jobId,
+      })
+    );
+  });
+
+  test('POST /v1/copilot/onboarding/jobs dedupes by idempotency key without requeue', async () => {
+    const jobId = '8f11f718-8c8d-4a8c-a85a-f0114e988f6a';
+    mockCopilotOnboardingJobService.createOnboardingJob.mockResolvedValue({
+      deduped: true,
+      job: {
+        id: jobId,
+        tenant_id: 'tenant-1',
+        status: 'queued',
+        stage: 'queued',
+        progress_pct: 5,
+      },
+    });
+
+    const res = await request(app)
+      .post('/v1/copilot/onboarding/jobs')
+      .set('x-idempotency-key', 'onboarding-job-2')
+      .field('mode', 'import')
+      .attach(
+        'file',
+        Buffer.from('record_type,role_name\nrole,Pastor\n'),
+        'onboarding.csv'
+      );
+
+    expect(res.status).toBe(202);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        ok: true,
+        deduped: true,
+        message: 'Onboarding upload already accepted for this idempotency key',
+        job: expect.objectContaining({
+          id: jobId,
+          status: 'queued',
+          stage: 'queued',
+          progress_pct: 5,
+        }),
+      })
+    );
+    expect(mockCopilotOnboardingJobService.markOnboardingJobQueued).not.toHaveBeenCalled();
+    expect(mockQueueOnboardingImportJob).not.toHaveBeenCalled();
+  });
+
+  test('GET /v1/copilot/onboarding/jobs returns onboarding history list', async () => {
+    mockCopilotOnboardingJobService.listOnboardingJobs.mockResolvedValue([
+      {
+        id: '2fd9eac9-a3c9-4eff-9bef-df7c53bbd9a8',
+        tenant_id: 'tenant-1',
+        status: 'completed',
+      },
+    ]);
+
+    const res = await request(app).get(
+      '/v1/copilot/onboarding/jobs?status=completed&limit=5&offset=0'
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      ok: true,
+      total: 1,
+      results: [
+        {
+          id: '2fd9eac9-a3c9-4eff-9bef-df7c53bbd9a8',
+          tenant_id: 'tenant-1',
+          status: 'completed',
+        },
+      ],
+    });
+    expect(mockCopilotOnboardingJobService.listOnboardingJobs).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      threadId: null,
+      status: 'completed',
+      limit: 5,
+      offset: 0,
+    });
+  });
+
+  test('POST /v1/copilot/onboarding/jobs/:jobId/cancel cancels onboarding job', async () => {
+    const jobId = 'f8b17dcb-17de-4f4f-a3f6-bec8f6050c58';
+    mockCopilotOnboardingJobService.cancelOnboardingJob.mockResolvedValue({
+      id: jobId,
+      tenant_id: 'tenant-1',
+      status: 'cancelled',
+      stage: 'cancelled',
+    });
+
+    const res = await request(app)
+      .post(`/v1/copilot/onboarding/jobs/${jobId}/cancel`)
+      .send({ reason: 'User requested stop' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        ok: true,
+        message: 'Onboarding job cancelled',
+        job: expect.objectContaining({
+          id: jobId,
+          status: 'cancelled',
+        }),
+      })
+    );
+    expect(mockCopilotOnboardingJobService.cancelOnboardingJob).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      jobId,
+      cancelledBy: 'user-1',
+      reason: 'User requested stop',
+    });
   });
 });

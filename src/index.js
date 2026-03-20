@@ -11,6 +11,7 @@ const {
   testRedisConnection,
   closeRedis,
 } = require('./config/redis');
+const { assertCopilotSchemaReady } = require('./services/copilotSchemaGuard.service');
 const { initializeSocket } = require('./config/socket');
 const { initializeWorkers, shutdownWorkers } = require('./workers/index');
 const { startNodeSync, stopNodeSync } = require('./services/nodeSync.service');
@@ -66,6 +67,8 @@ const connectToDatabases = async () => {
       if (process.env.WORKERS_ENABLED === 'false') {
         logger.info('⊘ Background workers disabled (WORKERS_ENABLED=false)');
       } else {
+        await assertCopilotSchemaReady();
+        logger.info('✅ Copilot schema check passed');
         await initializeWorkers();
       }
 

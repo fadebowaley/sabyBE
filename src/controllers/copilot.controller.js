@@ -12,6 +12,8 @@ const copilotSessionContextService = require('../services/copilotSessionContext.
 const copilotEntityResolverService = require('../services/copilotEntityResolver.service');
 const copilotProjectWizardService = require('../services/copilotProjectWizard.service');
 const copilotOnboardingService = require('../services/copilotOnboarding.service');
+const copilotOnboardingJobService = require('../services/copilotOnboardingJob.service');
+const { queueOnboardingImportJob } = require('../queues/onboardingImport.queue');
 
 const resolveUserId = (user = {}) => user.id || user._id || user.userId || null;
 const escapeCsv = (value) => {
@@ -640,6 +642,192 @@ const importOnboardingCsv = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).send(result);
 });
 
+const createOnboardingJob = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const actorUserId = resolveUserId(req.user);
+  const file = req.file;
+  if (!file) {
+    res.status(httpStatus.BAD_REQUEST).send({
+      code: httpStatus.BAD_REQUEST,
+      message: 'CSV file is required (field: file)',
+    });
+    return;
+  }
+
+  const modeRaw = String(req.body?.mode || 'import').toLowerCase();
+  const mode = modeRaw === 'dry_run' ? 'dry_run' : 'import';
+  const threadId =
+    req.body?.threadId && String(req.body.threadId).trim()
+      ? String(req.body.threadId).trim()
+      : null;
+  const idempotencyKey =
+    req.body?.idempotencyKey ||
+    req.headers['x-idempotency-key'] ||
+    req.headers['idempotency-key'] ||
+    null;
+
+  const created = await copilotOnboardingJobService.createOnboardingJob({
+    tenantId,
+    actorUserId,
+    threadId,
+    mode,
+    file,
+    idempotencyKey,
+  });
+  const { job, deduped } = created;
+
+  if (!deduped) {
+    await copilotOnboardingJobService.markOnboardingJobQueued({
+      tenantId,
+      jobId: job.id,
+      actorUserId,
+    });
+    await queueOnboardingImportJob({
+      jobId: job.id,
+      tenantId,
+      actorUser: req.user || {},
+    });
+  }
+
+  res.status(httpStatus.ACCEPTED).send({
+    ok: true,
+    message: deduped
+      ? 'Onboarding upload already accepted for this idempotency key'
+      : 'Onboarding upload accepted',
+    deduped: Boolean(deduped),
+    job: {
+      ...job,
+      ...(deduped
+        ? {}
+        : {
+            status: 'queued',
+            stage: 'queued',
+            progress_pct: 5,
+          }),
+    },
+  });
+});
+
+const getOnboardingJobById = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const includeEvents = req.query.includeEvents !== 'false';
+  const eventLimit = req.query.eventLimit;
+  const job = await copilotOnboardingJobService.getOnboardingJobById({
+    tenantId,
+    jobId: req.params.jobId,
+    includeEvents,
+    eventLimit,
+  });
+  res.status(httpStatus.OK).send({
+    ok: true,
+    job,
+  });
+});
+
+const listOnboardingJobs = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const jobs = await copilotOnboardingJobService.listOnboardingJobs({
+    tenantId,
+    threadId: req.query.threadId || null,
+    status: req.query.status || null,
+    limit: req.query.limit,
+    offset: req.query.offset,
+  });
+  res.status(httpStatus.OK).send({
+    ok: true,
+    total: jobs.length,
+    results: jobs,
+  });
+});
+
+const cancelOnboardingJob = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const actorUserId = resolveUserId(req.user);
+  const cancelled = await copilotOnboardingJobService.cancelOnboardingJob({
+    tenantId,
+    jobId: req.params.jobId,
+    cancelledBy: actorUserId,
+    reason: req.body?.reason || 'Cancelled by user',
+  });
+  res.status(httpStatus.OK).send({
+    ok: true,
+    message: cancelled?.alreadyTerminal
+      ? 'Job is already in a terminal state'
+      : 'Onboarding job cancelled',
+    job: cancelled,
+  });
+});
+
+const streamOnboardingJobEvents = async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const jobId = req.params.jobId;
+  const eventLimit = req.query.eventLimit;
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  if (res.flushHeaders) res.flushHeaders();
+
+  const send = (event, data) => {
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  let closed = false;
+  let timer = null;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    clearInterval(timer);
+    res.end();
+  };
+
+  const emitSnapshot = async () => {
+    try {
+      const job = await copilotOnboardingJobService.getOnboardingJobById({
+        tenantId,
+        jobId,
+        includeEvents: true,
+        eventLimit,
+      });
+      send('job', {
+        id: job.id,
+        status: job.status,
+        stage: job.stage,
+        progressPct: Number(job.progress_pct || 0),
+        summary: job.summary_json || {},
+        errors: job.error_json || {},
+        events: job.events || [],
+        totalRows: Number(job.total_rows || 0),
+        processedRows: Number(job.processed_rows || 0),
+      });
+      if (
+        ['completed', 'failed', 'cancelled'].includes(
+          String(job.status || '').toLowerCase()
+        )
+      ) {
+        send('done', { id: job.id, status: job.status });
+        close();
+      }
+    } catch (error) {
+      send('error', { message: error.message || 'Failed to stream job status' });
+      close();
+    }
+  };
+
+  req.on('close', close);
+  req.on('end', close);
+
+  send('connected', { ok: true, jobId });
+  await emitSnapshot();
+  if (closed) return;
+
+  timer = setInterval(() => {
+    emitSnapshot().catch(() => null);
+  }, 2000);
+};
+
 module.exports = {
   createAction,
   reverseAction,
@@ -677,4 +865,9 @@ module.exports = {
   getProjectWizardDraft,
   clearProjectWizardDraft,
   importOnboardingCsv,
+  createOnboardingJob,
+  listOnboardingJobs,
+  cancelOnboardingJob,
+  getOnboardingJobById,
+  streamOnboardingJobEvents,
 };

@@ -3,6 +3,7 @@ const auth = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
 const copilotValidation = require('../../validations/copilot.validation');
 const copilotController = require('../../controllers/copilot.controller');
+const { handleOnboardingCsvUpload } = require('../../middlewares/copilotOnboardingUpload');
 
 const router = express.Router();
 
@@ -222,6 +223,36 @@ router.post(
   auth(),
   validate(copilotValidation.importOnboardingCsv),
   copilotController.importOnboardingCsv
+);
+router.post(
+  '/onboarding/jobs',
+  auth(),
+  handleOnboardingCsvUpload,
+  copilotController.createOnboardingJob
+);
+router.get(
+  '/onboarding/jobs',
+  auth(),
+  validate(copilotValidation.listOnboardingJobs),
+  copilotController.listOnboardingJobs
+);
+router.post(
+  '/onboarding/jobs/:jobId/cancel',
+  auth(),
+  validate(copilotValidation.cancelOnboardingJob),
+  copilotController.cancelOnboardingJob
+);
+router.get(
+  '/onboarding/jobs/:jobId',
+  auth(),
+  validate(copilotValidation.getOnboardingJobById),
+  copilotController.getOnboardingJobById
+);
+router.get(
+  '/onboarding/jobs/:jobId/events',
+  auth(),
+  validate(copilotValidation.getOnboardingJobById),
+  copilotController.streamOnboardingJobEvents
 );
 
 module.exports = router;

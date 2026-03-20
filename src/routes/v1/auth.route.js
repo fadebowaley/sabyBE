@@ -81,6 +81,26 @@ router.post(
   authController.login
 );
 
+router.post(
+  '/phone-login/request-otp',
+  loginLimiter,
+  validate(authValidation.phoneLoginRequestOtp),
+  authController.requestPhoneLoginOtp
+);
+
+router.post(
+  '/phone-login/verify-otp',
+  loginLimiter,
+  validate(authValidation.phoneLoginVerifyOtp),
+  authController.verifyPhoneLoginOtp
+);
+
+router.post(
+  '/social-login',
+  validate(authValidation.socialLogin),
+  authController.socialLogin
+);
+
 /**
  * @swagger
  * /auth/login:
@@ -637,6 +657,20 @@ router.post(
   authController.requestPhoneChangeOtp
 );
 
+router.post(
+  '/onboarding/phone-otp/send',
+  auth(),
+  validate(authValidation.onboardingPhoneOtpSend),
+  authController.sendOnboardingPhoneOtp
+);
+
+router.post(
+  '/onboarding/phone-otp/verify',
+  auth(),
+  validate(authValidation.onboardingPhoneOtpVerify),
+  authController.verifyOnboardingPhoneOtp
+);
+
 /**
  * @swagger
  * /auth/request-phone-change-otp:
@@ -682,6 +716,22 @@ router.get(
   '/check-api-key-status',
   auth(),
   authController.checkApiKeyStatus
+);
+
+router.get('/onboarding/profile', auth(), authController.getOnboardingProfile);
+
+router.post(
+  '/onboarding/profile',
+  auth(),
+  validate(authValidation.onboardingProfileUpsert),
+  authController.upsertOnboardingProfile
+);
+
+router.patch(
+  '/onboarding/profile/draft',
+  auth(),
+  validate(authValidation.onboardingDraftUpsert),
+  authController.upsertOnboardingDraft
 );
 
 /**

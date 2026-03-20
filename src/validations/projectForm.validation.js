@@ -259,7 +259,9 @@ const workflowSchema = Joi.object({
   name: Joi.string().required().trim().min(1).max(100),
   enabled: Joi.boolean().default(true),
   type: Joi.string().valid('approval', 'review', 'notification', 'custom').default('approval'),
-  triggerOn: Joi.string().valid('submit', 'update', 'manual').default('submit'),
+  triggerOn: Joi.string()
+    .valid('submission', 'submit', 'update', 'manual')
+    .default('submission'),
   steps: Joi.array().items(workflowStepSchema).min(1).required(),
   metadata: Joi.object().unknown(true).optional(),
   description: Joi.string().allow('', null).optional(),

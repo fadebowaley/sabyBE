@@ -367,6 +367,36 @@ const importOnboardingCsv = {
   }),
 };
 
+const getOnboardingJobById = {
+  params: Joi.object().keys({
+    jobId: Joi.string().guid({ version: ['uuidv4', 'uuidv5'] }).required(),
+  }),
+  query: Joi.object().keys({
+    includeEvents: Joi.string().valid('true', 'false').optional(),
+    eventLimit: Joi.number().integer().min(1).max(200).optional(),
+  }),
+};
+
+const listOnboardingJobs = {
+  query: Joi.object().keys({
+    threadId: Joi.string().max(128).optional(),
+    status: Joi.string()
+      .valid('uploaded', 'queued', 'validating', 'importing', 'completed', 'failed', 'cancelled')
+      .optional(),
+    limit: Joi.number().integer().min(1).max(200).optional().default(20),
+    offset: Joi.number().integer().min(0).optional().default(0),
+  }),
+};
+
+const cancelOnboardingJob = {
+  params: Joi.object().keys({
+    jobId: Joi.string().guid({ version: ['uuidv4', 'uuidv5'] }).required(),
+  }),
+  body: Joi.object().keys({
+    reason: Joi.string().max(500).optional().allow(''),
+  }),
+};
+
 module.exports = {
   createAction,
   reverseAction,
@@ -404,4 +434,7 @@ module.exports = {
   getProjectWizardDraft,
   clearProjectWizardDraft,
   importOnboardingCsv,
+  listOnboardingJobs,
+  cancelOnboardingJob,
+  getOnboardingJobById,
 };

@@ -41,3 +41,4 @@ module.exports.StorageSettings = require('./storageSettings.model');
 module.exports.StorageActivity = require('./storageActivity.model');
 module.exports.Waitlist = require('./waitlist.model');
 module.exports.TenantConfig = require('./tenantConfig.model');
+module.exports.TenantOnboarding = require('./tenantOnboarding.model');

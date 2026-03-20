@@ -151,16 +151,34 @@ const sendUserOtp = async (user, options = {}) => {
 
   await User.updateOne({ _id: user._id }, update); // No validation issues
 
+  const channelStatus = {
+    email: {
+      attempted: Boolean(user.email),
+      sent: false,
+      error: null,
+    },
+    sms: {
+      attempted: Boolean(smsService.hasSmsConfig && user.phoneNumber),
+      sent: false,
+      error: null,
+    },
+  };
   const deliveryChannels = [];
 
-  try {
-    await sendOtpEmail(user.email, otp);
-    logger.info(`✅ OTP email queued for ${user.email}`);
-    deliveryChannels.push('email');
-  } catch (error) {
-    logger.warn(
-      `⚠️ Failed to send OTP email to ${user.email}: ${error.message}`
-    );
+  if (user.email) {
+    try {
+      await sendOtpEmail(user.email, otp);
+      logger.info(`✅ OTP email queued for ${user.email}`);
+      channelStatus.email.sent = true;
+      deliveryChannels.push('email');
+    } catch (error) {
+      channelStatus.email.error = error.message;
+      logger.warn(
+        `⚠️ Failed to send OTP email to ${user.email}: ${error.message}`
+      );
+    }
+  } else {
+    channelStatus.email.error = 'No email available for user.';
   }
 
   if (smsService.hasSmsConfig && user.phoneNumber) {
@@ -170,8 +188,10 @@ const sendUserOtp = async (user, options = {}) => {
         otp,
       });
       logger.info(`✅ OTP SMS dispatched to ${user.phoneNumber}`);
+      channelStatus.sms.sent = true;
       deliveryChannels.push('sms');
     } catch (error) {
+      channelStatus.sms.error = error.response?.data || error.message;
       logger.warn(
         `⚠️ Failed to send OTP SMS to ${user.phoneNumber}: ${
           error.response?.data || error.message
@@ -190,7 +210,12 @@ const sendUserOtp = async (user, options = {}) => {
     );
   }
 
-  return { email: user.email, otp, channels: deliveryChannels };
+  return {
+    email: user.email,
+    otp,
+    channels: deliveryChannels,
+    channelStatus,
+  };
 };
 
 /**

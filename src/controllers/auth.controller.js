@@ -1,16 +1,133 @@
 const httpStatus = require('http-status');
+const crypto = require('crypto');
 const catchAsync = require('../utils/catchAsync');
 const ApiError = require('../utils/ApiError');
 const moment = require('moment');
+const config = require('../config/config');
+const smsService = require('../services/sms.service');
 const {
   authService,
   userService,
   tokenService,
   emailService,
   apiKeyService,
+  tenantOnboardingService,
 } = require('../services');
 const { Role, User } = require('../models');
 const logger = require('../config/logger');
+
+const ONBOARDING_PHONE_OTP_TTL_MINUTES = 10;
+const ONBOARDING_PHONE_OTP_MAX_ATTEMPTS = 5;
+const ONBOARDING_CHANNEL_TIMEOUT_MS = 12000;
+
+const maskPhoneForDisplay = (phoneNumber = '') => {
+  const value = String(phoneNumber || '');
+  if (value.length <= 4) return value;
+  return `${'*'.repeat(Math.max(0, value.length - 4))}${value.slice(-4)}`;
+};
+
+const maskEmailForDisplay = (email = '') => {
+  const value = String(email || '').trim().toLowerCase();
+  const [local, domain] = value.split('@');
+  if (!local || !domain) return value;
+  if (local.length <= 2) return `${local[0] || '*'}***@${domain}`;
+  return `${local.slice(0, 2)}***@${domain}`;
+};
+
+const hashOnboardingPhoneOtp = ({ userId, phoneNumber, otp }) =>
+  crypto
+    .createHmac('sha256', String(config.jwt.secret || 'saby'))
+    .update(`${String(userId)}:${String(phoneNumber)}:${String(otp)}`)
+    .digest('hex');
+
+const getOnboardingPhoneOtpState = (user) => {
+  const customFields = user?.customFields || {};
+  return customFields?.onboarding?.phoneOtp || null;
+};
+
+const setOnboardingPhoneOtpState = (user, state) => {
+  const customFields = { ...(user?.customFields || {}) };
+  const onboarding = { ...(customFields.onboarding || {}) };
+  onboarding.phoneOtp = state;
+  customFields.onboarding = onboarding;
+  user.customFields = customFields;
+};
+
+const withTimeout = (promise, timeoutMs, timeoutMessage) =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(timeoutMessage));
+    }, timeoutMs);
+    Promise.resolve(promise)
+      .then((result) => {
+        clearTimeout(timer);
+        resolve(result);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+
+const buildAuthUserResponse = async (user) => {
+  let permissions = [];
+  if (
+    (user.isAdmin || (!user.isOwner && !user.isSuper && !user.isSaby)) &&
+    user.roles &&
+    user.roles.length > 0
+  ) {
+    const userRoles = await Role.find({ _id: { $in: user.roles } }).populate(
+      'permissions'
+    );
+
+    const allPermissions = new Set();
+    userRoles.forEach((role) => {
+      if (role.permissions && Array.isArray(role.permissions)) {
+        role.permissions.forEach((perm) => {
+          const permName =
+            typeof perm === 'string'
+              ? perm
+              : perm.name || perm._id?.toString();
+          if (permName) {
+            allPermissions.add(permName);
+          }
+        });
+      }
+    });
+
+    permissions = Array.from(allPermissions);
+  }
+
+  return {
+    id: user.id,
+    userId: user.userId,
+    haloId: user.haloId,
+    tenantId: user.tenantId,
+    firstname: user.firstname,
+    lastname: user.lastname,
+    name: `${user.firstname} ${user.lastname}`.trim(),
+    email: user.email,
+    phoneNumber: user.phoneNumber,
+    avatar: user.avatar,
+    isOwner: user.isOwner,
+    isSuper: user.isSuper,
+    isSaby: user.isSaby,
+    isAdmin: user.isAdmin,
+    isAgreed: user.isAgreed,
+    isEmailVerified: user.isEmailVerified,
+    isPhoneVerified: user.isPhoneVerified,
+    status: user.status,
+    createdAt: user.createdAt,
+    roles: user.roles,
+    permissions: permissions.length > 0 ? permissions : undefined,
+  };
+};
+
+const buildAuthLoginPayload = async (user) => {
+  const tokens = await tokenService.generateAuthTokens(user);
+  const userResponse = await buildAuthUserResponse(user);
+  return { user: userResponse, tokens };
+};
 
 /**
  * Register a new user
@@ -70,78 +187,8 @@ const login = catchAsync(async (req, res) => {
       password,
       'web'
     );
-    const tokens = await tokenService.generateAuthTokens(user);
-
-    // Populate role permissions for isAdmin and Regular users
-    let permissions = [];
-    if (
-      (user.isAdmin || (!user.isOwner && !user.isSuper && !user.isSaby)) &&
-      user.roles &&
-      user.roles.length > 0
-    ) {
-      const userRoles = await Role.find({ _id: { $in: user.roles } }).populate(
-        'permissions'
-      );
-
-      const allPermissions = new Set();
-      userRoles.forEach((role) => {
-        if (role.permissions && Array.isArray(role.permissions)) {
-          role.permissions.forEach((perm) => {
-            const permName =
-              typeof perm === 'string'
-                ? perm
-                : perm.name || perm._id?.toString();
-            if (permName) {
-              allPermissions.add(permName);
-            }
-          });
-        }
-      });
-
-      permissions = Array.from(allPermissions);
-
-      if (user.isAdmin) {
-        logger.info(
-          `[AuthController.login] isAdmin user permissions from roles: ${JSON.stringify(
-            permissions
-          )} (${permissions.length} permissions)`
-        );
-        if (permissions.length === 0) {
-          logger.warn(
-            `[AuthController.login] WARNING: isAdmin user has NO permissions! User roles: ${JSON.stringify(
-              user.roles
-            )}`
-          );
-        }
-      }
-    }
-
-    // Send comprehensive user data for frontend
-    const userResponse = {
-      id: user.id,
-      userId: user.userId,
-      haloId: user.haloId,
-      tenantId: user.tenantId,
-      firstname: user.firstname,
-      lastname: user.lastname,
-      name: `${user.firstname} ${user.lastname}`.trim(),
-      email: user.email,
-      phoneNumber: user.phoneNumber,
-      avatar: user.avatar,
-      isOwner: user.isOwner,
-      isSuper: user.isSuper,
-      isSaby: user.isSaby,
-      isAdmin: user.isAdmin,
-      isAgreed: user.isAgreed,
-      isEmailVerified: user.isEmailVerified,
-      isPhoneVerified: user.isPhoneVerified,
-      status: user.status,
-      createdAt: user.createdAt,
-      roles: user.roles,
-      permissions: permissions.length > 0 ? permissions : undefined, // Only include if populated
-    };
-
-    res.send({ user: userResponse, tokens });
+    const payload = await buildAuthLoginPayload(user);
+    res.send(payload);
   } catch (error) {
     // If user exists but is unverified, return phone number for OTP flow
     if (error.name === 'OtpNotVerified') {
@@ -173,6 +220,120 @@ const login = catchAsync(async (req, res) => {
     // Re-throw other errors to be handled by error middleware
     throw error;
   }
+});
+
+const requestPhoneLoginOtp = catchAsync(async (req, res) => {
+  const rawPhone = String(req.body?.phoneNumber || '').trim();
+  if (!rawPhone) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Phone number is required.');
+  }
+
+  const user = await userService.getUserByPhone(rawPhone);
+  if (!user) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'No account found for this phone number. Please create an account to continue.'
+    );
+  }
+
+  const delivery = await authService.sendUserOtp(user);
+  const emailSent = Boolean(delivery?.channelStatus?.email?.sent);
+  const smsSent = Boolean(delivery?.channelStatus?.sms?.sent);
+  let message = 'OTP sent successfully.';
+  if (smsSent && emailSent) {
+    message = 'OTP sent via SMS and email fallback.';
+  } else if (smsSent && !emailSent) {
+    message = 'OTP sent via SMS. Email fallback failed.';
+  } else if (!smsSent && emailSent) {
+    message = 'OTP sent via email fallback. SMS delivery failed.';
+  }
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    message,
+    data: {
+      destination: user.phoneNumber ? maskPhoneForDisplay(user.phoneNumber) : null,
+      email: user.email ? maskEmailForDisplay(user.email) : null,
+      channels: Array.isArray(delivery?.channels) ? delivery.channels : [],
+      channelStatus: delivery?.channelStatus || null,
+    },
+  });
+});
+
+const verifyPhoneLoginOtp = catchAsync(async (req, res) => {
+  const rawPhone = String(req.body?.phoneNumber || '').trim();
+  const rawOtp = String(req.body?.otp || '')
+    .replace(/\D/g, '')
+    .slice(0, 6);
+  if (!rawPhone || rawOtp.length !== 6) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Phone number and 6-digit OTP are required.');
+  }
+
+  const user = await userService.getUserByPhone(rawPhone);
+  if (!user) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid OTP code.');
+  }
+
+  const { success } = await authService.verifyOtp(user.email, rawOtp, false);
+  if (!success) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid OTP code.');
+  }
+
+  if (!user.isPhoneVerified) {
+    user.isPhoneVerified = true;
+    await user.save();
+  }
+
+  const refreshedUser = await userService.getUserById(user.id);
+  const payload = await buildAuthLoginPayload(refreshedUser);
+  res.status(httpStatus.OK).send(payload);
+});
+
+const socialLogin = catchAsync(async (req, res) => {
+  const configuredSecret = String(config.socialAuth?.sharedSecret || '').trim();
+  if (!configuredSecret) {
+    throw new ApiError(
+      httpStatus.SERVICE_UNAVAILABLE,
+      'Social authentication is not configured.'
+    );
+  }
+
+  const providedSecret = String(req.headers['x-social-auth-secret'] || '').trim();
+  if (!providedSecret || providedSecret !== configuredSecret) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Unauthorized social login request.');
+  }
+
+  const provider = String(req.body?.provider || '').toLowerCase();
+  const email = String(req.body?.email || '')
+    .trim()
+    .toLowerCase();
+
+  if (!['google', 'apple'].includes(provider)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Unsupported social provider.');
+  }
+  if (!email) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Email is required for social login.');
+  }
+
+  const user = await userService.getUserByEmail(email);
+  if (!user) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'No account found for this social identity. Sign up with email/password first.'
+    );
+  }
+
+  if (!user.otpVerified || !user.isEmailVerified || !user.status) {
+    await userService.updateUserById(user.id, {
+      otpVerified: true,
+      isEmailVerified: true,
+      status: true,
+    });
+  }
+
+  const refreshedUser = await userService.getUserById(user.id);
+  const payload = await buildAuthLoginPayload(refreshedUser);
+  res.status(httpStatus.OK).send(payload);
 });
 
 /**
@@ -541,7 +702,6 @@ const requestPhoneChangeOtp = catchAsync(async (req, res) => {
   );
 
   // Send OTP via SMS
-  const smsService = require('../services/sms.service');
   await smsService.sendOtpSms({
     phoneNumber: user.phoneNumber,
     otp,
@@ -651,9 +811,333 @@ const checkApiKeyStatus = catchAsync(async (req, res) => {
   });
 });
 
+const sendOnboardingPhoneOtp = catchAsync(async (req, res) => {
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+  if (!(user.isOwner || user.isSuper || user.isSaby)) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Only tenant owner accounts can request onboarding phone OTP.'
+    );
+  }
+
+  const rawPhone = String(req.body?.phoneNumber || '').trim();
+  if (!rawPhone) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Phone number is required.');
+  }
+
+  const normalizedPhone = smsService.formatPhoneNumber(rawPhone);
+  if (!/^\d{10,15}$/.test(normalizedPhone)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid phone number format.');
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = moment().add(ONBOARDING_PHONE_OTP_TTL_MINUTES, 'minutes').toDate();
+
+  const otpState = {
+    provider: 'termii',
+    phoneNumber: normalizedPhone,
+    otpHash: hashOnboardingPhoneOtp({
+      userId: user._id,
+      phoneNumber: normalizedPhone,
+      otp,
+    }),
+    expiresAt: expiresAt.toISOString(),
+    attempts: 0,
+    maxAttempts: ONBOARDING_PHONE_OTP_MAX_ATTEMPTS,
+    verified: false,
+    sentAt: new Date().toISOString(),
+    verifiedAt: null,
+  };
+  setOnboardingPhoneOtpState(user, otpState);
+  await user.save();
+
+  let smsDelivery = {
+    sent: false,
+    pending: false,
+    response: null,
+    error: smsService.hasSmsConfig
+      ? null
+      : 'SMS provider is not configured. Set SMS_BASE_URL and SMS_API_KEY.',
+  };
+  let emailDelivery = {
+    sent: false,
+    pending: Boolean(user.email),
+    error: user.email ? null : 'Owner account has no email address.',
+  };
+
+  const emailPromise = user.email
+    ? (async () => {
+        try {
+          await withTimeout(
+            emailService.sendOtpEmail(user.email, otp),
+            ONBOARDING_CHANNEL_TIMEOUT_MS,
+            'Email delivery timed out'
+          );
+          emailDelivery = {
+            sent: true,
+            pending: false,
+            error: null,
+          };
+        } catch (error) {
+          emailDelivery = {
+            sent: false,
+            pending: false,
+            error: error?.message || 'Email send failed',
+          };
+        }
+        return emailDelivery;
+      })()
+    : Promise.resolve(emailDelivery);
+
+  if (smsService.hasSmsConfig) {
+    try {
+      const response = await withTimeout(
+        smsService.sendOtpSms({
+          phoneNumber: normalizedPhone,
+          otp,
+        }),
+        ONBOARDING_CHANNEL_TIMEOUT_MS,
+        'SMS delivery timed out'
+      );
+      smsDelivery = {
+        sent: true,
+        pending: false,
+        response,
+        error: null,
+      };
+    } catch (error) {
+      smsDelivery = {
+        sent: false,
+        pending: false,
+        response: null,
+        error: error?.response?.data || error?.message || 'SMS send failed',
+      };
+    }
+  }
+
+  if (smsDelivery.sent) {
+    void emailPromise.then((finalEmail) => {
+      if (finalEmail?.sent) {
+        logger.info('[Auth] onboarding_phone_otp_email_fallback_sent', {
+          userId: String(user._id),
+          tenantId: user.tenantId,
+          email: user.email,
+        });
+      } else if (finalEmail && finalEmail.error) {
+        logger.warn('[Auth] onboarding_phone_otp_email_fallback_failed', {
+          userId: String(user._id),
+          tenantId: user.tenantId,
+          email: user.email,
+          error: finalEmail.error,
+        });
+      }
+    });
+
+    return res.status(httpStatus.OK).send({
+      success: true,
+      message: emailDelivery.pending
+        ? 'OTP sent via SMS. Email fallback is being processed.'
+        : emailDelivery.sent
+          ? 'OTP sent via SMS and email.'
+          : 'OTP sent via SMS. Email fallback failed.',
+      data: {
+        provider: 'termii',
+        providerConfigured: smsService.hasSmsConfig,
+        destination: maskPhoneForDisplay(normalizedPhone),
+        email: user.email ? maskEmailForDisplay(user.email) : null,
+        expiresInMinutes: ONBOARDING_PHONE_OTP_TTL_MINUTES,
+        channels: {
+          sms: {
+            sent: smsDelivery.sent,
+            pending: false,
+            error: smsDelivery.error,
+            providerResponse: smsDelivery.response,
+          },
+          email: {
+            sent: emailDelivery.sent,
+            pending: emailDelivery.pending,
+            error: emailDelivery.error,
+          },
+        },
+      },
+    });
+  }
+
+  const finalEmailDelivery = await emailPromise;
+
+  if (!smsDelivery.sent && !finalEmailDelivery.sent) {
+    logger.error('[Auth] onboarding_phone_otp_all_delivery_failed', {
+      userId: String(user._id),
+      tenantId: user.tenantId,
+      phoneNumber: normalizedPhone,
+      email: user.email,
+      smsError: smsDelivery.error,
+      emailError: finalEmailDelivery.error,
+    });
+    throw new ApiError(
+      httpStatus.BAD_GATEWAY,
+      'Failed to send OTP via SMS and email channels. Please retry shortly.'
+    );
+  }
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    message:
+      smsDelivery.sent && finalEmailDelivery.sent
+        ? 'OTP sent via SMS and email.'
+        : smsDelivery.sent
+          ? 'OTP sent via SMS. Email fallback failed.'
+          : 'OTP sent via email. SMS delivery failed.',
+    data: {
+      provider: 'termii',
+      providerConfigured: smsService.hasSmsConfig,
+      destination: maskPhoneForDisplay(normalizedPhone),
+      email: user.email ? maskEmailForDisplay(user.email) : null,
+      expiresInMinutes: ONBOARDING_PHONE_OTP_TTL_MINUTES,
+      channels: {
+        sms: {
+          sent: smsDelivery.sent,
+          pending: false,
+          error: smsDelivery.error,
+          providerResponse: smsDelivery.response,
+        },
+        email: {
+          sent: finalEmailDelivery.sent,
+          pending: false,
+          error: finalEmailDelivery.error,
+        },
+      },
+    },
+  });
+});
+
+const verifyOnboardingPhoneOtp = catchAsync(async (req, res) => {
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+  if (!(user.isOwner || user.isSuper || user.isSaby)) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Only tenant owner accounts can verify onboarding phone OTP.'
+    );
+  }
+
+  const rawPhone = String(req.body?.phoneNumber || '').trim();
+  const rawOtp = String(req.body?.otp || '')
+    .replace(/\D/g, '')
+    .slice(0, 6);
+  if (!rawPhone || rawOtp.length !== 6) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Phone number and 6-digit OTP are required.');
+  }
+
+  const normalizedPhone = smsService.formatPhoneNumber(rawPhone);
+  const otpState = getOnboardingPhoneOtpState(user);
+  if (!otpState) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'No OTP request found. Request a new code.');
+  }
+
+  if (otpState.phoneNumber !== normalizedPhone) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Phone number does not match the last OTP request.'
+    );
+  }
+
+  if (otpState.verified) {
+    return res.status(httpStatus.OK).send({
+      success: true,
+      message: 'Phone number already verified.',
+      data: {
+        destination: maskPhoneForDisplay(normalizedPhone),
+      },
+    });
+  }
+
+  const now = Date.now();
+  const expiresAtMs = new Date(otpState.expiresAt).getTime();
+  if (!Number.isFinite(expiresAtMs) || now > expiresAtMs) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'OTP has expired. Request a new code to continue.'
+    );
+  }
+
+  const maxAttempts = Number(otpState.maxAttempts || ONBOARDING_PHONE_OTP_MAX_ATTEMPTS);
+  const attempts = Number(otpState.attempts || 0);
+  if (attempts >= maxAttempts) {
+    throw new ApiError(
+      httpStatus.TOO_MANY_REQUESTS,
+      'Too many invalid attempts. Request a new OTP code.'
+    );
+  }
+
+  const expectedHash = hashOnboardingPhoneOtp({
+    userId: user._id,
+    phoneNumber: normalizedPhone,
+    otp: rawOtp,
+  });
+  if (expectedHash !== otpState.otpHash) {
+    setOnboardingPhoneOtpState(user, {
+      ...otpState,
+      attempts: attempts + 1,
+    });
+    await user.save();
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid OTP code.');
+  }
+
+  setOnboardingPhoneOtpState(user, {
+    ...otpState,
+    attempts,
+    verified: true,
+    verifiedAt: new Date().toISOString(),
+  });
+  user.phoneNumber = normalizedPhone;
+  user.isPhoneVerified = true;
+  await user.save();
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    message: 'Phone verification successful.',
+    data: {
+      destination: maskPhoneForDisplay(normalizedPhone),
+      verifiedAt: new Date().toISOString(),
+    },
+  });
+});
+
+const getOnboardingProfile = catchAsync(async (req, res) => {
+  const result = await tenantOnboardingService.getOnboardingStatus({
+    userId: req.user.id,
+  });
+  res.status(httpStatus.OK).send(result);
+});
+
+const upsertOnboardingProfile = catchAsync(async (req, res) => {
+  const result = await tenantOnboardingService.completeOnboarding({
+    userId: req.user.id,
+    payload: req.body,
+  });
+  res.status(httpStatus.OK).send(result);
+});
+
+const upsertOnboardingDraft = catchAsync(async (req, res) => {
+  const result = await tenantOnboardingService.saveOnboardingDraft({
+    userId: req.user.id,
+    payload: req.body,
+  });
+  res.status(httpStatus.OK).send(result);
+});
+
 module.exports = {
   register,
   login,
+  requestPhoneLoginOtp,
+  verifyPhoneLoginOtp,
+  socialLogin,
   logout,
   refreshTokens,
   forgotPassword,
@@ -667,5 +1151,10 @@ module.exports = {
   changePasswordAuthenticated,
   requestEmailChangeOtp,
   requestPhoneChangeOtp,
+  sendOnboardingPhoneOtp,
+  verifyOnboardingPhoneOtp,
   checkApiKeyStatus,
+  getOnboardingProfile,
+  upsertOnboardingProfile,
+  upsertOnboardingDraft,
 };

@@ -52,6 +52,9 @@ MIGRATIONS=(
   "${SCRIPT_DIR}/../src/scripts/migrations/014_create_copilot_entity_resolution_logs.sql"
   "${SCRIPT_DIR}/../src/scripts/migrations/015_create_copilot_node_dimensions.sql"
   "${SCRIPT_DIR}/../src/scripts/migrations/016_add_action_event_result_json.sql"
+  "${SCRIPT_DIR}/../src/scripts/migrations/017_create_onboarding_jobs.sql"
+  "${SCRIPT_DIR}/../src/scripts/migrations/018_create_onboarding_job_events.sql"
+  "${SCRIPT_DIR}/../src/scripts/migrations/019_create_onboarding_job_idempotency.sql"
 )
 
 while [[ $# -gt 0 ]]; do

@@ -35,6 +35,7 @@ const NODE_ESSENTIAL_FIELDS = [
   'structure',
   'parent',
   'name',
+  'nodeStructures',
   'isMain',
   'address',
   'city',

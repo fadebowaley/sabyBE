@@ -190,6 +190,17 @@ jobs:
               sed -i -E 's#(MONGODB_URL: mongodb://[^ ]+\\?authSource=admin)(&replicaSet=rs0)?#\\1#' "$COMPOSE_FILE"
             fi
 
+            echo "🗄️ Ensuring required copilot DB migration is applied..."
+            PG_CONTAINER="saby-postgres"
+            if ! docker ps --format '{{.Names}}' | grep -q "^${PG_CONTAINER}\$"; then
+              echo "⚠️ ${PG_CONTAINER} not found; skipping direct migration step"
+            else
+              docker exec -i "$PG_CONTAINER" psql -U halograph_user -d halograph -v ON_ERROR_STOP=1 -f - <<'SQL'
+ALTER TABLE copilot.action_events
+  ADD COLUMN IF NOT EXISTS result_json JSONB;
+SQL
+            fi
+
             echo "🚀 Recreating backend (no build)..."
             \$DC -f "\$COMPOSE_FILE" up -d --no-build --force-recreate backend
 

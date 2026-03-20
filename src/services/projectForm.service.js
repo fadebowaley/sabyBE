@@ -169,6 +169,17 @@ const hasFileUploadElement = (elements = []) =>
     return Boolean(properties.accept || properties.acceptedTypes);
   });
 
+const normalizeWorkflowTriggerOn = (workflows = []) => {
+  if (!Array.isArray(workflows)) return [];
+  return workflows.map((workflow) => {
+    const triggerOn = String(workflow?.triggerOn || '').toLowerCase();
+    return {
+      ...workflow,
+      triggerOn: triggerOn === 'submit' ? 'submission' : workflow?.triggerOn || 'submission',
+    };
+  });
+};
+
 const normalizeModuleFolderName = (projectName = '') => {
   const trimmed = String(projectName || '').trim();
   if (!trimmed) return 'module';
@@ -256,6 +267,7 @@ const getProjectStorageFolderByProjectId = async (projectId) => {
  */
 const createProjectForm = async (projectFormBody, tenantId, createdBy) => {
   const normalizedBody = { ...projectFormBody };
+  normalizedBody.workflows = normalizeWorkflowTriggerOn(projectFormBody.workflows || []);
   normalizedBody.configuration = enrichConfigurationWithAnalysisProfile({
     configuration: projectFormBody.configuration || {},
     elements: projectFormBody.elements || [],
@@ -391,6 +403,9 @@ const updateProjectFormById = async (
   updateBody,
   options = {}
 ) => {
+  if (Array.isArray(updateBody.workflows)) {
+    updateBody.workflows = normalizeWorkflowTriggerOn(updateBody.workflows);
+  }
   const projectForm = await getProjectFormById(projectFormId);
 
   // Check if project name is being updated and if it's already taken
