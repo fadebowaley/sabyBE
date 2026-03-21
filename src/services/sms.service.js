@@ -3,7 +3,7 @@ const config = require('../config/config');
 const logger = require('../config/logger');
 
 // Constants
-const DEFAULT_SENDER_ID = 'N-Alert';
+const DEFAULT_SENDER_ID = null;
 const DEFAULT_CHANNEL = 'dnd';
 const DEFAULT_TYPE = 'plain';
 const NIGERIA_COUNTRY_CODE = '234';
@@ -117,12 +117,15 @@ const sendSms = async (
 
   const data = {
     to: formattedPhoneNumbers,
-    from,
     sms: message,
     type,
     api_key: config.sms.sms_api_key,
     channel,
   };
+  // Let provider account defaults handle sender ID when not explicitly configured.
+  if (from) {
+    data.from = from;
+  }
 
   logger.info(
     `Sending SMS to ${
