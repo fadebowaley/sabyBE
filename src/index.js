@@ -12,6 +12,7 @@ const {
   closeRedis,
 } = require('./config/redis');
 const { assertCopilotSchemaReady } = require('./services/copilotSchemaGuard.service');
+const { assertLevelIndexesReady } = require('./services/levelIndexGuard.service');
 const { initializeSocket } = require('./config/socket');
 const { initializeWorkers, shutdownWorkers } = require('./workers/index');
 const { startNodeSync, stopNodeSync } = require('./services/nodeSync.service');
@@ -24,6 +25,16 @@ const connectToDatabases = async () => {
     // Connect to MongoDB
     await mongoose.connect(config.mongoose.url, config.mongoose.options);
     logger.info('✅ Connected to MongoDB');
+    const levelIndexStatus = await assertLevelIndexesReady();
+    if (levelIndexStatus.dropped.length || levelIndexStatus.created.length) {
+      logger.info(
+        `✅ Level index guard applied (dropped: ${
+          levelIndexStatus.dropped.join(', ') || 'none'
+        }; created: ${levelIndexStatus.created.join(', ') || 'none'})`
+      );
+    } else {
+      logger.info('✅ Level index guard passed (no changes required)');
+    }
 
     // Connect to PostgreSQL
     const postgresConnected = await testPostgresConnection();
