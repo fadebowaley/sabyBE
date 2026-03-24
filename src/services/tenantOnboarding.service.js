@@ -365,14 +365,28 @@ const getOnboardingStatus = async ({ userId }) => {
     .populate('level', 'name rank')
     .lean();
 
-  const resolvedCompanyName = sanitizeText(
+  let resolvedCompanyName = sanitizeText(
     profile?.company?.name,
     sanitizeText(settings?.organizationName)
   );
   const hasCompanyName =
     Boolean(resolvedCompanyName) && resolvedCompanyName !== 'Default Organization Name';
   const hasRootNode = Boolean(rootNode?._id);
-  const completed = hasCompanyName && hasRootNode;
+  let completed = hasCompanyName && hasRootNode;
+
+  // Legacy tenants created before onboarding rollout may have rich tenant data
+  // (users/nodes) but no onboarding profile company name yet.
+  if (!completed && hasRootNode && !hasCompanyName) {
+    const [userCount, nodeCount] = await Promise.all([
+      User.countDocuments({ tenantId, deletedAt: null }),
+      Nodes.countDocuments({ tenantId, deletedAt: null }),
+    ]);
+    const hasLegacyConfiguredTenant = Number(userCount || 0) > 1 || Number(nodeCount || 0) > 1;
+    if (hasLegacyConfiguredTenant) {
+      completed = true;
+      resolvedCompanyName = sanitizeText(rootNode?.name, 'Organization');
+    }
+  }
 
   return {
     requiresOnboarding: true,
