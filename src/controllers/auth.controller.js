@@ -34,6 +34,102 @@ const maskEmailForDisplay = (email = '') => {
   return `${local.slice(0, 2)}***@${domain}`;
 };
 
+const normalizeNamePart = (value = '', fallback = 'User') => {
+  const cleaned = String(value || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9' -]/g, '')
+    .replace(/\s+/g, ' ');
+  if (!cleaned) return fallback;
+  return cleaned.slice(0, 64);
+};
+
+const deriveNamePartsFromEmail = (email = '') => {
+  const localPart = String(email || '').split('@')[0] || '';
+  const chunks = localPart
+    .split(/[._-]+/)
+    .map((part) => part.replace(/[^a-zA-Z0-9]/g, '').trim())
+    .filter(Boolean);
+  const first = normalizeNamePart(chunks[0] || 'Google', 'Google');
+  const last = normalizeNamePart(chunks.slice(1).join(' ') || 'User', 'User');
+  return { first, last };
+};
+
+const deriveSocialNameParts = ({ firstname, lastname, name, email }) => {
+  const first = normalizeNamePart(firstname || '', '');
+  const last = normalizeNamePart(lastname || '', '');
+  if (first && last) {
+    return { firstname: first, lastname: last };
+  }
+
+  const fromName = String(name || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (fromName.length >= 2) {
+    return {
+      firstname: normalizeNamePart(fromName[0], 'Google'),
+      lastname: normalizeNamePart(fromName.slice(1).join(' '), 'User'),
+    };
+  }
+
+  const fromEmail = deriveNamePartsFromEmail(email);
+  return {
+    firstname: first || fromEmail.first,
+    lastname: last || fromEmail.last,
+  };
+};
+
+const generateSocialPassword = () =>
+  `Saby${crypto.randomBytes(12).toString('hex')}A1`;
+
+const upsertSocialAuthAudit = async ({
+  user,
+  provider,
+  avatar = '',
+  isNewUser = false,
+}) => {
+  if (!user || !provider) return;
+  const now = new Date();
+  const current =
+    user.socialAuth && typeof user.socialAuth === 'object'
+      ? user.socialAuth
+      : {};
+  const currentProviders = Array.isArray(current.providers)
+    ? current.providers
+    : [];
+  const providers = currentProviders.includes(provider)
+    ? currentProviders
+    : [...currentProviders, provider];
+  const currentMeta =
+    current.providerMeta && typeof current.providerMeta === 'object'
+      ? current.providerMeta
+      : {};
+  const existingMeta =
+    currentMeta[provider] && typeof currentMeta[provider] === 'object'
+      ? currentMeta[provider]
+      : {};
+
+  user.socialAuth = {
+    ...current,
+    signupProvider:
+      current.signupProvider || (isNewUser ? provider : null) || provider,
+    lastProvider: provider,
+    providers,
+    lastLoginAt: now,
+    providerMeta: {
+      ...currentMeta,
+      [provider]: {
+        ...existingMeta,
+        linkedAt: existingMeta.linkedAt || now,
+        lastLoginAt: now,
+        avatar: String(avatar || existingMeta.avatar || '').trim() || null,
+      },
+    },
+  };
+  user.markModified('socialAuth');
+  await user.save();
+};
+
 const hashOnboardingPhoneOtp = ({ userId, phoneNumber, otp }) =>
   crypto
     .createHmac('sha256', String(config.jwt.secret || 'saby'))
@@ -307,6 +403,11 @@ const socialLogin = catchAsync(async (req, res) => {
   const email = String(req.body?.email || '')
     .trim()
     .toLowerCase();
+  const providerFirstname = String(req.body?.firstname || '').trim();
+  const providerLastname = String(req.body?.lastname || '').trim();
+  const providerName = String(req.body?.name || '').trim();
+  const providerAvatar = String(req.body?.avatar || '').trim();
+  const providerEmailVerified = req.body?.emailVerified;
 
   if (!['google', 'apple'].includes(provider)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Unsupported social provider.');
@@ -314,26 +415,84 @@ const socialLogin = catchAsync(async (req, res) => {
   if (!email) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email is required for social login.');
   }
-
-  const user = await userService.getUserByEmail(email);
-  if (!user) {
+  if (provider === 'google' && providerEmailVerified !== true) {
     throw new ApiError(
-      httpStatus.NOT_FOUND,
-      'No account found for this social identity. Sign up with email/password first.'
+      httpStatus.BAD_REQUEST,
+      'Google account email must be verified before continuing.'
     );
   }
 
-  if (!user.otpVerified || !user.isEmailVerified || !user.status) {
-    await userService.updateUserById(user.id, {
+  let user = await userService.getUserByEmail(email);
+  const isNewUser = !user;
+
+  if (!user) {
+    const nameParts = deriveSocialNameParts({
+      firstname: providerFirstname,
+      lastname: providerLastname,
+      name: providerName,
+      email,
+    });
+
+    user = await userService.createUser({
+      firstname: nameParts.firstname,
+      lastname: nameParts.lastname,
+      email,
+      password: generateSocialPassword(),
+      isOwner: true,
+      isAgreed: true,
       otpVerified: true,
       isEmailVerified: true,
       status: true,
+      ...(providerAvatar ? { avatar: providerAvatar } : {}),
     });
+  } else {
+    if (user.deletedAt) {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        'This account has been deactivated. Contact support.'
+      );
+    }
+
+    const nameParts = deriveSocialNameParts({
+      firstname: providerFirstname,
+      lastname: providerLastname,
+      name: providerName,
+      email,
+    });
+    const updates = {
+      otpVerified: true,
+      isEmailVerified: true,
+      status: true,
+    };
+
+    if (!String(user.firstname || '').trim()) {
+      updates.firstname = nameParts.firstname;
+    }
+    if (!String(user.lastname || '').trim()) {
+      updates.lastname = nameParts.lastname;
+    }
+    if (providerAvatar && !String(user.avatar || '').trim()) {
+      updates.avatar = providerAvatar;
+    }
+
+    await userService.updateUserById(user.id, updates);
   }
 
+  await upsertSocialAuthAudit({
+    user,
+    provider,
+    avatar: providerAvatar,
+    isNewUser,
+  });
   const refreshedUser = await userService.getUserById(user.id);
   const payload = await buildAuthLoginPayload(refreshedUser);
-  res.status(httpStatus.OK).send(payload);
+  res.status(httpStatus.OK).send({
+    ...payload,
+    auth: {
+      provider,
+      mode: isNewUser ? 'signup' : 'login',
+    },
+  });
 });
 
 /**

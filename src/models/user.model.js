@@ -107,6 +107,25 @@ const userSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    socialAuth: {
+      type: {
+        signupProvider: { type: String, default: null },
+        lastProvider: { type: String, default: null },
+        providers: [{ type: String }],
+        lastLoginAt: { type: Date, default: null },
+        providerMeta: {
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
+        },
+      },
+      default: () => ({
+        signupProvider: null,
+        lastProvider: null,
+        providers: [],
+        lastLoginAt: null,
+        providerMeta: {},
+      }),
+    },
     deletedAt: { type: Date, default: null },
     createdAt: { type: Date, default: Date.now },
 

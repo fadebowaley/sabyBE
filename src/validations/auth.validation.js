@@ -37,6 +37,11 @@ const socialLogin = {
   body: Joi.object().keys({
     provider: Joi.string().valid('google', 'apple').required(),
     email: Joi.string().email().required(),
+    firstname: Joi.string().allow('', null),
+    lastname: Joi.string().allow('', null),
+    name: Joi.string().allow('', null),
+    avatar: Joi.string().uri().allow('', null),
+    emailVerified: Joi.boolean().allow(null),
   }),
 };
 
