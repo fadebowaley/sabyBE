@@ -181,6 +181,13 @@ const metadataSchema = Joi.object({
   permEnabled: Joi.boolean().optional(),
 }).unknown(true);
 
+const paymentConfigSchema = Joi.object({
+  enabled: Joi.boolean().default(false),
+  enabledChannels: Joi.array().items(Joi.string()).default([]),
+  defaultChannel: Joi.string().allow('', null),
+  channelConfigs: Joi.object().unknown(true).default({}),
+}).unknown(true);
+
 // PERM Settings Schema
 const permSettingsSchema = Joi.object({
   enabled: Joi.boolean().default(false),
@@ -262,7 +269,13 @@ const workflowSchema = Joi.object({
   triggerOn: Joi.string()
     .valid('submission', 'submit', 'update', 'manual')
     .default('submission'),
-  steps: Joi.array().items(workflowStepSchema).min(1).required(),
+  steps: Joi.array()
+    .items(workflowStepSchema)
+    .when('enabled', {
+      is: true,
+      then: Joi.array().items(workflowStepSchema).min(1).required(),
+      otherwise: Joi.array().items(workflowStepSchema).default([]),
+    }),
   metadata: Joi.object().unknown(true).optional(),
   description: Joi.string().allow('', null).optional(),
 }).unknown(true);
@@ -277,6 +290,9 @@ const createProjectForm = {
     columnSpans: Joi.object().default({}),
     userSettings: userSettingsSchema,
     permSettings: permSettingsSchema,
+    paymentConfig: paymentConfigSchema,
+    calendar: Joi.object().unknown(true).optional(),
+    behaviorHooks: Joi.object().unknown(true).optional(),
     metadata: metadataSchema,
     workflows: Joi.array().items(workflowSchema).default([]),
   }),
@@ -360,6 +376,33 @@ const getProjectFormByProjectId = {
   }),
 };
 
+const getProjectFormByPublicRef = {
+  params: Joi.object().keys({
+    publicRef: Joi.string().required(),
+  }),
+  query: Joi.object().keys({
+    populate: Joi.string(),
+  }),
+};
+
+const getPublicProjectFormByReference = {
+  params: Joi.object().keys({
+    reference: Joi.string().required(),
+  }),
+  query: Joi.object().keys({
+    accessToken: Joi.string().optional(),
+  }),
+};
+
+const getPublicProjectFormByShortCode = {
+  params: Joi.object().keys({
+    shortCode: Joi.string().alphanum().min(4).max(16).required(),
+  }),
+  query: Joi.object().keys({
+    accessToken: Joi.string().optional(),
+  }),
+};
+
 const updateProjectForm = {
   params: Joi.object().keys({
     projectFormId: Joi.string().custom(objectId).required(),
@@ -373,6 +416,9 @@ const updateProjectForm = {
       columnSpans: Joi.object(),
       userSettings: userSettingsSchema,
       permSettings: permSettingsSchema,
+      paymentConfig: paymentConfigSchema,
+      calendar: Joi.object().unknown(true).optional(),
+      behaviorHooks: Joi.object().unknown(true).optional(),
       metadata: metadataSchema,
       status: Joi.string().valid('active', 'inactive', 'archived'),
       workflows: Joi.array().items(workflowSchema).default([]),
@@ -396,6 +442,9 @@ const updateProjectFormByProjectId = {
       columnSpans: Joi.object(),
       userSettings: userSettingsSchema,
       permSettings: permSettingsSchema,
+      paymentConfig: paymentConfigSchema,
+      calendar: Joi.object().unknown(true).optional(),
+      behaviorHooks: Joi.object().unknown(true).optional(),
       metadata: metadataSchema,
       status: Joi.string().valid('active', 'inactive', 'archived'),
       workflows: Joi.array().items(workflowSchema).default([]),
@@ -497,6 +546,9 @@ module.exports = {
   getProjectFormsByUser,
   getProjectForm,
   getProjectFormByProjectId,
+  getProjectFormByPublicRef,
+  getPublicProjectFormByReference,
+  getPublicProjectFormByShortCode,
   updateProjectForm,
   updateProjectFormByProjectId,
   deleteProjectForm,

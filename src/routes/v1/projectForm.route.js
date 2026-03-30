@@ -4,6 +4,9 @@ const validate = require('../../middlewares/validate');
 const projectFormValidation = require('../../validations/projectForm.validation');
 const projectFormController = require('../../controllers/projectForm.controller');
 const workflowController = require('../../controllers/workflow.controller');
+const {
+  publicFormReadLimiter,
+} = require('../../middlewares/publicFormRateLimiter');
 
 const router = express.Router();
 
@@ -274,6 +277,7 @@ router.get('/deleted', auth('view:project-form'), projectFormController.getDelet
 // Get project form by project ID (public route for form access)
 router.get(
   '/project/:projectId',
+  auth('view:project-form'),
   validate(projectFormValidation.getProjectFormByProjectId),
   projectFormController.getProjectFormByProjectId
 );
@@ -286,11 +290,36 @@ router.get(
   projectFormController.getProjectStorageFolder
 );
 
-// Public route for accessing forms (no auth required)
+// Strict public access by canonical reference (supports legacy projectId fallback)
 router.get(
-  '/public/:projectId',
-  validate(projectFormValidation.getProjectFormByProjectId),
-  projectFormController.getProjectFormByProjectId
+  '/public/ref/:reference',
+  publicFormReadLimiter,
+  validate(projectFormValidation.getPublicProjectFormByReference),
+  projectFormController.getPublicProjectFormByReference
+);
+
+// Short-code public alias (strict-gated and sanitized)
+router.get(
+  '/public/short/:shortCode',
+  publicFormReadLimiter,
+  validate(projectFormValidation.getPublicProjectFormByShortCode),
+  projectFormController.getPublicProjectFormByShortCode
+);
+
+// Legacy public path alias (still strict-gated and sanitized)
+router.get(
+  '/public/:reference',
+  publicFormReadLimiter,
+  validate(projectFormValidation.getPublicProjectFormByReference),
+  projectFormController.getPublicProjectFormByReference
+);
+
+// Authenticated route for studio edit rehydration by canonical reference
+router.get(
+  '/ref/:publicRef',
+  auth('view:project-form'),
+  validate(projectFormValidation.getProjectFormByPublicRef),
+  projectFormController.getProjectFormByPublicRef
 );
 
 /**

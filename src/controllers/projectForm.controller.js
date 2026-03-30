@@ -3,6 +3,21 @@ const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { projectFormService } = require('../services');
+const {
+  invalidateTenantEntityCaches,
+} = require('../services/copilotEntityResolver.service');
+
+const invalidateProjectResolverCache = async (tenantId) => {
+  if (!tenantId) return;
+  try {
+    await invalidateTenantEntityCaches({
+      tenantId: String(tenantId),
+      entityType: 'project',
+    });
+  } catch (_) {
+    // non-blocking cache invalidation
+  }
+};
 
 /**
  * Create a project form
@@ -16,11 +31,15 @@ const createProjectForm = catchAsync(async (req, res) => {
     tenantId,
     createdBy
   );
+  await invalidateProjectResolverCache(tenantId || projectForm?.tenantId);
   console.log('🔍 [SERVER DATA] Module Created:', req.body);
   res.status(httpStatus.CREATED).send({
     message: 'Module created successfully',
     projectForm,
     formId: projectForm.projectId,
+    publicRef: projectForm.publicRef,
+    shareRef: projectForm.shareRef,
+    shareCode: projectForm.shareCode,
   });
 });
 
@@ -149,6 +168,90 @@ const getProjectFormByProjectId = catchAsync(async (req, res) => {
 });
 
 /**
+ * Get project form by canonical public reference (authenticated studio/edit use)
+ */
+const getProjectFormByPublicRef = catchAsync(async (req, res) => {
+  const { publicRef } = req.params;
+  const options = pick(req.query, ['populate']);
+
+  const projectForm = await projectFormService.getProjectFormByPublicRef(
+    publicRef,
+    options
+  );
+
+  res.send(projectForm);
+});
+
+/**
+ * Strict public read endpoint by reference (publicRef or legacy projectId)
+ */
+const getPublicProjectFormByReference = catchAsync(async (req, res) => {
+  const { reference } = req.params;
+  const result = await projectFormService.getPublicProjectFormByReference(
+    reference
+  );
+
+  const requireToken = String(process.env.PUBLIC_FORM_REQUIRE_TOKEN || 'false')
+    .toLowerCase() === 'true';
+
+  if (requireToken) {
+    const incomingToken =
+      req.get('x-form-access-token') || req.query?.accessToken || null;
+    const configuredToken = result?.projectForm?.publicAccessToken || null;
+
+    if (!configuredToken || !incomingToken || incomingToken !== configuredToken) {
+      throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid form access token');
+    }
+  }
+
+  const response = {
+    ...result.form,
+    canonicalRef: result.canonicalRef,
+    legacyResolved: result.legacyResolved,
+    canonicalPath: `/s/${result.canonicalRef}`,
+  };
+
+  await projectFormService.incrementProjectViews(result.projectForm.projectId);
+
+  res.send(response);
+});
+
+/**
+ * Strict public read endpoint by short code.
+ */
+const getPublicProjectFormByShortCode = catchAsync(async (req, res) => {
+  const { shortCode } = req.params;
+  const result = await projectFormService.getPublicProjectFormByShortCode(
+    shortCode
+  );
+
+  const requireToken = String(process.env.PUBLIC_FORM_REQUIRE_TOKEN || 'false')
+    .toLowerCase() === 'true';
+
+  if (requireToken) {
+    const incomingToken =
+      req.get('x-form-access-token') || req.query?.accessToken || null;
+    const configuredToken = result?.projectForm?.publicAccessToken || null;
+
+    if (!configuredToken || !incomingToken || incomingToken !== configuredToken) {
+      throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid form access token');
+    }
+  }
+
+  const response = {
+    ...result.form,
+    canonicalRef: result.canonicalRef,
+    legacyResolved: false,
+    canonicalPath: `/s/${result.canonicalRef}`,
+    shortCode,
+  };
+
+  await projectFormService.incrementProjectViews(result.projectForm.projectId);
+
+  res.send(response);
+});
+
+/**
  * Get (or create) canonical storage folder for a module
  */
 const getProjectStorageFolder = catchAsync(async (req, res) => {
@@ -171,6 +274,7 @@ const updateProjectForm = catchAsync(async (req, res) => {
     req.body,
     options
   );
+  await invalidateProjectResolverCache(req.user?.tenantId || projectForm?.tenantId);
 
   res.send({
     message: 'Module updated successfully',
@@ -190,6 +294,7 @@ const updateProjectFormByProjectId = catchAsync(async (req, res) => {
     req.body,
     options
   );
+  await invalidateProjectResolverCache(req.user?.tenantId || projectForm?.tenantId);
 
   res.send({
     message: 'Module updated successfully',
@@ -208,6 +313,7 @@ const softDeleteProjectForm = catchAsync(async (req, res) => {
   const projectForm = await projectFormService.softDeleteProjectFormById(
     projectFormId
   );
+  await invalidateProjectResolverCache(req.user?.tenantId || projectForm?.tenantId);
 
   res.send({
     message: 'Module deleted successfully',
@@ -235,6 +341,7 @@ const publishProjectForm = catchAsync(async (req, res) => {
     projectFormId,
     publishOptions
   );
+  await invalidateProjectResolverCache(req.user?.tenantId || projectForm?.tenantId);
 
   res.send({
     message: 'Module published successfully',
@@ -252,6 +359,7 @@ const archiveProjectForm = catchAsync(async (req, res) => {
   const projectForm = await projectFormService.archiveProjectForm(
     projectFormId
   );
+  await invalidateProjectResolverCache(req.user?.tenantId || projectForm?.tenantId);
 
   res.send({
     message: 'Module archived successfully',
@@ -281,6 +389,7 @@ const deleteProjectForm = catchAsync(async (req, res) => {
     userId,
     permanent
   );
+  await invalidateProjectResolverCache(req.user?.tenantId);
   res.send(result);
 });
 
@@ -291,6 +400,7 @@ const restoreProjectForm = catchAsync(async (req, res) => {
   const { projectFormId } = req.params;
 
   const projectForm = await projectFormService.restoreProjectFormById(projectFormId);
+  await invalidateProjectResolverCache(req.user?.tenantId || projectForm?.tenantId);
 
   res.send({
     message: 'Module restored successfully',
@@ -345,6 +455,7 @@ const updatePaymentConfig = catchAsync(async (req, res) => {
   };
 
   await projectForm.save();
+  await invalidateProjectResolverCache(req.user?.tenantId || projectForm?.tenantId);
 
   res.send({
     message: 'Payment configuration updated',
@@ -467,6 +578,9 @@ module.exports = {
   getProjectFormsByUser,
   getProjectForm,
   getProjectFormByProjectId,
+  getProjectFormByPublicRef,
+  getPublicProjectFormByReference,
+  getPublicProjectFormByShortCode,
   getProjectStorageFolder,
   updateProjectForm,
   updateProjectFormByProjectId,

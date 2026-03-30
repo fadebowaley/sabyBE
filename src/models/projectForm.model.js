@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
-const { nanoid } = require('nanoid');
+const { randomUUID } = require('crypto');
+const { nanoid, customAlphabet } = require('nanoid');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
 // Schema for form elements (from form builder)
@@ -312,6 +313,27 @@ const ProjectFormSchema = new mongoose.Schema(
       index: true,
       // Format: #SB-000001 (human-readable sequential reference)
     },
+    publicRef: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+      // URL-safe canonical reference used for public links and embeds
+    },
+    shareRef: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+      // Opaque public share reference used by /s/:shareRef
+    },
+    shareCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+      // Short-code share token used by shortener routes (/go/:shortCode)
+    },
     tenantId: {
       type: String,
       required: true,
@@ -431,6 +453,10 @@ const ProjectFormSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    publicAccessToken: {
+      type: String,
+      default: null,
+    },
 
     // Metadata
     metadata: {
@@ -520,6 +546,36 @@ ProjectFormSchema.statics.generateProjectId = function (projectName = '') {
 };
 
 /**
+ * Generate canonical URL-safe public reference
+ * @returns {string}
+ */
+ProjectFormSchema.statics.generatePublicRef = function (projectName = '') {
+  const slug = createProjectSlug(projectName) || 'form';
+  const suffix = nanoid(8).toLowerCase();
+  return `frm_${slug}-${suffix}`;
+};
+
+/**
+ * Generate opaque share reference (UUID)
+ * @returns {string}
+ */
+ProjectFormSchema.statics.generateShareRef = function () {
+  return randomUUID();
+};
+
+const shortCodeAlphabet =
+  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+const generateShortCode = customAlphabet(shortCodeAlphabet, 8);
+
+/**
+ * Generate URL short code for public short links
+ * @returns {string}
+ */
+ProjectFormSchema.statics.generateShareCode = function () {
+  return generateShortCode();
+};
+
+/**
  * Generate a unique formId
  * @returns {string}
  */
@@ -560,6 +616,39 @@ ProjectFormSchema.statics.createProjectForm = async function (
   const projectId = this.generateProjectId(
     projectData?.configuration?.projectName || projectData?.name || ''
   );
+  let publicRef = this.generatePublicRef(
+    projectData?.configuration?.projectName || projectData?.name || ''
+  );
+  let shareRef = this.generateShareRef();
+  let shareCode = this.generateShareCode();
+  let attempts = 0;
+  while (attempts < 8) {
+    // eslint-disable-next-line no-await-in-loop
+    const exists = await this.exists({ publicRef });
+    if (!exists) break;
+    publicRef = this.generatePublicRef(
+      projectData?.configuration?.projectName || projectData?.name || ''
+    );
+    attempts += 1;
+  }
+
+  attempts = 0;
+  while (attempts < 8) {
+    // eslint-disable-next-line no-await-in-loop
+    const exists = await this.exists({ shareRef });
+    if (!exists) break;
+    shareRef = this.generateShareRef();
+    attempts += 1;
+  }
+
+  attempts = 0;
+  while (attempts < 8) {
+    // eslint-disable-next-line no-await-in-loop
+    const exists = await this.exists({ shareCode });
+    if (!exists) break;
+    shareCode = this.generateShareCode();
+    attempts += 1;
+  }
 
   // Generate human-readable form reference
   const Counter = require('./counter.model');
@@ -571,6 +660,9 @@ ProjectFormSchema.statics.createProjectForm = async function (
   const projectFormData = {
     ...projectData,
     projectId,
+    publicRef,
+    shareRef,
+    shareCode,
     formReference,
     tenantId,
     createdBy,
@@ -830,7 +922,7 @@ ProjectFormSchema.methods.generateAccessibilityUrls = function (
 
   // Always include the public form URL if published
   if (this.metadata.deploymentStatus === 'published') {
-    urls.public = `${baseUrl}/form/${this.projectId}`;
+    urls.public = `${baseUrl}/form/${this.publicRef || this.projectId}`;
   }
 
   return urls;

@@ -171,13 +171,92 @@ const hasFileUploadElement = (elements = []) =>
 
 const normalizeWorkflowTriggerOn = (workflows = []) => {
   if (!Array.isArray(workflows)) return [];
+
+  const createWorkflowId = () =>
+    `wf_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  const createStepId = (index = 0) =>
+    `step_${index + 1}_${Math.random().toString(36).slice(2, 7)}`;
+
   return workflows.map((workflow) => {
     const triggerOn = String(workflow?.triggerOn || '').toLowerCase();
+    const steps = Array.isArray(workflow?.steps)
+      ? workflow.steps.map((step = {}, index) => ({
+          ...step,
+          id: step?.id || createStepId(index),
+          name: step?.name || `Step ${index + 1}`,
+          stepOrder:
+            Number.isFinite(step?.stepOrder) && step.stepOrder >= 0
+              ? step.stepOrder
+              : index,
+        }))
+      : [];
+
     return {
       ...workflow,
+      id: workflow?.id || createWorkflowId(),
       triggerOn: triggerOn === 'submit' ? 'submission' : workflow?.triggerOn || 'submission',
+      steps,
     };
   });
+};
+
+const isStrictPublicAccessible = (projectForm) => {
+  if (!projectForm) return false;
+  return (
+    projectForm?.metadata?.deploymentStatus === 'published' &&
+    projectForm?.status === 'active' &&
+    projectForm?.configuration?.security === 'public'
+  );
+};
+
+const sanitizePublicForm = (projectForm) => {
+  const source =
+    typeof projectForm?.toObject === 'function' ? projectForm.toObject() : projectForm;
+
+  const safeElements = Array.isArray(source.elements)
+    ? source.elements.map((element = {}) => ({
+        id: element.id,
+        type: element.type,
+        properties: element.properties || {},
+      }))
+    : [];
+
+  const behaviorSettings = source?.userSettings?.behavior || {};
+  const uiSettings = source?.userSettings?.ui || {};
+
+  return {
+    shareRef: source.shareRef || null,
+    shareCode: source.shareCode || null,
+    publicRef: source.publicRef,
+    formReference: source.formReference || null,
+    configuration: {
+      projectName: source.configuration?.projectName || '',
+      tags: Array.isArray(source.configuration?.tags)
+        ? source.configuration.tags
+        : [],
+      security: source.configuration?.security || 'public',
+    },
+    elements: safeElements,
+    style: source.style || 'default',
+    wizardMode: Boolean(source.wizardMode),
+    columnSpans: source.columnSpans || {},
+    userSettings: {
+      behavior: {
+        allowMultipleSubmissions:
+          behaviorSettings.allowMultipleSubmissions !== false,
+        submitOnComplete: behaviorSettings.submitOnComplete !== false,
+      },
+      ui: uiSettings,
+    },
+    metadata: {
+      version: source.metadata?.version || '1.0.0',
+      elementsCount:
+        source.metadata?.elementsCount ||
+        safeElements.length,
+      hasValidation: Boolean(source.metadata?.hasValidation),
+      lastModified: source.metadata?.lastModified || source.updatedAt || null,
+    },
+  };
 };
 
 const normalizeModuleFolderName = (projectName = '') => {
@@ -272,18 +351,6 @@ const createProjectForm = async (projectFormBody, tenantId, createdBy) => {
     configuration: projectFormBody.configuration || {},
     elements: projectFormBody.elements || [],
   });
-
-  // Check if project name is already taken within the tenant
-  const isNameTaken = await ProjectForm.isProjectNameTaken(
-    normalizedBody.configuration.projectName,
-    tenantId
-  );
-  if (isNameTaken) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'A module with this name already exists in your workspace'
-    );
-  }
   const projectForm = await ProjectForm.createProjectForm(
     normalizedBody,
     tenantId,
@@ -358,6 +425,108 @@ const getProjectFormByProjectId = async (projectId, options = {}) => {
 };
 
 /**
+ * Get project form by canonical public reference
+ * @param {string} publicRef
+ * @param {Object} options
+ * @returns {Promise<ProjectForm>}
+ */
+const getProjectFormByPublicRef = async (publicRef, options = {}) => {
+  const populateFields = options.populate || 'createdBy';
+  const projectForm = await ProjectForm.findOne({
+    publicRef,
+    deletedAt: null,
+  }).populate(populateFields);
+
+  if (!projectForm) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
+  }
+
+  return projectForm;
+};
+
+/**
+ * Resolve and return strict public form payload by reference.
+ * Supports canonical publicRef and legacy projectId.
+ * @param {string} reference
+ * @returns {Promise<Object>}
+ */
+const getPublicProjectFormByReference = async (reference) => {
+  let projectForm = await ProjectForm.findOne({
+    shareRef: reference,
+    deletedAt: null,
+  });
+  let resolvedBy = 'shareRef';
+
+  if (!projectForm) {
+    projectForm = await ProjectForm.findOne({
+    publicRef: reference,
+    deletedAt: null,
+  });
+    resolvedBy = 'publicRef';
+  }
+
+  if (!projectForm) {
+    projectForm = await ProjectForm.findOne({
+      projectId: reference,
+      deletedAt: null,
+    });
+    resolvedBy = 'projectId';
+  }
+
+  if (!projectForm) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
+  }
+
+  if (!isStrictPublicAccessible(projectForm)) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'This module is not currently available for public access'
+    );
+  }
+
+  return {
+    form: sanitizePublicForm(projectForm),
+    canonicalRef:
+      projectForm.shareRef || projectForm.publicRef || projectForm.projectId,
+    legacyResolved: resolvedBy === 'projectId',
+    resolvedBy,
+    projectForm,
+  };
+};
+
+/**
+ * Resolve and return strict public form payload by short code.
+ * @param {string} shortCode
+ * @returns {Promise<Object>}
+ */
+const getPublicProjectFormByShortCode = async (shortCode) => {
+  const projectForm = await ProjectForm.findOne({
+    shareCode: shortCode,
+    deletedAt: null,
+  });
+
+  if (!projectForm) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Short link not found');
+  }
+
+  if (!isStrictPublicAccessible(projectForm)) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'This module is not currently available for public access'
+    );
+  }
+
+  return {
+    form: sanitizePublicForm(projectForm),
+    canonicalRef:
+      projectForm.shareRef || projectForm.publicRef || projectForm.projectId,
+    legacyResolved: false,
+    resolvedBy: 'shareCode',
+    projectForm,
+  };
+};
+
+/**
  * Get project forms by tenant ID
  * @param {string} tenantId - The tenant ID
  * @param {Object} filter - Additional filters
@@ -408,30 +577,14 @@ const updateProjectFormById = async (
   }
   const projectForm = await getProjectFormById(projectFormId);
 
-  // Check if project name is being updated and if it's already taken
-  if (
-    updateBody.configuration &&
-    updateBody.configuration.projectName &&
-    updateBody.configuration.projectName !==
-      projectForm.configuration.projectName
-  ) {
-    const isNameTaken = await ProjectForm.isProjectNameTaken(
-      updateBody.configuration.projectName,
-      projectForm.tenantId,
-      projectFormId
-    );
-
-    if (isNameTaken) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        'A module with this name already exists in your workspace'
-      );
-    }
-  }
-
   // Update metadata
   if (updateBody.metadata) {
     updateBody.metadata.lastModified = new Date();
+    const currentVersion = String(projectForm?.metadata?.version || '1.0.0');
+    const [major = 1, minor = 0, patch = 0] = currentVersion
+      .split('.')
+      .map((part) => Number(part) || 0);
+    updateBody.metadata.version = `${major}.${minor}.${patch + 1}`;
   }
 
   const mergedElements = Array.isArray(updateBody.elements)
@@ -817,6 +970,10 @@ const searchProjectForms = async (query, filter = {}, options = {}) => {
       { 'configuration.projectName': searchRegex },
       { 'configuration.tags': { $in: [searchRegex] } },
       { projectId: searchRegex },
+      { shareRef: searchRegex },
+      { shareCode: searchRegex },
+      { publicRef: searchRegex },
+      { formReference: searchRegex },
     ],
   };
 
@@ -828,6 +985,9 @@ module.exports = {
   queryProjectForms,
   getProjectFormById,
   getProjectFormByProjectId,
+  getProjectFormByPublicRef,
+  getPublicProjectFormByReference,
+  getPublicProjectFormByShortCode,
   getProjectFormsByTenant,
   getProjectFormsByUser,
   updateProjectFormById,
