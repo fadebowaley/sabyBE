@@ -4,12 +4,28 @@ const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { userService } = require('../services');
 const copilotActionService = require('../services/copilotAction.service');
+const {
+  invalidateTenantEntityCaches,
+} = require('../services/copilotEntityResolver.service');
 const { User } = require('../models');
+
+const invalidateUserResolverCache = async (tenantId) => {
+  if (!tenantId) return;
+  try {
+    await invalidateTenantEntityCaches({
+      tenantId: String(tenantId),
+      entityType: 'user',
+    });
+  } catch (_) {
+    // non-blocking cache invalidation
+  }
+};
 
 // Function to create users by owner Profile
 const ownerCreate = catchAsync(async (req, res) => {
   req.body.createdBy = req.user._id; // 🔐 enforce ownership context
   const user = await userService.ownerCreate(req.body);
+  await invalidateUserResolverCache(req.user?.tenantId || user?.tenantId);
   await copilotActionService.recordExistingAction({
     tenantId: req.user.tenantId,
     actorUserId: req.user._id || req.user.id,
@@ -29,6 +45,7 @@ const ownerCreate = catchAsync(async (req, res) => {
 // Function to create SabyUser (Global Admin)
 const createSabyUser = catchAsync(async (req, res) => {
   const user = await userService.createSabyUser(req.body);
+  await invalidateUserResolverCache(req.user?.tenantId || user?.tenantId);
   if (req.user?.tenantId) {
     await copilotActionService.recordExistingAction({
       tenantId: req.user.tenantId,
@@ -62,6 +79,9 @@ const bulkCreate = catchAsync(async (req, res) => {
 
   // Return the response
   if (createdUsers.length > 0 || errors.length > 0) {
+    if (createdUsers.length > 0) {
+      await invalidateUserResolverCache(tenantId);
+    }
     return res.status(httpStatus.CREATED).send({
       message: 'Bulk user creation completed',
       createdUsers,
@@ -90,6 +110,9 @@ const bulkDelete = catchAsync(async (req, res) => {
   // Call the service to perform the bulk soft delete
   const { successReport, errorReport } =
     await userService.bulkSoftDeleteByTenantId(tenantId);
+  if (successReport.length > 0) {
+    await invalidateUserResolverCache(tenantId);
+  }
 
   // If no users were soft-deleted, return an error
   if (successReport.length === 0 && errorReport.length === 0) {
@@ -145,6 +168,7 @@ const restoreUsers = catchAsync(async (req, res) => {
       })
     )
   );
+  await invalidateUserResolverCache(req.user?.tenantId || tenantId);
 
   // Return success response with detailed report
   res.status(httpStatus.OK).send({
@@ -187,6 +211,7 @@ const restoreUser = catchAsync(async (req, res) => {
     source: 'existing-service',
     priority: 8,
   });
+  await invalidateUserResolverCache(req.user?.tenantId || restoredUser?.tenantId);
 
   // Return success response with the restored user data
   res.status(httpStatus.OK).send({
@@ -255,6 +280,7 @@ const updateUser = catchAsync(async (req, res) => {
       req.body,
       req.user
     );
+    await invalidateUserResolverCache(req.user?.tenantId || user?.tenantId);
 
     console.log(`✅ [UserController.updateUser] User updated successfully`);
     res.send(userService.buildUserResponse(user));
@@ -270,7 +296,8 @@ const updateUser = catchAsync(async (req, res) => {
 });
 
 const deleteUser = catchAsync(async (req, res) => {
-  await userService.deleteUserById(req.params.userId);
+  const deletedUser = await userService.deleteUserById(req.params.userId);
+  await invalidateUserResolverCache(req.user?.tenantId || deletedUser?.tenantId);
   await copilotActionService.recordExistingAction({
     tenantId: req.user.tenantId,
     actorUserId: req.user._id || req.user.id,
@@ -374,6 +401,7 @@ const softDeleteUser = catchAsync(async (req, res) => {
     source: 'existing-service',
     priority: 9,
   });
+  await invalidateUserResolverCache(req.user?.tenantId || deletedUser?.tenantId);
 
   // Return a success response
   res.status(httpStatus.OK).send({
@@ -384,6 +412,7 @@ const softDeleteUser = catchAsync(async (req, res) => {
 
 const assignRoles = catchAsync(async (req, res) => {
   const userRole = await userService.assignRoles(req.params.id, req.body.roles);
+  await invalidateUserResolverCache(req.user?.tenantId || userRole?.tenantId);
   await copilotActionService.recordExistingAction({
     tenantId: req.user.tenantId,
     actorUserId: req.user._id || req.user.id,
@@ -454,6 +483,7 @@ const changeEmail = catchAsync(async (req, res) => {
 
   // Update user email
   const user = await userService.updateUserById(userId, { email }, req.user);
+  await invalidateUserResolverCache(req.user?.tenantId || user?.tenantId);
 
   res.status(httpStatus.OK).json({
     success: true,
@@ -480,6 +510,7 @@ const changePhone = catchAsync(async (req, res) => {
     { phoneNumber: phone },
     req.user
   );
+  await invalidateUserResolverCache(req.user?.tenantId || user?.tenantId);
 
   res.status(httpStatus.OK).json({
     success: true,

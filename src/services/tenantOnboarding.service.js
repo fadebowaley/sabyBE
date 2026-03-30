@@ -15,6 +15,7 @@ const sanitizeText = (value, fallback = '') =>
   String(value == null ? fallback : value).trim();
 
 const DEFAULT_TIMEZONE = 'Africa/Lagos';
+
 const ALLOWED_COMPANY_SIZES = new Set([
   '1-10',
   '11-50',

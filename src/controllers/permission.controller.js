@@ -3,6 +3,21 @@ const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { permissionService } = require('../services');
+const {
+  invalidateTenantEntityCaches,
+} = require('../services/copilotEntityResolver.service');
+
+const invalidatePermissionResolverCache = async (tenantId) => {
+  if (!tenantId) return;
+  try {
+    await invalidateTenantEntityCaches({
+      tenantId: String(tenantId),
+      entityType: 'permission',
+    });
+  } catch (_) {
+    // non-blocking cache invalidation
+  }
+};
 
 /**
  * Create a permission
@@ -12,6 +27,7 @@ const createPermission = catchAsync(async (req, res) => {
     req.body,
     req.user
   );
+  await invalidatePermissionResolverCache(req.user?.tenantId);
   res.status(httpStatus.CREATED).send(permission);
 });
 
@@ -48,6 +64,7 @@ const updatePermission = catchAsync(async (req, res) => {
     req.params.permissionName,
     req.body
   );
+  await invalidatePermissionResolverCache(req.user?.tenantId);
   res.send(permission);
 });
 
@@ -56,6 +73,7 @@ const updatePermission = catchAsync(async (req, res) => {
  */
 const deletePermission = catchAsync(async (req, res) => {
   await permissionService.deletePermissionByName(req.params.permissionName);
+  await invalidatePermissionResolverCache(req.user?.tenantId);
   res.status(httpStatus.NO_CONTENT).send();
 });
 
@@ -64,6 +82,7 @@ const deletePermission = catchAsync(async (req, res) => {
  */
 const bulkCreatePermissions = catchAsync(async (req, res) => {
   const permissions = await permissionService.bulkCreatePermissions(req.body);
+  await invalidatePermissionResolverCache(req.user?.tenantId);
   res.status(httpStatus.CREATED).send(permissions);
 });
 

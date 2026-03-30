@@ -4,6 +4,9 @@ const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { nodeService } = require('../services');
 const copilotActionService = require('../services/copilotAction.service');
+const {
+  invalidateTenantEntityCaches,
+} = require('../services/copilotEntityResolver.service');
 
 const MAX_NODE_QUERY_LIMIT = 500;
 const DEFAULT_NODE_QUERY_LIMIT = 50;
@@ -23,11 +26,24 @@ const TABLE_NODE_POPULATE = [
   },
 ];
 
+const invalidateNodeResolverCache = async (tenantId) => {
+  if (!tenantId) return;
+  try {
+    await invalidateTenantEntityCaches({
+      tenantId: String(tenantId),
+      entityType: 'node',
+    });
+  } catch (_) {
+    // non-blocking cache invalidation
+  }
+};
+
 // Create a new node
 const createNode = catchAsync(async (req, res) => {
   // SECURITY: Add tenantId from authenticated user
   req.body.tenantId = req.user.tenantId;
   const node = await nodeService.createNode(req.body);
+  await invalidateNodeResolverCache(req.user?.tenantId || node?.tenantId);
   await copilotActionService.recordExistingAction({
     tenantId: req.user.tenantId,
     actorUserId: req.user._id || req.user.id,
@@ -87,6 +103,7 @@ const updateNodeById = catchAsync(async (req, res) => {
     req.params.nodeId,
     req.body
   );
+  await invalidateNodeResolverCache(req.user?.tenantId || updatedNode?.tenantId);
 
   if (Object.prototype.hasOwnProperty.call(req.body, 'parent')) {
     const nextParent = updatedNode.parent ? String(updatedNode.parent) : null;
@@ -155,6 +172,7 @@ const deleteNodeById = catchAsync(async (req, res) => {
     );
   }
   await nodeService.deleteNodeById(req.params.nodeId);
+  await invalidateNodeResolverCache(req.user?.tenantId || node?.tenantId);
   await copilotActionService.recordExistingAction({
     tenantId: req.user.tenantId,
     actorUserId: req.user._id || req.user.id,
@@ -177,6 +195,7 @@ const deleteNodeHardById = catchAsync(async (req, res) => {
   await nodeService.deleteNodeById(req.params.nodeId, true, {
     includeDeleted: true,
   });
+  await invalidateNodeResolverCache(req.user?.tenantId || node?.tenantId);
   await copilotActionService.recordExistingAction({
     tenantId: req.user.tenantId || node?.tenantId,
     actorUserId: req.user._id || req.user.id,
@@ -199,6 +218,7 @@ const restoreNodeById = catchAsync(async (req, res) => {
     req.params.nodeId,
     req.body || {}
   );
+  await invalidateNodeResolverCache(req.user?.tenantId || restoredNode?.tenantId);
   await copilotActionService.recordExistingAction({
     tenantId: req.user.tenantId || restoredNode.tenantId,
     actorUserId: req.user._id || req.user.id,
@@ -297,6 +317,7 @@ const moveNodeToParent = catchAsync(async (req, res) => {
     req.params.nodeId,
     req.body.parentId
   );
+  await invalidateNodeResolverCache(req.user?.tenantId || updatedNode?.tenantId);
   await copilotActionService.recordExistingAction({
     tenantId: req.user.tenantId || currentNode.tenantId,
     actorUserId: req.user._id || req.user.id,
@@ -323,12 +344,14 @@ const getNodePath = catchAsync(async (req, res) => {
 // Activate a node
 const activateNode = catchAsync(async (req, res) => {
   const updatedNode = await nodeService.activateNode(req.params.nodeId);
+  await invalidateNodeResolverCache(req.user?.tenantId || updatedNode?.tenantId);
   res.send(nodeService.buildNodeResponse(updatedNode));
 });
 
 // Deactivate a node
 const deactivateNode = catchAsync(async (req, res) => {
   const updatedNode = await nodeService.deactivateNode(req.params.nodeId);
+  await invalidateNodeResolverCache(req.user?.tenantId || updatedNode?.tenantId);
   res.send(nodeService.buildNodeResponse(updatedNode));
 });
 
@@ -344,6 +367,7 @@ const assignUsersToNode = catchAsync(async (req, res) => {
     req.params.nodeId,
     req.body.userIds
   );
+  await invalidateNodeResolverCache(req.user?.tenantId || updatedNode?.tenantId);
 
   const assignedUsers = [...requestedUsers].filter((id) => !previousUsers.has(id));
   const unassignedUsers = [...previousUsers].filter((id) => !requestedUsers.has(id));
@@ -386,6 +410,7 @@ const assignUsersToNode = catchAsync(async (req, res) => {
 // Bulk import nodes
 const bulkImportNodes = catchAsync(async (req, res) => {
   const nodes = await nodeService.bulkImportNodes(req.body.nodes);
+  await invalidateNodeResolverCache(req.user?.tenantId);
   res.status(httpStatus.CREATED).json({
     message: `${nodes.length} nodes successfully imported.`,
     data: nodes.map((node) => nodeService.buildNodeResponse(node)),

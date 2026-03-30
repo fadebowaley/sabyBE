@@ -176,17 +176,23 @@ const cascadeMoveFamilyLevelAlignment = async ({
   }
 };
 
-const invalidateUserSearchAndResolveCache = async (tenantId) => {
+const invalidateEntitySearchAndResolveCache = async (tenantId, entityType) => {
   try {
     if (!tenantId) return;
     await invalidateTenantEntityCaches({
       tenantId: String(tenantId),
-      entityType: 'user',
+      entityType: String(entityType || 'user'),
     });
   } catch (_) {
     // non-blocking cache invalidation
   }
 };
+
+const invalidateUserSearchAndResolveCache = async (tenantId) =>
+  invalidateEntitySearchAndResolveCache(tenantId, 'user');
+
+const invalidateRoleSearchAndResolveCache = async (tenantId) =>
+  invalidateEntitySearchAndResolveCache(tenantId, 'role');
 
 const handleCreateUser = async (event) => {
   requireObjectPayload(event.payload_json);
@@ -396,6 +402,7 @@ const handleCreateRole = async (event) => {
   }
 
   const role = await roleService.createRole(normalizedRoleBody, actorUser);
+  await invalidateRoleSearchAndResolveCache(event.tenant_id || role?.tenantId);
   return {
     handled: true,
     resultType: 'role_created',
@@ -620,6 +627,9 @@ const handleDeleteRole = async (event) => {
 
   const actorUser = await resolveActorUser(event);
   const deletedRole = await roleService.deleteRoleById(roleId, actorUser || null);
+  await invalidateRoleSearchAndResolveCache(
+    event.tenant_id || deletedRole?.tenantId
+  );
   return {
     handled: true,
     resultType: 'role_deleted',
@@ -648,6 +658,7 @@ const handleAssignRole = async (event) => {
   }
 
   const updatedUser = await userService.assignRoles(userId, roleIds);
+  await invalidateUserSearchAndResolveCache(event.tenant_id || updatedUser?.tenantId);
   return {
     handled: true,
     resultType: 'role_assigned',
@@ -689,6 +700,7 @@ const handleUnassignRole = async (event) => {
     { roles: filteredRoles },
     actorUser || null
   );
+  await invalidateUserSearchAndResolveCache(event.tenant_id || updatedUser?.tenantId);
 
   return {
     handled: true,
@@ -722,6 +734,7 @@ const handleGrantPermission = async (event) => {
   }
 
   const updatedRole = await roleService.assignPermissions(roleId, permissionIds);
+  await invalidateRoleSearchAndResolveCache(event.tenant_id || updatedRole?.tenantId);
   return {
     handled: true,
     resultType: 'permission_granted',
@@ -759,6 +772,7 @@ const handleRevokePermission = async (event) => {
     roleId,
     permissionIds
   );
+  await invalidateRoleSearchAndResolveCache(event.tenant_id || updatedRole?.tenantId);
   return {
     handled: true,
     resultType: 'permission_revoked',

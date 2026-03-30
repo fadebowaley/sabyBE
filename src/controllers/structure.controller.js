@@ -3,6 +3,21 @@ const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { structureService } = require('../services');
+const {
+  invalidateTenantEntityCaches,
+} = require('../services/copilotEntityResolver.service');
+
+const invalidateStructureResolverCache = async (tenantId) => {
+  if (!tenantId) return;
+  try {
+    await invalidateTenantEntityCaches({
+      tenantId: String(tenantId),
+      entityType: 'structure',
+    });
+  } catch (_) {
+    // non-blocking cache invalidation
+  }
+};
 
 // Create a new structure
 const createStructure = catchAsync(async (req, res) => {
@@ -14,6 +29,7 @@ const createStructure = catchAsync(async (req, res) => {
       tenantId,
       createdBy
     );
+    await invalidateStructureResolverCache(tenantId);
     res.status(httpStatus.CREATED).send(result);
   } catch (err) {
     console.error(err);
@@ -92,6 +108,7 @@ const updateStructure = catchAsync(async (req, res) => {
     req.params.structureId,
     updateData
   );
+  await invalidateStructureResolverCache(req.user?.tenantId || updated?.tenantId);
   res.send(updated);
 });
 
@@ -114,6 +131,7 @@ const deleteStructure = catchAsync(async (req, res) => {
     );
   }
   await structureService.deleteStructureById(req.params.structureId);
+  await invalidateStructureResolverCache(req.user?.tenantId || structure?.tenantId);
   res.status(httpStatus.NO_CONTENT).send();
 });
 
@@ -182,6 +200,7 @@ const moveStructureToParent = catchAsync(async (req, res) => {
     req.params.structureId,
     req.body.parentId
   );
+  await invalidateStructureResolverCache(req.user?.tenantId || result?.tenantId);
   res.send(result);
 });
 
@@ -204,6 +223,7 @@ const activateStructure = catchAsync(async (req, res) => {
   const result = await structureService.activateStructure(
     req.params.structureId
   );
+  await invalidateStructureResolverCache(req.user?.tenantId || result?.tenantId);
   res.send(result);
 });
 
@@ -212,6 +232,7 @@ const deactivateStructure = catchAsync(async (req, res) => {
   const result = await structureService.deactivateStructure(
     req.params.structureId
   );
+  await invalidateStructureResolverCache(req.user?.tenantId || result?.tenantId);
   res.send(result);
 });
 

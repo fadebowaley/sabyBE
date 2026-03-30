@@ -3,6 +3,9 @@ const auth = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
 const projectFormSubmissionValidation = require('../../validations/projectFormSubmission.validation');
 const projectFormSubmissionController = require('../../controllers/projectFormSubmission.controller');
+const {
+  publicFormSubmitLimiter,
+} = require('../../middlewares/publicFormRateLimiter');
 
 const router = express.Router();
 
@@ -62,6 +65,14 @@ router.post(
   '/',
   validate(projectFormSubmissionValidation.createSubmission),
   projectFormSubmissionController.createSubmission
+);
+
+// Create a new public form submission by canonical reference
+router.post(
+  '/public/ref/:reference',
+  publicFormSubmitLimiter,
+  validate(projectFormSubmissionValidation.createSubmissionByReference),
+  projectFormSubmissionController.createSubmissionByReference
 );
 
 /**

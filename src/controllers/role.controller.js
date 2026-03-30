@@ -4,10 +4,26 @@ const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { roleService } = require('../services');
 const copilotActionService = require('../services/copilotAction.service');
+const {
+  invalidateTenantEntityCaches,
+} = require('../services/copilotEntityResolver.service');
+
+const invalidateRoleResolverCache = async (tenantId) => {
+  if (!tenantId) return;
+  try {
+    await invalidateTenantEntityCaches({
+      tenantId: String(tenantId),
+      entityType: 'role',
+    });
+  } catch (_) {
+    // non-blocking cache invalidation
+  }
+};
 
 // Controller to create Roles
 const createRole = catchAsync(async (req, res) => {
   const role = await roleService.createRole(req.body, req.user);
+  await invalidateRoleResolverCache(req.user?.tenantId || role?.tenantId);
   await copilotActionService.recordExistingAction({
     tenantId: req.user.tenantId,
     actorUserId: req.user._id || req.user.id,
@@ -70,11 +86,13 @@ const updateRole = catchAsync(async (req, res) => {
     req.body,
     req.user
   );
+  await invalidateRoleResolverCache(req.user?.tenantId || updated?.tenantId);
   res.send(updated);
 });
 
 const deleteRole = catchAsync(async (req, res) => {
   const deletedRole = await roleService.deleteRoleById(req.params.roleId, req.user);
+  await invalidateRoleResolverCache(req.user?.tenantId || deletedRole?.tenantId);
   await copilotActionService.recordExistingAction({
     tenantId: req.user.tenantId || deletedRole.tenantId,
     actorUserId: req.user._id || req.user.id,
@@ -96,6 +114,7 @@ const assignPermissions = catchAsync(async (req, res) => {
     req.params.roleId,
     req.body.permissionIds
   );
+  await invalidateRoleResolverCache(req.user?.tenantId || updatedRole?.tenantId);
   await copilotActionService.recordExistingAction({
     tenantId: req.user.tenantId,
     actorUserId: req.user._id || req.user.id,
@@ -133,6 +152,7 @@ const removePermissionsFromRole = catchAsync(async (req, res) => {
     roleId,
     permissions
   );
+  await invalidateRoleResolverCache(req.user?.tenantId || updatedRole?.tenantId);
   await copilotActionService.recordExistingAction({
     tenantId: req.user.tenantId,
     actorUserId: req.user._id || req.user.id,

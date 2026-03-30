@@ -1,10 +1,11 @@
 const Joi = require('joi');
 const { objectId } = require('./custom.validation');
+const tenantIdSchema = Joi.string().pattern(/^[a-zA-Z0-9_-]+$/);
 
 const createUserFormSettings = {
   body: Joi.object().keys({
     user: Joi.string().required().custom(objectId),
-    tenantId: Joi.string().alphanum(),
+    tenantId: tenantIdSchema,
     defaultFormSettings: Joi.object()
       .required()
       .keys({
@@ -121,7 +122,7 @@ const getUserFormSettings = {
     limit: Joi.number().integer(),
     page: Joi.number().integer(),
     user: Joi.string().custom(objectId),
-    tenantId: Joi.string().alphanum(),
+    tenantId: tenantIdSchema,
   }),
 };
 
@@ -143,7 +144,7 @@ const updateUserFormSettings = {
   }),
   body: Joi.object()
     .keys({
-      tenantId: Joi.string().alphanum(),
+      tenantId: tenantIdSchema,
       defaultFormSettings: Joi.object().keys({
         access: Joi.object().keys({
           type: Joi.string().valid('public', 'role-based', 'invite-only'),
@@ -223,7 +224,7 @@ const updateUserFormSettingsByUserId = {
   }),
   body: Joi.object()
     .keys({
-      tenantId: Joi.string().alphanum(),
+      tenantId: tenantIdSchema,
       defaultFormSettings: Joi.object().keys({
         access: Joi.object().keys({
           type: Joi.string().valid('public', 'role-based', 'invite-only'),
@@ -314,7 +315,7 @@ const upsertUserFormSettings = {
     userId: Joi.string().required().custom(objectId),
   }),
   body: Joi.object().keys({
-    tenantId: Joi.string().alphanum(),
+    tenantId: tenantIdSchema,
     defaultFormSettings: Joi.object()
       .required()
       .keys({

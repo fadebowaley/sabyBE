@@ -2,7 +2,7 @@ const httpStatus = require('http-status');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
-const { projectFormSubmissionService } = require('../services');
+const { projectFormSubmissionService, projectFormService } = require('../services');
 
 /**
  * Create a new form submission
@@ -40,6 +40,55 @@ const createSubmission = catchAsync(async (req, res) => {
     message: 'Form submitted successfully',
     submission,
     submissionId: submission.submissionId,
+  });
+});
+
+/**
+ * Create a new public form submission by canonical reference
+ */
+const createSubmissionByReference = catchAsync(async (req, res) => {
+  const { reference } = req.params;
+  const { submissionData, submittedAt, metadata } = req.body;
+
+  if (!submissionData) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Missing required field: submissionData'
+    );
+  }
+
+  const resolved = await projectFormService.getPublicProjectFormByReference(
+    reference
+  );
+
+  const requireToken = String(process.env.PUBLIC_FORM_REQUIRE_TOKEN || 'false')
+    .toLowerCase() === 'true';
+  if (requireToken) {
+    const incomingToken =
+      req.get('x-form-access-token') || req.query?.accessToken || null;
+    const configuredToken = resolved?.projectForm?.publicAccessToken || null;
+
+    if (!configuredToken || !incomingToken || incomingToken !== configuredToken) {
+      throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid form access token');
+    }
+  }
+
+  const submission = await projectFormSubmissionService.createSubmission(
+    {
+      submissionData,
+      submittedAt,
+      metadata,
+    },
+    resolved.projectForm.projectId,
+    resolved.projectForm.tenantId,
+    null
+  );
+
+  res.status(httpStatus.CREATED).send({
+    message: 'Form submitted successfully',
+    submission,
+    submissionId: submission.submissionId,
+    formReference: resolved.projectForm.formReference || null,
   });
 });
 
@@ -206,6 +255,7 @@ const getSubmissionStats = catchAsync(async (req, res) => {
 
 module.exports = {
   createSubmission,
+  createSubmissionByReference,
   getSubmissions,
   getSubmissionsByProject,
   getSubmissionsByTenant,

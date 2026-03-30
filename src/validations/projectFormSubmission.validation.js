@@ -18,6 +18,28 @@ const createSubmission = {
   }),
 };
 
+const createSubmissionByReference = {
+  params: Joi.object().keys({
+    reference: Joi.string().required(),
+  }),
+  body: Joi.object().keys({
+    submissionData: Joi.object().required(),
+    submittedAt: Joi.date().iso(),
+    metadata: Joi.object().keys({
+      submissionId: Joi.string(),
+      userAgent: Joi.string(),
+      ipAddress: Joi.string(),
+      referrer: Joi.string(),
+      timestamp: Joi.number(),
+      deviceInfo: Joi.object(),
+      geolocation: Joi.object(),
+    }),
+  }),
+  query: Joi.object().keys({
+    accessToken: Joi.string().optional(),
+  }),
+};
+
 const getSubmissions = {
   query: Joi.object().keys({
     projectId: Joi.string(),
@@ -143,6 +165,7 @@ const exportSubmissions = {
 
 module.exports = {
   createSubmission,
+  createSubmissionByReference,
   getSubmissions,
   getSubmissionsByProject,
   getSubmissionsByTenant,

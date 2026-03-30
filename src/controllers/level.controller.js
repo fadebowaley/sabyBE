@@ -3,6 +3,21 @@ const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { levelService } = require('../services');
+const {
+  invalidateTenantEntityCaches,
+} = require('../services/copilotEntityResolver.service');
+
+const invalidateLevelResolverCache = async (tenantId) => {
+  if (!tenantId) return;
+  try {
+    await invalidateTenantEntityCaches({
+      tenantId: String(tenantId),
+      entityType: 'level',
+    });
+  } catch (_) {
+    // non-blocking cache invalidation
+  }
+};
 
 // Create a new level
 const createLevel = catchAsync(async (req, res) => {
@@ -40,6 +55,7 @@ const createLevel = catchAsync(async (req, res) => {
   );
 
   const level = await levelService.createLevel(req.body);
+  await invalidateLevelResolverCache(req.user?.tenantId || level?.tenantId);
 
   console.log(
     '[LEVEL CONTROLLER - CREATE] Created level result:',
@@ -99,6 +115,7 @@ const updateLevelById = catchAsync(async (req, res) => {
     req.params.levelId,
     req.body
   );
+  await invalidateLevelResolverCache(req.user?.tenantId || updatedLevel?.tenantId);
   res.send(updatedLevel);
 });
 
@@ -119,6 +136,7 @@ const deleteLevelById = catchAsync(async (req, res) => {
     );
   }
   await levelService.deleteLevelById(req.params.levelId);
+  await invalidateLevelResolverCache(req.user?.tenantId || level?.tenantId);
   res.status(httpStatus.NO_CONTENT).send();
 });
 
@@ -198,18 +216,21 @@ const moveLevelToParent = catchAsync(async (req, res) => {
     req.params.levelId,
     req.body.parentId
   );
+  await invalidateLevelResolverCache(req.user?.tenantId || updatedLevel?.tenantId);
   res.send(updatedLevel);
 });
 
 // Activate a level
 const activateLevel = catchAsync(async (req, res) => {
   const updatedLevel = await levelService.activateLevel(req.params.levelId);
+  await invalidateLevelResolverCache(req.user?.tenantId || updatedLevel?.tenantId);
   res.send(updatedLevel);
 });
 
 // Deactivate a level
 const deactivateLevel = catchAsync(async (req, res) => {
   const updatedLevel = await levelService.deactivateLevel(req.params.levelId);
+  await invalidateLevelResolverCache(req.user?.tenantId || updatedLevel?.tenantId);
   res.send(updatedLevel);
 });
 

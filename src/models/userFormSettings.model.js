@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const validator = require('validator');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 
 const userFormSettingsSchema = mongoose.Schema(
@@ -8,8 +7,9 @@ const userFormSettingsSchema = mongoose.Schema(
       type: String,
       index: true,
       validate: {
-        validator: (value) => validator.isAlphanumeric(value),
-        message: 'Tenant ID must be alphanumeric',
+        validator: (value) =>
+          typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value),
+        message: 'Tenant ID must contain only letters, numbers, hyphen, or underscore',
       },
     },
     user: {

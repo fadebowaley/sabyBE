@@ -48,6 +48,27 @@ const normalizeRoleIds = (actorRoleIds) => {
   return [String(actorRoleIds)];
 };
 
+const normalizeActorUserId = (actorUserId) => {
+  if (actorUserId === null || actorUserId === undefined) return null;
+  let value = String(actorUserId).trim();
+  if (!value) return null;
+
+  // Tolerate accidentally JSON-encoded IDs like "\"6925...\""
+  try {
+    const parsed = JSON.parse(value);
+    if (typeof parsed === 'string') {
+      value = parsed.trim();
+    }
+  } catch (_) {
+    // keep original value
+  }
+
+  // Strip wrapping quotes if still present
+  value = value.replace(/^['"]+|['"]+$/g, '').trim();
+  if (!value || value === 'null' || value === 'undefined') return null;
+  return value;
+};
+
 const enforceActionPermission = async ({
   client,
   tenantId,
@@ -128,13 +149,14 @@ const createAction = async ({
   const client = await postgresPool.connect();
   try {
     await client.query('BEGIN');
+    const normalizedActorUserId = normalizeActorUserId(actorUserId);
 
     if (enforceRbac) {
       await enforceActionPermission({
         client,
         tenantId,
         actionType,
-        actorUserId,
+        actorUserId: normalizedActorUserId,
         actorRoleIds,
         permissionColumn: 'allow_execute',
       });
@@ -180,7 +202,7 @@ const createAction = async ({
       RETURNING *`,
       [
         tenantId,
-        actorUserId || null,
+        normalizedActorUserId || null,
         actionType,
         entityType,
         entityId || null,
@@ -229,7 +251,7 @@ const createAction = async ({
         entityType,
         entityId || null,
         priority,
-        actorUserId || null,
+        normalizedActorUserId || null,
         `Action requested: ${actionType}`,
         `Queued action ${actionType} for processing`,
         { tool: actionType, entityType, entityId },
