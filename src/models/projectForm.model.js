@@ -68,7 +68,7 @@ const FormElementSchema = new mongoose.Schema(
       ],
     },
   },
-  { _id: false }
+  { _id: false, strict: false }
 );
 
 const ProjectAnalysisProfileSchema = new mongoose.Schema(
