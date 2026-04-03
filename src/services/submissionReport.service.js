@@ -286,7 +286,11 @@ const getModuleReportTable = async (filters = {}) => {
       fs.node_name,
       fs.status,
       fs.data,
-      fs.created_at
+      fs.created_at,
+      COALESCE(nd.lineage_refs, ARRAY[]::text[]) AS hierarchy_lineage_refs,
+      COALESCE(nd.lineage_names, ARRAY[]::text[]) AS hierarchy_lineage_names,
+      COALESCE(nd.depth, 0) AS hierarchy_depth,
+      COALESCE(nd.level_name, NULL) AS hierarchy_level_name
     FROM form_submissions fs
     ${hierarchyJoin}
     ${whereClause}
@@ -350,6 +354,17 @@ const getModuleReportTable = async (filters = {}) => {
       node_name: row.node_name || null,
       status: row.status,
       submitted_at: row.created_at,
+      __lineage_refs: Array.isArray(row.hierarchy_lineage_refs)
+        ? row.hierarchy_lineage_refs
+        : [],
+      __lineage_names: Array.isArray(row.hierarchy_lineage_names)
+        ? row.hierarchy_lineage_names
+        : [],
+      __node_depth:
+        Number.isFinite(Number(row.hierarchy_depth))
+          ? Number(row.hierarchy_depth)
+          : 0,
+      __level_name: row.hierarchy_level_name || null,
     };
 
     const payload = row.data && typeof row.data === 'object' ? row.data : {};
