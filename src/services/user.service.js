@@ -6,6 +6,10 @@ const { validateCustomFields } = require('./customField.service');
 const { USER_ESSENTIAL_FIELDS } = require('../config/essentials');
 const { getUsersInAdminNodeDescendants } = require('./nodeAccess.service');
 const { postgresPool } = require('../config/postgres');
+const {
+  normalizePhoneToE164,
+  buildPhoneLookupCandidates,
+} = require('../utils/phoneNumber');
 
 const buildUserResponse = (userDoc) => {
   if (!userDoc) {
@@ -39,6 +43,19 @@ const buildUserResponse = (userDoc) => {
   return response;
 };
 
+const normalizePhoneForWrite = (value) => {
+  const raw = String(value == null ? '' : value).trim();
+  if (!raw) return '';
+  const normalized = normalizePhoneToE164(raw, { allowEmpty: false });
+  if (!normalized) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Invalid phone number format. Use a valid local or international number.'
+    );
+  }
+  return normalized;
+};
+
 /**
  * Create a user
  * @param {Object} userBody
@@ -46,6 +63,19 @@ const buildUserResponse = (userDoc) => {
  */
 
 const createUser = async (userBody) => {
+  if (
+    Object.prototype.hasOwnProperty.call(userBody, 'phone') &&
+    !Object.prototype.hasOwnProperty.call(userBody, 'phoneNumber')
+  ) {
+    userBody.phoneNumber = userBody.phone;
+  }
+  if (Object.prototype.hasOwnProperty.call(userBody, 'phone')) {
+    delete userBody.phone;
+  }
+  if (Object.prototype.hasOwnProperty.call(userBody, 'phoneNumber')) {
+    userBody.phoneNumber = normalizePhoneForWrite(userBody.phoneNumber);
+  }
+
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
@@ -82,6 +112,19 @@ const createUser = async (userBody) => {
 };
 
 const ownerCreate = async (userBody) => {
+  if (
+    Object.prototype.hasOwnProperty.call(userBody, 'phone') &&
+    !Object.prototype.hasOwnProperty.call(userBody, 'phoneNumber')
+  ) {
+    userBody.phoneNumber = userBody.phone;
+  }
+  if (Object.prototype.hasOwnProperty.call(userBody, 'phone')) {
+    delete userBody.phone;
+  }
+  if (Object.prototype.hasOwnProperty.call(userBody, 'phoneNumber')) {
+    userBody.phoneNumber = normalizePhoneForWrite(userBody.phoneNumber);
+  }
+
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
@@ -127,6 +170,19 @@ const ownerCreate = async (userBody) => {
  * @returns {Promise<User>}
  */
 const createSabyUser = async (userBody) => {
+  if (
+    Object.prototype.hasOwnProperty.call(userBody, 'phone') &&
+    !Object.prototype.hasOwnProperty.call(userBody, 'phoneNumber')
+  ) {
+    userBody.phoneNumber = userBody.phone;
+  }
+  if (Object.prototype.hasOwnProperty.call(userBody, 'phone')) {
+    delete userBody.phone;
+  }
+  if (Object.prototype.hasOwnProperty.call(userBody, 'phoneNumber')) {
+    userBody.phoneNumber = normalizePhoneForWrite(userBody.phoneNumber);
+  }
+
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
@@ -461,40 +517,15 @@ const getUserByEmail = async (email) => User.findOne({ email });
  */
 const getUserByPhone = async (phoneNumber) => {
   if (!phoneNumber) return null;
-  const normalized = phoneNumber.replace(/[\s\-\(\)]/g, '');
+  const candidates = buildPhoneLookupCandidates(phoneNumber);
   let user = null;
-  console.log(`[getUserByPhone] Trying as-is: ${normalized}`);
-  user = await User.findOne({ phoneNumber: normalized });
+  if (candidates.length > 0) {
+    console.log(`[getUserByPhone] Trying candidates: ${candidates.join(', ')}`);
+    user = await User.findOne({ phoneNumber: { $in: candidates } });
+  }
   if (user) {
-    console.log(`[getUserByPhone] Found as-is: ${user.email}`);
+    console.log(`[getUserByPhone] Found user: ${user.email}`);
     return user;
-  }
-  if (!normalized.startsWith('+')) {
-    console.log(`[getUserByPhone] Trying with +: +${normalized}`);
-    user = await User.findOne({ phoneNumber: `+${normalized}` });
-    if (user) {
-      console.log(`[getUserByPhone] Found with +: ${user.email}`);
-      return user;
-    }
-  }
-  if (normalized.startsWith('+')) {
-    console.log(
-      `[getUserByPhone] Trying without +: ${normalized.substring(1)}`
-    );
-    user = await User.findOne({ phoneNumber: normalized.substring(1) });
-    if (user) {
-      console.log(`[getUserByPhone] Found without +: ${user.email}`);
-      return user;
-    }
-  }
-  if (normalized.length > 10) {
-    const last10 = normalized.slice(-10);
-    console.log(`[getUserByPhone] Trying last 10 digits: ${last10}`);
-    user = await User.findOne({ phoneNumber: last10 });
-    if (user) {
-      console.log(`[getUserByPhone] Found last 10: ${user.email}`);
-      return user;
-    }
   }
   console.log(`[getUserByPhone] No user found for: ${phoneNumber}`);
   return null;
@@ -551,6 +582,19 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
   }
   if (Object.prototype.hasOwnProperty.call(updateBody, 'phone')) {
     delete updateBody.phone;
+  }
+  // Backward compatibility: accept legacy profile.phoneNumber but persist canonically on user.phoneNumber.
+  if (
+    updateBody.profile &&
+    typeof updateBody.profile === 'object' &&
+    Object.prototype.hasOwnProperty.call(updateBody.profile, 'phoneNumber') &&
+    !Object.prototype.hasOwnProperty.call(updateBody, 'phoneNumber')
+  ) {
+    updateBody.phoneNumber = updateBody.profile.phoneNumber;
+    delete updateBody.profile.phoneNumber;
+  }
+  if (Object.prototype.hasOwnProperty.call(updateBody, 'phoneNumber')) {
+    updateBody.phoneNumber = normalizePhoneForWrite(updateBody.phoneNumber);
   }
 
   const user = await User.findById(userId);

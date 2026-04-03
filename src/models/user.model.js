@@ -4,8 +4,21 @@ const bcrypt = require('bcryptjs');
 const { nanoid } = require('nanoid');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 const { HaloCounter } = require('./haloCounter.model');
+const { normalizePhoneToE164 } = require('../utils/phoneNumber');
 
 const AVATAR_BASE_URL = 'https://halocrm.s3.us-east-1.amazonaws.com/user';
+
+const normalizePhoneForPersistence = (value) => {
+  const raw = String(value == null ? '' : value).trim();
+  if (!raw) return null;
+  const normalized = normalizePhoneToE164(raw, { allowEmpty: false });
+  if (!normalized) {
+    throw new Error(
+      'Invalid phone number format. Use a valid local or international number.'
+    );
+  }
+  return normalized;
+};
 
 const userSchema = mongoose.Schema(
   {
@@ -308,6 +321,15 @@ userSchema.statics.isEmailTaken = async function (email, excludeUserId) {
 
 userSchema.statics.createUser = async function (userBody) {
   console.log('Creating user with body:', userBody);
+  if (
+    Object.prototype.hasOwnProperty.call(userBody, 'phone') &&
+    !Object.prototype.hasOwnProperty.call(userBody, 'phoneNumber')
+  ) {
+    userBody.phoneNumber = userBody.phone;
+  }
+  if (Object.prototype.hasOwnProperty.call(userBody, 'phone')) {
+    delete userBody.phone;
+  }
 
   // Enforce SabyUser uniqueness
   if (userBody.isSaby) {
@@ -329,6 +351,9 @@ userSchema.statics.createUser = async function (userBody) {
     userBody.isOwner,
     userBody.createdBy
   );
+  if (Object.prototype.hasOwnProperty.call(userBody, 'phoneNumber')) {
+    userBody.phoneNumber = normalizePhoneForPersistence(userBody.phoneNumber);
+  }
   const user = new this(userBody);
   await user.save();
   return user;
@@ -525,6 +550,9 @@ userSchema.statics.createBulk = async function (
       if (userBody.phone && !userBody.phoneNumber) {
         userBody.phoneNumber = userBody.phone;
         delete userBody.phone;
+      }
+      if (Object.prototype.hasOwnProperty.call(userBody, 'phoneNumber')) {
+        userBody.phoneNumber = normalizePhoneForPersistence(userBody.phoneNumber);
       }
 
       // Handle roles: convert role names to ObjectIds
