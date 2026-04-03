@@ -15,7 +15,11 @@ const { assertCopilotSchemaReady } = require('./services/copilotSchemaGuard.serv
 const { assertLevelIndexesReady } = require('./services/levelIndexGuard.service');
 const { initializeSocket } = require('./config/socket');
 const { initializeWorkers, shutdownWorkers } = require('./workers/index');
-const { startNodeSync, stopNodeSync } = require('./services/nodeSync.service');
+const {
+  startNodeSync,
+  stopNodeSync,
+  syncNodeDimensionsAtStartup,
+} = require('./services/nodeSync.service');
 
 let server;
 
@@ -83,7 +87,27 @@ const connectToDatabases = async () => {
         await initializeWorkers();
       }
 
-      // Initialize node sync if enabled
+      // Startup node dimension reconciliation:
+      // - distributed advisory lock (single instance runs)
+      // - first run full backfill, subsequent runs incremental.
+      const nodeDimensionSync = await syncNodeDimensionsAtStartup({
+        batchSize: config.nodeSync?.batchSize || 250,
+      });
+      if (nodeDimensionSync?.skipped) {
+        logger.info(
+          `⊘ Node dimension startup sync skipped (${nodeDimensionSync.reason})`
+        );
+      } else if (nodeDimensionSync?.mode === 'full_backfill') {
+        logger.info(
+          `✅ Node dimension startup full backfill: synced ${nodeDimensionSync.synced}/${nodeDimensionSync.missingDimensions} missing rows`
+        );
+      } else {
+        logger.info(
+          `✅ Node dimension startup incremental sync: processed ${nodeDimensionSync.processed}, upserted ${nodeDimensionSync.upserted}, removed ${nodeDimensionSync.removed}`
+        );
+      }
+
+      // Initialize node sync change stream if enabled
       await startNodeSync();
     } else {
       logger.error(

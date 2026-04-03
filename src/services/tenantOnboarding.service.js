@@ -10,6 +10,7 @@ const {
   GlobalSettings,
 } = require('../models');
 const ApiError = require('../utils/ApiError');
+const { upsertNodeDimension } = require('./nodeSync.service');
 
 const sanitizeText = (value, fallback = '') =>
   String(value == null ? fallback : value).trim();
@@ -318,6 +319,7 @@ const getOrCreateRootNode = async ({
     existing.isMain = true;
     existing.isActive = true;
     await existing.save();
+    await upsertNodeDimension(existing);
     return existing;
   }
 
@@ -335,6 +337,7 @@ const getOrCreateRootNode = async ({
     city: sanitizeText(city),
     nodeStructures: sanitizeBoolean(nodeStructures, false),
   });
+  await upsertNodeDimension(node);
   return node;
 };
 

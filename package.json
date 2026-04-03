@@ -40,7 +40,7 @@
     "backfill:compliance-tracking": "node src/scripts/backfill-compliance-tracking.js",
     "seed:copilot-actions": "node src/scripts/seed-copilot-action-catalog.js",
     "check:copilot-drift": "node src/scripts/check-copilot-action-drift.js",
-    "node-sync:backfill": "node scripts/backfill_node_dimension.js",
+    "node-sync:backfill": "node src/scripts/backfill-node-dimensions.js",
     "migrate:project-form-public-ref": "node src/scripts/migrate-project-form-public-ref.js",
     "whatsapp": "cross-env NODE_ENV=development node src/ingestion/whatsapp/server.js",
     "whatsapp:prod": "cross-env NODE_ENV=production node src/ingestion/whatsapp/server.js",

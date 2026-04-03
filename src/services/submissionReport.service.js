@@ -22,11 +22,16 @@ const { postgresPool } = require('../config/postgres');
 
 const DEFAULT_TABLE_LIMIT = 100;
 const MAX_TABLE_LIMIT = 500;
+const HIERARCHY_ORDERING_CACHE_MS = 60 * 1000;
 const FIXED_COLUMN_LABELS = {
   node_name: 'Node Name',
   nodeid: 'NodeId',
   status: 'Status',
   submitted_at: 'Submitted At',
+};
+let hierarchyOrderingCapability = {
+  checkedAt: 0,
+  enabled: false,
 };
 
 const toSnakeCase = (value = '') =>
@@ -70,6 +75,48 @@ const isTruthyDebugFlag = (value) => {
     return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
   }
   return false;
+};
+
+const isHierarchyOrderingAvailable = async () => {
+  const now = Date.now();
+  if (
+    now - hierarchyOrderingCapability.checkedAt <
+    HIERARCHY_ORDERING_CACHE_MS
+  ) {
+    return hierarchyOrderingCapability.enabled;
+  }
+
+  const requiredColumns = [
+    'tenant_id',
+    'node_id',
+    'node_reference',
+    'lineage_refs',
+  ];
+
+  try {
+    const result = await postgresPool.query(
+      `
+        SELECT COUNT(*)::int AS matched
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'node_dimension'
+          AND column_name = ANY($1::text[])
+      `,
+      [requiredColumns]
+    );
+    const matched = Number(result.rows[0]?.matched || 0);
+    hierarchyOrderingCapability = {
+      checkedAt: now,
+      enabled: matched === requiredColumns.length,
+    };
+  } catch (_error) {
+    hierarchyOrderingCapability = {
+      checkedAt: now,
+      enabled: false,
+    };
+  }
+
+  return hierarchyOrderingCapability.enabled;
 };
 
 const buildDynamicColumns = (catalogRows = [], submissionRows = []) => {
@@ -153,66 +200,103 @@ const getModuleReportTable = async (filters = {}) => {
     MAX_TABLE_LIMIT
   );
   const safeOffset = Math.max(Number(offset) || 0, 0);
+  const canUseHierarchyOrdering = await isHierarchyOrderingAvailable();
 
-  const where = ['tenant_id = $1', 'project_id = $2'];
+  const where = ['fs.tenant_id = $1', 'fs.project_id = $2'];
   const values = [tenant_id, project_id];
   let index = 3;
 
   if (node_filter) {
-    where.push(`(node_id = $${index} OR node_reference = $${index})`);
+    where.push(`(fs.node_id = $${index} OR fs.node_reference = $${index})`);
     values.push(node_filter);
     index += 1;
   }
   if (month) {
-    where.push(`month = $${index}`);
+    where.push(`fs.month = $${index}`);
     values.push(month);
     index += 1;
   }
   if (start_date) {
-    where.push(`created_at >= $${index}`);
+    where.push(`fs.created_at >= $${index}`);
     values.push(start_date);
     index += 1;
   }
   if (end_date) {
-    where.push(`created_at <= $${index}`);
+    where.push(`fs.created_at <= $${index}`);
     values.push(end_date);
     index += 1;
   }
   if (search && String(search).trim() !== '') {
     where.push(`(
-      CAST(id AS TEXT) ILIKE $${index}
-      OR COALESCE(node_name, '') ILIKE $${index}
-      OR COALESCE(node_reference, '') ILIKE $${index}
-      OR COALESCE(node_id, '') ILIKE $${index}
-      OR COALESCE(status, '') ILIKE $${index}
+      CAST(fs.id AS TEXT) ILIKE $${index}
+      OR COALESCE(fs.node_name, '') ILIKE $${index}
+      OR COALESCE(fs.node_reference, '') ILIKE $${index}
+      OR COALESCE(fs.node_id, '') ILIKE $${index}
+      OR COALESCE(fs.status, '') ILIKE $${index}
     )`);
     values.push(`%${String(search).trim()}%`);
     index += 1;
   }
 
   // Hide soft-deleted records from reporting table by default.
-  where.push(`status != 'deleted'`);
+  where.push(`fs.status != 'deleted'`);
 
   const whereClause = `WHERE ${where.join(' AND ')}`;
+  const hierarchyJoin = canUseHierarchyOrdering
+    ? `
+      LEFT JOIN LATERAL (
+        SELECT
+          nd.node_id,
+          nd.node_reference,
+          nd.lineage_refs
+        FROM node_dimension nd
+        WHERE nd.tenant_id = fs.tenant_id
+          AND (
+            (fs.node_id IS NOT NULL AND nd.node_id = fs.node_id)
+            OR (
+              fs.node_reference IS NOT NULL
+              AND nd.node_reference = fs.node_reference
+            )
+          )
+        ORDER BY
+          CASE WHEN fs.node_id IS NOT NULL AND nd.node_id = fs.node_id THEN 0 ELSE 1 END,
+          nd.updated_at DESC NULLS LAST
+        LIMIT 1
+      ) nd ON TRUE
+    `
+    : '';
+
+  const orderByClause = canUseHierarchyOrdering
+    ? `
+      ORDER BY
+        CASE WHEN nd.node_id IS NULL THEN 1 ELSE 0 END ASC,
+        array_to_string(
+          COALESCE(nd.lineage_refs, ARRAY[]::text[]) || COALESCE(nd.node_reference, fs.node_reference, fs.node_id, ''),
+          '/'
+        ) ASC,
+        fs.created_at DESC
+    `
+    : 'ORDER BY fs.created_at DESC';
 
   const rowsQuery = `
     SELECT
-      id,
-      node_id,
-      node_reference,
-      node_name,
-      status,
-      data,
-      created_at
-    FROM form_submissions
+      fs.id,
+      fs.node_id,
+      fs.node_reference,
+      fs.node_name,
+      fs.status,
+      fs.data,
+      fs.created_at
+    FROM form_submissions fs
+    ${hierarchyJoin}
     ${whereClause}
-    ORDER BY created_at DESC
+    ${orderByClause}
     LIMIT $${index} OFFSET $${index + 1}
   `;
   const rowsValues = [...values, safeLimit, safeOffset];
   const rowsResult = await postgresPool.query(rowsQuery, rowsValues);
 
-  const countQuery = `SELECT COUNT(*)::bigint AS total FROM form_submissions ${whereClause}`;
+  const countQuery = `SELECT COUNT(*)::bigint AS total FROM form_submissions fs ${whereClause}`;
   const countResult = await postgresPool.query(countQuery, values);
   const total = Number(countResult.rows[0]?.total || 0);
 
@@ -228,7 +312,7 @@ const getModuleReportTable = async (filters = {}) => {
       COUNT(*) FILTER (WHERE status = 'rejected')::bigint AS rejected_count,
       COUNT(*) FILTER (WHERE status = 'completed')::bigint AS completed_count,
       COUNT(*) FILTER (WHERE status = 'failed')::bigint AS failed_count
-    FROM form_submissions
+    FROM form_submissions fs
     ${whereClause}
   `;
   const summaryResult = await postgresPool.query(summaryQuery, values);
@@ -317,6 +401,7 @@ const getModuleReportTable = async (filters = {}) => {
       columns_count: columns.length,
       columns,
       display_order: response.display_order,
+      hierarchy_ordering_enabled: canUseHierarchyOrdering,
       sample_input_row: rowsResult.rows[0] || null,
       sample_mapped_row: rows[0] || null,
     };

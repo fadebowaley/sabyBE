@@ -3,8 +3,26 @@ const { Nodes, Structures } = require('../models');
 const ApiError = require('../utils/ApiError');
 const { validateCustomFields } = require('./customField.service');
 const { NODE_ESSENTIAL_FIELDS } = require('../config/essentials');
+const {
+  upsertNodeDimension,
+  deleteNodeDimension,
+  syncNodeBranchDimensions,
+} = require('./nodeSync.service');
 
 const isObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(value);
+
+const ensureNodeDimensionForNode = async (nodeDoc) => {
+  if (!nodeDoc) return;
+  await upsertNodeDimension(nodeDoc);
+};
+
+const ensureNodeDimensionsForBranch = async (nodeDoc) => {
+  if (!nodeDoc?.path) return;
+  await syncNodeBranchDimensions({
+    tenantId: nodeDoc.tenantId || null,
+    rootPath: nodeDoc.path,
+  });
+};
 
 /**
  * Create a new node
@@ -77,6 +95,7 @@ const createNode = async (nodeBody) => {
     await node.save();
   }
 
+  await ensureNodeDimensionForNode(node);
   return node;
 };
 
@@ -285,6 +304,9 @@ const updateNodeById = async (nodeId, updateBody) => {
     }
     await Nodes.updateNodeParent(node._id, newParentId);
     node = await getNodeById(node._id);
+    await ensureNodeDimensionsForBranch(node);
+  } else {
+    await ensureNodeDimensionForNode(node);
   }
 
   // Trigger compliance recalculation if profile was updated
@@ -323,6 +345,7 @@ const updateNodeById = async (nodeId, updateBody) => {
 const deleteNodeById = async (nodeId, hardDelete = false, options = {}) => {
   const { includeDeleted = false } = options;
   const node = await getNodeById(nodeId, { includeDeleted });
+  const targetNodeId = node?._id ? String(node._id) : null;
 
   if (hardDelete) {
     await node.remove();
@@ -333,6 +356,9 @@ const deleteNodeById = async (nodeId, hardDelete = false, options = {}) => {
     await node.save();
   }
 
+  if (targetNodeId) {
+    await deleteNodeDimension(targetNodeId);
+  }
   return node;
 };
 
@@ -373,8 +399,12 @@ const restoreNodeById = async (nodeId, restoreBody = {}) => {
       node._id,
       restoreBody.parent ? restoreBody.parent : null
     );
+    const refreshed = await getNodeById(node._id);
+    await ensureNodeDimensionsForBranch(refreshed);
+    return refreshed;
   }
 
+  await ensureNodeDimensionForNode(node);
   return getNodeById(node._id);
 };
 

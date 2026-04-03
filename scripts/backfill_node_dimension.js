@@ -15,46 +15,45 @@ const dotenv = require('dotenv');
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const config = require('../src/config/config');
-const { postgresPool, closePool } = require('../src/config/postgres');
+const { closePool } = require('../src/config/postgres');
 const logger = require('../src/config/logger');
 require('../src/models/level.model');
 require('../src/models/structure.model');
 const Nodes = require('../src/models/node.model');
-const { upsertNodeDimension } = require('../src/services/nodeSync.service');
+const {
+  ensureNodeDimensionTable,
+  backfillMissingNodeDimensions,
+} = require('../src/services/nodeSync.service');
 
 const BATCH_SIZE = config.nodeSync.batchSize || 250;
+const getArg = (flag) => {
+  const index = process.argv.indexOf(flag);
+  if (index === -1) return null;
+  return process.argv[index + 1] || null;
+};
 
 async function backfill() {
   console.log('🔁 Starting node_dimension backfill...');
 
   await mongoose.connect(config.mongoose.url, config.mongoose.options);
+  await ensureNodeDimensionTable();
 
-  const total = await Nodes.countDocuments({ deletedAt: null });
-  console.log(`📦 Nodes to process: ${total}`);
+  const tenantId = getArg('--tenant');
+  const batchSizeArg = Number(getArg('--batch'));
+  const batchSize = Number.isFinite(batchSizeArg) && batchSizeArg > 0 ? batchSizeArg : BATCH_SIZE;
 
-  let processed = 0;
-  let cursor = Nodes.find({ deletedAt: null }).cursor();
+  const total = await Nodes.countDocuments({
+    ...(tenantId ? { tenantId } : {}),
+    deletedAt: null,
+  });
+  console.log(`📦 Active nodes in scope: ${total}`);
 
-  const batch = [];
-  for await (const doc of cursor) {
-    batch.push(doc);
-    if (batch.length >= BATCH_SIZE) {
-      await Promise.all(batch.map((node) => upsertNodeDimension(node)));
-      processed += batch.length;
-      console.log(
-        `✅ Processed ${processed}/${total} nodes (${(
-          (processed / total) *
-          100
-        ).toFixed(1)}%)`
-      );
-      batch.length = 0;
-    }
-  }
-
-  if (batch.length) {
-    await Promise.all(batch.map((node) => upsertNodeDimension(node)));
-    processed += batch.length;
-  }
+  const result = await backfillMissingNodeDimensions({
+    tenantId,
+    batchSize,
+  });
+  console.log('✅ Backfill result:');
+  console.table([result]);
 
   console.log('🎉 Node dimension backfill complete!');
 }
