@@ -2,6 +2,7 @@ const httpStatus = require('http-status');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
+const { Nodes } = require('../models');
 const { nodeService } = require('../services');
 const copilotActionService = require('../services/copilotAction.service');
 const {
@@ -25,6 +26,9 @@ const TABLE_NODE_POPULATE = [
     },
   },
 ];
+
+const escapeRegex = (value = '') =>
+  String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const invalidateNodeResolverCache = async (tenantId) => {
   if (!tenantId) return;
@@ -238,7 +242,7 @@ const restoreNodeById = catchAsync(async (req, res) => {
 // Query nodes with filters and pagination
 const queryNodes = catchAsync(async (req, res) => {
   // SECURITY: Always filter by authenticated user's tenantId
-  const filter = pick(req.query, ['type', 'parent']);
+  const filter = pick(req.query, ['type', 'parent', 'level']);
   filter.tenantId = req.user.tenantId;
 
   const search = req.query.search && req.query.search.trim();
@@ -279,7 +283,44 @@ const queryNodes = catchAsync(async (req, res) => {
   options.populate = TABLE_NODE_POPULATE;
   options.select = TABLE_NODE_SELECT_FIELDS;
 
-  const result = await nodeService.queryNodes(filter, options);
+  const includeFamily =
+    String(req.query.includeFamily || '').toLowerCase() === 'true';
+
+  let result;
+  if (includeFamily && search && !filter.level) {
+    const matchedRoots = await Nodes.find(filter)
+      .select('path')
+      .limit(safeLimit)
+      .lean();
+
+    if (!matchedRoots.length) {
+      result = {
+        results: [],
+        page: options.page,
+        limit: options.limit,
+        totalPages: 0,
+        totalResults: 0,
+      };
+    } else {
+      const familyPathFilters = matchedRoots
+        .map((node) => String(node.path || '').trim())
+        .filter(Boolean)
+        .map((pathValue) => ({
+          path: { $regex: `^${escapeRegex(pathValue)}` },
+        }));
+
+      const baseFilter = { ...filter };
+      delete baseFilter.name;
+
+      const familyFilter = {
+        $and: [baseFilter, { $or: familyPathFilters }],
+      };
+
+      result = await nodeService.queryNodes(familyFilter, options);
+    }
+  } else {
+    result = await nodeService.queryNodes(filter, options);
+  }
 
   // Add metadata about access scope
   result.scopedToUser =

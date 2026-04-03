@@ -35,8 +35,10 @@ const queryNodes = {
     parent: Joi.alternatives()
       .try(Joi.string().custom(objectId), Joi.valid('root', null))
       .optional(),
+    level: Joi.string().custom(objectId).optional(),
     type: Joi.string().valid('main', 'owner'),
     search: Joi.string().trim().allow('').optional(),
+    includeFamily: Joi.boolean().optional(),
     status: Joi.string().valid('active', 'archived', 'all').default('active'),
   }),
 };
