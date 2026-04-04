@@ -551,7 +551,7 @@ ProjectFormSchema.statics.generateProjectId = function (projectName = '') {
  */
 ProjectFormSchema.statics.generatePublicRef = function (projectName = '') {
   const slug = createProjectSlug(projectName) || 'form';
-  const suffix = nanoid(8).toLowerCase();
+  const suffix = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 8)();
   return `frm_${slug}-${suffix}`;
 };
 
