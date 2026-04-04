@@ -248,7 +248,10 @@ const getModuleReportTable = async (filters = {}) => {
         SELECT
           nd.node_id,
           nd.node_reference,
-          nd.lineage_refs
+          nd.lineage_refs,
+          nd.lineage_names,
+          nd.depth,
+          nd.level_name
         FROM node_dimension nd
         WHERE nd.tenant_id = fs.tenant_id
           AND (
