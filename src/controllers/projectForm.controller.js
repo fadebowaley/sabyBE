@@ -3,6 +3,7 @@ const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { projectFormService } = require('../services');
+const projectFormPublicAccessService = require('../services/projectFormPublicAccess.service');
 const {
   invalidateTenantEntityCaches,
 } = require('../services/copilotEntityResolver.service');
@@ -190,6 +191,9 @@ const getPublicProjectFormByReference = catchAsync(async (req, res) => {
   const result = await projectFormService.getPublicProjectFormByReference(
     reference
   );
+  const qrContext = projectFormService.buildPublicQrContext(result.projectForm, {
+    resolvedBy: result.resolvedBy,
+  });
 
   const requireToken = String(process.env.PUBLIC_FORM_REQUIRE_TOKEN || 'false')
     .toLowerCase() === 'true';
@@ -209,6 +213,14 @@ const getPublicProjectFormByReference = catchAsync(async (req, res) => {
     canonicalRef: result.canonicalRef,
     legacyResolved: result.legacyResolved,
     canonicalPath: `/s/${result.canonicalRef}`,
+    secureMode: qrContext.secureMode,
+    requiresIdentityChallenge: qrContext.requiresIdentityChallenge,
+    qrContextToken: qrContext.qrContextToken,
+    qrContextExpiresAt: qrContext.qrContextExpiresAt,
+    qrVersion: qrContext.qrVersion,
+    schemaVersion: qrContext.schemaVersion,
+    schemaHash: qrContext.schemaHash,
+    pipelineTarget: qrContext.pipelineTarget,
   };
 
   await projectFormService.incrementProjectViews(result.projectForm.projectId);
@@ -224,6 +236,9 @@ const getPublicProjectFormByShortCode = catchAsync(async (req, res) => {
   const result = await projectFormService.getPublicProjectFormByShortCode(
     shortCode
   );
+  const qrContext = projectFormService.buildPublicQrContext(result.projectForm, {
+    resolvedBy: result.resolvedBy,
+  });
 
   const requireToken = String(process.env.PUBLIC_FORM_REQUIRE_TOKEN || 'false')
     .toLowerCase() === 'true';
@@ -244,11 +259,129 @@ const getPublicProjectFormByShortCode = catchAsync(async (req, res) => {
     legacyResolved: false,
     canonicalPath: `/s/${result.canonicalRef}`,
     shortCode,
+    secureMode: qrContext.secureMode,
+    requiresIdentityChallenge: qrContext.requiresIdentityChallenge,
+    qrContextToken: qrContext.qrContextToken,
+    qrContextExpiresAt: qrContext.qrContextExpiresAt,
+    qrVersion: qrContext.qrVersion,
+    schemaVersion: qrContext.schemaVersion,
+    schemaHash: qrContext.schemaHash,
+    pipelineTarget: qrContext.pipelineTarget,
   };
 
   await projectFormService.incrementProjectViews(result.projectForm.projectId);
 
   res.send(response);
+});
+
+/**
+ * Request secure magic-link for single-QR passwordless public form access.
+ */
+const requestPublicAccessLink = catchAsync(async (req, res) => {
+  const { reference, identifier, qrContextToken } = req.body;
+  const result = await projectFormPublicAccessService.issueAccessLink({
+    reference,
+    identifier,
+    qrContextToken: qrContextToken || null,
+  });
+
+  res.status(httpStatus.OK).send(result);
+});
+
+/**
+ * Request OTP challenge for secure public form access.
+ */
+const requestPublicAccessCode = catchAsync(async (req, res) => {
+  const { reference, channel, identifier, qrContextToken } = req.body;
+  const result = await projectFormPublicAccessService.requestAccessCode({
+    reference,
+    channel,
+    identifier,
+    qrContextToken: qrContextToken || null,
+  });
+
+  res.status(httpStatus.OK).send(result);
+});
+
+/**
+ * Verify OTP challenge and return secure access token/context.
+ */
+const verifyPublicAccessCode = catchAsync(async (req, res) => {
+  const { challengeId, otp } = req.body;
+  const result = await projectFormPublicAccessService.verifyAccessCode({
+    challengeId,
+    otp,
+  });
+
+  res.status(httpStatus.OK).send(result);
+});
+
+/**
+ * Resend OTP challenge code for secure public form access.
+ */
+const resendPublicAccessCode = catchAsync(async (req, res) => {
+  const { challengeId } = req.body;
+  const result = await projectFormPublicAccessService.resendAccessCode({
+    challengeId,
+  });
+
+  res.status(httpStatus.OK).send(result);
+});
+
+/**
+ * Consume secure magic-link token and return access context + assigned nodes.
+ */
+const consumePublicAccessLink = catchAsync(async (req, res) => {
+  const accessToken =
+    req.query?.accessToken ||
+    req.body?.accessToken ||
+    req.get('x-form-access-token') ||
+    null;
+
+  const result = await projectFormPublicAccessService.consumeAccessLink({
+    accessToken,
+  });
+
+  res.status(httpStatus.OK).send(result);
+});
+
+/**
+ * Submit secure public form payload via unified Postgres pipeline.
+ */
+const submitPublicAccessForm = catchAsync(async (req, res) => {
+  const accessToken =
+    req.body?.accessToken ||
+    req.get('x-form-access-token') ||
+    req.query?.accessToken ||
+    null;
+
+  const result = await projectFormPublicAccessService.submitWithAccess({
+    accessToken,
+    nodeId: req.body?.nodeId,
+    submissionData: req.body?.submissionData,
+    submittedAt: req.body?.submittedAt || null,
+    metadata: req.body?.metadata || {},
+  });
+
+  res.status(httpStatus.CREATED).send(result);
+});
+
+/**
+ * Get secure public-access metrics for one module.
+ */
+const getProjectPublicAccessMetrics = catchAsync(async (req, res) => {
+  const { projectId } = req.params;
+  const tenantId = req.user?.tenantId;
+  const recentWindowHours = Number(req.query?.windowHours || 24);
+
+  const metrics =
+    await projectFormPublicAccessService.getProjectPublicAccessMetrics({
+      tenantId,
+      projectId,
+      recentWindowHours,
+    });
+
+  res.send(metrics);
 });
 
 /**
@@ -581,6 +714,13 @@ module.exports = {
   getProjectFormByPublicRef,
   getPublicProjectFormByReference,
   getPublicProjectFormByShortCode,
+  requestPublicAccessLink,
+  requestPublicAccessCode,
+  verifyPublicAccessCode,
+  resendPublicAccessCode,
+  consumePublicAccessLink,
+  submitPublicAccessForm,
+  getProjectPublicAccessMetrics,
   getProjectStorageFolder,
   updateProjectForm,
   updateProjectFormByProjectId,

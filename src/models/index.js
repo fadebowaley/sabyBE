@@ -23,6 +23,7 @@ module.exports.Permission = require('./permission.model');
 module.exports.Program = require('./program.model');
 module.exports.ProjectForm = require('./projectForm.model');
 module.exports.ProjectFormSubmission = require('./projectFormSubmission.model');
+module.exports.PublicFormAccess = require('./publicFormAccess.model');
 module.exports.Report = require('./reports.model');
 module.exports.Role = require('./role.model');
 module.exports.Settings = require('./settings.model');

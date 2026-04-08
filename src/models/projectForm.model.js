@@ -112,6 +112,11 @@ const ProjectConfigurationSchema = new mongoose.Schema({
     type: ProjectAnalysisProfileSchema,
     default: undefined,
   },
+  publicSecureMode: {
+    type: String,
+    enum: ['off', 'single_qr_passwordless'],
+    default: 'off',
+  },
   accessibility: [
     {
       type: String,

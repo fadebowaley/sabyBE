@@ -186,6 +186,13 @@ const envVarsSchema = Joi.object()
       .try(Joi.number(), Joi.string().pattern(/^\d+/))
       .default(200)
       .description('Max payments processed per reconciliation sweep'),
+    PUBLIC_QR_CONTEXT_SECRET: Joi.string()
+      .allow('')
+      .description('Secret used to sign public QR context tokens'),
+    PUBLIC_QR_CONTEXT_TTL_SEC: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(900)
+      .description('TTL in seconds for signed public QR context token'),
     COPILOT_WORKER_INTERVAL_MS: Joi.alternatives()
       .try(Joi.number(), Joi.string().pattern(/^\d+/))
       .default(3000)
@@ -384,6 +391,11 @@ module.exports = {
       stuckMinutes: Number(envVars.PAYMENT_RECON_STUCK_MINUTES),
       batchSize: Number(envVars.PAYMENT_RECON_BATCH_SIZE),
     },
+  },
+  publicForm: {
+    qrContextSecret:
+      envVars.PUBLIC_QR_CONTEXT_SECRET || envVars.JWT_SECRET,
+    qrContextTtlSec: Number(envVars.PUBLIC_QR_CONTEXT_TTL_SEC),
   },
   copilot: {
     workerIntervalMs: Number(envVars.COPILOT_WORKER_INTERVAL_MS),

@@ -105,6 +105,9 @@ const projectConfigurationSchema = Joi.object({
   projectName: Joi.string().required().trim().min(1).max(100),
   tags: Joi.array().items(Joi.string().trim()).default([]),
   analysisProfile: projectAnalysisProfileSchema,
+  publicSecureMode: Joi.string()
+    .valid('off', 'single_qr_passwordless')
+    .default('off'),
   accessibility: Joi.array()
     .items(Joi.string().valid('api', 'embedded', 'javascript', 'mobile'))
     .default([]),
@@ -403,6 +406,54 @@ const getPublicProjectFormByShortCode = {
   }),
 };
 
+const requestPublicAccessLink = {
+  body: Joi.object().keys({
+    reference: Joi.string().required(),
+    identifier: Joi.string().required(),
+    qrContextToken: Joi.string().optional(),
+  }),
+};
+
+const requestPublicAccessCode = {
+  body: Joi.object().keys({
+    reference: Joi.string().required(),
+    channel: Joi.string().valid('email', 'phone').required(),
+    identifier: Joi.string().required(),
+    qrContextToken: Joi.string().optional(),
+  }),
+};
+
+const verifyPublicAccessCode = {
+  body: Joi.object().keys({
+    challengeId: Joi.string().required(),
+    otp: Joi.string().pattern(/^\d{6}$/).required(),
+  }),
+};
+
+const resendPublicAccessCode = {
+  body: Joi.object().keys({
+    challengeId: Joi.string().required(),
+  }),
+};
+
+const consumePublicAccessLink = {
+  query: Joi.object().keys({
+    accessToken: Joi.string().required(),
+  }),
+};
+
+const submitPublicAccessForm = {
+  body: Joi.object().keys({
+    accessToken: Joi.string().required(),
+    nodeId: Joi.string().required(),
+    submissionData: Joi.alternatives()
+      .try(Joi.object().unknown(true), Joi.array().items(Joi.any()))
+      .required(),
+    submittedAt: Joi.string().isoDate().optional(),
+    metadata: Joi.object().unknown(true).optional(),
+  }),
+};
+
 const updateProjectForm = {
   params: Joi.object().keys({
     projectFormId: Joi.string().custom(objectId).required(),
@@ -501,6 +552,15 @@ const getProjectAnalytics = {
   }),
 };
 
+const getProjectPublicAccessMetrics = {
+  params: Joi.object().keys({
+    projectId: Joi.string().required(),
+  }),
+  query: Joi.object().keys({
+    windowHours: Joi.number().integer().min(1).max(168).optional(),
+  }),
+};
+
 const getProjectSchemaProfile = {
   params: Joi.object().keys({
     projectId: Joi.string().required(),
@@ -549,6 +609,12 @@ module.exports = {
   getProjectFormByPublicRef,
   getPublicProjectFormByReference,
   getPublicProjectFormByShortCode,
+  requestPublicAccessLink,
+  requestPublicAccessCode,
+  verifyPublicAccessCode,
+  resendPublicAccessCode,
+  consumePublicAccessLink,
+  submitPublicAccessForm,
   updateProjectForm,
   updateProjectFormByProjectId,
   deleteProjectForm,
@@ -557,6 +623,7 @@ module.exports = {
   publishProjectForm,
   archiveProjectForm,
   getProjectAnalytics,
+  getProjectPublicAccessMetrics,
   getProjectSchemaProfile,
   incrementSubmissions,
   bulkOperations,

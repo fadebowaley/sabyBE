@@ -32,6 +32,7 @@ module.exports.departmentService = require('./department.service');
 module.exports.eventService = require('./event.service');
 module.exports.eventConfigService = require('./eventConfig.service');
 module.exports.projectFormService = require('./projectForm.service');
+module.exports.projectFormPublicAccessService = require('./projectFormPublicAccess.service');
 module.exports.projectFormSubmissionService = require('./projectFormSubmission.service');
 module.exports.programService = require('./program.service');
 module.exports.inmailService = require('./inmail.service');

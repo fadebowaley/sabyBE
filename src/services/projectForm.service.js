@@ -1,6 +1,9 @@
 const httpStatus = require('http-status');
+const jwt = require('jsonwebtoken');
+const { randomUUID, createHash } = require('crypto');
 const { ProjectForm, StorageFolder } = require('../models');
 const { postgresPool } = require('../config/postgres');
+const config = require('../config/config');
 const ApiError = require('../utils/ApiError');
 const fieldCatalogService = require('./fieldCatalog.service');
 
@@ -235,6 +238,7 @@ const sanitizePublicForm = (projectForm) => {
         ? source.configuration.tags
         : [],
       security: source.configuration?.security || 'public',
+      publicSecureMode: source.configuration?.publicSecureMode || 'off',
     },
     elements: safeElements,
     style: source.style || 'default',
@@ -256,6 +260,89 @@ const sanitizePublicForm = (projectForm) => {
       hasValidation: Boolean(source.metadata?.hasValidation),
       lastModified: source.metadata?.lastModified || source.updatedAt || null,
     },
+  };
+};
+
+const resolvePublicSecureMode = (projectForm) => {
+  const mode = String(
+    projectForm?.configuration?.publicSecureMode ||
+      projectForm?.metadata?.publicSecureMode ||
+      'off'
+  ).toLowerCase();
+
+  if (mode === 'single_qr_passwordless') return mode;
+  return 'off';
+};
+
+const buildSchemaHash = (projectForm) => {
+  const payload = {
+    projectId: projectForm?.projectId || '',
+    publicRef: projectForm?.publicRef || '',
+    shareRef: projectForm?.shareRef || '',
+    version: projectForm?.metadata?.version || '1.0.0',
+    updatedAt: projectForm?.updatedAt
+      ? new Date(projectForm.updatedAt).toISOString()
+      : null,
+    elements: Array.isArray(projectForm?.elements)
+      ? projectForm.elements.map((element = {}) => ({
+          id: element.id,
+          type: element.type,
+          properties: element.properties || {},
+        }))
+      : [],
+  };
+
+  return createHash('sha256')
+    .update(JSON.stringify(payload))
+    .digest('hex');
+};
+
+const buildPublicQrContext = (projectForm, options = {}) => {
+  const secureMode = resolvePublicSecureMode(projectForm);
+  const requiresIdentityChallenge = secureMode === 'single_qr_passwordless';
+  const ttlSec = Number(config?.publicForm?.qrContextTtlSec || 900);
+  const nowEpoch = Math.floor(Date.now() / 1000);
+  const schemaHash = buildSchemaHash(projectForm);
+  const qrVersion = 'v1';
+
+  const claims = {
+    typ: 'public_qr_context',
+    jti: randomUUID(),
+    tenantId: projectForm?.tenantId || null,
+    projectId: projectForm?.projectId || null,
+    projectFormId: projectForm?._id ? String(projectForm._id) : null,
+    publicRef: projectForm?.publicRef || null,
+    shareRef: projectForm?.shareRef || null,
+    shareCode: projectForm?.shareCode || null,
+    deploymentStatus: projectForm?.metadata?.deploymentStatus || null,
+    status: projectForm?.status || null,
+    security: projectForm?.configuration?.security || null,
+    publicSecureMode: secureMode,
+    pipelineTarget: 'postgres_unified',
+    schemaVersion: projectForm?.metadata?.version || '1.0.0',
+    schemaHash,
+    qrVersion,
+    issuedAt: new Date().toISOString(),
+    resolvedBy: options?.resolvedBy || null,
+  };
+
+  const token = jwt.sign(claims, config.publicForm.qrContextSecret, {
+    algorithm: 'HS256',
+    issuer: 'saby-public-form',
+    audience: 'saby-public-form-entry',
+    expiresIn: ttlSec,
+    notBefore: 0,
+  });
+
+  return {
+    secureMode,
+    requiresIdentityChallenge,
+    qrContextToken: token,
+    qrContextExpiresAt: new Date((nowEpoch + ttlSec) * 1000).toISOString(),
+    qrVersion,
+    schemaHash,
+    schemaVersion: claims.schemaVersion,
+    pipelineTarget: claims.pipelineTarget,
   };
 };
 
@@ -988,6 +1075,7 @@ module.exports = {
   getProjectFormByPublicRef,
   getPublicProjectFormByReference,
   getPublicProjectFormByShortCode,
+  buildPublicQrContext,
   getProjectFormsByTenant,
   getProjectFormsByUser,
   updateProjectFormById,

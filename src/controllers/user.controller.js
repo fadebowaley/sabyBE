@@ -1,4 +1,5 @@
 const httpStatus = require('http-status');
+const mongoose = require('mongoose');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
@@ -7,7 +8,7 @@ const copilotActionService = require('../services/copilotAction.service');
 const {
   invalidateTenantEntityCaches,
 } = require('../services/copilotEntityResolver.service');
-const { User } = require('../models');
+const { User, Role } = require('../models');
 
 const invalidateUserResolverCache = async (tenantId) => {
   if (!tenantId) return;
@@ -222,7 +223,7 @@ const restoreUser = catchAsync(async (req, res) => {
 
 // getting all users or users based on tenantid of owner
 const getUsers = catchAsync(async (req, res) => {
-  let filter = pick(req.query, [
+  const baseFilter = pick(req.query, [
     'firstname',
     'lastname',
     'userId',
@@ -230,23 +231,74 @@ const getUsers = catchAsync(async (req, res) => {
     'avatar',
   ]);
   const searchTerm = (req.query.search || req.query.q || '').trim();
+  const requestedStatus = String(req.query.status || '').trim();
+  const requestedRoles = String(req.query.roles || '').trim();
+  const andFilters = [];
 
-  // If userId is passed (10-digit string), search by that field directly
-  if (filter.userId) {
-    filter.userId = filter.userId;
+  if (Object.keys(baseFilter).length > 0) {
+    andFilters.push(baseFilter);
   }
-  // If 'q' is present, override filters with regex OR search
+
+  if (requestedStatus) {
+    const statusLower = requestedStatus.toLowerCase();
+    if (statusLower === 'active') {
+      andFilters.push({ deletedAt: null, status: true });
+    } else if (statusLower === 'pending') {
+      andFilters.push({ deletedAt: null, status: false });
+    } else if (statusLower === 'deactivated') {
+      andFilters.push({ deletedAt: { $ne: null } });
+    }
+  }
+
+  if (requestedRoles) {
+    let roleIds = [];
+    const rawRoleValues = requestedRoles
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    const objectIdRoleValues = rawRoleValues.filter((value) =>
+      mongoose.Types.ObjectId.isValid(value)
+    );
+    const roleNameValues = rawRoleValues.filter(
+      (value) => !mongoose.Types.ObjectId.isValid(value)
+    );
+
+    if (objectIdRoleValues.length > 0) {
+      roleIds = roleIds.concat(objectIdRoleValues);
+    }
+
+    if (roleNameValues.length > 0) {
+      const roleNameFilter = { name: { $in: roleNameValues } };
+      if (!req.user?.isSaby && req.user?.tenantId) {
+        roleNameFilter.tenantId = req.user.tenantId;
+      }
+      const matchingRoles = await Role.find(roleNameFilter).select('_id');
+      roleIds = roleIds.concat(matchingRoles.map((role) => String(role._id)));
+    }
+
+    const uniqueRoleIds = [...new Set(roleIds)];
+    if (uniqueRoleIds.length === 0) {
+      andFilters.push({ _id: { $in: [] } });
+    } else {
+      andFilters.push({ roles: { $in: uniqueRoleIds } });
+    }
+  }
+
   if (searchTerm) {
-    const regex = new RegExp(searchTerm, 'i'); // case-insensitive
-    filter = {
+    const regex = new RegExp(searchTerm, 'i');
+    andFilters.push({
       $or: [
         { firstname: regex },
         { lastname: regex },
         { email: regex },
         { userId: regex },
       ],
-    };
+    });
   }
+
+  const filter = andFilters.length === 0 ? {} : { $and: andFilters };
+
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
   options.populate = 'roles';
   options.user = req.user; // Add the user object to options for tenant filtering and hierarchy

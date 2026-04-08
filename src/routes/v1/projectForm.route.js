@@ -6,6 +6,7 @@ const projectFormController = require('../../controllers/projectForm.controller'
 const workflowController = require('../../controllers/workflow.controller');
 const {
   publicFormReadLimiter,
+  publicFormSubmitLimiter,
 } = require('../../middlewares/publicFormRateLimiter');
 
 const router = express.Router();
@@ -298,6 +299,48 @@ router.get(
   projectFormController.getPublicProjectFormByReference
 );
 
+router.post(
+  '/public/access/request-link',
+  publicFormReadLimiter,
+  validate(projectFormValidation.requestPublicAccessLink),
+  projectFormController.requestPublicAccessLink
+);
+
+router.post(
+  '/public/access/request-code',
+  publicFormReadLimiter,
+  validate(projectFormValidation.requestPublicAccessCode),
+  projectFormController.requestPublicAccessCode
+);
+
+router.post(
+  '/public/access/verify-code',
+  publicFormSubmitLimiter,
+  validate(projectFormValidation.verifyPublicAccessCode),
+  projectFormController.verifyPublicAccessCode
+);
+
+router.post(
+  '/public/access/resend-code',
+  publicFormReadLimiter,
+  validate(projectFormValidation.resendPublicAccessCode),
+  projectFormController.resendPublicAccessCode
+);
+
+router.get(
+  '/public/access/consume-link',
+  publicFormReadLimiter,
+  validate(projectFormValidation.consumePublicAccessLink),
+  projectFormController.consumePublicAccessLink
+);
+
+router.post(
+  '/public/access/submit',
+  publicFormSubmitLimiter,
+  validate(projectFormValidation.submitPublicAccessForm),
+  projectFormController.submitPublicAccessForm
+);
+
 // Short-code public alias (strict-gated and sanitized)
 router.get(
   '/public/short/:shortCode',
@@ -353,6 +396,13 @@ router.get(
   auth('view:project-form'),
   validate(projectFormValidation.getProjectAnalytics),
   projectFormController.getProjectAnalytics
+);
+
+router.get(
+  '/project/:projectId/public-access-metrics',
+  auth('view:project-form'),
+  validate(projectFormValidation.getProjectPublicAccessMetrics),
+  projectFormController.getProjectPublicAccessMetrics
 );
 
 // Get project schema profile by project ID
