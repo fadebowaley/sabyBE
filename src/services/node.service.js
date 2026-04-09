@@ -150,17 +150,19 @@ const getNodeByName = async (name) => {
  * @returns {Promise<Node>}
  */
 const updateNodeById = async (nodeId, updateBody) => {
+  const safeUpdateBody =
+    updateBody && typeof updateBody === 'object' ? { ...updateBody } : {};
   let node = await getNodeById(nodeId);
 
   const customFieldsProvided = Object.prototype.hasOwnProperty.call(
-    updateBody,
+    safeUpdateBody,
     'customFields'
   );
   const customFieldsPayload = customFieldsProvided
-    ? updateBody.customFields
+    ? safeUpdateBody.customFields
     : undefined;
   if (customFieldsProvided) {
-    delete updateBody.customFields;
+    delete safeUpdateBody.customFields;
   }
 
   // Separate node fields from profile fields
@@ -180,15 +182,20 @@ const updateNodeById = async (nodeId, updateBody) => {
     'structure',
   ];
 
-  const profileFields = [
+  const profileFields = new Set([
     'dateOfEstablishment',
     'propertyStatus',
     'estimatedValue',
     'buildingType',
-    'status',
+    'facilityStatus',
     'averageAttendance',
     'averageIncome',
-  ];
+  ]);
+
+  const normalizeProfileField = (field) => {
+    if (field === 'status') return 'facilityStatus';
+    return field;
+  };
 
   // Extract node-specific fields and profile fields
   const nodeUpdate = {};
@@ -196,20 +203,34 @@ const updateNodeById = async (nodeId, updateBody) => {
 
   let newParentId = null;
   const parentProvided = Object.prototype.hasOwnProperty.call(
-    updateBody,
+    safeUpdateBody,
     'parent'
   );
 
-  Object.keys(updateBody).forEach((key) => {
+  Object.keys(safeUpdateBody).forEach((key) => {
     if (key === 'parent') {
-      newParentId = updateBody[key] || null;
+      newParentId = safeUpdateBody[key] || null;
+      return;
+    }
+
+    if (key === 'profile' && safeUpdateBody.profile && typeof safeUpdateBody.profile === 'object') {
+      Object.keys(safeUpdateBody.profile).forEach((profileKey) => {
+        const normalizedProfileKey = normalizeProfileField(profileKey);
+        if (profileFields.has(normalizedProfileKey)) {
+          profileUpdate[normalizedProfileKey] = safeUpdateBody.profile[profileKey];
+        }
+      });
       return;
     }
 
     if (nodeFields.includes(key)) {
-      nodeUpdate[key] = updateBody[key];
-    } else if (profileFields.includes(key)) {
-      profileUpdate[key] = updateBody[key];
+      nodeUpdate[key] = safeUpdateBody[key];
+      return;
+    }
+
+    const normalizedProfileKey = normalizeProfileField(key);
+    if (profileFields.has(normalizedProfileKey)) {
+      profileUpdate[normalizedProfileKey] = safeUpdateBody[key];
     }
   });
 

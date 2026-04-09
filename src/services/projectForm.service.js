@@ -1,7 +1,7 @@
 const httpStatus = require('http-status');
 const jwt = require('jsonwebtoken');
 const { randomUUID, createHash } = require('crypto');
-const { ProjectForm, StorageFolder, User, Role } = require('../models');
+const { ProjectForm, StorageFolder, User, Role, Nodes } = require('../models');
 const { postgresPool } = require('../config/postgres');
 const config = require('../config/config');
 const logger = require('../config/logger');
@@ -264,32 +264,27 @@ const getNodeProfileSystemElements = () => [
     bindingPath: 'name',
   }),
   makeSystemElement({
-    id: 'address',
-    type: 'textarea',
-    label: 'Address',
-    placeholder: 'Enter address',
-    bindingPath: 'address',
-  }),
-  makeSystemElement({
-    id: 'city',
-    type: 'text',
-    label: 'City',
-    placeholder: 'Enter city',
-    bindingPath: 'city',
+    id: 'country',
+    type: 'select',
+    label: 'Country',
+    required: true,
+    placeholder: 'Select country',
+    options: ['Nigeria'],
+    bindingPath: 'country',
   }),
   makeSystemElement({
     id: 'state',
-    type: 'text',
-    label: 'State',
-    placeholder: 'Enter state',
+    type: 'select',
+    label: 'State / Region',
+    placeholder: 'Select state',
     bindingPath: 'state',
   }),
   makeSystemElement({
-    id: 'country',
-    type: 'text',
-    label: 'Country',
-    placeholder: 'Enter country',
-    bindingPath: 'country',
+    id: 'lga',
+    type: 'select',
+    label: 'LGA / County',
+    placeholder: 'Select LGA or county',
+    bindingPath: 'city',
   }),
   makeSystemElement({
     id: 'postal_code',
@@ -297,6 +292,13 @@ const getNodeProfileSystemElements = () => [
     label: 'Postal Code',
     placeholder: 'Enter postal code',
     bindingPath: 'postalCode',
+  }),
+  makeSystemElement({
+    id: 'address',
+    type: 'textarea',
+    label: 'Address',
+    placeholder: 'Enter address',
+    bindingPath: 'address',
   }),
   makeSystemElement({
     id: 'date_of_establishment',
@@ -329,22 +331,8 @@ const getNodeProfileSystemElements = () => [
     id: 'profile_facility_status',
     type: 'select',
     label: 'Facility Status',
-    options: ['Active', 'Inactive', 'Under Construction'],
+    options: ['Completed', 'Not Started', 'Under Construction'],
     bindingPath: 'profile.facilityStatus',
-  }),
-  makeSystemElement({
-    id: 'profile_average_attendance',
-    type: 'number',
-    label: 'Average Attendance',
-    placeholder: 'Enter average attendance',
-    bindingPath: 'profile.averageAttendance',
-  }),
-  makeSystemElement({
-    id: 'profile_average_income',
-    type: 'currency',
-    label: 'Average Income',
-    placeholder: 'Enter average income',
-    bindingPath: 'profile.averageIncome',
   }),
 ];
 
@@ -446,9 +434,10 @@ const SYSTEM_NODE_TOP_LEVEL_FIELDS = new Set([
 
 const SYSTEM_NODE_PROFILE_FIELDS = new Set([
   'propertyStatus',
+  'facilityStatus',
+  // legacy fields retained for backward compatibility with older templates
   'estimatedValue',
   'buildingType',
-  'facilityStatus',
   'averageAttendance',
   'averageIncome',
 ]);
@@ -1212,9 +1201,9 @@ const getPublicProjectFormByReference = async (reference) => {
 
   if (!projectForm) {
     projectForm = await ProjectForm.findOne({
-    publicRef: reference,
-    deletedAt: null,
-  });
+      publicRef: reference,
+      deletedAt: null,
+    });
     resolvedBy = 'publicRef';
   }
 
@@ -1229,6 +1218,8 @@ const getPublicProjectFormByReference = async (reference) => {
   if (!projectForm) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
   }
+
+  await syncSystemFormTemplateIfNeeded(projectForm);
 
   if (!isStrictPublicAccessible(projectForm)) {
     throw new ApiError(
@@ -1261,6 +1252,8 @@ const getPublicProjectFormByShortCode = async (shortCode) => {
   if (!projectForm) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Short link not found');
   }
+
+  await syncSystemFormTemplateIfNeeded(projectForm);
 
   if (!isStrictPublicAccessible(projectForm)) {
     throw new ApiError(
@@ -1434,13 +1427,42 @@ const buildSystemFormTemplate = (target) => {
         deploymentStatus: 'published',
         formCategory: SYSTEM_FORM_CATEGORY,
         systemTarget: SYSTEM_TARGET_NODE_PROFILE,
-        systemVersion: '1.0.0',
+        systemVersion: '1.1.0',
         integrations: ['web', 'mobile'],
       },
     };
   }
 
   throw new ApiError(httpStatus.BAD_REQUEST, `Unsupported system target: ${target}`);
+};
+
+const syncSystemFormTemplateIfNeeded = async (projectForm) => {
+  if (!projectForm || projectForm.deletedAt) return projectForm;
+  if (projectForm?.metadata?.formCategory !== SYSTEM_FORM_CATEGORY) return projectForm;
+
+  const target = projectForm?.metadata?.systemTarget;
+  if (!VALID_SYSTEM_TARGETS.has(target)) return projectForm;
+
+  const template = buildSystemFormTemplate(target);
+  const currentVersion = String(projectForm?.metadata?.systemVersion || '');
+  const expectedVersion = String(template?.metadata?.systemVersion || '');
+  if (currentVersion === expectedVersion) return projectForm;
+
+  projectForm.elements = template.elements;
+  projectForm.metadata = {
+    ...(projectForm.metadata || {}),
+    ...template.metadata,
+    deploymentStatus:
+      projectForm?.metadata?.deploymentStatus || template.metadata.deploymentStatus,
+  };
+  projectForm.configuration = {
+    ...(projectForm.configuration?.toObject
+      ? projectForm.configuration.toObject()
+      : projectForm.configuration || {}),
+    ...(template.configuration || {}),
+  };
+  await projectForm.save();
+  return projectForm;
 };
 
 const bootstrapSystemFormsForTenant = async ({
@@ -1615,17 +1637,27 @@ const submitSystemFormByPublicRef = async ({
       );
     }
 
-    const canUpdateNode = await hasRequiredPermission(actorUser, 'node:update');
-    if (!canUpdateNode) {
+    const targetNode = await nodeService.getNodeById(targetId, { populate: '' });
+    if (String(targetNode.tenantId) !== String(actorUser.tenantId)) {
+      throw new ApiError(httpStatus.FORBIDDEN, 'Target node belongs to another tenant');
+    }
+
+    const hasNodeUpdatePermission = await hasRequiredPermission(actorUser, 'node:update');
+    const isAssignedNodeUser = Boolean(
+      await Nodes.exists({
+        _id: targetNode._id,
+        tenantId: actorUser.tenantId,
+        users: actorUser._id,
+        deletedAt: null,
+        isActive: true,
+      })
+    );
+
+    if (!hasNodeUpdatePermission && !isAssignedNodeUser) {
       throw new ApiError(
         httpStatus.FORBIDDEN,
         'You are not authorized to update node profile'
       );
-    }
-
-    const targetNode = await nodeService.getNodeById(targetId, { populate: '' });
-    if (String(targetNode.tenantId) !== String(actorUser.tenantId)) {
-      throw new ApiError(httpStatus.FORBIDDEN, 'Target node belongs to another tenant');
     }
 
     const updatedNode = await nodeService.updateNodeById(targetNode._id, updatePayload);
@@ -1738,6 +1770,8 @@ const restoreProjectFormById = async (projectFormId) => {
   if (!projectForm) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
   }
+
+  await syncSystemFormTemplateIfNeeded(projectForm);
   if (!projectForm.deletedAt) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Module is not deleted');
   }

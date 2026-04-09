@@ -87,7 +87,14 @@ const nodeSchema = mongoose.Schema(
       buildingType: { type: String }, // Auditorium, Hall, Tent, Office, etc.
       facilityStatus: {
         type: String,
-        enum: ['Active', 'Inactive', 'Under Construction'],
+        enum: [
+          'Completed',
+          'Not Started',
+          'Under Construction',
+          // legacy values retained for backward compatibility
+          'Active',
+          'Inactive',
+        ],
         default: 'Active',
       },
       // Attendance and Financial metrics

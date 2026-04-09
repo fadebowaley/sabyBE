@@ -417,6 +417,24 @@ const consumePublicAccessLink = catchAsync(async (req, res) => {
 });
 
 /**
+ * Get system-form prefill data for secure public access.
+ */
+const getPublicAccessPrefill = catchAsync(async (req, res) => {
+  const accessToken =
+    req.query?.accessToken ||
+    req.get('x-form-access-token') ||
+    null;
+  const nodeId = req.query?.nodeId || null;
+
+  const result = await projectFormPublicAccessService.getSystemFormPrefillByAccess({
+    accessToken,
+    nodeId,
+  });
+
+  res.status(httpStatus.OK).send(result);
+});
+
+/**
  * Submit secure public form payload via unified Postgres pipeline.
  */
 const submitPublicAccessForm = catchAsync(async (req, res) => {
@@ -790,6 +808,7 @@ module.exports = {
   verifyPublicAccessCode,
   resendPublicAccessCode,
   consumePublicAccessLink,
+  getPublicAccessPrefill,
   submitPublicAccessForm,
   getProjectPublicAccessMetrics,
   getProjectStorageFolder,

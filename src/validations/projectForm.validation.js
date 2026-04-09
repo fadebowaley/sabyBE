@@ -478,6 +478,13 @@ const consumePublicAccessLink = {
   }),
 };
 
+const getPublicAccessPrefill = {
+  query: Joi.object().keys({
+    accessToken: Joi.string().required(),
+    nodeId: Joi.string().optional().allow('', null),
+  }),
+};
+
 const submitPublicAccessForm = {
   body: Joi.object().keys({
     accessToken: Joi.string().required(),
@@ -671,6 +678,7 @@ module.exports = {
   verifyPublicAccessCode,
   resendPublicAccessCode,
   consumePublicAccessLink,
+  getPublicAccessPrefill,
   submitPublicAccessForm,
   bootstrapSystemForms,
   submitSystemForm,

@@ -43,13 +43,26 @@ const formatPhoneNumbers = (phoneNumber) => {
   return formatPhoneNumber(phoneNumber);
 };
 
+const normalizeSenderId = (value) => {
+  const normalized = String(value || '').trim();
+  return normalized.length > 0 ? normalized : null;
+};
+
 /**
  * Get sender ID with fallback logic
  * @param {string|null} providedSenderId - Sender ID provided by caller
- * @returns {string} - Final sender ID to use
+ * @returns {string|null} - Final sender ID to use
  */
 const getSenderId = (providedSenderId = null) => {
-  return providedSenderId || config.sms.senderId || DEFAULT_SENDER_ID;
+  const explicitSender = normalizeSenderId(providedSenderId);
+  if (explicitSender) {
+    return explicitSender;
+  }
+  const configuredSender = normalizeSenderId(config.sms.senderId);
+  if (configuredSender) {
+    return configuredSender;
+  }
+  return DEFAULT_SENDER_ID;
 };
 
 /**
@@ -127,13 +140,15 @@ const sendSms = async (
     data.from = from;
   }
 
-  logger.info(
-    `Sending SMS to ${
-      Array.isArray(formattedPhoneNumbers)
-        ? formattedPhoneNumbers.join(', ')
-        : formattedPhoneNumbers
-    }`
-  );
+  logger.info('Sending SMS', {
+    to: Array.isArray(formattedPhoneNumbers)
+      ? formattedPhoneNumbers.join(', ')
+      : formattedPhoneNumbers,
+    hasFrom: Boolean(from),
+    senderId: from || null,
+    channel,
+    type,
+  });
 
   const response = await makeApiRequest('/api/sms/send', data);
   logger.info('SMS sent successfully', { response });

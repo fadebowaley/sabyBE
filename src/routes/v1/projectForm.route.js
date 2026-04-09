@@ -350,6 +350,13 @@ router.get(
   projectFormController.consumePublicAccessLink
 );
 
+router.get(
+  '/public/access/prefill',
+  publicFormReadLimiter,
+  validate(projectFormValidation.getPublicAccessPrefill),
+  projectFormController.getPublicAccessPrefill
+);
+
 router.post(
   '/public/access/submit',
   publicFormSubmitLimiter,

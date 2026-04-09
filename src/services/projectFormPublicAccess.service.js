@@ -317,11 +317,18 @@ const buildOtpDelivery = async ({ channel, user, otpCode }) => {
     });
     delivery.sms.sent = true;
   } catch (error) {
-    delivery.sms.error = normalizeDeliveryError(
+    const providerError = normalizeDeliveryError(
       error?.response?.data?.message || error?.response?.data || error,
       'SMS delivery failed'
     );
-    throw new ApiError(httpStatus.BAD_GATEWAY, delivery.sms.error);
+    delivery.sms.error = providerError;
+    if (/from cannot be blank/i.test(providerError)) {
+      throw new ApiError(
+        httpStatus.BAD_GATEWAY,
+        'SMS provider sender ID is not configured properly.'
+      );
+    }
+    throw new ApiError(httpStatus.BAD_GATEWAY, providerError);
   }
 
   return delivery;
@@ -451,11 +458,16 @@ const getOtpChallengeById = async (challengeId) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'OTP challenge not found.');
   }
   // Backward-compat for older challenge docs created before challengeChannel was introduced.
-  if (
-    !challenge.challengeChannel &&
-    (challenge.identifierType === 'email' || challenge.identifierType === 'phone')
-  ) {
-    challenge.challengeChannel = challenge.identifierType;
+  if (!challenge.challengeChannel) {
+    if (challenge.identifierType === 'email' || challenge.identifierType === 'phone') {
+      challenge.challengeChannel = challenge.identifierType;
+    } else if (challenge.email) {
+      challenge.challengeChannel = 'email';
+    } else if (challenge.phoneNumber) {
+      challenge.challengeChannel = 'phone';
+    } else {
+      challenge.challengeChannel = 'email';
+    }
   }
   return challenge;
 };
@@ -622,6 +634,9 @@ const resendAccessCode = async ({ challengeId }) => {
   challenge.expiresAt = expiresAt;
   challenge.delivery = delivery;
   challenge.status = 'issued';
+  challenge.challengeChannel =
+    challenge.challengeChannel ||
+    (challenge.identifierType === 'phone' ? 'phone' : 'email');
   await challenge.save();
 
   return {
@@ -656,6 +671,9 @@ const verifyAccessCode = async ({ challengeId, otp }) => {
   const attempts = Number(challenge.otpAttempts || 0);
   if (attempts >= maxAttempts) {
     challenge.status = 'locked';
+    challenge.challengeChannel =
+      challenge.challengeChannel ||
+      (challenge.identifierType === 'phone' ? 'phone' : 'email');
     await challenge.save();
     throw new ApiError(
       httpStatus.TOO_MANY_REQUESTS,
@@ -669,6 +687,9 @@ const verifyAccessCode = async ({ challengeId, otp }) => {
     if (challenge.otpAttempts >= maxAttempts) {
       challenge.status = 'locked';
     }
+    challenge.challengeChannel =
+      challenge.challengeChannel ||
+      (challenge.identifierType === 'phone' ? 'phone' : 'email');
     await challenge.save();
     throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid verification code.');
   }
@@ -1013,6 +1034,164 @@ const resolveAssignedNode = async ({ tenantId, userId, nodeId }) => {
   return node;
 };
 
+const getValueByPath = (source, path) => {
+  const segments = String(path || '')
+    .split('.')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  if (segments.length === 0) return undefined;
+
+  let cursor = source;
+  for (const segment of segments) {
+    if (cursor == null || typeof cursor !== 'object') return undefined;
+    cursor = cursor[segment];
+  }
+  return cursor;
+};
+
+const normalizePrefillValue = (value, elementType = '') => {
+  if (value == null) return '';
+
+  const type = String(elementType || '').toLowerCase();
+
+  if (value instanceof Date) {
+    if (type === 'date') return value.toISOString().slice(0, 10);
+    if (type === 'time') return value.toISOString().slice(11, 16);
+    if (type === 'datetime' || type === 'datetime-local') {
+      return value.toISOString().slice(0, 16);
+    }
+    return value.toISOString();
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizePrefillValue(item, elementType));
+  }
+
+  if (typeof value === 'object') {
+    if (typeof value.toString === 'function') {
+      const asString = value.toString();
+      if (asString && asString !== '[object Object]') return asString;
+    }
+    return '';
+  }
+
+  return value;
+};
+
+const buildSystemPrefillData = ({ projectForm, source }) => {
+  const prefillData = {};
+  const elements = Array.isArray(projectForm?.elements) ? projectForm.elements : [];
+  elements.forEach((element = {}) => {
+    const elementId = element?.id;
+    const bindingPath = element?.metadata?.bindingPath;
+    if (!elementId || !bindingPath) return;
+    const rawValue = getValueByPath(source, bindingPath);
+    if (rawValue === undefined) return;
+    prefillData[elementId] = normalizePrefillValue(rawValue, element?.type);
+  });
+  return prefillData;
+};
+
+const getSystemFormPrefillByAccess = async ({ accessToken, nodeId = null }) => {
+  const { decoded, accessDoc } = await verifyAccessToken(accessToken);
+  if (accessDoc.status !== 'consumed') {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Access link must be consumed before loading form prefill.'
+    );
+  }
+
+  const user = await User.findById(decoded.sub);
+  if (!isUserActive(user) || user.tenantId !== decoded.tenantId) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Account is not eligible for this module.');
+  }
+
+  const projectForm = await ProjectForm.findOne({
+    _id: decoded.projectFormId,
+    tenantId: decoded.tenantId,
+    projectId: decoded.projectId,
+    deletedAt: null,
+  }).lean();
+  if (!projectForm) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found.');
+  }
+
+  const isSystemForm = projectForm?.metadata?.formCategory === 'system';
+  const systemTarget = projectForm?.metadata?.systemTarget || null;
+  if (!isSystemForm || !systemTarget) {
+    return {
+      success: true,
+      systemTarget: null,
+      prefillData: {},
+    };
+  }
+
+  if (systemTarget === 'user_profile') {
+    return {
+      success: true,
+      systemTarget,
+      prefillData: buildSystemPrefillData({ projectForm, source: user.toObject() }),
+      target: {
+        userId: String(user._id),
+      },
+    };
+  }
+
+  if (systemTarget === 'node_profile') {
+    let resolvedNodeId = nodeId || null;
+    if (!resolvedNodeId && accessDoc.selectedNodeId) {
+      resolvedNodeId = String(accessDoc.selectedNodeId);
+    }
+    if (!resolvedNodeId) {
+      const assignedNodes = await resolveUserAssignedNodes({
+        tenantId: decoded.tenantId,
+        userId: user._id,
+      });
+      if (assignedNodes.length === 1) {
+        resolvedNodeId = assignedNodes[0].id;
+      }
+    }
+    if (!resolvedNodeId) {
+      return {
+        success: true,
+        systemTarget,
+        prefillData: {},
+        target: null,
+      };
+    }
+
+    const node = await resolveAssignedNode({
+      tenantId: decoded.tenantId,
+      userId: user._id,
+      nodeId: resolvedNodeId,
+    });
+    const nodeDoc = await Nodes.findById(node._id).lean();
+    if (!nodeDoc) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Assigned node not found.');
+    }
+
+    accessDoc.selectedNodeId = node._id;
+    await accessDoc.save();
+
+    return {
+      success: true,
+      systemTarget,
+      prefillData: buildSystemPrefillData({ projectForm, source: nodeDoc }),
+      target: {
+        nodeId: String(node._id),
+        nodeReference: node.nodeId || null,
+        nodeName: node.name || '',
+      },
+    };
+  }
+
+  return {
+    success: true,
+    systemTarget,
+    prefillData: {},
+  };
+};
+
 const submitWithAccess = async ({
   accessToken,
   nodeId,
@@ -1184,6 +1363,7 @@ module.exports = {
   resendAccessCode,
   verifyAccessCode,
   consumeAccessLink,
+  getSystemFormPrefillByAccess,
   submitWithAccess,
   getProjectPublicAccessMetrics,
 };

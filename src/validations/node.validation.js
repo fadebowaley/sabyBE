@@ -79,7 +79,13 @@ const updateNodeById = {
       propertyStatus: Joi.string().valid('Owned', 'Rented', 'Leased', 'Other'),
       estimatedValue: Joi.number(),
       buildingType: Joi.string(),
-      status: Joi.string().valid('Active', 'Inactive', 'Under Construction'),
+      status: Joi.string().valid(
+        'Completed',
+        'Not Started',
+        'Under Construction',
+        'Active',
+        'Inactive'
+      ),
 
       // ✨ NEW: Support nested profile object structure
       profile: Joi.object().keys({
@@ -92,9 +98,11 @@ const updateNodeById = {
         estimatedValue: Joi.number(),
         buildingType: Joi.string(),
         facilityStatus: Joi.string().valid(
+          'Completed',
+          'Not Started',
+          'Under Construction',
           'Active',
-          'Inactive',
-          'Under Construction'
+          'Inactive'
         ),
         averageAttendance: Joi.number().min(0).allow(null),
         averageIncome: Joi.number().min(0).allow(null),
