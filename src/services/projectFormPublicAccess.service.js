@@ -1048,6 +1048,55 @@ const submitWithAccess = async ({
     throw new ApiError(httpStatus.NOT_FOUND, 'Module not found.');
   }
 
+  const isSystemForm = projectForm?.metadata?.formCategory === 'system';
+  const systemTarget = projectForm?.metadata?.systemTarget || null;
+
+  if (isSystemForm) {
+    let targetId = null;
+    let selectedNode = null;
+
+    if (systemTarget === 'node_profile') {
+      selectedNode = await resolveAssignedNode({
+        tenantId: decoded.tenantId,
+        userId: user._id,
+        nodeId,
+      });
+      targetId = String(selectedNode._id);
+    } else if (systemTarget === 'user_profile') {
+      targetId = String(user._id);
+    }
+
+    const result = await projectFormService.submitSystemFormByPublicRef({
+      publicRef: projectForm.publicRef,
+      actorUser: user,
+      targetId,
+      submissionData,
+    });
+
+    accessDoc.status = 'submitted';
+    accessDoc.submittedAt = new Date();
+    if (selectedNode?._id) {
+      accessDoc.selectedNodeId = selectedNode._id;
+    }
+    await accessDoc.save();
+
+    return {
+      success: true,
+      status: 'completed',
+      mode: 'system_direct_update',
+      projectId: decoded.projectId,
+      systemTarget,
+      node: selectedNode
+        ? {
+            id: String(selectedNode._id),
+            nodeId: selectedNode.nodeId || null,
+            name: selectedNode.name || '',
+          }
+        : null,
+      result,
+    };
+  }
+
   const node = await resolveAssignedNode({
     tenantId: decoded.tenantId,
     userId: user._id,

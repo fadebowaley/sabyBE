@@ -171,6 +171,12 @@ const metadataIntegrationsSchema = Joi.alternatives()
 
 const metadataSchema = Joi.object({
   version: Joi.string().default('1.0.0'),
+  formCategory: Joi.string().valid('standard', 'system').default('standard'),
+  systemTarget: Joi.string()
+    .valid('user_profile', 'node_profile')
+    .allow(null)
+    .optional(),
+  systemVersion: Joi.string().allow('', null).optional(),
   elementsCount: Joi.number().default(0),
   hasValidation: Joi.boolean().default(false),
   lastModified: Joi.date().default(Date.now),
@@ -183,6 +189,28 @@ const metadataSchema = Joi.object({
   integrations: metadataIntegrationsSchema,
   permEnabled: Joi.boolean().optional(),
 }).unknown(true);
+
+const enforceSystemFormContract = (value, helpers) => {
+  const category = value?.metadata?.formCategory;
+  if (category !== 'system') {
+    return value;
+  }
+
+  const target = value?.metadata?.systemTarget;
+  if (!target) {
+    return helpers.error('any.custom', {
+      message: 'metadata.systemTarget is required when metadata.formCategory is system',
+    });
+  }
+
+  if (value?.configuration?.security && value.configuration.security !== 'private') {
+    return helpers.error('any.custom', {
+      message: 'System forms must set configuration.security to private',
+    });
+  }
+
+  return value;
+};
 
 const paymentConfigSchema = Joi.object({
   enabled: Joi.boolean().default(false),
@@ -285,20 +313,22 @@ const workflowSchema = Joi.object({
 
 // Validation schemas
 const createProjectForm = {
-  body: Joi.object().keys({
-    configuration: projectConfigurationSchema.required(),
-    elements: Joi.array().items(formElementSchema).default([]),
-    style: Joi.string().default('default'),
-    wizardMode: Joi.boolean().default(false),
-    columnSpans: Joi.object().default({}),
-    userSettings: userSettingsSchema,
-    permSettings: permSettingsSchema,
-    paymentConfig: paymentConfigSchema,
-    calendar: Joi.object().unknown(true).optional(),
-    behaviorHooks: Joi.object().unknown(true).optional(),
-    metadata: metadataSchema,
-    workflows: Joi.array().items(workflowSchema).default([]),
-  }),
+  body: Joi.object()
+    .keys({
+      configuration: projectConfigurationSchema.required(),
+      elements: Joi.array().items(formElementSchema).default([]),
+      style: Joi.string().default('default'),
+      wizardMode: Joi.boolean().default(false),
+      columnSpans: Joi.object().default({}),
+      userSettings: userSettingsSchema,
+      permSettings: permSettingsSchema,
+      paymentConfig: paymentConfigSchema,
+      calendar: Joi.object().unknown(true).optional(),
+      behaviorHooks: Joi.object().unknown(true).optional(),
+      metadata: metadataSchema,
+      workflows: Joi.array().items(workflowSchema).default([]),
+    })
+    .custom(enforceSystemFormContract, 'system form contract'),
 };
 
 const getProjectForms = {
@@ -307,6 +337,8 @@ const getProjectForms = {
     'configuration.projectName': Joi.string(),
     'configuration.tags': Joi.string(),
     'configuration.security': Joi.string().valid('public', 'private'),
+    'metadata.formCategory': Joi.string().valid('standard', 'system'),
+    'metadata.systemTarget': Joi.string().valid('user_profile', 'node_profile'),
     'metadata.deploymentStatus': Joi.string().valid(
       'draft',
       'published',
@@ -329,6 +361,8 @@ const getProjectFormsByTenant = {
     status: Joi.string().valid('active', 'inactive', 'archived'),
     'configuration.projectName': Joi.string(),
     'configuration.tags': Joi.string(),
+    'metadata.formCategory': Joi.string().valid('standard', 'system'),
+    'metadata.systemTarget': Joi.string().valid('user_profile', 'node_profile'),
     'metadata.deploymentStatus': Joi.string().valid(
       'draft',
       'published',
@@ -349,6 +383,8 @@ const getProjectFormsByUser = {
     status: Joi.string().valid('active', 'inactive', 'archived'),
     'configuration.projectName': Joi.string(),
     'configuration.tags': Joi.string(),
+    'metadata.formCategory': Joi.string().valid('standard', 'system'),
+    'metadata.systemTarget': Joi.string().valid('user_profile', 'node_profile'),
     'metadata.deploymentStatus': Joi.string().valid(
       'draft',
       'published',
@@ -445,7 +481,7 @@ const consumePublicAccessLink = {
 const submitPublicAccessForm = {
   body: Joi.object().keys({
     accessToken: Joi.string().required(),
-    nodeId: Joi.string().required(),
+    nodeId: Joi.string().optional().allow('', null),
     submissionData: Joi.alternatives()
       .try(Joi.object().unknown(true), Joi.array().items(Joi.any()))
       .required(),
@@ -474,6 +510,7 @@ const updateProjectForm = {
       status: Joi.string().valid('active', 'inactive', 'archived'),
       workflows: Joi.array().items(workflowSchema).default([]),
     })
+    .custom(enforceSystemFormContract, 'system form contract')
     .min(1),
   query: Joi.object().keys({
     populate: Joi.string(),
@@ -500,9 +537,29 @@ const updateProjectFormByProjectId = {
       status: Joi.string().valid('active', 'inactive', 'archived'),
       workflows: Joi.array().items(workflowSchema).default([]),
     })
+    .custom(enforceSystemFormContract, 'system form contract')
     .min(1),
   query: Joi.object().keys({
     populate: Joi.string(),
+  }),
+};
+
+const bootstrapSystemForms = {
+  body: Joi.object().keys({
+    targets: Joi.array()
+      .items(Joi.string().valid('user_profile', 'node_profile'))
+      .optional(),
+    force: Joi.boolean().default(false),
+  }),
+};
+
+const submitSystemForm = {
+  params: Joi.object().keys({
+    publicRef: Joi.string().required(),
+  }),
+  body: Joi.object().keys({
+    targetId: Joi.string().optional(),
+    submissionData: Joi.object().unknown(true).required(),
   }),
 };
 
@@ -615,6 +672,8 @@ module.exports = {
   resendPublicAccessCode,
   consumePublicAccessLink,
   submitPublicAccessForm,
+  bootstrapSystemForms,
+  submitSystemForm,
   updateProjectForm,
   updateProjectFormByProjectId,
   deleteProjectForm,

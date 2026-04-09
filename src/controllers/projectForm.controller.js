@@ -45,6 +45,45 @@ const createProjectForm = catchAsync(async (req, res) => {
 });
 
 /**
+ * Bootstrap tenant system forms (User Profile + Node Profile)
+ */
+const bootstrapSystemForms = catchAsync(async (req, res) => {
+  const { tenantId } = req.user;
+  const createdBy = req.user._id;
+  const { targets, force = false } = req.body || {};
+
+  const result = await projectFormService.bootstrapSystemFormsForTenant({
+    tenantId,
+    createdBy,
+    targets,
+    force,
+  });
+  await invalidateProjectResolverCache(tenantId);
+
+  res.status(httpStatus.OK).send({
+    message: 'System forms bootstrap completed',
+    ...result,
+  });
+});
+
+/**
+ * Submit a system form (direct DB update path).
+ */
+const submitSystemForm = catchAsync(async (req, res) => {
+  const { publicRef } = req.params;
+  const { targetId = null, submissionData = {} } = req.body || {};
+
+  const result = await projectFormService.submitSystemFormByPublicRef({
+    publicRef,
+    actorUser: req.user,
+    targetId,
+    submissionData,
+  });
+
+  res.status(httpStatus.OK).send(result);
+});
+
+/**
  * Get all project forms
  */
 const getProjectForms = catchAsync(async (req, res) => {
@@ -53,6 +92,8 @@ const getProjectForms = catchAsync(async (req, res) => {
     'configuration.projectName',
     'configuration.tags',
     'configuration.security',
+    'metadata.formCategory',
+    'metadata.systemTarget',
     'metadata.deploymentStatus',
   ]);
 
@@ -92,14 +133,42 @@ const getProjectFormsByTenant = catchAsync(async (req, res) => {
     'status',
     'configuration.projectName',
     'configuration.tags',
+    'metadata.formCategory',
+    'metadata.systemTarget',
     'metadata.deploymentStatus',
   ]);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
-  const result = await projectFormService.getProjectFormsByTenant(
+  let result = await projectFormService.getProjectFormsByTenant(
     tenantId,
     filter,
     options
   );
+
+  const hasSystemForms =
+    Array.isArray(result?.results) &&
+    result.results.some(
+      (item) => item?.metadata?.formCategory === 'system'
+    );
+
+  if (!hasSystemForms && req.user?._id) {
+    try {
+      await projectFormService.bootstrapSystemFormsForTenant({
+        tenantId,
+        createdBy: req.user._id,
+      });
+      result = await projectFormService.getProjectFormsByTenant(
+        tenantId,
+        filter,
+        options
+      );
+    } catch (bootstrapError) {
+      console.warn('System form bootstrap skipped during tenant list fetch', {
+        tenantId,
+        userId: req.user?._id,
+        error: bootstrapError?.message,
+      });
+    }
+  }
 
   res.send(result);
 });
@@ -113,6 +182,8 @@ const getProjectFormsByUser = catchAsync(async (req, res) => {
     'status',
     'configuration.projectName',
     'configuration.tags',
+    'metadata.formCategory',
+    'metadata.systemTarget',
     'metadata.deploymentStatus',
   ]);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
@@ -737,4 +808,6 @@ module.exports = {
   bulkOperations,
   searchProjectForms,
   getProjectFormStats,
+  bootstrapSystemForms,
+  submitSystemForm,
 };

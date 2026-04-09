@@ -466,6 +466,17 @@ const ProjectFormSchema = new mongoose.Schema(
     // Metadata
     metadata: {
       version: { type: String, default: '1.0.0' },
+      formCategory: {
+        type: String,
+        enum: ['standard', 'system'],
+        default: 'standard',
+      },
+      systemTarget: {
+        type: String,
+        enum: ['user_profile', 'node_profile', null],
+        default: null,
+      },
+      systemVersion: { type: String, default: null },
       elementsCount: { type: Number, default: 0 },
       hasValidation: { type: Boolean, default: false },
       lastModified: { type: Date, default: Date.now },
@@ -519,6 +530,16 @@ ProjectFormSchema.plugin(tenantPlugin);
 ProjectFormSchema.index({ tenantId: 1, 'configuration.tags': 1 });
 ProjectFormSchema.index({ tenantId: 1, 'configuration.analysisProfile.domain': 1 });
 ProjectFormSchema.index({ tenantId: 1, 'configuration.analysisProfile.dataNature': 1 });
+ProjectFormSchema.index(
+  { tenantId: 1, 'metadata.formCategory': 1, 'metadata.systemTarget': 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      'metadata.formCategory': 'system',
+      deletedAt: null,
+    },
+  }
+);
 
 /**
  * Generate a unique projectId
@@ -1162,6 +1183,18 @@ ProjectFormSchema.methods.generateIntegrationGuide = function (
 
 // Pre-save middleware
 ProjectFormSchema.pre('save', function (next) {
+  if (this.metadata?.formCategory === 'system') {
+    if (!this.metadata.systemTarget) {
+      return next(new Error('System forms must define metadata.systemTarget'));
+    }
+    if (this.configuration?.security !== 'private') {
+      this.configuration.security = 'private';
+    }
+    if (!this.metadata.systemVersion) {
+      this.metadata.systemVersion = '1.0.0';
+    }
+  }
+
   // Update metadata on save
   this.metadata.lastModified = new Date();
 

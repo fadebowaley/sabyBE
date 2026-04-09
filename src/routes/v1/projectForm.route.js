@@ -139,6 +139,22 @@ router.post(
   projectFormController.createProjectForm
 );
 
+// Bootstrap system forms for current tenant (idempotent)
+router.post(
+  '/system/bootstrap',
+  auth('create:project-form'),
+  validate(projectFormValidation.bootstrapSystemForms),
+  projectFormController.bootstrapSystemForms
+);
+
+// Submit system form (authenticated direct DB update)
+router.post(
+  '/system/:publicRef/submit',
+  auth(),
+  validate(projectFormValidation.submitSystemForm),
+  projectFormController.submitSystemForm
+);
+
 /**
  * @swagger
  * /project-forms:

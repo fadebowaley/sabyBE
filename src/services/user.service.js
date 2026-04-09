@@ -6,6 +6,7 @@ const { validateCustomFields } = require('./customField.service');
 const { USER_ESSENTIAL_FIELDS } = require('../config/essentials');
 const { getUsersInAdminNodeDescendants } = require('./nodeAccess.service');
 const { postgresPool } = require('../config/postgres');
+const logger = require('../config/logger');
 const {
   normalizePhoneToE164,
   buildPhoneLookupCandidates,
@@ -828,6 +829,8 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     'occupation',
     'employeeId',
     'officeTitle',
+    'spouse',
+    'nextOfKin',
   ];
 
   // Extract user-specific fields and profile fields
@@ -837,6 +840,40 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
   // Handle nested profile object
   if (updateBody.profile && typeof updateBody.profile === 'object') {
     Object.keys(updateBody.profile).forEach((key) => {
+      if (
+        key === 'spouse' &&
+        updateBody.profile.spouse &&
+        typeof updateBody.profile.spouse === 'object'
+      ) {
+        const spouse = updateBody.profile.spouse;
+        if (Object.prototype.hasOwnProperty.call(spouse, 'name')) {
+          profileUpdate.spouseName = spouse.name;
+        }
+        if (Object.prototype.hasOwnProperty.call(spouse, 'phoneNumber')) {
+          profileUpdate.spousePhoneNumber = spouse.phoneNumber;
+        }
+        if (Object.prototype.hasOwnProperty.call(spouse, 'dateOfBirth')) {
+          profileUpdate.spouseDateOfBirth = spouse.dateOfBirth;
+        }
+        return;
+      }
+      if (
+        key === 'nextOfKin' &&
+        updateBody.profile.nextOfKin &&
+        typeof updateBody.profile.nextOfKin === 'object'
+      ) {
+        const nextOfKin = updateBody.profile.nextOfKin;
+        if (Object.prototype.hasOwnProperty.call(nextOfKin, 'name')) {
+          profileUpdate.nextOfKinName = nextOfKin.name;
+        }
+        if (Object.prototype.hasOwnProperty.call(nextOfKin, 'phoneNumber')) {
+          profileUpdate.nextOfKinPhoneNumber = nextOfKin.phoneNumber;
+        }
+        if (Object.prototype.hasOwnProperty.call(nextOfKin, 'relationship')) {
+          profileUpdate.nextOfKinRelationship = nextOfKin.relationship;
+        }
+        return;
+      }
       if (profileFields.includes(key)) {
         profileUpdate[key] = updateBody.profile[key];
       }
@@ -893,6 +930,36 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
       }
       // Update profile fields
       Object.keys(profileUpdate).forEach((key) => {
+        if (key === 'spouseName') {
+          user.profile.spouse = user.profile.spouse || {};
+          user.profile.spouse.name = profileUpdate[key];
+          return;
+        }
+        if (key === 'spousePhoneNumber') {
+          user.profile.spouse = user.profile.spouse || {};
+          user.profile.spouse.phoneNumber = profileUpdate[key];
+          return;
+        }
+        if (key === 'spouseDateOfBirth') {
+          user.profile.spouse = user.profile.spouse || {};
+          user.profile.spouse.dateOfBirth = profileUpdate[key];
+          return;
+        }
+        if (key === 'nextOfKinName') {
+          user.profile.nextOfKin = user.profile.nextOfKin || {};
+          user.profile.nextOfKin.name = profileUpdate[key];
+          return;
+        }
+        if (key === 'nextOfKinPhoneNumber') {
+          user.profile.nextOfKin = user.profile.nextOfKin || {};
+          user.profile.nextOfKin.phoneNumber = profileUpdate[key];
+          return;
+        }
+        if (key === 'nextOfKinRelationship') {
+          user.profile.nextOfKin = user.profile.nextOfKin || {};
+          user.profile.nextOfKin.relationship = profileUpdate[key];
+          return;
+        }
         user.profile[key] = profileUpdate[key];
       });
       // Mark profile as modified for Mongoose to save it

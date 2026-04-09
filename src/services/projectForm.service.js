@@ -1,11 +1,14 @@
 const httpStatus = require('http-status');
 const jwt = require('jsonwebtoken');
 const { randomUUID, createHash } = require('crypto');
-const { ProjectForm, StorageFolder } = require('../models');
+const { ProjectForm, StorageFolder, User, Role } = require('../models');
 const { postgresPool } = require('../config/postgres');
 const config = require('../config/config');
+const logger = require('../config/logger');
 const ApiError = require('../utils/ApiError');
 const fieldCatalogService = require('./fieldCatalog.service');
+const userService = require('./user.service');
+const nodeService = require('./node.service');
 
 const BLOCK_TYPES = new Set([
   'header',
@@ -26,6 +29,655 @@ const CATEGORICAL_TYPES = new Set([
   'tags',
 ]);
 const TEXT_TYPES = new Set(['text', 'textarea', 'email', 'phone', 'url']);
+const SYSTEM_FORM_CATEGORY = 'system';
+const SYSTEM_TARGET_USER_PROFILE = 'user_profile';
+const SYSTEM_TARGET_NODE_PROFILE = 'node_profile';
+const VALID_SYSTEM_TARGETS = new Set([
+  SYSTEM_TARGET_USER_PROFILE,
+  SYSTEM_TARGET_NODE_PROFILE,
+]);
+
+const makeSystemElement = ({
+  id,
+  type,
+  label,
+  required = false,
+  placeholder = '',
+  options = [],
+  bindingPath,
+}) => ({
+  id,
+  type,
+  properties: {
+    label,
+    required,
+    placeholder,
+    ...(Array.isArray(options) && options.length > 0 ? { options } : {}),
+  },
+  metadata: {
+    systemBound: true,
+    bindingPath,
+  },
+});
+
+const getUserProfileSystemElements = () => [
+  makeSystemElement({
+    id: 'firstname',
+    type: 'text',
+    label: 'First Name',
+    required: true,
+    placeholder: 'Enter first name',
+    bindingPath: 'firstname',
+  }),
+  makeSystemElement({
+    id: 'lastname',
+    type: 'text',
+    label: 'Last Name',
+    required: true,
+    placeholder: 'Enter last name',
+    bindingPath: 'lastname',
+  }),
+  makeSystemElement({
+    id: 'email',
+    type: 'email',
+    label: 'Email Address',
+    required: true,
+    placeholder: 'Enter email address',
+    bindingPath: 'email',
+  }),
+  makeSystemElement({
+    id: 'phoneNumber',
+    type: 'phone',
+    label: 'Phone Number',
+    required: true,
+    placeholder: 'Enter phone number',
+    bindingPath: 'phoneNumber',
+  }),
+  makeSystemElement({
+    id: 'profile_title',
+    type: 'select',
+    label: 'Title',
+    options: ['Mr', 'Mrs', 'Miss', 'Dr', 'Pastor'],
+    bindingPath: 'profile.title',
+  }),
+  makeSystemElement({
+    id: 'profile_other_name',
+    type: 'text',
+    label: 'Other Name',
+    placeholder: 'Enter other name',
+    bindingPath: 'profile.otherName',
+  }),
+  makeSystemElement({
+    id: 'profile_gender',
+    type: 'select',
+    label: 'Gender',
+    options: ['Male', 'Female', 'Other'],
+    bindingPath: 'profile.gender',
+  }),
+  makeSystemElement({
+    id: 'profile_dob',
+    type: 'date',
+    label: 'Date of Birth',
+    bindingPath: 'profile.dateOfBirth',
+  }),
+  makeSystemElement({
+    id: 'profile_qualification',
+    type: 'select',
+    label: 'Highest Qualification',
+    options: ['PHD', 'MSC', 'BSC', 'HND EQUIVALENT', 'OTHERS'],
+    bindingPath: 'profile.highestQualification',
+  }),
+  makeSystemElement({
+    id: 'profile_professional',
+    type: 'text',
+    label: 'Profession',
+    placeholder: 'Enter profession',
+    bindingPath: 'profile.professional',
+  }),
+  makeSystemElement({
+    id: 'profile_employment_category',
+    type: 'select',
+    label: 'Employment Category',
+    options: ['EMPLOYED', 'SELF EMPLOYED', 'UNEMPLOYED', 'RETIRED'],
+    bindingPath: 'profile.employmentCategory',
+  }),
+  makeSystemElement({
+    id: 'profile_occupation',
+    type: 'text',
+    label: 'Occupation',
+    placeholder: 'Enter occupation',
+    bindingPath: 'profile.occupation',
+  }),
+  makeSystemElement({
+    id: 'profile_employee_id',
+    type: 'text',
+    label: 'Employee ID',
+    placeholder: 'Click Generate to create employee ID',
+    bindingPath: 'profile.employeeId',
+  }),
+  makeSystemElement({
+    id: 'profile_office_title',
+    type: 'select',
+    label: 'Office Title',
+    options: ['MD', 'CEO', 'FOUNDER', 'PASTOR', 'OTHERS'],
+    bindingPath: 'profile.officeTitle',
+  }),
+  makeSystemElement({
+    id: 'profile_marital_status',
+    type: 'select',
+    label: 'Marital Status',
+    options: ['Single', 'Married', 'Divorced', 'Widowed'],
+    bindingPath: 'profile.maritalStatus',
+  }),
+  makeSystemElement({
+    id: 'profile_spouse_name',
+    type: 'text',
+    label: 'Spouse Name',
+    placeholder: 'Enter spouse name',
+    bindingPath: 'profile.spouse.name',
+  }),
+  makeSystemElement({
+    id: 'profile_spouse_phone',
+    type: 'phone',
+    label: 'Spouse Phone Number',
+    placeholder: 'Enter spouse phone number',
+    bindingPath: 'profile.spouse.phoneNumber',
+  }),
+  makeSystemElement({
+    id: 'profile_spouse_dob',
+    type: 'date',
+    label: 'Spouse Date of Birth',
+    bindingPath: 'profile.spouse.dateOfBirth',
+  }),
+  makeSystemElement({
+    id: 'profile_nok_name',
+    type: 'text',
+    label: 'Next of Kin Name',
+    placeholder: 'Enter next of kin name',
+    bindingPath: 'profile.nextOfKin.name',
+  }),
+  makeSystemElement({
+    id: 'profile_nok_phone',
+    type: 'phone',
+    label: 'Next of Kin Phone Number',
+    placeholder: 'Enter next of kin phone number',
+    bindingPath: 'profile.nextOfKin.phoneNumber',
+  }),
+  makeSystemElement({
+    id: 'profile_nok_relationship',
+    type: 'text',
+    label: 'Next of Kin Relationship',
+    placeholder: 'Enter relationship',
+    bindingPath: 'profile.nextOfKin.relationship',
+  }),
+  makeSystemElement({
+    id: 'profile_state_origin',
+    type: 'text',
+    label: 'State of Origin',
+    placeholder: 'Enter state of origin',
+    bindingPath: 'profile.stateOfOrigin',
+  }),
+  makeSystemElement({
+    id: 'profile_lga_origin',
+    type: 'text',
+    label: 'LGA of Origin',
+    placeholder: 'Enter LGA of origin',
+    bindingPath: 'profile.lgaOfOrigin',
+  }),
+  makeSystemElement({
+    id: 'profile_home_town',
+    type: 'text',
+    label: 'Home Town',
+    placeholder: 'Enter home town',
+    bindingPath: 'profile.homeTown',
+  }),
+  makeSystemElement({
+    id: 'profile_residential_address',
+    type: 'textarea',
+    label: 'Residential Address',
+    placeholder: 'Enter residential address',
+    bindingPath: 'profile.residentialAddress',
+  }),
+  makeSystemElement({
+    id: 'profile_state_residence',
+    type: 'text',
+    label: 'State of Residence',
+    placeholder: 'Enter state of residence',
+    bindingPath: 'profile.stateOfResidence',
+  }),
+  makeSystemElement({
+    id: 'profile_lga_residence',
+    type: 'text',
+    label: 'LGA of Residence',
+    placeholder: 'Enter LGA of residence',
+    bindingPath: 'profile.lgaOfResidence',
+  }),
+];
+
+const getNodeProfileSystemElements = () => [
+  makeSystemElement({
+    id: 'name',
+    type: 'text',
+    label: 'Node Name',
+    required: true,
+    placeholder: 'Enter node name',
+    bindingPath: 'name',
+  }),
+  makeSystemElement({
+    id: 'address',
+    type: 'textarea',
+    label: 'Address',
+    placeholder: 'Enter address',
+    bindingPath: 'address',
+  }),
+  makeSystemElement({
+    id: 'city',
+    type: 'text',
+    label: 'City',
+    placeholder: 'Enter city',
+    bindingPath: 'city',
+  }),
+  makeSystemElement({
+    id: 'state',
+    type: 'text',
+    label: 'State',
+    placeholder: 'Enter state',
+    bindingPath: 'state',
+  }),
+  makeSystemElement({
+    id: 'country',
+    type: 'text',
+    label: 'Country',
+    placeholder: 'Enter country',
+    bindingPath: 'country',
+  }),
+  makeSystemElement({
+    id: 'postal_code',
+    type: 'text',
+    label: 'Postal Code',
+    placeholder: 'Enter postal code',
+    bindingPath: 'postalCode',
+  }),
+  makeSystemElement({
+    id: 'date_of_establishment',
+    type: 'date',
+    label: 'Date of Establishment',
+    bindingPath: 'dateOfEstablishment',
+  }),
+  makeSystemElement({
+    id: 'profile_property_status',
+    type: 'select',
+    label: 'Property Status',
+    options: ['Owned', 'Rented', 'Leased', 'Other'],
+    bindingPath: 'profile.propertyStatus',
+  }),
+  makeSystemElement({
+    id: 'profile_estimated_value',
+    type: 'currency',
+    label: 'Estimated Value',
+    placeholder: 'Enter estimated value',
+    bindingPath: 'profile.estimatedValue',
+  }),
+  makeSystemElement({
+    id: 'profile_building_type',
+    type: 'text',
+    label: 'Building Type',
+    placeholder: 'Enter building type',
+    bindingPath: 'profile.buildingType',
+  }),
+  makeSystemElement({
+    id: 'profile_facility_status',
+    type: 'select',
+    label: 'Facility Status',
+    options: ['Active', 'Inactive', 'Under Construction'],
+    bindingPath: 'profile.facilityStatus',
+  }),
+  makeSystemElement({
+    id: 'profile_average_attendance',
+    type: 'number',
+    label: 'Average Attendance',
+    placeholder: 'Enter average attendance',
+    bindingPath: 'profile.averageAttendance',
+  }),
+  makeSystemElement({
+    id: 'profile_average_income',
+    type: 'currency',
+    label: 'Average Income',
+    placeholder: 'Enter average income',
+    bindingPath: 'profile.averageIncome',
+  }),
+];
+
+const normalizeSystemFormContract = ({
+  body = {},
+  existing = null,
+  enforceForCreate = false,
+}) => {
+  const normalized = { ...body };
+  const existingMetadata = existing?.metadata || {};
+  const existingCategory = existingMetadata?.formCategory || 'standard';
+  const incomingCategory = normalized?.metadata?.formCategory;
+  const category =
+    existingCategory === SYSTEM_FORM_CATEGORY
+      ? SYSTEM_FORM_CATEGORY
+      : incomingCategory || existingCategory;
+  const isSystem = category === SYSTEM_FORM_CATEGORY;
+
+  if (!normalized.metadata) normalized.metadata = {};
+  normalized.metadata.formCategory = category;
+
+  if (!isSystem) {
+    return normalized;
+  }
+
+  const target =
+    normalized?.metadata?.systemTarget || existingMetadata?.systemTarget || null;
+  if (!target || !VALID_SYSTEM_TARGETS.has(target)) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'System forms require metadata.systemTarget = user_profile or node_profile'
+    );
+  }
+
+  normalized.metadata.systemTarget = target;
+  normalized.metadata.systemVersion =
+    normalized?.metadata?.systemVersion ||
+    existingMetadata?.systemVersion ||
+    '1.0.0';
+
+  normalized.configuration = {
+    ...(existing?.configuration?.toObject
+      ? existing.configuration.toObject()
+      : existing?.configuration || {}),
+    ...(normalized.configuration || {}),
+  };
+  normalized.configuration.security = 'private';
+  normalized.configuration.publicSecureMode = 'off';
+  normalized.configuration.tags = Array.from(
+    new Set([...(normalized.configuration.tags || []), 'system', 'profile'])
+  );
+
+  if (enforceForCreate && (!normalized.elements || normalized.elements.length === 0)) {
+    normalized.elements =
+      target === SYSTEM_TARGET_USER_PROFILE
+        ? getUserProfileSystemElements()
+        : getNodeProfileSystemElements();
+  }
+
+  return normalized;
+};
+
+const SYSTEM_USER_TOP_LEVEL_FIELDS = new Set([
+  'firstname',
+  'lastname',
+  'email',
+  'phoneNumber',
+]);
+
+const SYSTEM_USER_PROFILE_FIELDS = new Set([
+  'title',
+  'otherName',
+  'gender',
+  'dateOfBirth',
+  'highestQualification',
+  'professional',
+  'employmentCategory',
+  'occupation',
+  'employeeId',
+  'officeTitle',
+  'maritalStatus',
+  'stateOfOrigin',
+  'lgaOfOrigin',
+  'homeTown',
+  'residentialAddress',
+  'stateOfResidence',
+  'lgaOfResidence',
+]);
+
+const SYSTEM_NODE_TOP_LEVEL_FIELDS = new Set([
+  'name',
+  'address',
+  'city',
+  'state',
+  'country',
+  'postalCode',
+  'dateOfEstablishment',
+]);
+
+const SYSTEM_NODE_PROFILE_FIELDS = new Set([
+  'propertyStatus',
+  'estimatedValue',
+  'buildingType',
+  'facilityStatus',
+  'averageAttendance',
+  'averageIncome',
+]);
+
+const setByPath = (target, path, value) => {
+  const segments = String(path || '')
+    .split('.')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  if (segments.length === 0) return;
+
+  let cursor = target;
+  for (let index = 0; index < segments.length - 1; index += 1) {
+    const key = segments[index];
+    if (
+      typeof cursor[key] !== 'object' ||
+      cursor[key] === null ||
+      Array.isArray(cursor[key])
+    ) {
+      cursor[key] = {};
+    }
+    cursor = cursor[key];
+  }
+  cursor[segments[segments.length - 1]] = value;
+};
+
+const normalizePermissionName = (permission = '') => {
+  if (!permission || typeof permission !== 'string') {
+    return '';
+  }
+  if (permission === '*' || permission === 'all:*') {
+    return '*';
+  }
+
+  const raw = permission.trim().toLowerCase();
+  if (!raw.includes(':')) return raw;
+
+  const parts = raw.split(':');
+  if (parts.length !== 2) return raw;
+  const [first, second] = parts;
+  const actionCandidates = new Set([
+    'view',
+    'read',
+    'create',
+    'update',
+    'delete',
+    'manage',
+    'assign',
+    'approve',
+    'export',
+    'import',
+    'restore',
+    'activate',
+    'deactivate',
+    'move',
+    'permissions',
+    'upload',
+    'download',
+    'share',
+    'copy',
+    'publish',
+    'archive',
+    'submit',
+    'process',
+    'complete',
+    'cancel',
+    'refund',
+    'regenerate',
+    'togglestatus',
+    'assignrole',
+    'sendmessage',
+    'forgotpassword',
+    'resetpassword',
+    'verify',
+    'refresh',
+    'send',
+    'draft',
+    'retry',
+    'public',
+    'private',
+    'status',
+    'auth',
+    'all',
+  ]);
+  if (actionCandidates.has(second)) return `${first}:${second}`;
+  if (actionCandidates.has(first)) return `${second}:${first}`;
+  return raw;
+};
+
+const hasRequiredPermission = async (actorUser, requiredPermission) => {
+  if (!actorUser) return false;
+  if (actorUser.isSaby || actorUser.isSuper || actorUser.isOwner) return true;
+
+  const roleIds = Array.isArray(actorUser.roles) ? actorUser.roles : [];
+  if (roleIds.length === 0) return false;
+
+  const roles = await Role.find({ _id: { $in: roleIds } }).populate('permissions');
+  const permissionSet = new Set();
+  roles.forEach((role) => {
+    (role.permissions || []).forEach((permission) => {
+      const name = normalizePermissionName(permission?.name || '');
+      if (name) permissionSet.add(name);
+    });
+  });
+
+  if (permissionSet.has('*')) return true;
+
+  const normalizedRequired = normalizePermissionName(requiredPermission);
+  if (permissionSet.has(normalizedRequired)) return true;
+
+  const [resource, action] = normalizedRequired.split(':');
+  if (!resource || !action) return false;
+
+  if (permissionSet.has(`${resource}:*`)) return true;
+  if (permissionSet.has(`${resource}:manage`)) {
+    if (['view', 'read', 'create', 'update', 'delete'].includes(action)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const buildSystemUpdatePayload = ({ projectForm, submissionData = {} }) => {
+  const payload = {};
+  const elements = Array.isArray(projectForm?.elements) ? projectForm.elements : [];
+
+  elements.forEach((element = {}) => {
+    const bindingPath = element?.metadata?.bindingPath;
+    if (!bindingPath) return;
+
+    const elementId = element?.id;
+    let incomingValue;
+    if (
+      submissionData &&
+      Object.prototype.hasOwnProperty.call(submissionData, elementId)
+    ) {
+      incomingValue = submissionData[elementId];
+    } else if (
+      submissionData &&
+      Object.prototype.hasOwnProperty.call(submissionData, bindingPath)
+    ) {
+      incomingValue = submissionData[bindingPath];
+    } else {
+      return;
+    }
+
+    setByPath(payload, bindingPath, incomingValue);
+  });
+
+  return payload;
+};
+
+const sanitizeSystemUpdatePayload = ({ target, payload = {} }) => {
+  const sanitized = {};
+
+  Object.entries(payload || {}).forEach(([key, value]) => {
+    if (target === SYSTEM_TARGET_USER_PROFILE) {
+      if (SYSTEM_USER_TOP_LEVEL_FIELDS.has(key)) {
+        sanitized[key] = value;
+        return;
+      }
+      if (key === 'profile' && value && typeof value === 'object') {
+        const cleanProfile = {};
+        Object.entries(value).forEach(([profileKey, profileValue]) => {
+          if (SYSTEM_USER_PROFILE_FIELDS.has(profileKey)) {
+            cleanProfile[profileKey] = profileValue;
+            return;
+          }
+          if (profileKey === 'spouse' && profileValue && typeof profileValue === 'object') {
+            const spouse = {};
+            if (Object.prototype.hasOwnProperty.call(profileValue, 'name')) {
+              spouse.name = profileValue.name;
+            }
+            if (Object.prototype.hasOwnProperty.call(profileValue, 'phoneNumber')) {
+              spouse.phoneNumber = profileValue.phoneNumber;
+            }
+            if (Object.prototype.hasOwnProperty.call(profileValue, 'dateOfBirth')) {
+              spouse.dateOfBirth = profileValue.dateOfBirth;
+            }
+            if (Object.keys(spouse).length > 0) {
+              cleanProfile.spouse = spouse;
+            }
+            return;
+          }
+          if (profileKey === 'nextOfKin' && profileValue && typeof profileValue === 'object') {
+            const nextOfKin = {};
+            if (Object.prototype.hasOwnProperty.call(profileValue, 'name')) {
+              nextOfKin.name = profileValue.name;
+            }
+            if (Object.prototype.hasOwnProperty.call(profileValue, 'phoneNumber')) {
+              nextOfKin.phoneNumber = profileValue.phoneNumber;
+            }
+            if (Object.prototype.hasOwnProperty.call(profileValue, 'relationship')) {
+              nextOfKin.relationship = profileValue.relationship;
+            }
+            if (Object.keys(nextOfKin).length > 0) {
+              cleanProfile.nextOfKin = nextOfKin;
+            }
+          }
+        });
+        if (Object.keys(cleanProfile).length > 0) {
+          sanitized.profile = cleanProfile;
+        }
+      }
+      return;
+    }
+
+    if (target === SYSTEM_TARGET_NODE_PROFILE) {
+      if (SYSTEM_NODE_TOP_LEVEL_FIELDS.has(key)) {
+        sanitized[key] = value;
+        return;
+      }
+      if (key === 'profile' && value && typeof value === 'object') {
+        const cleanProfile = {};
+        Object.entries(value).forEach(([profileKey, profileValue]) => {
+          if (SYSTEM_NODE_PROFILE_FIELDS.has(profileKey)) {
+            cleanProfile[profileKey] = profileValue;
+          }
+        });
+        if (Object.keys(cleanProfile).length > 0) {
+          sanitized.profile = cleanProfile;
+        }
+      }
+    }
+  });
+
+  return sanitized;
+};
 
 const normalizeTags = (tags = []) =>
   Array.from(
@@ -205,10 +857,11 @@ const normalizeWorkflowTriggerOn = (workflows = []) => {
 
 const isStrictPublicAccessible = (projectForm) => {
   if (!projectForm) return false;
+  const isSystemForm = projectForm?.metadata?.formCategory === SYSTEM_FORM_CATEGORY;
   return (
     projectForm?.metadata?.deploymentStatus === 'published' &&
     projectForm?.status === 'active' &&
-    projectForm?.configuration?.security === 'public'
+    (projectForm?.configuration?.security === 'public' || isSystemForm)
   );
 };
 
@@ -259,11 +912,17 @@ const sanitizePublicForm = (projectForm) => {
         safeElements.length,
       hasValidation: Boolean(source.metadata?.hasValidation),
       lastModified: source.metadata?.lastModified || source.updatedAt || null,
+      formCategory: source.metadata?.formCategory || 'standard',
+      systemTarget: source.metadata?.systemTarget || null,
+      systemVersion: source.metadata?.systemVersion || null,
     },
   };
 };
 
 const resolvePublicSecureMode = (projectForm) => {
+  if (projectForm?.metadata?.formCategory === SYSTEM_FORM_CATEGORY) {
+    return 'single_qr_passwordless';
+  }
   const mode = String(
     projectForm?.configuration?.publicSecureMode ||
       projectForm?.metadata?.publicSecureMode ||
@@ -432,11 +1091,18 @@ const getProjectStorageFolderByProjectId = async (projectId) => {
  * @returns {Promise<ProjectForm>}
  */
 const createProjectForm = async (projectFormBody, tenantId, createdBy) => {
-  const normalizedBody = { ...projectFormBody };
-  normalizedBody.workflows = normalizeWorkflowTriggerOn(projectFormBody.workflows || []);
+  let normalizedBody = { ...projectFormBody };
+  normalizedBody = normalizeSystemFormContract({
+    body: normalizedBody,
+    existing: null,
+    enforceForCreate: true,
+  });
+  normalizedBody.workflows = normalizeWorkflowTriggerOn(
+    normalizedBody.workflows || []
+  );
   normalizedBody.configuration = enrichConfigurationWithAnalysisProfile({
-    configuration: projectFormBody.configuration || {},
-    elements: projectFormBody.elements || [],
+    configuration: normalizedBody.configuration || {},
+    elements: normalizedBody.elements || [],
   });
   const projectForm = await ProjectForm.createProjectForm(
     normalizedBody,
@@ -659,37 +1325,43 @@ const updateProjectFormById = async (
   updateBody,
   options = {}
 ) => {
+  let normalizedUpdateBody = { ...updateBody };
   if (Array.isArray(updateBody.workflows)) {
-    updateBody.workflows = normalizeWorkflowTriggerOn(updateBody.workflows);
+    normalizedUpdateBody.workflows = normalizeWorkflowTriggerOn(updateBody.workflows);
   }
   const projectForm = await getProjectFormById(projectFormId);
+  normalizedUpdateBody = normalizeSystemFormContract({
+    body: normalizedUpdateBody,
+    existing: projectForm,
+    enforceForCreate: false,
+  });
 
   // Update metadata
-  if (updateBody.metadata) {
-    updateBody.metadata.lastModified = new Date();
+  if (normalizedUpdateBody.metadata) {
+    normalizedUpdateBody.metadata.lastModified = new Date();
     const currentVersion = String(projectForm?.metadata?.version || '1.0.0');
     const [major = 1, minor = 0, patch = 0] = currentVersion
       .split('.')
       .map((part) => Number(part) || 0);
-    updateBody.metadata.version = `${major}.${minor}.${patch + 1}`;
+    normalizedUpdateBody.metadata.version = `${major}.${minor}.${patch + 1}`;
   }
 
-  const mergedElements = Array.isArray(updateBody.elements)
-    ? updateBody.elements
+  const mergedElements = Array.isArray(normalizedUpdateBody.elements)
+    ? normalizedUpdateBody.elements
     : projectForm.elements || [];
   const mergedConfiguration = enrichConfigurationWithAnalysisProfile({
     configuration: {
       ...(projectForm.configuration?.toObject
         ? projectForm.configuration.toObject()
         : projectForm.configuration || {}),
-      ...(updateBody.configuration || {}),
+      ...(normalizedUpdateBody.configuration || {}),
     },
     elements: mergedElements,
     existingProfile: projectForm?.configuration?.analysisProfile || null,
   });
-  updateBody.configuration = mergedConfiguration;
+  normalizedUpdateBody.configuration = mergedConfiguration;
 
-  Object.assign(projectForm, updateBody);
+  Object.assign(projectForm, normalizedUpdateBody);
   await projectForm.save();
 
   if (options.populate) {
@@ -699,6 +1371,285 @@ const updateProjectFormById = async (
   await fieldCatalogService.syncCatalogFromForm(projectForm);
   await ensureModuleStorageFolder(projectForm);
   return projectForm;
+};
+
+const buildSystemFormTemplate = (target) => {
+  if (target === SYSTEM_TARGET_USER_PROFILE) {
+    return {
+      configuration: {
+        projectName: 'User Profile',
+        tags: ['system', 'profile', 'user'],
+        accessibility: ['api', 'mobile'],
+        security: 'private',
+        publicSecureMode: 'off',
+      },
+      elements: getUserProfileSystemElements(),
+      style: 'default',
+      wizardMode: false,
+      userSettings: {
+        behavior: {
+          allowMultipleSubmissions: true,
+          enableProgressSave: true,
+        },
+        distribution: {
+          enableSharing: false,
+          allowEmbedding: false,
+          generateQR: false,
+        },
+      },
+      metadata: {
+        deploymentStatus: 'published',
+        formCategory: SYSTEM_FORM_CATEGORY,
+        systemTarget: SYSTEM_TARGET_USER_PROFILE,
+        systemVersion: '1.0.0',
+        integrations: ['web', 'mobile'],
+      },
+    };
+  }
+
+  if (target === SYSTEM_TARGET_NODE_PROFILE) {
+    return {
+      configuration: {
+        projectName: 'Node Profile',
+        tags: ['system', 'profile', 'node'],
+        accessibility: ['api', 'mobile'],
+        security: 'private',
+        publicSecureMode: 'off',
+      },
+      elements: getNodeProfileSystemElements(),
+      style: 'default',
+      wizardMode: false,
+      userSettings: {
+        behavior: {
+          allowMultipleSubmissions: true,
+          enableProgressSave: true,
+        },
+        distribution: {
+          enableSharing: false,
+          allowEmbedding: false,
+          generateQR: false,
+        },
+      },
+      metadata: {
+        deploymentStatus: 'published',
+        formCategory: SYSTEM_FORM_CATEGORY,
+        systemTarget: SYSTEM_TARGET_NODE_PROFILE,
+        systemVersion: '1.0.0',
+        integrations: ['web', 'mobile'],
+      },
+    };
+  }
+
+  throw new ApiError(httpStatus.BAD_REQUEST, `Unsupported system target: ${target}`);
+};
+
+const bootstrapSystemFormsForTenant = async ({
+  tenantId,
+  createdBy,
+  targets = [SYSTEM_TARGET_USER_PROFILE, SYSTEM_TARGET_NODE_PROFILE],
+  force = false,
+}) => {
+  if (!tenantId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId is required');
+  }
+  if (!createdBy) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'createdBy is required');
+  }
+
+  const requestedTargets = Array.from(
+    new Set((Array.isArray(targets) ? targets : []).filter((target) => VALID_SYSTEM_TARGETS.has(target)))
+  );
+  const normalizedTargets =
+    requestedTargets.length > 0
+      ? requestedTargets
+      : [SYSTEM_TARGET_USER_PROFILE, SYSTEM_TARGET_NODE_PROFILE];
+
+  const results = [];
+
+  for (const target of normalizedTargets) {
+    // eslint-disable-next-line no-await-in-loop
+    const existing = await ProjectForm.findOne({
+      tenantId,
+      deletedAt: null,
+      'metadata.formCategory': SYSTEM_FORM_CATEGORY,
+      'metadata.systemTarget': target,
+    });
+
+    if (existing && !force) {
+      results.push({
+        target,
+        status: 'exists',
+        projectId: existing.projectId,
+        publicRef: existing.publicRef,
+        shareRef: existing.shareRef,
+      });
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
+    if (existing && force) {
+      // eslint-disable-next-line no-await-in-loop
+      await existing.softDelete(createdBy);
+    }
+
+    const template = buildSystemFormTemplate(target);
+    // eslint-disable-next-line no-await-in-loop
+    const created = await createProjectForm(template, tenantId, createdBy);
+    results.push({
+      target,
+      status: 'created',
+      projectId: created.projectId,
+      publicRef: created.publicRef,
+      shareRef: created.shareRef,
+    });
+  }
+
+  return {
+    tenantId,
+    totalRequested: normalizedTargets.length,
+    created: results.filter((item) => item.status === 'created').length,
+    existing: results.filter((item) => item.status === 'exists').length,
+    results,
+  };
+};
+
+const submitSystemFormByPublicRef = async ({
+  publicRef,
+  actorUser,
+  targetId = null,
+  submissionData = {},
+}) => {
+  if (!publicRef) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'publicRef is required');
+  }
+  if (!actorUser?._id || !actorUser?.tenantId) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Authenticated user is required');
+  }
+
+  const projectForm = await ProjectForm.findOne({
+    publicRef,
+    tenantId: actorUser.tenantId,
+    deletedAt: null,
+  });
+
+  if (!projectForm) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'System form not found');
+  }
+
+  if (projectForm?.metadata?.formCategory !== SYSTEM_FORM_CATEGORY) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'This form is not a system form');
+  }
+
+  const systemTarget = projectForm?.metadata?.systemTarget;
+  if (!VALID_SYSTEM_TARGETS.has(systemTarget)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid system form target');
+  }
+
+  const mappedPayload = buildSystemUpdatePayload({
+    projectForm,
+    submissionData,
+  });
+  const updatePayload = sanitizeSystemUpdatePayload({
+    target: systemTarget,
+    payload: mappedPayload,
+  });
+
+  if (Object.keys(updatePayload).length === 0) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'No valid system-bound fields found in submission payload'
+    );
+  }
+
+  if (systemTarget === SYSTEM_TARGET_USER_PROFILE) {
+    const resolvedTargetUserId = targetId || String(actorUser._id);
+    const targetUser = await User.findById(resolvedTargetUserId);
+    if (!targetUser) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Target user not found');
+    }
+    if (String(targetUser.tenantId) !== String(actorUser.tenantId)) {
+      throw new ApiError(httpStatus.FORBIDDEN, 'Target user belongs to another tenant');
+    }
+
+    const isSelfUpdate = String(targetUser._id) === String(actorUser._id);
+    if (!isSelfUpdate) {
+      const canUpdateUser = await hasRequiredPermission(actorUser, 'user:update');
+      if (!canUpdateUser) {
+        throw new ApiError(
+          httpStatus.FORBIDDEN,
+          'You are not authorized to update another user profile'
+        );
+      }
+    }
+
+    const updatedUser = await userService.updateUserById(
+      targetUser._id,
+      updatePayload,
+      actorUser
+    );
+
+    logger.info('system_form_submission', {
+      tenantId: actorUser.tenantId,
+      actorUserId: String(actorUser._id),
+      targetType: SYSTEM_TARGET_USER_PROFILE,
+      targetId: String(updatedUser._id),
+      formRef: publicRef,
+      success: true,
+    });
+
+    return {
+      success: true,
+      systemTarget,
+      formRef: publicRef,
+      targetId: String(updatedUser._id),
+      updatedEntity: userService.buildUserResponse(updatedUser),
+      message: 'User profile updated successfully via system form',
+    };
+  }
+
+  if (systemTarget === SYSTEM_TARGET_NODE_PROFILE) {
+    if (!targetId) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'targetId is required for node profile system form submission'
+      );
+    }
+
+    const canUpdateNode = await hasRequiredPermission(actorUser, 'node:update');
+    if (!canUpdateNode) {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        'You are not authorized to update node profile'
+      );
+    }
+
+    const targetNode = await nodeService.getNodeById(targetId, { populate: '' });
+    if (String(targetNode.tenantId) !== String(actorUser.tenantId)) {
+      throw new ApiError(httpStatus.FORBIDDEN, 'Target node belongs to another tenant');
+    }
+
+    const updatedNode = await nodeService.updateNodeById(targetNode._id, updatePayload);
+
+    logger.info('system_form_submission', {
+      tenantId: actorUser.tenantId,
+      actorUserId: String(actorUser._id),
+      targetType: SYSTEM_TARGET_NODE_PROFILE,
+      targetId: String(updatedNode._id),
+      formRef: publicRef,
+      success: true,
+    });
+
+    return {
+      success: true,
+      systemTarget,
+      formRef: publicRef,
+      targetId: String(updatedNode._id),
+      updatedEntity: nodeService.buildNodeResponse(updatedNode),
+      message: 'Node profile updated successfully via system form',
+    };
+  }
+
+  throw new ApiError(httpStatus.BAD_REQUEST, 'Unsupported system form target');
 };
 
 /**
@@ -1094,4 +2045,6 @@ module.exports = {
   bulkOperations,
   searchProjectForms,
   getProjectStorageFolderByProjectId,
+  bootstrapSystemFormsForTenant,
+  submitSystemFormByPublicRef,
 };
