@@ -489,6 +489,7 @@ const submitPublicAccessForm = {
   body: Joi.object().keys({
     accessToken: Joi.string().required(),
     nodeId: Joi.string().optional().allow('', null),
+    source: Joi.string().optional(),
     submissionData: Joi.alternatives()
       .try(Joi.object().unknown(true), Joi.array().items(Joi.any()))
       .required(),
