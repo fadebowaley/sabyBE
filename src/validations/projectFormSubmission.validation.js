@@ -4,10 +4,12 @@ const { objectId } = require('./custom.validation');
 const createSubmission = {
   body: Joi.object().keys({
     projectId: Joi.string().required(),
+    source: Joi.string().optional(),
     submissionData: Joi.object().required(),
     submittedAt: Joi.date().iso(),
     metadata: Joi.object().keys({
       submissionId: Joi.string(),
+      source: Joi.string(),
       userAgent: Joi.string(),
       ipAddress: Joi.string(),
       referrer: Joi.string(),
@@ -23,10 +25,12 @@ const createSubmissionByReference = {
     reference: Joi.string().required(),
   }),
   body: Joi.object().keys({
+    source: Joi.string().optional(),
     submissionData: Joi.object().required(),
     submittedAt: Joi.date().iso(),
     metadata: Joi.object().keys({
       submissionId: Joi.string(),
+      source: Joi.string(),
       userAgent: Joi.string(),
       ipAddress: Joi.string(),
       referrer: Joi.string(),
