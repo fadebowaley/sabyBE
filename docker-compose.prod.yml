@@ -66,7 +66,7 @@ services:
       - halo-prod-network
 
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: halo-prod-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-halograph}

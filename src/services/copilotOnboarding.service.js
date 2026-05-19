@@ -172,6 +172,88 @@ const parseLevelRank = (value) => {
   return Number(raw);
 };
 
+const buildNodeRefKey = ({ name, levelRef = '', parentRef = '' }) =>
+  `${norm(name)}|${String(levelRef || '')}|${String(parentRef || '')}`;
+
+const appendNodeNameCandidate = (refs, node) => {
+  const key = norm(node?.name);
+  if (!key) return;
+  const current = refs.nodesByName.get(key) || [];
+  const next = current.filter(
+    (candidate) => String(candidate?._id || '') !== String(node?._id || '')
+  );
+  next.push(node);
+  refs.nodesByName.set(key, next);
+};
+
+const indexNodeRef = (refs, node) => {
+  if (!refs || !node?._id) return;
+  appendNodeNameCandidate(refs, node);
+  refs.nodesByComposite.set(
+    buildNodeRefKey({
+      name: node.name,
+      levelRef: node.level,
+      parentRef: node.parent,
+    }),
+    node
+  );
+};
+
+const unindexNodeRef = (refs, node) => {
+  if (!refs || !node?._id) return;
+  const key = norm(node?.name);
+  if (key) {
+    const next = (refs.nodesByName.get(key) || []).filter(
+      (candidate) => String(candidate?._id || '') !== String(node?._id || '')
+    );
+    if (next.length > 0) refs.nodesByName.set(key, next);
+    else refs.nodesByName.delete(key);
+  }
+  refs.nodesByComposite.delete(
+    buildNodeRefKey({
+      name: node.name,
+      levelRef: node.level,
+      parentRef: node.parent,
+    })
+  );
+};
+
+const resolveNodeRef = (refs, { name, levelRef = null, parentRef = undefined }) => {
+  const nodeName = norm(name);
+  if (!nodeName) return null;
+  const hasLevelConstraint = levelRef != null;
+  const hasParentConstraint = parentRef !== undefined;
+
+  if (hasLevelConstraint && hasParentConstraint) {
+    const exact = refs.nodesByComposite.get(
+      buildNodeRefKey({ name, levelRef, parentRef })
+    );
+    if (exact) return exact;
+  }
+
+  const candidates = refs.nodesByName.get(nodeName) || [];
+  if (candidates.length === 0) return null;
+
+  const filtered = candidates.filter((candidate) => {
+    if (hasLevelConstraint && String(candidate?.level || '') !== String(levelRef)) {
+      return false;
+    }
+    if (
+      hasParentConstraint &&
+      String(candidate?.parent || '') !== String(parentRef || '')
+    ) {
+      return false;
+    }
+    return true;
+  });
+
+  if (filtered.length === 1) return filtered[0];
+  if (filtered.length > 1) return filtered[filtered.length - 1];
+  if (hasLevelConstraint || hasParentConstraint) return null;
+  if (candidates.length === 1) return candidates[0];
+  return candidates[candidates.length - 1] || null;
+};
+
 const canonicalizeMasterRows = (rows = []) => {
   const canonicalRows = [];
   const levelsByName = new Map();
@@ -278,16 +360,30 @@ const canonicalizeMasterRows = (rows = []) => {
   });
 
   const stack = [];
+  const nodeContextByLine = new Map();
   nodeRows.forEach((entry) => {
     const numericRank = parseLevelRank(entry.levelRank);
     let parentNodeName = '';
+    let parentLevelName = '';
     if (numericRank != null) {
       while (stack.length > 0 && stack[stack.length - 1].rank >= numericRank) {
         stack.pop();
       }
       parentNodeName = stack.length > 0 ? stack[stack.length - 1].nodeName : '';
-      stack.push({ rank: numericRank, nodeName: entry.nodeName });
+      parentLevelName = stack.length > 0 ? stack[stack.length - 1].levelName : '';
+      stack.push({
+        rank: numericRank,
+        nodeName: entry.nodeName,
+        levelName: entry.levelName,
+      });
     }
+
+    nodeContextByLine.set(entry.lineNumber, {
+      nodeName: entry.nodeName,
+      levelName: entry.levelName,
+      parentNodeName,
+      parentLevelName,
+    });
 
     canonicalRows.push({
       lineNumber: entry.lineNumber,
@@ -297,6 +393,7 @@ const canonicalizeMasterRows = (rows = []) => {
         level_name: entry.levelName,
         node_name: entry.nodeName,
         parent_node_name: parentNodeName,
+        parent_level_name: parentLevelName,
         node_address: entry.nodeAddress,
       },
     });
@@ -340,12 +437,16 @@ const canonicalizeMasterRows = (rows = []) => {
 
   [...userNodeBindings].forEach((binding) => {
     const [userEmail, nodeName, lineNumber] = binding.split('|||');
+    const nodeContext = nodeContextByLine.get(Number(lineNumber || 0)) || {};
     canonicalRows.push({
       lineNumber: Number(lineNumber || 1),
       row: {
         record_type: 'user_node',
         user_email: userEmail,
         node_name: nodeName,
+        level_name: nodeContext.levelName || '',
+        parent_node_name: nodeContext.parentNodeName || '',
+        parent_level_name: nodeContext.parentLevelName || '',
       },
     });
   });
@@ -684,12 +785,21 @@ const preloadReferenceMaps = async (tenantId) => {
     User.find({ tenantId, deletedAt: null }).lean(),
   ]);
 
+  const nodeRefs = {
+    nodesByName: new Map(),
+    nodesByComposite: new Map(),
+  };
+  nodes.forEach((node) => {
+    indexNodeRef(nodeRefs, node);
+  });
+
   return {
     structuresByName: new Map(structures.map((x) => [norm(x.name), x])),
     levelsByName: new Map(levels.map((x) => [norm(x.name), x])),
     levelsById: new Map(levels.map((x) => [String(x._id), x])),
     levelsByRank: new Map(levels.map((x) => [String(x.rank), x])),
-    nodesByName: new Map(nodes.map((x) => [norm(x.name), x])),
+    nodesByName: nodeRefs.nodesByName,
+    nodesByComposite: nodeRefs.nodesByComposite,
     rootNode: nodes.find((x) => !x.parent) || null,
     rolesByName: new Map(roles.map((x) => [norm(x.name), x])),
     usersByEmail: new Map(users.map((x) => [norm(x.email), x])),
@@ -1068,15 +1178,24 @@ const importOnboardingCsv = async ({
       const level = refs.levelsByName.get(norm(row.level_name));
       const structure = refs.structuresByName.get(norm(row.structure_name));
       const parentName = getSafe(row, 'parent_node_name');
-      const parent = parentName ? refs.nodesByName.get(norm(parentName)) : null;
-      const key = norm(nodeName);
-      const existing = refs.nodesByName.get(key);
+      const parentLevel = refs.levelsByName.get(norm(row.parent_level_name));
       const rankFromMap = levelRankByName.get(norm(row.level_name));
       const rankValue =
         Number.isInteger(rankFromMap) ? rankFromMap : Number(level?.rank);
       const isRootCsvRow = !parentName && rankValue === 0;
       const nodeAddress =
         getSafe(row, 'node_address') || getSafe(row, 'address') || '';
+      const parent = parentName
+        ? resolveNodeRef(refs, {
+            name: parentName,
+            levelRef: parentLevel?._id || null,
+          })
+        : null;
+      const existing = resolveNodeRef(refs, {
+        name: nodeName,
+        levelRef: level?._id || null,
+        parentRef: parent ? parent._id : null,
+      });
 
       if (!level || !structure) {
         throw new ApiError(
@@ -1111,7 +1230,7 @@ const importOnboardingCsv = async ({
           (nodeAddress && String(rootTarget.address || '') !== String(nodeAddress));
 
         if (!needsUpdate) {
-          refs.nodesByName.set(key, rootTarget);
+          indexNodeRef(refs, rootTarget);
           rowResults.push({
             line: lineNumber,
             recordType: 'node',
@@ -1129,9 +1248,8 @@ const importOnboardingCsv = async ({
         );
         const updatedRootObject = updatedRoot.toObject ? updatedRoot.toObject() : updatedRoot;
         refs.rootNode = updatedRootObject;
-        refs.nodesByName.set(norm(before.name), updatedRootObject);
-        refs.nodesByName.set(norm(updatedRootObject.name), updatedRootObject);
-        refs.nodesByName.set(key, updatedRootObject);
+        unindexNodeRef(refs, before);
+        indexNodeRef(refs, updatedRootObject);
         undoStack.push(async () => {
           await nodeService.updateNodeById(rootTarget._id, {
             name: before.name,
@@ -1166,7 +1284,9 @@ const importOnboardingCsv = async ({
           parent: parent?._id || null,
           ...(nodeAddress ? { address: nodeAddress } : {}),
         });
-        refs.nodesByName.set(key, updated.toObject ? updated.toObject() : updated);
+        const updatedObject = updated.toObject ? updated.toObject() : updated;
+        unindexNodeRef(refs, before);
+        indexNodeRef(refs, updatedObject);
         undoStack.push(async () => {
           await nodeService.updateNodeById(existing._id, {
             name: before.name,
@@ -1195,7 +1315,7 @@ const importOnboardingCsv = async ({
         ...(nodeAddress ? { address: nodeAddress } : {}),
       });
       const createdNode = created.toObject ? created.toObject() : created;
-      refs.nodesByName.set(key, createdNode);
+      indexNodeRef(refs, createdNode);
       if (isRootCsvRow || (!parentName && !refs.rootNode)) {
         refs.rootNode = createdNode;
       }
@@ -1385,7 +1505,19 @@ const importOnboardingCsv = async ({
       async ({ lineNumber, row }) => {
       const user = refs.usersByEmail.get(norm(row.user_email));
       const nodeName = getUserNodeName(row);
-      const node = refs.nodesByName.get(norm(nodeName));
+      const level = refs.levelsByName.get(norm(row.level_name));
+      const parentLevel = refs.levelsByName.get(norm(row.parent_level_name));
+      const parent = getSafe(row, 'parent_node_name')
+        ? resolveNodeRef(refs, {
+            name: row.parent_node_name,
+            levelRef: parentLevel?._id || null,
+          })
+        : null;
+      const node = resolveNodeRef(refs, {
+        name: nodeName,
+        levelRef: level?._id || null,
+        parentRef: parent ? parent._id : null,
+      });
       if (!user || !node) {
         throw new ApiError(
           httpStatus.BAD_REQUEST,
@@ -1410,10 +1542,7 @@ const importOnboardingCsv = async ({
 
       const merged = [...currentUsers, userId];
       const updated = await nodeService.assignUsersToNode(String(node._id), merged);
-      refs.nodesByName.set(
-        norm(updated.name || nodeName),
-        updated.toObject ? updated.toObject() : updated
-      );
+      indexNodeRef(refs, updated.toObject ? updated.toObject() : updated);
       rowResults.push({
         line: lineNumber,
         recordType: 'user_node',

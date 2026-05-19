@@ -278,19 +278,24 @@ describe('copilot onboarding service (dry-run)', () => {
         },
       };
     });
-    mockStructureService.createStructure.mockResolvedValue({
-      _id: 'str1',
-      name: 'Master Structure',
-      level: 'lvl1',
-      toObject() {
-        return this;
-      },
+    mockStructureService.createStructure.mockImplementation(async ({ name, level }) => {
+      return {
+        _id: `str${level}`,
+        name,
+        level,
+        toObject() {
+          return this;
+        },
+      };
     });
-    mockNodeService.createNode.mockImplementation(async ({ name }) => {
+    mockNodeService.createNode.mockImplementation(async ({ name, level, structure, parent }) => {
       nodeCount += 1;
       return {
         _id: `node${nodeCount}`,
         name,
+        level,
+        structure,
+        parent: parent || null,
         users: [],
         toObject() {
           return this;
@@ -322,12 +327,21 @@ describe('copilot onboarding service (dry-run)', () => {
         return this;
       },
     }));
-    mockNodeService.getNodeById.mockResolvedValue({
-      _id: 'node1',
-      users: [],
-    });
+    mockNodeService.getNodeById
+      .mockResolvedValueOnce({
+        _id: 'node1',
+        users: [],
+      })
+      .mockResolvedValueOnce({
+        _id: 'node2',
+        users: [],
+      });
     mockNodeService.assignUsersToNode.mockImplementation(async (nodeId, users) => ({
       _id: nodeId,
+      name: nodeId === 'node1' ? 'National Headquarters' : 'Oluyoro Zone',
+      level: nodeId === 'node1' ? 'lvl1' : 'lvl2',
+      structure: nodeId === 'node1' ? 'strlvl1' : 'strlvl2',
+      parent: nodeId === 'node1' ? null : 'node1',
       users,
       toObject() {
         return this;
@@ -348,6 +362,184 @@ describe('copilot onboarding service (dry-run)', () => {
     expect(mockUserService.ownerCreate).toHaveBeenCalledTimes(2);
     expect(mockUserService.assignRoles).toHaveBeenCalledTimes(2);
     expect(mockNodeService.assignUsersToNode).toHaveBeenCalledTimes(2);
+  });
+
+  test('supports repeated node names at different hierarchy levels in master template imports', async () => {
+    const csvText = [
+      'LEVEL,STRUCTURE,CHURCH NAME,ROLE,PASTORS NAME,EMAIL,PHONE NO,CHURCH ADDRESS,PASSWORD',
+      '0,ROOT,Covenant Cathedral (Headquarters I),,,root@example.org,08010000001,Address 1,TempPass123!',
+      '2,Diocese,Philadelphia,,Bishop One,bishop@example.org,08010000002,Address 2,TempPass123!',
+      '4,Parish,Philadelphia,,Pastor Two,pastor@example.org,08010000003,Address 3,TempPass123!',
+    ].join('\n');
+
+    mockLevelService.createLevel
+      .mockResolvedValueOnce({
+        _id: 'lvl-root',
+        name: 'ROOT',
+        rank: 0,
+        toObject() {
+          return this;
+        },
+      })
+      .mockResolvedValueOnce({
+        _id: 'lvl-diocese',
+        name: 'Diocese',
+        rank: 2,
+        toObject() {
+          return this;
+        },
+      })
+      .mockResolvedValueOnce({
+        _id: 'lvl-parish',
+        name: 'Parish',
+        rank: 4,
+        toObject() {
+          return this;
+        },
+      });
+
+    mockStructureService.createStructure
+      .mockResolvedValueOnce({
+        _id: 'str-root',
+        name: 'Master Structure - ROOT',
+        level: 'lvl-root',
+        toObject() {
+          return this;
+        },
+      })
+      .mockResolvedValueOnce({
+        _id: 'str-diocese',
+        name: 'Master Structure - Diocese',
+        level: 'lvl-diocese',
+        toObject() {
+          return this;
+        },
+      })
+      .mockResolvedValueOnce({
+        _id: 'str-parish',
+        name: 'Master Structure - Parish',
+        level: 'lvl-parish',
+        toObject() {
+          return this;
+        },
+      });
+
+    mockNodeService.createNode
+      .mockResolvedValueOnce({
+        _id: 'node-root',
+        name: 'Covenant Cathedral (Headquarters I)',
+        level: 'lvl-root',
+        structure: 'str-root',
+        parent: null,
+        users: [],
+        toObject() {
+          return this;
+        },
+      })
+      .mockResolvedValueOnce({
+        _id: 'node-diocese',
+        name: 'Philadelphia',
+        level: 'lvl-diocese',
+        structure: 'str-diocese',
+        parent: 'node-root',
+        users: [],
+        toObject() {
+          return this;
+        },
+      })
+      .mockResolvedValueOnce({
+        _id: 'node-parish',
+        name: 'Philadelphia',
+        level: 'lvl-parish',
+        structure: 'str-parish',
+        parent: 'node-diocese',
+        users: [],
+        toObject() {
+          return this;
+        },
+      });
+
+    mockUserService.ownerCreate
+      .mockResolvedValueOnce({
+        _id: 'user-root',
+        email: 'root@example.org',
+        roles: [],
+        toObject() {
+          return this;
+        },
+      })
+      .mockResolvedValueOnce({
+        _id: 'user-bishop',
+        email: 'bishop@example.org',
+        roles: [],
+        toObject() {
+          return this;
+        },
+      })
+      .mockResolvedValueOnce({
+        _id: 'user-pastor',
+        email: 'pastor@example.org',
+        roles: [],
+        toObject() {
+          return this;
+        },
+      });
+
+    mockNodeService.getNodeById
+      .mockResolvedValueOnce({ _id: 'node-root', users: [] })
+      .mockResolvedValueOnce({ _id: 'node-diocese', users: [] })
+      .mockResolvedValueOnce({ _id: 'node-parish', users: [] });
+
+    mockNodeService.assignUsersToNode
+      .mockResolvedValueOnce({
+        _id: 'node-root',
+        name: 'Covenant Cathedral (Headquarters I)',
+        level: 'lvl-root',
+        structure: 'str-root',
+        parent: null,
+        users: ['user-root'],
+        toObject() {
+          return this;
+        },
+      })
+      .mockResolvedValueOnce({
+        _id: 'node-diocese',
+        name: 'Philadelphia',
+        level: 'lvl-diocese',
+        structure: 'str-diocese',
+        parent: 'node-root',
+        users: ['user-bishop'],
+        toObject() {
+          return this;
+        },
+      })
+      .mockResolvedValueOnce({
+        _id: 'node-parish',
+        name: 'Philadelphia',
+        level: 'lvl-parish',
+        structure: 'str-parish',
+        parent: 'node-diocese',
+        users: ['user-pastor'],
+        toObject() {
+          return this;
+        },
+      });
+
+    const result = await importOnboardingCsv({
+      tenantId: 'tenant-1',
+      csvText,
+      actorUser: { _id: 'actor1', userId: 'u-actor', isOwner: true },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.summary.rolledBack).toBe(false);
+    expect(mockNodeService.createNode).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        name: 'Philadelphia',
+        parent: 'node-diocese',
+      })
+    );
   });
 
   test('keeps created records and reports failure details when a later assignment stage fails', async () => {
