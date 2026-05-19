@@ -427,7 +427,7 @@ const executeToolCall = async ({
         entityId: derivedEntityId,
         payload: resolveResult.resolvedPayload,
         idempotencyKey: payload.idempotencyKey,
-        correlationId: null,
+        correlationId,
         source: 'tool_runtime',
         priority: Number(payload.priority || 0),
       });

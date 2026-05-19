@@ -6,6 +6,11 @@ const mockProjectFormService = {
   getPublicProjectFormByShortCode: jest.fn(),
   buildPublicQrContext: jest.fn(),
   incrementProjectViews: jest.fn(),
+  getProjectFormByProjectId: jest.fn(),
+};
+
+const mockProjectFormWorkspaceService = {
+  assertWorkspaceAccess: jest.fn(),
 };
 
 const mockPublicAccessService = {
@@ -27,6 +32,7 @@ jest.mock('../middlewares/publicFormRateLimiter', () => ({
 
 jest.mock('../services', () => ({
   projectFormService: mockProjectFormService,
+  projectFormWorkspaceService: mockProjectFormWorkspaceService,
 }));
 
 jest.mock('../services/projectFormPublicAccess.service', () => mockPublicAccessService);
@@ -44,6 +50,7 @@ app.use('/v1/project-forms', projectFormRouter);
 describe('project form public secure routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockProjectFormWorkspaceService.assertWorkspaceAccess.mockResolvedValue(undefined);
   });
 
   test('GET /v1/project-forms/public/ref/:reference returns QR context contract', async () => {
@@ -190,6 +197,11 @@ describe('project form public secure routes', () => {
   });
 
   test('GET /v1/project-forms/project/:projectId/public-access-metrics returns metrics', async () => {
+    mockProjectFormService.getProjectFormByProjectId.mockResolvedValue({
+      projectId: 'proj_medical',
+      tenantId: 'tenant-1',
+      workspaceId: 'ws_default',
+    });
     mockPublicAccessService.getProjectPublicAccessMetrics.mockResolvedValue({
       linkRequests: 4,
       linksConsumed: 3,
@@ -216,5 +228,12 @@ describe('project form public secure routes', () => {
       projectId: 'proj_medical',
       recentWindowHours: 12,
     });
+    expect(mockProjectFormWorkspaceService.assertWorkspaceAccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        workspaceId: 'ws_default',
+        userId: 'user-1',
+      })
+    );
   });
 });

@@ -350,7 +350,7 @@ describe('copilot onboarding service (dry-run)', () => {
     expect(mockNodeService.assignUsersToNode).toHaveBeenCalledTimes(2);
   });
 
-  test('rolls back created records when a later stage fails', async () => {
+  test('keeps created records and reports failure details when a later assignment stage fails', async () => {
     const csvText = [
       'record_type,structure_name,level_name,level_rank,node_name,parent_node_name,role_name,user_email,first_name,last_name',
       'structure,National,,,,,,,,',
@@ -409,11 +409,14 @@ describe('copilot onboarding service (dry-run)', () => {
     });
 
     expect(result.ok).toBe(false);
-    expect(result.summary.rolledBack).toBe(true);
-    expect(mockUser.deleteOne).toHaveBeenCalledWith({ _id: 'user1' });
-    expect(mockRole.deleteOne).toHaveBeenCalledWith({ _id: 'role1' });
-    expect(mockNodes.deleteOne).toHaveBeenCalledWith({ _id: 'node1' });
-    expect(mockLevel.deleteOne).toHaveBeenCalledWith({ _id: 'lvl1' });
+    expect(result.summary.rolledBack).toBe(false);
+    expect(result.summary.failed).toBe(1);
+    expect(result.summary.created).toBeGreaterThan(0);
+    expect(result.summary.completedWithErrors).toBe(true);
+    expect(mockUser.deleteOne).not.toHaveBeenCalled();
+    expect(mockRole.deleteOne).not.toHaveBeenCalled();
+    expect(mockNodes.deleteOne).not.toHaveBeenCalled();
+    expect(mockLevel.deleteOne).not.toHaveBeenCalled();
   });
 
   test('reuses existing level by rank when CSV level name differs', async () => {

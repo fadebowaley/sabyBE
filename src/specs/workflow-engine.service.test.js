@@ -95,14 +95,14 @@ describe('workflowEngine.service', () => {
     expect(mockAgentTaskService.updateTaskStep).toHaveBeenCalledWith(
       expect.objectContaining({
         stepId: 'step-1',
-        status: 'queued',
+        status: 'waiting_approval',
         actionEventId: 'event-1',
       })
     );
     expect(mockAgentTaskService.updateTaskStatus).toHaveBeenCalledWith(
       expect.objectContaining({
         taskId: 'task-1',
-        status: 'queued',
+        status: 'waiting_approval',
       })
     );
   });
