@@ -47,13 +47,15 @@ CREATE INDEX IF NOT EXISTS idx_agent_eval_results_prompt_key
 -- and promotes the highest-version draft prompt when the threshold is breached.
 
 INSERT INTO copilot.agent_schedules
-  (tenant_id, workflow_name, cron_expression, scope_json, enabled, created_by)
+  (tenant_id, workflow_name, trigger_type, cron_expression, scope_json, enabled, next_run_at, created_by)
 SELECT DISTINCT
   tenant_id,
   'prompt_improvement',
+  'schedule',
   '0 5 * * 0',   -- Sunday 05:00 UTC
   '{"interval_hours": 168}'::jsonb,
   true,
+  NOW(),
   'migration:029'
 FROM copilot.agent_schedules
 WHERE workflow_name = 'agent_eval'   -- one schedule per tenant that already has eval enabled

@@ -5,26 +5,36 @@
 -- be indexed for cosine similarity. This migration converts it to the native
 -- pgvector VECTOR type and adds an HNSW index for fast approximate search.
 -- text-embedding-3-small produces 1536-dimension vectors.
+--
+-- Some production images may not have the pgvector extension package installed.
+-- In that case this migration should skip the vector-specific DDL instead of
+-- aborting the entire migration chain.
 
--- Enable the extension (idempotent)
-CREATE EXTENSION IF NOT EXISTS vector;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_available_extensions
+    WHERE name = 'vector'
+  ) THEN
+    CREATE EXTENSION IF NOT EXISTS vector;
 
--- Drop the old DOUBLE PRECISION[] column and replace with VECTOR(1536)
--- Existing rows (none in production at this point) would be dropped.
-ALTER TABLE copilot.doc_embeddings
-  DROP COLUMN IF EXISTS embedding_values,
-  ADD COLUMN IF NOT EXISTS embedding VECTOR(1536);
+    ALTER TABLE copilot.doc_embeddings
+      DROP COLUMN IF EXISTS embedding_values,
+      ADD COLUMN IF NOT EXISTS embedding VECTOR(1536);
 
--- HNSW index for approximate nearest-neighbour cosine similarity.
--- ef_construction=128 is a reasonable default for enterprise document sets.
--- This index makes retrieval O(log n) rather than O(n).
-CREATE INDEX IF NOT EXISTS idx_doc_embeddings_hnsw_cosine
-  ON copilot.doc_embeddings
-  USING hnsw (embedding vector_cosine_ops)
-  WITH (m = 16, ef_construction = 128);
+    CREATE INDEX IF NOT EXISTS idx_doc_embeddings_hnsw_cosine
+      ON copilot.doc_embeddings
+      USING hnsw (embedding vector_cosine_ops)
+      WITH (m = 16, ef_construction = 128);
+  ELSE
+    RAISE NOTICE 'Skipping pgvector-specific RAG migration because extension "vector" is not installed on this Postgres image.';
+  END IF;
+END
+$$;
 
--- Also index by tenant_id so the similarity scan is always tenant-scoped.
--- The planner combines this with the HNSW index via a bitmap scan.
+-- Also index by tenant_id so retrieval remains tenant-scoped even when
+-- pgvector is unavailable and the embedding column migration is skipped.
 CREATE INDEX IF NOT EXISTS idx_doc_embeddings_tenant
   ON copilot.doc_embeddings (tenant_id);
 
