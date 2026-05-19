@@ -4,6 +4,10 @@ const { postgresPool } = require('../config/postgres');
 const ApiError = require('../utils/ApiError');
 const copilotActionService = require('./copilotAction.service');
 const copilotEntityResolverService = require('./copilotEntityResolver.service');
+const { validateToolPayload } = require('./copilotToolSchema.service');
+const copilotPolicyDecisionService = require('./copilotPolicyDecision.service');
+const copilotApprovalService = require('./copilotApproval.service');
+const workflowEngineService = require('./workflowEngine.service');
 
 const DEFAULT_LIMIT = 50;
 
@@ -16,7 +20,12 @@ const normalizeLimit = (limit) => {
 const listTools = async ({ enabledOnly = true } = {}) => {
   const where = enabledOnly ? 'WHERE enabled = TRUE' : '';
   const result = await postgresPool.query(
-    `SELECT id, tool_name, description, category, action_type, enabled, requires_approval, reversible, timeout_ms, schema_json, metadata
+    `SELECT id, tool_name, description, category, action_type, enabled,
+            requires_approval, reversible, timeout_ms, schema_json,
+            risk_level, input_schema_json, output_schema_json,
+            required_permissions, tenant_scope_required,
+            idempotency_key_required, audit_required, retry_policy,
+            rollback_strategy, metadata
      FROM copilot.tool_registry
      ${where}
      ORDER BY tool_name ASC`
@@ -26,7 +35,12 @@ const listTools = async ({ enabledOnly = true } = {}) => {
 
 const getToolByName = async (toolName) => {
   const result = await postgresPool.query(
-    `SELECT id, tool_name, description, category, action_type, enabled, requires_approval, reversible, timeout_ms, schema_json, metadata
+    `SELECT id, tool_name, description, category, action_type, enabled,
+            requires_approval, reversible, timeout_ms, schema_json,
+            risk_level, input_schema_json, output_schema_json,
+            required_permissions, tenant_scope_required,
+            idempotency_key_required, audit_required, retry_policy,
+            rollback_strategy, metadata
      FROM copilot.tool_registry
      WHERE tool_name = $1
      LIMIT 1`,
@@ -116,11 +130,13 @@ const executeToolCall = async ({
   tenantId,
   userId,
   roleIds,
+  isOwner,
   toolName,
   payload = {},
   lockKey,
   lockTtlSec = 30,
   approvalToken,
+  correlationId = null,
 }) => {
   if (!tenantId) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId is required');
@@ -136,23 +152,140 @@ const executeToolCall = async ({
   let acquiredLock = false;
   const holderId = `${userId || 'system'}:${crypto.randomUUID()}`;
   const effectiveLockKey = lockKey || payload?.lockKey || null;
+  const workflowContext = await workflowEngineService.beginToolExecutionWorkflow({
+    tenantId,
+    requestedByUserId: userId,
+    tool,
+    payload,
+    correlationId,
+    source: 'tool_runtime',
+  });
 
   try {
-    if (tool.requires_approval && !approvalToken) {
+    try {
+      validateToolPayload({
+        toolName,
+        schema: tool.input_schema_json || tool.schema_json,
+        payload,
+      });
+    } catch (error) {
       await logToolCall({
         tenantId,
         userId,
         toolName,
         requestJson: payload,
-        responseJson: { blocked: true, reason: 'approval_required' },
+        responseJson: {
+          blocked: true,
+          reason: 'schema_validation_failed',
+        },
         status: 'blocked',
         durationMs: Date.now() - started,
-        errorMessage: 'Tool requires approval token',
+        errorMessage: error.message,
       });
-      throw new ApiError(
-        httpStatus.CONFLICT,
-        'Tool requires approval before execution'
-      );
+      await workflowEngineService.recordToolCall({
+        workflowContext,
+        tenantId,
+        userId,
+        toolName,
+        requestJson: payload,
+        responseJson: {
+          blocked: true,
+          reason: 'schema_validation_failed',
+        },
+        status: 'blocked',
+        durationMs: Date.now() - started,
+        errorMessage: error.message,
+        startedAt: new Date(started),
+        completedAt: new Date(),
+      });
+      await workflowEngineService.markWorkflowFailed({
+        workflowContext,
+        tenantId,
+        responseJson: {
+          blocked: true,
+          reason: 'schema_validation_failed',
+        },
+        errorMessage: error.message,
+        errorCode: 'SCHEMA_VALIDATION_FAILED',
+        errorType: 'tool_schema',
+      });
+      throw error;
+    }
+
+    const policyDecision =
+      await copilotPolicyDecisionService.evaluateToolPolicy({
+        tenantId,
+        userId,
+        roleIds,
+        isOwner: Boolean(isOwner),
+        tool,
+        payload,
+        approvalToken,
+      });
+    await copilotPolicyDecisionService.logPolicyDecision({
+      decision: policyDecision,
+      payload,
+      approvalToken,
+    });
+
+    if (!policyDecision.allowed) {
+      await logToolCall({
+        tenantId,
+        userId,
+        toolName,
+        requestJson: payload,
+        responseJson: {
+          blocked: true,
+          reason: policyDecision.reason,
+          policyDecision,
+        },
+        status: 'blocked',
+        durationMs: Date.now() - started,
+        errorMessage: `Policy blocked tool call: ${policyDecision.reason}`,
+      });
+      await workflowEngineService.recordToolCall({
+        workflowContext,
+        tenantId,
+        userId,
+        toolName,
+        requestJson: payload,
+        responseJson: {
+          blocked: true,
+          reason: policyDecision.reason,
+          policyDecision,
+        },
+        status: 'blocked',
+        durationMs: Date.now() - started,
+        policyDecisionJson: policyDecision,
+        errorMessage: `Policy blocked tool call: ${policyDecision.reason}`,
+        startedAt: new Date(started),
+        completedAt: new Date(),
+      });
+      if (policyDecision.reason === 'approval_required') {
+        await workflowEngineService.markWorkflowWaitingApproval({
+          workflowContext,
+          tenantId,
+          responseJson: {
+            blocked: true,
+            reason: policyDecision.reason,
+            policyDecision,
+          },
+        });
+      } else {
+        await workflowEngineService.markWorkflowFailed({
+          workflowContext,
+          tenantId,
+          responseJson: {
+            blocked: true,
+            reason: policyDecision.reason,
+            policyDecision,
+          },
+          errorMessage: `Policy blocked tool call: ${policyDecision.reason}`,
+          errorCode: 'POLICY_BLOCKED',
+          errorType: 'policy',
+        });
+      }
+      copilotPolicyDecisionService.assertPolicyAllowed(policyDecision);
     }
 
     if (effectiveLockKey) {
@@ -174,6 +307,29 @@ const executeToolCall = async ({
           durationMs: Date.now() - started,
           errorMessage: `Lock busy: ${effectiveLockKey}`,
         });
+        await workflowEngineService.recordToolCall({
+          workflowContext,
+          tenantId,
+          userId,
+          toolName,
+          requestJson: payload,
+          responseJson: { blocked: true, reason: 'lock_busy' },
+          status: 'blocked',
+          durationMs: Date.now() - started,
+          policyDecisionJson: policyDecision,
+          errorMessage: `Lock busy: ${effectiveLockKey}`,
+          startedAt: new Date(started),
+          completedAt: new Date(),
+        });
+        await workflowEngineService.markWorkflowFailed({
+          workflowContext,
+          tenantId,
+          responseJson: { blocked: true, reason: 'lock_busy' },
+          errorMessage: `Lock busy: ${effectiveLockKey}`,
+          errorCode: 'LOCK_BUSY',
+          errorType: 'tool_lock',
+          recoverable: true,
+        });
         throw new ApiError(
           httpStatus.CONFLICT,
           `Tool lock is busy for key: ${effectiveLockKey}`
@@ -182,9 +338,14 @@ const executeToolCall = async ({
     }
 
     let responsePayload = { executed: true, mode: 'noop' };
+    await workflowEngineService.markWorkflowExecuting({
+      workflowContext,
+      tenantId,
+    });
     if (tool.action_type) {
       const entityType =
-        payload.entityType || (await resolveEntityTypeForAction(tool.action_type));
+        payload.entityType ||
+        (await resolveEntityTypeForAction(tool.action_type));
       if (!entityType) {
         throw new ApiError(
           httpStatus.BAD_REQUEST,
@@ -218,6 +379,29 @@ const executeToolCall = async ({
           durationMs: Date.now() - started,
           errorMessage: 'Entity resolution failed or ambiguous',
         });
+        await workflowEngineService.recordToolCall({
+          workflowContext,
+          tenantId,
+          userId,
+          toolName,
+          requestJson: payload,
+          responseJson: blockedResponse,
+          status: 'blocked',
+          durationMs: Date.now() - started,
+          policyDecisionJson: policyDecision,
+          errorMessage: 'Entity resolution failed or ambiguous',
+          startedAt: new Date(started),
+          completedAt: new Date(),
+        });
+        await workflowEngineService.markWorkflowFailed({
+          workflowContext,
+          tenantId,
+          responseJson: blockedResponse,
+          errorMessage: 'Entity resolution failed or ambiguous',
+          errorCode: 'ENTITY_RESOLUTION_REQUIRED',
+          errorType: 'entity_resolution',
+          recoverable: true,
+        });
         throw new ApiError(
           httpStatus.CONFLICT,
           'Entity resolution required before tool can execute'
@@ -229,6 +413,9 @@ const executeToolCall = async ({
         resolveResult.resolvedPayload?.entityId ||
         resolveResult.resolvedPayload?.userId ||
         resolveResult.resolvedPayload?.roleId ||
+        resolveResult.resolvedPayload?.nodeId ||
+        resolveResult.resolvedPayload?.projectFormId ||
+        resolveResult.resolvedPayload?.projectId ||
         null;
 
       const actionResult = await copilotActionService.createAction({
@@ -240,11 +427,23 @@ const executeToolCall = async ({
         entityId: derivedEntityId,
         payload: resolveResult.resolvedPayload,
         idempotencyKey: payload.idempotencyKey,
+        correlationId: null,
         source: 'tool_runtime',
         priority: Number(payload.priority || 0),
       });
 
       actionEventId = actionResult?.event?.id || null;
+      if (tool.requires_approval && policyDecision?.approvalId) {
+        await copilotApprovalService.consumeApprovalDecision({
+          approvalId: policyDecision.approvalId,
+          result: {
+            toolName,
+            actionEventId,
+            mode: 'action_event',
+            deduped: Boolean(actionResult?.deduped),
+          },
+        });
+      }
       responsePayload = {
         executed: true,
         mode: 'action_event',
@@ -252,6 +451,18 @@ const executeToolCall = async ({
         event: actionResult?.event || null,
         resolution: resolveResult.resolutionDetails,
       };
+      await workflowEngineService.queueWorkflowActionEvent({
+        workflowContext,
+        tenantId,
+        actionEventId,
+        responseJson: responsePayload,
+      });
+    } else {
+      await workflowEngineService.completeImmediateWorkflow({
+        workflowContext,
+        tenantId,
+        responseJson: responsePayload,
+      });
     }
 
     await logToolCall({
@@ -263,6 +474,20 @@ const executeToolCall = async ({
       responseJson: responsePayload,
       status: 'success',
       durationMs: Date.now() - started,
+    });
+    await workflowEngineService.recordToolCall({
+      workflowContext,
+      tenantId,
+      userId,
+      toolName,
+      actionEventId,
+      requestJson: payload,
+      responseJson: responsePayload,
+      status: actionEventId ? 'accepted' : 'success',
+      durationMs: Date.now() - started,
+      policyDecisionJson: policyDecision,
+      startedAt: new Date(started),
+      completedAt: new Date(),
     });
 
     return responsePayload;
@@ -278,6 +503,29 @@ const executeToolCall = async ({
         status: 'failed',
         durationMs: Date.now() - started,
         errorMessage: error.message,
+      });
+      await workflowEngineService.recordToolCall({
+        workflowContext,
+        tenantId,
+        userId,
+        toolName,
+        actionEventId,
+        requestJson: payload,
+        responseJson: {},
+        status: 'failed',
+        durationMs: Date.now() - started,
+        errorMessage: error.message,
+        startedAt: new Date(started),
+        completedAt: new Date(),
+      });
+      await workflowEngineService.markWorkflowFailed({
+        workflowContext,
+        tenantId,
+        responseJson: {},
+        errorMessage: error.message,
+        errorCode: 'TOOL_EXECUTION_FAILED',
+        errorType: 'tool_runtime',
+        recoverable: true,
       });
       throw new ApiError(
         httpStatus.INTERNAL_SERVER_ERROR,

@@ -1,0 +1,381 @@
+# TODO: System Forms (User Profile + Node Profile)
+
+Date: 2026-04-08
+Owner: Backend + Form Studio
+Status: Phase A-C complete, Phase D in progress
+
+## 1) Goal
+
+Introduce a new `system` form category in ProjectForm so every tenant always has two standard secure forms:
+
+1. `User Profile` system form
+2. `Node Profile` system form
+
+These forms should behave like standard forms (short code, share reference, form renderer UX), but submission writes directly to system records (`User` / `Nodes`) instead of generic data submission storage.
+
+## 2) Current Architecture Findings
+
+### 2.1 Existing schema sources of truth
+
+- User profile is embedded in `User` model:
+  - `src/models/user.model.js`
+- Node profile is embedded in `Nodes` model:
+  - `src/models/node.model.js`
+
+There are no separate `UserProfile` or `NodeProfile` collections.
+
+### 2.2 Existing update APIs already available
+
+- User update endpoint:
+  - `PATCH /v1/users/:userId`
+  - route: `src/routes/v1/user.route.js`
+  - validation: `src/validations/user.validation.js`
+  - service mapping: `src/services/user.service.js` (`updateUserById`)
+- Node update endpoint:
+  - `PATCH /v1/node/:nodeId`
+  - route: `src/routes/v1/node.route.js`
+  - validation: `src/validations/node.validation.js`
+  - service mapping: `src/services/node.service.js` (`updateNodeById`)
+
+### 2.3 Existing standard form infrastructure
+
+- Standard form model with share/public references is already present:
+  - `publicRef`, `shareRef`, `shareCode`, `formReference`
+  - `src/models/projectForm.model.js`
+- Public form and secure access routes already exist:
+  - `src/routes/v1/projectForm.route.js`
+- Secure public mode exists (`single_qr_passwordless`) and can be reused for protected system forms.
+
+## 3) Profile Field Mapping (for schema generation)
+
+## 3.1 User Profile Form (system target: `user_profile`)
+
+Primary fields to include from `User`:
+
+- Top-level user fields:
+  - `firstname`, `lastname`, `email`, `phoneNumber`
+- Embedded `profile` fields:
+  - `title`, `otherName`, `gender`, `dateOfBirth`
+  - `highestQualification`, `professional`, `employmentCategory`, `occupation`, `employeeId`, `officeTitle`
+  - `maritalStatus`
+  - `spouse.name`, `spouse.phoneNumber`, `spouse.dateOfBirth`
+  - `nextOfKin.name`, `nextOfKin.phoneNumber`, `nextOfKin.relationship`
+  - `stateOfOrigin`, `lgaOfOrigin`, `homeTown`
+  - `residentialAddress`, `stateOfResidence`, `lgaOfResidence`
+
+## 3.2 Node Profile Form (system target: `node_profile`)
+
+Primary fields to include from `Nodes`:
+
+- Top-level node fields:
+  - `name`, `address`, `city`, `state`, `country`, `postalCode`, `dateOfEstablishment`
+- Embedded `profile` fields:
+  - `propertyStatus`, `estimatedValue`, `buildingType`, `facilityStatus`
+  - `averageAttendance`, `averageIncome`
+
+## 4) Required Form Metadata Contract (new)
+
+Add metadata for system forms:
+
+- `metadata.formCategory = "system"`
+- `metadata.systemTarget = "user_profile" | "node_profile"`
+- `metadata.systemVersion = "1.0.0"`
+- `configuration.security = "private"` (enforced)
+- `configuration.publicSecureMode = "off"` for dashboard-only mode by default
+
+Optional future setting:
+
+- `metadata.systemSubmissionMode = "direct_update"`
+
+## 5) Submission Strategy (key difference)
+
+Standard forms currently submit into submission pipeline.
+System forms should instead:
+
+1. resolve authenticated actor + tenant context
+2. validate that actor can update target record
+3. map form payload to existing update DTO
+4. call existing update services
+   - `userService.updateUserById(...)`
+   - `nodeService.updateNodeById(...)`
+5. return updated entity payload
+6. emit audit log (`system_form_submission`)
+
+No new profile collections should be created.
+
+## 6) Security + Access Rules
+
+System forms are authenticated-only.
+
+- User Profile form:
+  - user can edit own profile
+  - elevated roles can edit other users if existing permission allows
+- Node Profile form:
+  - must respect `node:update` permission and tenant ownership check
+
+All submissions must enforce:
+
+- tenant match
+- permission check
+- field allowlist based on validation schemas
+
+## 7) Tenant Bootstrap Requirements
+
+On tenant creation (or on first access if missing), auto-provision:
+
+1. `User Profile` system form
+2. `Node Profile` system form
+
+Each provisioned form should have:
+
+- generated `projectId`
+- generated `publicRef/shareRef/shareCode`
+- deterministic `metadata.systemTarget`
+- locked core element bindings (`metadata.bindingPath`) for DB-safe mapping
+
+## 8) Form Studio/Renderer Behavior Requirements
+
+System forms should look and behave like normal forms, but:
+
+- mark bound fields as `system-bound`
+- restrict unsafe edits:
+  - disallow changing critical binding path IDs
+  - allow label/help/placeholder changes
+- keep references and links visible like standard forms
+
+Renderer should still use current form engine; only submission handler changes based on `metadata.formCategory`.
+
+## 9) API Changes Needed (planned)
+
+1. Add system form submit endpoint (authenticated):
+   - `POST /v1/project-forms/system/:publicRef/submit`
+2. Add bootstrap endpoint (admin/internal):
+   - `POST /v1/project-forms/system/bootstrap`
+3. Add retrieval filter:
+   - `?formCategory=system`
+
+Compatibility:
+
+- existing project-form APIs remain unchanged
+- generic submissions pipeline remains unchanged for non-system forms
+
+## 10) Implementation Phases
+
+Phase A: Schema and metadata support
+- add `formCategory/systemTarget` metadata validation
+- add mapper utility for binding paths
+
+Phase B: Tenant bootstrap
+- create provision script/service for both system forms per tenant
+- backfill existing tenants
+
+Phase C: Secure submit path
+- implement direct update submit handler
+- integrate existing user/node services
+
+Phase D: Studio and renderer constraints
+- enforce field lock rules for system-bound elements
+- show system form badge and target info
+
+Phase E: Audit + monitoring
+- structured logs for each system-form submission
+- metrics: success/fail by target type
+
+## 10.1) Progress Update (2026-04-08)
+
+Completed:
+- Phase A (metadata contract + validation + unique constraint for system target per tenant)
+- Phase B (idempotent bootstrap endpoint/service for user_profile + node_profile)
+- Phase C (authenticated direct submit path to User/Node services with tenant/permission checks)
+- Phase D (API Center visibility: system badges + authenticated submission endpoint + anonymous submission hidden)
+
+In progress:
+- Phase D (studio/renderer system-bound field lock UX)
+- Phase E (expanded metrics/observability dashboards)
+
+## 11) UAT Checklist
+
+1. New tenant has both forms available automatically
+2. User Profile system form updates `User` document directly
+3. Node Profile system form updates `Nodes` document directly
+4. Unauthorized actor cannot submit/update
+5. Submission does not create generic form submission record for system forms
+6. Audit logs are written for all system-form submissions
+7. Existing normal forms still submit through current pipeline without regression
+
+## 12) Open Design Decisions (before coding)
+
+1. Should system forms be visible on public `/form/*` routes at all, or dashboard-only?
+2. Should Node Profile form support one-node-at-a-time selection for users assigned to multiple nodes?
+3. Should profile custom fields (`customFields`) be included in v1 of system forms or phase 2?
+4. Should system form versioning be locked per tenant or centrally managed?
+
+## 13) Explicit Rendered Schemas (v1)
+
+### 13.1 User Profile System Form
+
+Render these bindings from `User`:
+
+- Top-level:
+  - `firstname` (text)
+  - `lastname` (text)
+  - `email` (email)
+  - `phoneNumber` (phone)
+- Nested `profile`:
+  - `profile.title` (select)
+  - `profile.otherName` (text)
+  - `profile.gender` (select)
+  - `profile.dateOfBirth` (date)
+  - `profile.highestQualification` (text/select)
+  - `profile.professional` (text)
+  - `profile.employmentCategory` (text/select)
+  - `profile.occupation` (text)
+  - `profile.employeeId` (text)
+  - `profile.officeTitle` (text)
+  - `profile.maritalStatus` (select)
+  - `profile.spouse.name` (text)
+  - `profile.spouse.phoneNumber` (phone)
+  - `profile.spouse.dateOfBirth` (date)
+  - `profile.nextOfKin.name` (text)
+  - `profile.nextOfKin.phoneNumber` (phone)
+  - `profile.nextOfKin.relationship` (text/select)
+  - `profile.stateOfOrigin` (text)
+  - `profile.lgaOfOrigin` (text)
+  - `profile.homeTown` (text)
+  - `profile.residentialAddress` (textarea)
+  - `profile.stateOfResidence` (text)
+  - `profile.lgaOfResidence` (text)
+
+### 13.2 Node Profile System Form
+
+Render these bindings from `Nodes`:
+
+- Top-level:
+  - `name` (text)
+  - `address` (textarea)
+  - `city` (text)
+  - `state` (text)
+  - `country` (text)
+  - `postalCode` (text)
+  - `dateOfEstablishment` (date)
+- Nested `profile`:
+  - `profile.propertyStatus` (select)
+  - `profile.estimatedValue` (currency/number)
+  - `profile.buildingType` (text/select)
+  - `profile.facilityStatus` (select)
+  - `profile.averageAttendance` (number)
+  - `profile.averageIncome` (currency/number)
+
+## 14) API Center Visibility and Differentiation
+
+Both system forms must appear in API Center because they are standard `ProjectForm` records with reference IDs and short links.
+
+Required UI distinction in API Center list:
+
+- `Category` badge: `System`
+- `Target` badge: `User Profile` or `Node Profile`
+- `Submission` badge: `Direct DB Update`
+- `Security` badge: `Auth Required`
+- Optional icon: shield/gear for system forms
+
+Behavior differences from normal forms:
+
+- No anonymous public submission for system forms
+- Opens authenticated secure flow only
+- Uses direct update endpoints (User/Node services), not generic form submission storage
+
+---
+
+## Recommendation to start
+
+Start with `User Profile` only (Phase A-C), then `Node Profile` after submit-path is stable. This reduces blast radius and validates the direct-update form pattern before adding node-specific authorization complexity.
+
+## 15) Implementation Checklist (Ticket-Sized)
+
+### 15.1 Backend
+
+- [x] `SYSFORM-BE-001` Add metadata contract support in `projectForm` validation/model
+  - add/validate: `metadata.formCategory`, `metadata.systemTarget`, `metadata.systemVersion`
+  - enforce: `configuration.security=private` for system forms
+  - DoD: system form create/update payload validates and persists correctly
+
+- [x] `SYSFORM-BE-002` Create system form bootstrap service (per tenant)
+  - auto-provision `User Profile` + `Node Profile` forms
+  - idempotent by `(tenantId, metadata.systemTarget)`
+  - DoD: running bootstrap twice does not create duplicates
+
+- [x] `SYSFORM-BE-003` Add authenticated submit endpoint for system forms
+  - `POST /v1/project-forms/system/:publicRef/submit`
+  - route to target service by `systemTarget`
+  - DoD: updates hit `User`/`Nodes` DB paths only
+
+- [x] `SYSFORM-BE-004` Build payload mapper + binding-path resolver
+  - map element IDs to model paths (`profile.*`, top-level fields)
+  - allowlist only approved fields
+  - DoD: unsafe/unbound fields are rejected
+
+- [x] `SYSFORM-BE-005` Authorization rules
+  - `user_profile`: self-edit by default, elevated edit with existing permission
+  - `node_profile`: must pass `node:update` + tenant match
+  - DoD: cross-tenant and unauthorized submissions blocked
+
+- [x] `SYSFORM-BE-006` Audit + metrics
+  - structured event: `system_form_submission`
+  - counters: success/failure per target
+  - DoD: logs and metrics visible in existing observability flow
+
+### 15.2 API Center / Listing
+
+- [ ] `SYSFORM-FE-001` Show system forms in API Center list
+  - add badges: `System`, `User Profile|Node Profile`, `Direct DB Update`, `Auth Required`
+  - DoD: both system forms visible and distinguishable from normal modules
+
+- [ ] `SYSFORM-FE-002` Restrict actions for system forms
+  - hide/disable anonymous public submit action
+  - show secure/auth-only access hint
+  - DoD: no anonymous path for system forms from API Center
+
+### 15.3 Studio / Renderer
+
+- [ ] `SYSFORM-FE-003` Add system-bound field lock behavior in studio
+  - lock binding-path and unsafe schema edits
+  - allow safe label/help/placeholder edits
+  - DoD: critical mapping cannot be broken from UI
+
+- [ ] `SYSFORM-FE-004` Renderer submit routing
+  - if `formCategory=system`, call system submit endpoint
+  - otherwise use normal submission pipeline
+  - DoD: no regression for existing forms
+
+### 15.4 Migration / Backfill
+
+- [ ] `SYSFORM-OPS-001` Backfill existing tenants
+  - script to create missing system forms
+  - dry-run and apply modes
+  - DoD: report with tenant-by-tenant status
+
+### 15.5 QA / UAT
+
+- [ ] `SYSFORM-QA-001` User Profile happy-path tests
+  - self-edit and admin-edit cases
+  - verify DB update in `User` model
+
+- [ ] `SYSFORM-QA-002` Node Profile happy-path tests
+  - single-node and multi-node actor cases
+  - verify DB update in `Nodes` model
+
+- [ ] `SYSFORM-QA-003` Security regression
+  - unauthorized, cross-tenant, invalid field-path, malformed payload
+  - expected 4xx with clear message
+
+- [ ] `SYSFORM-QA-004` Non-system regression
+  - normal module submission still flows to existing pipeline
+  - reports/workflow unaffected
+
+## 16) Suggested Execution Order
+
+1. `SYSFORM-BE-001` → `SYSFORM-BE-002` (foundation)
+2. `SYSFORM-BE-003` → `SYSFORM-BE-005` (secure submit path)
+3. `SYSFORM-FE-001` → `SYSFORM-FE-004` (visibility + routing)
+4. `SYSFORM-OPS-001` (backfill)
+5. `SYSFORM-QA-*` full UAT pass

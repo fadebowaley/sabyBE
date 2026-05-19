@@ -147,6 +147,13 @@ router.post(
   projectFormController.bootstrapSystemForms
 );
 
+router.get(
+  '/system/:target',
+  auth('view:project-form'),
+  validate(projectFormValidation.getSystemProjectForm),
+  projectFormController.getSystemProjectForm
+);
+
 // Submit system form (authenticated direct DB update)
 router.post(
   '/system/:publicRef/submit',
@@ -198,6 +205,56 @@ router.get(
   auth('view:project-form'),
   validate(projectFormValidation.getProjectForms),
   projectFormController.getProjectForms
+);
+
+// Workspace domain routes
+router.get(
+  '/workspaces',
+  auth('view:project-form'),
+  validate(projectFormValidation.listProjectWorkspaces),
+  projectFormController.listProjectWorkspaces
+);
+
+router.post(
+  '/workspaces',
+  auth('create:project-form'),
+  validate(projectFormValidation.createProjectWorkspace),
+  projectFormController.createProjectWorkspace
+);
+
+router.patch(
+  '/workspaces/:workspaceId',
+  auth('update:project-form'),
+  validate(projectFormValidation.renameProjectWorkspace),
+  projectFormController.renameProjectWorkspace
+);
+
+router.post(
+  '/workspaces/:workspaceId/members',
+  auth('update:project-form'),
+  validate(projectFormValidation.addProjectWorkspaceMember),
+  projectFormController.addProjectWorkspaceMember
+);
+
+router.delete(
+  '/workspaces/:workspaceId/members/:userId',
+  auth('update:project-form'),
+  validate(projectFormValidation.removeProjectWorkspaceMember),
+  projectFormController.removeProjectWorkspaceMember
+);
+
+router.post(
+  '/workspaces/:workspaceId/leave',
+  auth('update:project-form'),
+  validate(projectFormValidation.leaveProjectWorkspace),
+  projectFormController.leaveProjectWorkspace
+);
+
+router.delete(
+  '/workspaces/:workspaceId',
+  auth('delete:project-form'),
+  validate(projectFormValidation.deleteProjectWorkspace),
+  projectFormController.deleteProjectWorkspace
 );
 
 /**
@@ -539,6 +596,13 @@ router.patch(
   projectFormController.updateProjectFormByProjectId
 );
 
+router.post(
+  '/project/:projectId/duplicate',
+  auth('create:project-form'),
+  validate(projectFormValidation.duplicateProjectForm),
+  projectFormController.duplicateProjectForm
+);
+
 // Delete project form (hard delete)
 router.delete(
   '/:projectFormId',
@@ -569,6 +633,13 @@ router.patch(
   auth('update:project-form'),
   validate(projectFormValidation.publishProjectForm),
   projectFormController.publishProjectForm
+);
+
+router.patch(
+  '/:projectFormId/unpublish',
+  auth('update:project-form'),
+  validate(projectFormValidation.unpublishProjectForm),
+  projectFormController.unpublishProjectForm
 );
 
 /**

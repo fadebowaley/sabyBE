@@ -1,5 +1,6 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
+const ApiError = require('../utils/ApiError');
 const copilotActionService = require('../services/copilotAction.service');
 const copilotAuditExportService = require('../services/copilotAuditExport.service');
 const copilotProjectRulesService = require('../services/copilotProjectRules.service');
@@ -8,14 +9,51 @@ const copilotProjectRuleAnalysisService = require('../services/copilotProjectRul
 const copilotNodeComparisonService = require('../services/copilotNodeComparison.service');
 const copilotNodeRankingService = require('../services/copilotNodeRanking.service');
 const copilotToolRuntimeService = require('../services/copilotToolRuntime.service');
+const copilotApprovalService = require('../services/copilotApproval.service');
+const agentTaskService = require('../services/agentTask.service');
+const complianceAgentService = require('../services/complianceAgent.service');
 const copilotSessionContextService = require('../services/copilotSessionContext.service');
 const copilotEntityResolverService = require('../services/copilotEntityResolver.service');
 const copilotProjectWizardService = require('../services/copilotProjectWizard.service');
 const copilotOnboardingService = require('../services/copilotOnboarding.service');
 const copilotOnboardingJobService = require('../services/copilotOnboardingJob.service');
 const { queueOnboardingImportJob } = require('../queues/onboardingImport.queue');
+const modelRouterService         = require('../services/modelRouter.service');
+const promptRegistryService      = require('../services/promptRegistry.service');
+const intelligenceGatewayService = require('../services/intelligenceGateway.service');
+const operationalMetricsService  = require('../services/operationalMetrics.service');
+const anomalyDetectionService    = require('../services/anomalyDetection.service');
+const executiveInsightService    = require('../services/executiveInsight.service');
+// Phase 6 — RAG / Knowledge Layer
+const docIngestionService        = require('../services/docIngestion.service');
+const docRetrieverService        = require('../services/docRetriever.service');
+// Phase 7 — Enterprise Autonomy
+const workflowDefsService        = require('../services/workflowDefinitions.service');
+const agentFeedbackService       = require('../services/agentFeedback.service');
+const agentEvalService           = require('../services/agentEval.service');
+const incidentPlaybookService    = require('../services/incidentPlaybook.service');
+const { postgresPool }           = require('../config/postgres');
+const logger                     = require('../config/logger');
 
 const resolveUserId = (user = {}) => user.id || user._id || user.userId || null;
+
+// Seed the three worker schedules for a tenant on first onboarding. Idempotent.
+const AGENT_WORKFLOWS = [
+  { name: 'compliance_monitor', cron: '0 2 * * *' },
+  { name: 'data_intelligence',  cron: '0 3 * * *' },
+  { name: 'agent_eval',         cron: '0 4 * * *' },
+];
+async function seedAgentSchedulesForTenant(tenantId) {
+  for (const wf of AGENT_WORKFLOWS) {
+    await postgresPool.query(
+      `INSERT INTO copilot.agent_schedules
+         (tenant_id, workflow_name, trigger_type, cron_expression, scope_json, enabled, next_run_at, created_by)
+       VALUES ($1, $2, 'schedule', $3, '{"interval_hours":24}'::jsonb, TRUE, NOW(), 'onboarding')
+       ON CONFLICT DO NOTHING`,
+      [tenantId, wf.name, wf.cron]
+    );
+  }
+}
 const escapeCsv = (value) => {
   const v = value == null ? '' : String(value);
   if (/[",\n]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
@@ -48,6 +86,12 @@ const createAction = catchAsync(async (req, res) => {
       req.body.idempotencyKey ||
       req.headers['x-idempotency-key'] ||
       req.headers['idempotency-key'],
+    correlationId:
+      req.body.correlationId ||
+      req.headers['x-correlation-id'] ||
+      req.headers['correlation-id'] ||
+      null,
+    approvalToken: req.body.approvalToken || null,
     source: req.body.source || 'api',
     priority: req.body.priority || 0,
   });
@@ -111,6 +155,30 @@ const getFeed = catchAsync(async (req, res) => {
     total: items.length,
     results: items,
   });
+});
+
+const listAgentTasks = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const tasks = await agentTaskService.listTasks({
+    tenantId,
+    status: req.query.status,
+    source: req.query.source,
+    limit: req.query.limit,
+  });
+
+  res.status(httpStatus.OK).send({
+    total: tasks.length,
+    results: tasks,
+  });
+});
+
+const getAgentTaskById = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const task = await agentTaskService.getTaskById({
+    tenantId,
+    taskId: req.params.taskId,
+  });
+  res.status(httpStatus.OK).send(task);
 });
 
 const updateActionItemStatus = catchAsync(async (req, res) => {
@@ -446,19 +514,154 @@ const callTool = catchAsync(async (req, res) => {
   const tenantId = req.user?.tenantId;
   const userId = resolveUserId(req.user);
   const roleIds = resolveRoleIds(req.user);
+  const isOwner = Boolean(req.user?.isOwner || req.user?.isSuper);
 
   const result = await copilotToolRuntimeService.executeToolCall({
     tenantId,
     userId,
     roleIds,
+    isOwner,
     toolName: req.params.toolName,
     payload: req.body.payload || {},
     lockKey: req.body.lockKey,
     lockTtlSec: req.body.lockTtlSec,
     approvalToken: req.body.approvalToken,
+    correlationId:
+      req.body.correlationId ||
+      req.headers['x-correlation-id'] ||
+      req.headers['correlation-id'] ||
+      null,
   });
 
   res.status(httpStatus.OK).send(result);
+});
+
+const createApprovalDecision = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const userId = resolveUserId(req.user);
+  const approval = await copilotApprovalService.createApprovalDecision({
+    tenantId,
+    requestedByUserId: userId,
+    approvedByUserId: userId,
+    toolName: req.body.toolName || null,
+    actionType: req.body.actionType || null,
+    entityId: req.body.entityId || null,
+    payload: req.body.payload || {},
+    approvalToken: req.body.approvalToken || null,
+    traceId:
+      req.body.correlationId ||
+      req.headers['x-correlation-id'] ||
+      req.headers['correlation-id'] ||
+      null,
+    expiresInSec: req.body.expiresInSec,
+    reason: req.body.reason || null,
+    metadata: req.body.metadata || {},
+  });
+
+  res.status(httpStatus.CREATED).send({
+    id: approval.id,
+    approvalToken: approval.approval_token,
+    status: approval.status,
+    traceId: approval.trace_id,
+    expiresAt: approval.expires_at,
+    approvedAt: approval.approved_at,
+  });
+});
+
+const queueHumanApproval = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const userId = resolveUserId(req.user);
+  const approval = await copilotApprovalService.createHumanApprovalRequest({
+    tenantId,
+    requestedByUserId: userId,
+    toolName: req.body.toolName || null,
+    actionType: req.body.actionType || null,
+    entityId: req.body.entityId || null,
+    payload: req.body.payload || {},
+    traceId:
+      req.body.correlationId ||
+      req.headers['x-correlation-id'] ||
+      req.headers['correlation-id'] ||
+      null,
+    reason: req.body.reason || null,
+    metadata: req.body.metadata || {},
+  });
+
+  // Queue a notification to tenant admins about the pending request
+  try {
+    const notificationQueueService = require('../services/notificationQueue.service');
+    await notificationQueueService.queueCustomNotification({
+      type: 'human_approval_requested',
+      tenantId,
+      requestedByUserId: userId,
+      actionType: req.body.actionType,
+      approvalToken: approval.approval_token,
+      subject: `Action approval required: ${req.body.actionType || 'unknown'}`,
+      message:
+        `User ${userId} has requested approval for action "${req.body.actionType || 'unknown'}". ` +
+        `Reference: ${approval.approval_token}. ` +
+        `Log in to Saby to approve or reject this request.`,
+    });
+  } catch { /* non-fatal — notification failure should not block the queue response */ }
+
+  res.status(httpStatus.ACCEPTED).send({
+    approvalToken: approval.approval_token,
+    status: approval.status,
+    message: 'Your request has been submitted for approval. You will be notified when it is processed.',
+    reference: approval.approval_token,
+  });
+});
+
+const listPendingApprovals = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const limit = Math.max(1, Math.min(200, Number(req.query.limit) || 50));
+  const items = await copilotApprovalService.listPendingHumanApprovals({ tenantId, limit });
+  res.status(httpStatus.OK).send({ items, total: items.length });
+});
+
+const approveDecision = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const approvedByUserId = resolveUserId(req.user);
+  const { approvalToken } = req.params;
+  const { reason = null } = req.body;
+
+  const row = await copilotApprovalService.approveHumanDecision({
+    tenantId,
+    approvalToken,
+    approvedByUserId,
+    reason,
+  });
+  if (!row) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Approval request not found or already acted on');
+  }
+  res.status(httpStatus.OK).send({
+    approvalToken: row.approval_token,
+    status: row.status,
+    approvedAt: row.approved_at,
+    message: 'Approved. The requested action will now be executed.',
+  });
+});
+
+const rejectDecision = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const rejectedByUserId = resolveUserId(req.user);
+  const { approvalToken } = req.params;
+  const { reason = null } = req.body;
+
+  const row = await copilotApprovalService.rejectHumanDecision({
+    tenantId,
+    approvalToken,
+    rejectedByUserId,
+    reason,
+  });
+  if (!row) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Approval request not found or already acted on');
+  }
+  res.status(httpStatus.OK).send({
+    approvalToken: row.approval_token,
+    status: row.status,
+    message: 'Request rejected.',
+  });
 });
 
 const listToolCallLogs = catchAsync(async (req, res) => {
@@ -687,6 +890,10 @@ const createOnboardingJob = catchAsync(async (req, res) => {
       tenantId,
       actorUser: req.user || {},
     });
+    // Ensure worker schedules exist for this tenant (no-op if already seeded)
+    seedAgentSchedulesForTenant(tenantId).catch((err) =>
+      logger.warn('[Onboarding] Failed to seed agent schedules', { tenantId, err: err.message })
+    );
   }
 
   res.status(httpStatus.ACCEPTED).send({
@@ -828,11 +1035,518 @@ const streamOnboardingJobEvents = async (req, res) => {
   }, 2000);
 };
 
+const triggerComplianceAgentRun = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const result = await complianceAgentService.runComplianceMonitor({ tenantId });
+  res.status(httpStatus.OK).send(result);
+});
+
+const listComplianceSnapshots = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const snapshots = await complianceAgentService.listComplianceSnapshots({
+    tenantId,
+    projectId: req.query.projectId,
+    limit: req.query.limit,
+  });
+  res.status(httpStatus.OK).send({ total: snapshots.length, results: snapshots });
+});
+
+// ── Phase 5: Data Intelligence ────────────────────────────────────────────────
+
+const getProjectMetrics = catchAsync(async (req, res) => {
+  const tenantId   = req.user?.tenantId;
+  const projectId  = req.params.projectId;
+  const monthLabel = req.query.monthLabel;
+  const recompute  = req.query.recompute === 'true';
+
+  if (recompute) {
+    const metrics = await operationalMetricsService.computeAndSaveMetrics({
+      tenantId, projectId, monthLabel,
+    });
+    return res.status(httpStatus.OK).send({ recomputed: true, metrics });
+  }
+
+  const snapshots = await operationalMetricsService.getLatestSnapshots({
+    tenantId, projectId, monthLabel,
+  });
+  res.status(httpStatus.OK).send({ total: snapshots.length, results: snapshots });
+});
+
+const listAnomalies = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const anomalies = await anomalyDetectionService.listAnomalies({
+    tenantId,
+    projectId: req.query.projectId,
+    severity:  req.query.severity,
+    limit:     req.query.limit,
+  });
+  res.status(httpStatus.OK).send({ total: anomalies.length, results: anomalies });
+});
+
+/**
+ * GET /copilot/intelligence/alerts/stream
+ *
+ * Server-Sent Events endpoint that pushes merged anomaly + incident data to
+ * the connected client every POLL_INTERVAL_MS (default 10 s). The client
+ * receives diffs — only the most recent snapshot is sent; the client is
+ * responsible for merging/displaying.
+ *
+ * Events:
+ *   connected  — {ok, tenantId}               — sent once on connect
+ *   alerts     — {anomalies, incidents,        — sent on each poll tick
+ *                 criticalCount, fetchedAt}
+ *   error      — {message}                    — fatal; stream ends
+ *
+ * The frontend should replace the existing 60-s client-side polling with
+ * this SSE stream. The stream keeps the connection alive with a comment
+ * ping every 20 s so proxies don't close it prematurely.
+ */
+const ALERTS_POLL_INTERVAL_MS = 10_000; // 10 s
+const ALERTS_HIGH_SEVERITY    = new Set(['high', 'critical']);
+
+const streamAlerts = async (req, res) => {
+  const tenantId = req.user?.tenantId;
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  if (res.flushHeaders) res.flushHeaders();
+
+  const send = (event, data) => {
+    if (res.writableEnded) return;
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  let closed = false;
+  let pollTimer  = null;
+  let pingTimer  = null;
+
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    clearInterval(pollTimer);
+    clearInterval(pingTimer);
+    if (!res.writableEnded) res.end();
+  };
+
+  const emitAlerts = async () => {
+    if (closed) return;
+    try {
+      const [anomalies, incidents] = await Promise.all([
+        anomalyDetectionService.listAnomalies({ tenantId, limit: 50 }),
+        incidentPlaybookService.listIncidents({ tenantId, status: 'open', limit: 50 }),
+      ]);
+
+      const criticalAnomalies = anomalies.filter((a) =>
+        ALERTS_HIGH_SEVERITY.has(String(a.severity || '').toLowerCase())
+      );
+      const criticalIncidents = incidents.filter((i) =>
+        ALERTS_HIGH_SEVERITY.has(String(i.severity || '').toLowerCase())
+      );
+
+      send('alerts', {
+        anomalies,
+        incidents,
+        criticalAnomalies,
+        criticalIncidents,
+        criticalCount: criticalAnomalies.length + criticalIncidents.length,
+        fetchedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      logger.error('[streamAlerts] Poll failed', { tenantId, err: err.message });
+      send('error', { message: 'Failed to fetch alerts' });
+      close();
+    }
+  };
+
+  req.on('close', close);
+  req.on('end',   close);
+
+  send('connected', { ok: true, tenantId });
+  await emitAlerts(); // immediate first push
+  if (closed) return;
+
+  pollTimer = setInterval(() => emitAlerts().catch(() => null), ALERTS_POLL_INTERVAL_MS);
+  // Keep-alive comment ping every 20 s
+  pingTimer = setInterval(() => {
+    if (!res.writableEnded) res.write(': ping\n\n');
+  }, 20_000);
+};
+
+const generateInsight = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const actorId  = resolveUserId(req.user);
+  const result = await executiveInsightService.queueInsightGeneration({
+    tenantId,
+    actorId,
+    projectId:  req.body.projectId  || null,
+    monthLabel: req.body.monthLabel || null,
+  });
+  res.status(httpStatus.ACCEPTED).send(result);
+});
+
+const completeInsight = catchAsync(async (req, res) => {
+  const tenantId  = req.user?.tenantId;
+  const insightId = req.params.insightId;
+  // Verify this insight belongs to the tenant
+  const insight = await executiveInsightService.getInsightById({ tenantId, insightId });
+  if (!insight) return res.status(httpStatus.NOT_FOUND).send({ message: 'Insight not found' });
+
+  const updated = await executiveInsightService.completeInsight({
+    insightId,
+    briefJson: req.body.briefJson,
+  });
+  res.status(httpStatus.OK).send(updated);
+});
+
+const failInsight = catchAsync(async (req, res) => {
+  const tenantId  = req.user?.tenantId;
+  const insightId = req.params.insightId;
+  const insight = await executiveInsightService.getInsightById({ tenantId, insightId });
+  if (!insight) return res.status(httpStatus.NOT_FOUND).send({ message: 'Insight not found' });
+
+  const updated = await executiveInsightService.failInsight({
+    insightId,
+    errorMessage: req.body.errorMessage,
+  });
+  res.status(httpStatus.OK).send(updated);
+});
+
+const listInsights = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const insights = await executiveInsightService.listInsights({
+    tenantId,
+    projectId: req.query.projectId,
+    status:    req.query.status,
+    limit:     req.query.limit,
+  });
+  res.status(httpStatus.OK).send({ total: insights.length, results: insights });
+});
+
+const getInsightById = catchAsync(async (req, res) => {
+  const tenantId  = req.user?.tenantId;
+  const insightId = req.params.insightId;
+  const insight = await executiveInsightService.getInsightById({ tenantId, insightId });
+  if (!insight) return res.status(httpStatus.NOT_FOUND).send({ message: 'Insight not found' });
+  res.status(httpStatus.OK).send(insight);
+});
+
+// ── Phase 4: Intelligence Gateway ─────────────────────────────────────────────
+
+const listModelRegistry = catchAsync(async (req, res) => {
+  const enabledOnly = req.query.enabledOnly !== 'false';
+  const models = await modelRouterService.listModelRegistry({ enabledOnly });
+  res.status(httpStatus.OK).send({ total: models.length, results: models });
+});
+
+const resolveCallPlan = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const actorId  = resolveUserId(req.user);
+  const plan = await intelligenceGatewayService.resolveCallPlan({
+    tenantId,
+    actorId,
+    taskType:        req.body.taskType,
+    promptKey:       req.body.promptKey,
+    variables:       req.body.variables,
+    riskLevel:       req.body.riskLevel,
+    fallbackAllowed: req.body.fallbackAllowed,
+  });
+  res.status(httpStatus.OK).send(plan);
+});
+
+const logIntelligenceUsage = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const actorId  = resolveUserId(req.user);
+  const result = await intelligenceGatewayService.recordUsage({
+    tenantId,
+    actorId,
+    ...req.body,
+  });
+  res.status(httpStatus.CREATED).send(result);
+});
+
+const getIntelligenceUsageSummary = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const summary = await intelligenceGatewayService.getUsageSummary({
+    tenantId,
+    from: req.query.from,
+    to:   req.query.to,
+  });
+  res.status(httpStatus.OK).send(summary);
+});
+
+const listPrompts = catchAsync(async (req, res) => {
+  const prompts = await promptRegistryService.listPrompts({
+    taskType: req.query.taskType,
+    status:   req.query.status,
+    limit:    req.query.limit,
+  });
+  res.status(httpStatus.OK).send({ total: prompts.length, results: prompts });
+});
+
+const getPromptVersion = catchAsync(async (req, res) => {
+  const prompt = await promptRegistryService.getPromptVersion(
+    req.params.promptKey,
+    parseInt(req.params.version, 10)
+  );
+  if (!prompt) return res.status(httpStatus.NOT_FOUND).send({ message: 'Prompt version not found' });
+  res.status(httpStatus.OK).send(prompt);
+});
+
+const createPromptVersion = catchAsync(async (req, res) => {
+  const createdBy = resolveUserId(req.user);
+  const prompt = await promptRegistryService.createPromptVersion({
+    ...req.body,
+    createdBy,
+  });
+  res.status(httpStatus.CREATED).send(prompt);
+});
+
+const activatePromptVersion = catchAsync(async (req, res) => {
+  const prompt = await promptRegistryService.activatePromptVersion(
+    req.params.promptKey,
+    parseInt(req.params.version, 10)
+  );
+  res.status(httpStatus.OK).send(prompt);
+});
+
+// ─── Phase 6 — RAG / Knowledge Layer ─────────────────────────────────────────
+
+const ingestDoc = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const result = await docIngestionService.ingestDocument({ tenantId, ...req.body });
+  res.status(httpStatus.CREATED).send(result);
+});
+
+const listDocs = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const docs = await docIngestionService.listDocs({
+    tenantId,
+    status: req.query.status,
+    limit:  req.query.limit,
+  });
+  res.status(httpStatus.OK).send({ total: docs.length, results: docs });
+});
+
+const getDoc = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const doc = await docIngestionService.getDoc({ tenantId, docId: req.params.docId });
+  if (!doc) return res.status(httpStatus.NOT_FOUND).send({ message: 'Document not found' });
+  res.status(httpStatus.OK).send(doc);
+});
+
+const deleteDoc = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  await docIngestionService.deleteDoc({ tenantId, docId: req.params.docId });
+  res.status(httpStatus.NO_CONTENT).send();
+});
+
+const getDocChunks = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const chunks = await docIngestionService.getDocChunks({
+    tenantId,
+    docId: req.params.docId,
+    limit: req.query.limit,
+  });
+  res.status(httpStatus.OK).send({ total: chunks.length, results: chunks });
+});
+
+const searchDocs = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const { query, topK, projectId } = req.body;
+  const { chunks, contextString, hasContext } = await docRetrieverService.resolveRagContext({
+    tenantId,
+    query,
+    topK,
+    projectId,
+  });
+  res.status(httpStatus.OK).send({ hasContext, total: chunks.length, results: chunks, contextString });
+});
+
+const reindexDoc = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const doc = await docIngestionService.getDoc({ tenantId, docId: req.params.docId });
+  if (!doc) return res.status(httpStatus.NOT_FOUND).send({ message: 'Document not found' });
+
+  await docIngestionService.writeChunks({ docId: doc.id, tenantId, contentText: doc.content_text });
+  await docIngestionService.queueEmbeddingJob({ docId: doc.id, tenantId });
+  res.status(httpStatus.ACCEPTED).send({ message: 'Re-index queued', docId: doc.id });
+});
+
+// ─── Phase 7 — Enterprise Autonomy ────────────────────────────────────────────
+
+const registerWorkflowDefinition = catchAsync(async (req, res) => {
+  const createdBy = resolveUserId(req.user);
+  const def = await workflowDefsService.registerWorkflowDefinition({ ...req.body, createdBy });
+  res.status(httpStatus.OK).send(def);
+});
+
+const listWorkflowDefinitions = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const enabled = req.query.enabled !== undefined ? req.query.enabled : undefined;
+  const defs = await workflowDefsService.listWorkflowDefinitions({ tenantId, enabled });
+  res.status(httpStatus.OK).send({ total: defs.length, results: defs });
+});
+
+const startWorkflowRun = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const { workflowName } = req.params;
+  const run = await workflowDefsService.startWorkflowRun({ workflowName, tenantId, ...req.body });
+  res.status(httpStatus.CREATED).send(run);
+});
+
+const listWorkflowRuns = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const { workflowName } = req.params;
+  const runs = await workflowDefsService.listWorkflowRuns({
+    tenantId, workflowName, status: req.query.status, limit: req.query.limit,
+  });
+  res.status(httpStatus.OK).send({ total: runs.length, results: runs });
+});
+
+const getWorkflowStats = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const { workflowName } = req.params;
+  const stats = await workflowDefsService.getWorkflowStats({
+    tenantId, workflowName, days: req.query.days,
+  });
+  res.status(httpStatus.OK).send(stats);
+});
+
+const submitFeedback = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const submittedBy = resolveUserId(req.user);
+  const fb = await agentFeedbackService.submitFeedback({ tenantId, submittedBy, ...req.body });
+  res.status(httpStatus.CREATED).send(fb);
+});
+
+const listFeedback = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const fb = await agentFeedbackService.listFeedback({
+    tenantId,
+    taskId:       req.query.taskId,
+    workflowName: req.query.workflowName,
+    limit:        req.query.limit,
+  });
+  res.status(httpStatus.OK).send({ total: fb.length, results: fb });
+});
+
+const getFeedbackSummary = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const summary = await agentFeedbackService.getFeedbackSummary({
+    tenantId,
+    workflowName: req.query.workflowName,
+    days:         req.query.days,
+  });
+  res.status(httpStatus.OK).send(summary);
+});
+
+const createEvalDataset = catchAsync(async (req, res) => {
+  const ds = await agentEvalService.createEvalDataset(req.body);
+  res.status(httpStatus.CREATED).send(ds);
+});
+
+const listEvalDatasets = catchAsync(async (req, res) => {
+  const ds = await agentEvalService.listEvalDatasets({
+    workflowName: req.query.workflowName,
+    enabled:      req.query.enabled,
+  });
+  res.status(httpStatus.OK).send({ total: ds.length, results: ds });
+});
+
+const recordEvalResult = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const result = await agentEvalService.recordEvalResult({
+    datasetId: req.params.datasetId,
+    tenantId,
+    ...req.body,
+  });
+  res.status(httpStatus.CREATED).send(result);
+});
+
+const getEvalStats = catchAsync(async (req, res) => {
+  const stats = await agentEvalService.getEvalStats({
+    workflowName: req.query.workflowName,
+    days:         req.query.days,
+  });
+  res.status(httpStatus.OK).send(stats);
+});
+
+const createPlaybook = catchAsync(async (req, res) => {
+  const pb = await incidentPlaybookService.createPlaybook(req.body);
+  res.status(httpStatus.CREATED).send(pb);
+});
+
+const listPlaybooks = catchAsync(async (req, res) => {
+  const pbs = await incidentPlaybookService.listPlaybooks({
+    incidentType: req.query.incidentType,
+    enabled:      req.query.enabled,
+  });
+  res.status(httpStatus.OK).send({ total: pbs.length, results: pbs });
+});
+
+const openIncident = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const incident = await incidentPlaybookService.openIncident({ tenantId, ...req.body });
+  res.status(httpStatus.CREATED).send(incident);
+});
+
+const acknowledgeIncident = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const userId = resolveUserId(req.user);
+  const incident = await incidentPlaybookService.acknowledgeIncident({
+    incidentId: req.params.incidentId, tenantId, userId,
+  });
+  res.status(httpStatus.OK).send(incident);
+});
+
+const resolveIncident = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const resolvedBy = resolveUserId(req.user);
+  const incident = await incidentPlaybookService.resolveIncident({
+    incidentId: req.params.incidentId, tenantId, resolvedBy,
+    resolutionNotes: req.body.resolutionNotes,
+  });
+  res.status(httpStatus.OK).send(incident);
+});
+
+const listIncidents = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const incidents = await incidentPlaybookService.listIncidents({
+    tenantId,
+    status:   req.query.status,
+    severity: req.query.severity,
+    limit:    req.query.limit,
+  });
+  res.status(httpStatus.OK).send({ total: incidents.length, results: incidents });
+});
+
+const getIncidentById = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const incident = await incidentPlaybookService.getIncidentById({
+    tenantId, incidentId: req.params.incidentId,
+  });
+  if (!incident) return res.status(httpStatus.NOT_FOUND).send({ message: 'Incident not found' });
+  res.status(httpStatus.OK).send(incident);
+});
+
+const updateIncidentStatus = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const incident = await incidentPlaybookService.updateIncidentStatus({
+    incidentId: req.params.incidentId, tenantId, status: req.body.status,
+  });
+  res.status(httpStatus.OK).send(incident);
+});
+
 module.exports = {
   createAction,
   reverseAction,
   getActionById,
   getFeed,
+  listAgentTasks,
+  getAgentTaskById,
   updateActionItemStatus,
   createAuditExportJob,
   listAuditExportJobs,
@@ -850,6 +1564,11 @@ module.exports = {
   exportProjectNodeComparison,
   exportProjectNodeRankings,
   listTools,
+  createApprovalDecision,
+  queueHumanApproval,
+  listPendingApprovals,
+  approveDecision,
+  rejectDecision,
   callTool,
   listToolCallLogs,
   getSessionContext,
@@ -870,4 +1589,52 @@ module.exports = {
   cancelOnboardingJob,
   getOnboardingJobById,
   streamOnboardingJobEvents,
+  triggerComplianceAgentRun,
+  listComplianceSnapshots,
+  // Phase 5
+  getProjectMetrics,
+  listAnomalies,
+  streamAlerts,
+  generateInsight,
+  completeInsight,
+  failInsight,
+  listInsights,
+  getInsightById,
+  listModelRegistry,
+  resolveCallPlan,
+  logIntelligenceUsage,
+  getIntelligenceUsageSummary,
+  listPrompts,
+  getPromptVersion,
+  createPromptVersion,
+  activatePromptVersion,
+  // Phase 6
+  ingestDoc,
+  listDocs,
+  getDoc,
+  deleteDoc,
+  getDocChunks,
+  searchDocs,
+  reindexDoc,
+  // Phase 7
+  registerWorkflowDefinition,
+  listWorkflowDefinitions,
+  startWorkflowRun,
+  listWorkflowRuns,
+  getWorkflowStats,
+  submitFeedback,
+  listFeedback,
+  getFeedbackSummary,
+  createEvalDataset,
+  listEvalDatasets,
+  recordEvalResult,
+  getEvalStats,
+  createPlaybook,
+  listPlaybooks,
+  openIncident,
+  acknowledgeIncident,
+  resolveIncident,
+  listIncidents,
+  getIncidentById,
+  updateIncidentStatus,
 };

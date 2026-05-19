@@ -1,12 +1,27 @@
 const mockUserService = {
   createUser: jest.fn(),
+  getUserByEmail: jest.fn(),
+  getUserById: jest.fn(),
   updateUserById: jest.fn(),
   softDeleteUserById: jest.fn(),
+  assignRoles: jest.fn(),
 };
 
 const mockRoleService = {
+  getRoleById: jest.fn(),
   assignPermissions: jest.fn(),
   removePermissionsFromRole: jest.fn(),
+};
+
+const mockNodeService = {
+  getNodeById: jest.fn(),
+  moveNodeToParent: jest.fn(),
+};
+
+const mockProjectFormService = {
+  getProjectFormById: jest.fn(),
+  archiveProjectForm: jest.fn(),
+  restoreProjectFormById: jest.fn(),
 };
 
 const mockSubmissionService = {
@@ -16,6 +31,8 @@ const mockSubmissionService = {
 
 jest.mock('../services/user.service', () => mockUserService);
 jest.mock('../services/role.service', () => mockRoleService);
+jest.mock('../services/node.service', () => mockNodeService);
+jest.mock('../services/projectForm.service', () => mockProjectFormService);
 jest.mock('../services/submission.service', () => mockSubmissionService);
 
 const { executeActionEvent } = require('../services/copilotCommandHandler.service');
@@ -23,6 +40,10 @@ const { executeActionEvent } = require('../services/copilotCommandHandler.servic
 describe('copilot command handler service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRoleService.getRoleById.mockResolvedValue({
+      _id: 'role-1',
+      tenantId: 'tenant-1',
+    });
   });
 
   test('handles create_user using existing userService.createUser', async () => {
@@ -204,8 +225,13 @@ describe('copilot command handler service', () => {
   });
 
   test('handles grant_permission using existing roleService.assignPermissions', async () => {
+    mockRoleService.getRoleById.mockResolvedValue({
+      _id: 'role-1',
+      tenantId: 'tenant-1',
+    });
     mockRoleService.assignPermissions.mockResolvedValue({
       _id: 'role-1',
+      tenantId: 'tenant-1',
       permissions: ['perm-1'],
     });
 
@@ -231,8 +257,13 @@ describe('copilot command handler service', () => {
   });
 
   test('handles revoke_permission using existing roleService.removePermissionsFromRole', async () => {
+    mockRoleService.getRoleById.mockResolvedValue({
+      _id: 'role-1',
+      tenantId: 'tenant-1',
+    });
     mockRoleService.removePermissionsFromRole.mockResolvedValue({
       _id: 'role-1',
+      tenantId: 'tenant-1',
       permissions: [],
     });
 
@@ -256,6 +287,123 @@ describe('copilot command handler service', () => {
         entityId: 'role-1',
       })
     );
+  });
+
+  test('blocks reset_password when target user belongs to another tenant', async () => {
+    mockUserService.getUserByEmail.mockResolvedValue({
+      _id: 'user-1',
+      email: 'person@example.com',
+      tenantId: 'tenant-2',
+    });
+
+    await expect(
+      executeActionEvent({
+        action_type: 'reset_password',
+        tenant_id: 'tenant-1',
+        actor_user_id: 'actor-1',
+        payload_json: {
+          email: 'person@example.com',
+          newPassword: 'new-secret',
+        },
+      })
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      message: expect.stringContaining('does not belong to tenant'),
+    });
+    expect(mockUserService.updateUserById).not.toHaveBeenCalled();
+  });
+
+  test('blocks assign_role when target user belongs to another tenant', async () => {
+    mockUserService.getUserById.mockResolvedValue({
+      _id: 'user-1',
+      tenantId: 'tenant-2',
+    });
+
+    await expect(
+      executeActionEvent({
+        action_type: 'assign_role',
+        tenant_id: 'tenant-1',
+        entity_id: 'user-1',
+        payload_json: {
+          roleIds: ['role-1'],
+        },
+      })
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      message: expect.stringContaining('User does not belong to tenant'),
+    });
+    expect(mockUserService.assignRoles).not.toHaveBeenCalled();
+  });
+
+  test('blocks grant_permission when target role belongs to another tenant', async () => {
+    mockRoleService.getRoleById.mockResolvedValue({
+      _id: 'role-1',
+      tenantId: 'tenant-2',
+    });
+
+    await expect(
+      executeActionEvent({
+        action_type: 'grant_permission',
+        tenant_id: 'tenant-1',
+        entity_id: 'role-1',
+        payload_json: {
+          permissionIds: ['perm-1'],
+        },
+      })
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      message: expect.stringContaining('Role does not belong to tenant'),
+    });
+    expect(mockRoleService.assignPermissions).not.toHaveBeenCalled();
+  });
+
+  test('blocks move_node when target parent belongs to another tenant', async () => {
+    mockNodeService.getNodeById
+      .mockResolvedValueOnce({
+        _id: 'node-1',
+        tenantId: 'tenant-1',
+      })
+      .mockResolvedValueOnce({
+        _id: 'node-2',
+        tenantId: 'tenant-2',
+      });
+
+    await expect(
+      executeActionEvent({
+        action_type: 'move_node',
+        tenant_id: 'tenant-1',
+        entity_id: 'node-1',
+        payload_json: {
+          targetParentId: 'node-2',
+        },
+      })
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      message: expect.stringContaining(
+        'Target parent node does not belong to tenant'
+      ),
+    });
+    expect(mockNodeService.moveNodeToParent).not.toHaveBeenCalled();
+  });
+
+  test('blocks archive_project when project belongs to another tenant', async () => {
+    mockProjectFormService.getProjectFormById.mockResolvedValue({
+      _id: 'project-1',
+      tenantId: 'tenant-2',
+    });
+
+    await expect(
+      executeActionEvent({
+        action_type: 'archive_project',
+        tenant_id: 'tenant-1',
+        entity_id: 'project-1',
+        payload_json: {},
+      })
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      message: expect.stringContaining('Project does not belong to tenant'),
+    });
+    expect(mockProjectFormService.archiveProjectForm).not.toHaveBeenCalled();
   });
 
   test('returns noop for unsupported action type', async () => {

@@ -798,17 +798,39 @@ const importOnboardingCsv = async ({
   let rolledBack = false;
   const rollbackErrors = [];
 
-  const runStage = async (name, items, handler) => {
+  const runStage = async (
+    name,
+    items,
+    handler,
+    { continueOnError = false } = {}
+  ) => {
     const startCount = rowResults.length;
+    let stageFailedCount = 0;
     try {
       // eslint-disable-next-line no-restricted-syntax
       for (const item of items) {
-        // eslint-disable-next-line no-await-in-loop
-        await handler(item);
+        if (!continueOnError) {
+          // eslint-disable-next-line no-await-in-loop
+          await handler(item);
+          continue;
+        }
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await handler(item);
+        } catch (error) {
+          stageFailedCount += 1;
+          rowResults.push({
+            line: Number(item?.lineNumber || 0) || null,
+            recordType: norm(item?.row?.record_type) || name,
+            action: 'failed',
+            status: 'failed',
+            reason: error.message,
+          });
+        }
       }
       stageResults.push({
         stage: name,
-        status: 'completed',
+        status: stageFailedCount > 0 ? 'completed_with_errors' : 'completed',
         ...summarizeRows(rowResults.slice(startCount)),
       });
     } catch (error) {
@@ -1251,7 +1273,10 @@ const importOnboardingCsv = async ({
       });
     });
 
-    await runStage('stage_4_users', userRows, async ({ lineNumber, row }) => {
+    await runStage(
+      'stage_4_users',
+      userRows,
+      async ({ lineNumber, row }) => {
       const email = getSafe(row, 'user_email').toLowerCase();
       const firstName = getSafe(row, 'first_name');
       const lastName = getSafe(row, 'last_name');
@@ -1269,20 +1294,12 @@ const importOnboardingCsv = async ({
 
       const existing = refs.usersByEmail.get(key);
       if (existing) {
-        const before = { ...existing };
         const updated = await userService.updateUserById(existing._id, {
-          firstname: firstName || before.firstname,
-          lastname: lastName || before.lastname,
-          phoneNumber: phoneNumber || before.phoneNumber || null,
+          firstname: firstName || existing.firstname,
+          lastname: lastName || existing.lastname,
+          phoneNumber: phoneNumber || existing.phoneNumber || null,
         });
         refs.usersByEmail.set(key, updated.toObject ? updated.toObject() : updated);
-        undoStack.push(async () => {
-          await userService.updateUserById(existing._id, {
-            firstname: before.firstname,
-            lastname: before.lastname,
-            phoneNumber: before.phoneNumber || null,
-          });
-        });
         rowResults.push({
           line: lineNumber,
           recordType: 'user',
@@ -1306,9 +1323,6 @@ const importOnboardingCsv = async ({
         isSaby: false,
       });
       refs.usersByEmail.set(key, created.toObject ? created.toObject() : created);
-      undoStack.push(async () => {
-        await User.deleteOne({ _id: created._id });
-      });
       rowResults.push({
         line: lineNumber,
         recordType: 'user',
@@ -1316,10 +1330,14 @@ const importOnboardingCsv = async ({
         status: 'ok',
         entityId: String(created._id),
       });
-    });
+      },
+      { continueOnError: true }
+    );
 
-    const userRoleUndoGuard = new Set();
-    await runStage('stage_5_user_roles', userRoleRows, async ({ lineNumber, row }) => {
+    await runStage(
+      'stage_5_user_roles',
+      userRoleRows,
+      async ({ lineNumber, row }) => {
       const user = refs.usersByEmail.get(norm(row.user_email));
       const role = refs.rolesByName.get(norm(row.role_name));
       if (!user || !role) {
@@ -1345,14 +1363,6 @@ const importOnboardingCsv = async ({
         return;
       }
 
-      if (!userRoleUndoGuard.has(userId)) {
-        const snapshot = [...currentRoles];
-        undoStack.push(async () => {
-          await User.updateOne({ _id: userId }, { $set: { roles: snapshot } });
-        });
-        userRoleUndoGuard.add(userId);
-      }
-
       const updated = await userService.assignRoles(userId, [roleId]);
       refs.usersByEmail.set(
         norm(updated.email || row.user_email),
@@ -1365,10 +1375,14 @@ const importOnboardingCsv = async ({
         status: 'ok',
         entityId: userId,
       });
-    });
+      },
+      { continueOnError: true }
+    );
 
-    const nodeUserUndoGuard = new Set();
-    await runStage('stage_5_user_nodes', userNodeRows, async ({ lineNumber, row }) => {
+    await runStage(
+      'stage_5_user_nodes',
+      userNodeRows,
+      async ({ lineNumber, row }) => {
       const user = refs.usersByEmail.get(norm(row.user_email));
       const nodeName = getUserNodeName(row);
       const node = refs.nodesByName.get(norm(nodeName));
@@ -1394,14 +1408,6 @@ const importOnboardingCsv = async ({
         return;
       }
 
-      if (!nodeUserUndoGuard.has(String(node._id))) {
-        const snapshot = [...currentUsers];
-        undoStack.push(async () => {
-          await nodeService.assignUsersToNode(String(node._id), snapshot);
-        });
-        nodeUserUndoGuard.add(String(node._id));
-      }
-
       const merged = [...currentUsers, userId];
       const updated = await nodeService.assignUsersToNode(String(node._id), merged);
       refs.nodesByName.set(
@@ -1415,7 +1421,9 @@ const importOnboardingCsv = async ({
         status: 'ok',
         entityId: String(node._id),
       });
-    });
+      },
+      { continueOnError: true }
+    );
   } catch (error) {
     failed.push({
       line: null,
@@ -1449,18 +1457,36 @@ const importOnboardingCsv = async ({
   }, {});
 
   const counters = summarizeRows(rowResults);
+  const totalFailures = counters.failed + failed.length;
+  const retainedCounters = rolledBack
+    ? {
+        created: 0,
+        updated: 0,
+        assigned: 0,
+        skipped: counters.skipped,
+        failed: totalFailures,
+      }
+    : { ...counters, failed: totalFailures };
+  const completedWithErrors = !rolledBack && totalFailures > 0;
   return {
     dryRun: false,
     executed: true,
-    ok: failed.length === 0,
+    ok: failed.length === 0 && counters.failed === 0,
+    completedWithErrors,
     summary: {
       rowCount: rows.length,
       byRecordType: byType,
-      created: counters.created,
-      updated: counters.updated,
-      assigned: counters.assigned,
-      skipped: counters.skipped,
-      failed: counters.failed + failed.length,
+      completedWithErrors,
+      created: retainedCounters.created,
+      updated: retainedCounters.updated,
+      assigned: retainedCounters.assigned,
+      skipped: retainedCounters.skipped,
+      failed: retainedCounters.failed,
+      attemptedCreated: counters.created,
+      attemptedUpdated: counters.updated,
+      attemptedAssigned: counters.assigned,
+      attemptedSkipped: counters.skipped,
+      attemptedFailed: totalFailures,
       rolledBack,
       rollbackErrors: rollbackErrors.length,
     },
@@ -1469,9 +1495,11 @@ const importOnboardingCsv = async ({
     stageResults,
     warnings,
     nextStep:
-      failed.length === 0
-        ? 'Onboarding import completed'
-        : 'Import failed and rollback attempted. Fix errors and rerun.',
+      completedWithErrors
+        ? 'Import completed with some row-level errors. Review failed rows and retry only those rows.'
+        : failed.length === 0
+          ? 'Onboarding import completed'
+          : 'Import failed and rollback attempted. Fix errors and rerun.',
   };
 };
 

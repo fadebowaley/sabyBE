@@ -6,6 +6,13 @@ const {
   ownerResourceBundle,
 } = require('../scripts/permissions/ownerResource.json');
 
+const debugLog = (...args) => {
+  if (process.env.AUTH_DEBUG === 'true') {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+};
+
 /**
  * Normalize resource name to singular form for bundle matching
  * Handles common plural forms: permissions -> permission, roles -> role, etc.
@@ -47,14 +54,14 @@ const normalizeResourceToSingular = (resource) => {
 
 // Debug: Log the owner resource bundle on startup
 // eslint-disable-next-line no-console
-console.log(
+debugLog(
   '🔍 [AUTH MIDDLEWARE] Owner Resource Bundle loaded:',
   ownerResourceBundle
 );
 // eslint-disable-next-line no-console
-console.log('🔍 [AUTH MIDDLEWARE] Bundle type:', typeof ownerResourceBundle);
+debugLog('🔍 [AUTH MIDDLEWARE] Bundle type:', typeof ownerResourceBundle);
 // eslint-disable-next-line no-console
-console.log(
+debugLog(
   '🔍 [AUTH MIDDLEWARE] Is Array?:',
   Array.isArray(ownerResourceBundle)
 );
@@ -63,13 +70,13 @@ const verifyCallback =
   (req, resolve, reject, requiredRights) => async (err, user, info) => {
     // Debug: Log the permissions required and the route being checked
     // eslint-disable-next-line no-console
-    console.log('--- AUTH DEBUG ---');
+    debugLog('--- AUTH DEBUG ---');
     // eslint-disable-next-line no-console
-    console.log('Route:', req.originalUrl);
+    debugLog('Route:', req.originalUrl);
     // eslint-disable-next-line no-console
-    console.log('HTTP Method:', req.method);
+    debugLog('HTTP Method:', req.method);
     // eslint-disable-next-line no-console
-    console.log('Required Permissions:', requiredRights);
+    debugLog('Required Permissions:', requiredRights);
 
     if (err || info || !user) {
       return reject(
@@ -86,13 +93,13 @@ const verifyCallback =
     // Handle Owner role check
     if (user.isOwner) {
       // eslint-disable-next-line no-console
-      console.log(
+      debugLog(
         'User is an Owner. Checking resource-based permissions with regex matching...'
       );
       // eslint-disable-next-line no-console
-      console.log('🔍 Owner Resource Bundle:', ownerResourceBundle);
+      debugLog('🔍 Owner Resource Bundle:', ownerResourceBundle);
       // eslint-disable-next-line no-console
-      console.log('🔍 Required Rights:', requiredRights);
+      debugLog('🔍 Required Rights:', requiredRights);
 
       // Normalize permission format (support both old and new during migration)
       const normalizePermission = (permission) => {
@@ -134,7 +141,7 @@ const verifyCallback =
         const resource = normalizePermission(right);
 
         // eslint-disable-next-line no-console
-        console.log(`🔍 Extracted Resource from "${right}": "${resource}"`);
+        debugLog(`🔍 Extracted Resource from "${right}": "${resource}"`);
 
         // If the resource is valid and hasn't been added to the map, create the regex for it
         if (resource && resource !== '*' && !resourceRegexMap.has(resource)) {
@@ -158,7 +165,7 @@ const verifyCallback =
 
         if (!matchedResource) {
           // eslint-disable-next-line no-console
-          console.log(`❌ Owner missing permission for action: ${right}`);
+          debugLog(`❌ Owner missing permission for action: ${right}`);
           return false;
         }
 
@@ -166,33 +173,33 @@ const verifyCallback =
         const normalizedResource = normalizeResourceToSingular(matchedResource);
 
         // eslint-disable-next-line no-console
-        console.log(`🔍 Checking if "${normalizedResource}" (normalized from "${matchedResource}") is in bundle...`);
+        debugLog(`🔍 Checking if "${normalizedResource}" (normalized from "${matchedResource}") is in bundle...`);
         // eslint-disable-next-line no-console
-        console.log(`🔍 Bundle contents:`, JSON.stringify(ownerResourceBundle));
+        debugLog(`🔍 Bundle contents:`, JSON.stringify(ownerResourceBundle));
 
         // Check if the normalized resource is in the owner's allowed resource bundle
         const hasResourceAccess = ownerResourceBundle.includes(normalizedResource);
 
         // eslint-disable-next-line no-console
-        console.log(`🔍 includes() result: ${hasResourceAccess}`);
+        debugLog(`🔍 includes() result: ${hasResourceAccess}`);
 
         if (!hasResourceAccess) {
           // eslint-disable-next-line no-console
-          console.log(
+          debugLog(
             `❌ Resource ${matchedResource} is not in Owner's allowed bundle.`
           );
           // Additional debug: Check each item in the bundle
           // eslint-disable-next-line no-console
-          console.log('🔍 Checking each bundle item:');
+          debugLog('🔍 Checking each bundle item:');
           ownerResourceBundle.forEach((item, idx) => {
             // eslint-disable-next-line no-console
-            console.log(
+            debugLog(
               `  [${idx}] "${item}" === "${matchedResource}"? ${
                 item === matchedResource
               }`
             );
             // eslint-disable-next-line no-console
-            console.log(
+            debugLog(
               `  [${idx}] Type: ${typeof item}, Length: ${item.length}`
             );
           });
@@ -215,7 +222,7 @@ const verifyCallback =
 
     // Handle regular user role check (if needed)
     // eslint-disable-next-line no-console
-    console.log('User is a regular user. Checking name-based permissions...');
+    debugLog('User is a regular user. Checking name-based permissions...');
 
     // Normalize permission format (support both old and new during migration)
     const normalizePermission = (permission) => {

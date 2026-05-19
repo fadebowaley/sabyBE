@@ -9,6 +9,13 @@ const {
   ownerResourceBundle,
 } = require('../scripts/permissions/ownerResource.json');
 
+const debugLog = (...args) => {
+  if (process.env.ACCESS_DEBUG === 'true') {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+};
+
 /**
  * Normalize resource name to singular form for bundle matching
  * Handles common plural forms: permissions -> permission, roles -> role, etc.
@@ -266,9 +273,9 @@ const checkUserPermissions = (
  */
 const checkOwnerAccess = (permissions) => {
   // eslint-disable-next-line no-console
-  console.log('🔍 [checkOwnerAccess] Checking permissions:', permissions);
+  debugLog('🔍 [checkOwnerAccess] Checking permissions:', permissions);
   // eslint-disable-next-line no-console
-  console.log('🔍 [checkOwnerAccess] Owner bundle:', ownerResourceBundle);
+  debugLog('🔍 [checkOwnerAccess] Owner bundle:', ownerResourceBundle);
 
   return permissions.every((perm) => {
     // Extract resource from permission string
@@ -281,26 +288,26 @@ const checkOwnerAccess = (permissions) => {
     const normalizedResource = normalizeResourceToSingular(resource);
 
     // eslint-disable-next-line no-console
-    console.log(
+    debugLog(
       `🔍 [checkOwnerAccess] Permission: "${perm}" → Resource: "${resource}" → Normalized: "${normalizedResource}"`
     );
 
     if (!normalizedResource) {
       // eslint-disable-next-line no-console
-      console.log(`❌ [checkOwnerAccess] No resource extracted from "${perm}"`);
+      debugLog(`❌ [checkOwnerAccess] No resource extracted from "${perm}"`);
       return false;
     }
 
     const hasAccess = ownerResourceBundle.includes(normalizedResource);
     // eslint-disable-next-line no-console
-    console.log(`🔍 [checkOwnerAccess] "${resource}" in bundle? ${hasAccess}`);
+    debugLog(`🔍 [checkOwnerAccess] "${resource}" in bundle? ${hasAccess}`);
 
     if (!hasAccess) {
       // eslint-disable-next-line no-console
-      console.log('🔍 [checkOwnerAccess] Checking each bundle item:');
+      debugLog('🔍 [checkOwnerAccess] Checking each bundle item:');
       ownerResourceBundle.forEach((item, idx) => {
         // eslint-disable-next-line no-console
-        console.log(
+        debugLog(
           `  [${idx}] "${item}" === "${resource}"? ${item === resource}`
         );
       });
@@ -319,7 +326,7 @@ const checkOwnerAccess = (permissions) => {
  * 3. Try API key authentication (extract and verify)
  */
 const resolveAccessIdentity = async (req, requiredPermissions = []) => {
-  console.log('[requireAccess] Incoming headers:', {
+  debugLog('[requireAccess] Incoming headers:', {
     Authorization: req.header('Authorization'),
     'x-api-key': req.header('x-api-key'),
     requiredPermissions,
@@ -329,7 +336,7 @@ const resolveAccessIdentity = async (req, requiredPermissions = []) => {
   // === 0. Check if req.apiKey already exists (set by apiKeyAuth middleware) ===
   // This means apiKeyAuth middleware already verified the API key
   if (req.apiKey) {
-    console.log(
+    debugLog(
       '[requireAccess] Using existing req.apiKey from apiKeyAuth middleware:',
       req.apiKey.id
     );
@@ -343,7 +350,7 @@ const resolveAccessIdentity = async (req, requiredPermissions = []) => {
       );
 
       if (!hasPermission) {
-        console.log(
+        debugLog(
           '[requireAccess] API key lacks required permissions:',
           requiredPermissions,
           req.apiKey.permissions
@@ -372,14 +379,14 @@ const resolveAccessIdentity = async (req, requiredPermissions = []) => {
     const isJwt = header?.startsWith('Bearer ') && !header?.includes('sk_');
 
     if (isJwt) {
-      console.log('[requireAccess] Detected JWT, authenticating...');
+      debugLog('[requireAccess] Detected JWT, authenticating...');
       return new Promise((resolve, reject) => {
         passport.authenticate(
           'jwt',
           { session: false },
           async (err, user, info) => {
             if (err || info || !user) {
-              console.log('[requireAccess] JWT auth failed', {
+              debugLog('[requireAccess] JWT auth failed', {
                 err,
                 info,
                 user,
@@ -390,7 +397,7 @@ const resolveAccessIdentity = async (req, requiredPermissions = []) => {
             }
 
             req.user = user;
-            console.log('[requireAccess] Authenticated user:', user);
+            debugLog('[requireAccess] Authenticated user:', user);
 
             // Superuser bypass
             if (user.isSuper) return resolve({ type: 'user', value: user });
@@ -399,7 +406,7 @@ const resolveAccessIdentity = async (req, requiredPermissions = []) => {
             if (user.isOwner) {
               const hasAccess = checkOwnerAccess(requiredPermissions);
               if (!hasAccess) {
-                console.log('[requireAccess] Owner lacks access');
+                debugLog('[requireAccess] Owner lacks access');
                 return reject(
                   new ApiError(
                     httpStatus.FORBIDDEN,
@@ -412,7 +419,7 @@ const resolveAccessIdentity = async (req, requiredPermissions = []) => {
 
             // === Role Permission Check ===
             if (user.isAdmin) {
-              console.log(
+              debugLog(
                 '[requireAccess] isAdmin user - checking role permissions'
               );
             }
@@ -426,11 +433,11 @@ const resolveAccessIdentity = async (req, requiredPermissions = []) => {
             );
 
             if (user.isAdmin) {
-              console.log(
+              debugLog(
                 '[requireAccess] isAdmin roles:',
                 userRoles.map((r) => r.name)
               );
-              console.log(
+              debugLog(
                 '[requireAccess] isAdmin permissions:',
                 userPermissions
               );
@@ -446,7 +453,7 @@ const resolveAccessIdentity = async (req, requiredPermissions = []) => {
             );
 
             if (!hasRights) {
-              console.log(
+              debugLog(
                 '[requireAccess] User missing permissions:',
                 requiredPermissions,
                 'User has:',
@@ -467,7 +474,7 @@ const resolveAccessIdentity = async (req, requiredPermissions = []) => {
     }
   } else {
     // req.user already exists - check permissions only
-    console.log('[requireAccess] Using existing req.user');
+    debugLog('[requireAccess] Using existing req.user');
     const { user } = req;
 
     // Superuser bypass
@@ -518,10 +525,10 @@ const resolveAccessIdentity = async (req, requiredPermissions = []) => {
       throw new ApiError(httpStatus.UNAUTHORIZED, 'Missing API key or JWT');
     }
 
-    console.log('[requireAccess] Detected API key, verifying...');
+    debugLog('[requireAccess] Detected API key, verifying...');
     // Verify API key (this includes all validation: hash, active, expired, approval, limits)
     const apiKeyDoc = await apiKeyService.verifyApiKey(apiKey);
-    console.log(
+    debugLog(
       '[requireAccess] API key verified:',
       apiKeyDoc && apiKeyDoc._id
     );
@@ -541,7 +548,7 @@ const resolveAccessIdentity = async (req, requiredPermissions = []) => {
     req.tenantId = apiKeyDoc.tenant._id;
     req.tenant = apiKeyDoc.tenant;
   } else {
-    console.log('[requireAccess] Using existing req.apiKey');
+    debugLog('[requireAccess] Using existing req.apiKey');
   }
 
   // Permissions check for API key (always check, even if req.apiKey was set by previous middleware)
@@ -553,7 +560,7 @@ const resolveAccessIdentity = async (req, requiredPermissions = []) => {
         req.apiKey.permissions.includes('admin')
     )
   ) {
-    console.log(
+    debugLog(
       '[requireAccess] API key lacks required permissions:',
       requiredPermissions,
       req.apiKey.permissions
@@ -598,7 +605,7 @@ const requireAccess = (config) => {
 
   return catchAsync(async (req, res, next) => {
     try {
-      console.log(
+      debugLog(
         '[requireAccess] Checking access for endpoint:',
         req.originalUrl,
         {
@@ -612,11 +619,11 @@ const requireAccess = (config) => {
       // STEP 1: Resolve user or apiKey identity
       const access = await resolveAccessIdentity(req, permissions);
       req.access = access; // Normalized access layer
-      console.log('[requireAccess] Resolved access:', access.type);
+      debugLog('[requireAccess] Resolved access:', access.type);
 
       // JWT-only block
       if (jwtOnly && access.type === 'apiKey') {
-        console.log('[requireAccess] Blocked: API key not allowed (jwtOnly)');
+        debugLog('[requireAccess] Blocked: API key not allowed (jwtOnly)');
         throw new ApiError(
           httpStatus.FORBIDDEN,
           'API key authentication is not allowed for this endpoint.'
@@ -624,7 +631,7 @@ const requireAccess = (config) => {
       }
       // API-only block
       if (apiOnly && access.type === 'user') {
-        console.log('[requireAccess] Blocked: JWT not allowed (apiOnly)');
+        debugLog('[requireAccess] Blocked: JWT not allowed (apiOnly)');
         throw new ApiError(
           httpStatus.FORBIDDEN,
           'JWT authentication is not allowed for this endpoint.'
@@ -634,7 +641,7 @@ const requireAccess = (config) => {
       // STEP 2: Scope validation (API key only)
       if (access.type === 'apiKey' && scope) {
         if (req.apiKey.scope !== scope && req.apiKey.scope !== 'admin') {
-          console.log(
+          debugLog(
             '[requireAccess] API key scope mismatch:',
             req.apiKey.scope,
             scope
@@ -649,7 +656,7 @@ const requireAccess = (config) => {
       // STEP 3: Environment validation (API key only)
       if (access.type === 'apiKey' && environment) {
         if (req.apiKey.environment !== environment) {
-          console.log(
+          debugLog(
             '[requireAccess] API key environment mismatch:',
             req.apiKey.environment,
             environment
@@ -673,7 +680,7 @@ const requireAccess = (config) => {
             'X-RateLimit-Remaining': 0,
             'X-RateLimit-Reset': new Date(Date.now() + 60000).toISOString(),
           });
-          console.log('[requireAccess] Rate limit exceeded');
+          debugLog('[requireAccess] Rate limit exceeded');
           throw new ApiError(
             httpStatus.TOO_MANY_REQUESTS,
             'Rate limit exceeded'
@@ -702,7 +709,7 @@ const requireAccess = (config) => {
           resourceTenantId &&
           resourceTenantId.toString() !== currentTenantId.toString()
         ) {
-          console.log(
+          debugLog(
             '[requireAccess] Ownership check failed:',
             resourceTenantId,
             currentTenantId

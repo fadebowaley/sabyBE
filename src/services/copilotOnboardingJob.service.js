@@ -760,7 +760,8 @@ const processOnboardingJob = async ({
       return;
     }
 
-    const status = imported.ok ? 'completed' : 'failed';
+    const status = imported.ok || imported.completedWithErrors ? 'completed' : 'failed';
+    const failedRows = Array.isArray(imported.failures) ? imported.failures : [];
     await updateJob(jobId, tenantId, {
       status,
       stage: status,
@@ -770,22 +771,32 @@ const processOnboardingJob = async ({
       error_json: {
         errors: imported.validationErrors || [],
         warnings: imported.warnings || [],
-        failedRows: imported.failed || [],
+        failedRows,
         stageResults: imported.stageResults || [],
+        nextStep: imported.nextStep || null,
+        rolledBack: Boolean(imported.summary?.rolledBack),
       },
       completed_at: new Date(),
     });
     await appendOnboardingJobEvent({
       tenantId,
       jobId,
-      eventType: imported.ok ? 'import_completed' : 'import_failed',
+      eventType: imported.completedWithErrors
+        ? 'import_completed_with_errors'
+        : imported.ok
+          ? 'import_completed'
+          : 'import_failed',
       stage: status,
       status,
       progressPct: 100,
-      message: imported.ok ? 'Import completed' : 'Import failed',
+      message: imported.completedWithErrors
+        ? 'Import completed with errors'
+        : imported.ok
+          ? 'Import completed'
+          : 'Import failed',
       payload: {
         summary: imported.summary || {},
-        failedRows: Array.isArray(imported.failed) ? imported.failed.length : 0,
+        failedRows: failedRows.length,
       },
       createdBy: actorUserId,
     });

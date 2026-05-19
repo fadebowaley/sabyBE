@@ -232,9 +232,9 @@ const createSubmissionWorker = () => {
     logger.info(
       `[Worker] Processing ${
         isPERMSubmission ? 'PERM' : 'regular'
-      } submission for project=${projectId} (Attempt ${
-        job.attemptsMade + 1
-      }/${job.opts.attempts || 1})`
+      } submission for project=${projectId} (Attempt ${job.attemptsMade + 1}/${
+        job.opts.attempts || 1
+      })`
     );
 
     await logActivity({
@@ -271,8 +271,9 @@ const createSubmissionWorker = () => {
         logger.info(
           `[Worker] Calling permSubmissionService.submitPERMData for PERM submission`
         );
-        const permResult =
-          await permSubmissionService.submitPERMData(submissionPayload);
+        const permResult = await permSubmissionService.submitPERMData(
+          submissionPayload
+        );
 
         result = {
           id: permResult.submission.id,
@@ -291,7 +292,10 @@ const createSubmissionWorker = () => {
       } else {
         const eventDate =
           submissionPayload.event_date || submissionPayload.submission_date;
-        const monthDate = normalizeMonthDate(submissionPayload.month, eventDate);
+        const monthDate = normalizeMonthDate(
+          submissionPayload.month,
+          eventDate
+        );
         const client = await postgresPool.connect();
         try {
           await client.query('BEGIN');
@@ -396,8 +400,9 @@ const createSubmissionWorker = () => {
       if (result) {
         // ── Analytics facts ──────────────────────────────────────────────
         try {
-          const catalog =
-            await SubmissionCatalogService.getCatalogByProject(projectId);
+          const catalog = await SubmissionCatalogService.getCatalogByProject(
+            projectId
+          );
           const facts =
             (await SubmissionModel.buildFactsFromSubmission(result, catalog)) ||
             [];
@@ -425,7 +430,11 @@ const createSubmissionWorker = () => {
               userName: user_name || null,
               userEmail: user_email || null,
             };
-            await workflowService.initWorkflows(result, activeWorkflows, submitter);
+            await workflowService.initWorkflows(
+              result,
+              activeWorkflows,
+              submitter
+            );
             logger.info(
               `[Worker] Initialised ${activeWorkflows.length} workflow(s) for submission ${result.id}`
             );
@@ -559,7 +568,8 @@ const createSubmissionWorker = () => {
   // UPDATE JOB HANDLER
   // ============================================================
   async function handleUpdateJob(job) {
-    const { submissionId, updates, userId, tenantId } = job.data;
+    const { submissionId, updates, userId, tenantId, force, actorRole } =
+      job.data;
 
     logger.info(`[Worker] Processing update for submission: ${submissionId}`);
     let existing;
@@ -569,6 +579,19 @@ const createSubmissionWorker = () => {
       existing = await SubmissionModel.getSubmissionById(submissionId);
       if (!existing) {
         throw new Error(`Submission not found: ${submissionId}`);
+      }
+
+      const isLocked =
+        existing.is_locked === true || existing.is_locked === 'true';
+
+      const allowLockedOverride =
+        force === true && (actorRole === 'admin' || actorRole === 'sabyUser');
+
+      if (isLocked && !allowLockedOverride) {
+        throw new ApiError(
+          httpStatus.LOCKED,
+          'Submission is locked and cannot be updated by worker'
+        );
       }
 
       await logActivity({
@@ -701,7 +724,9 @@ const createSubmissionWorker = () => {
     const { submissionId, userId, tenantId, permanent = false } = job.data;
 
     logger.info(
-      `[Worker] Processing ${permanent ? 'permanent' : 'soft'} delete for submission: ${submissionId}`
+      `[Worker] Processing ${
+        permanent ? 'permanent' : 'soft'
+      } delete for submission: ${submissionId}`
     );
 
     // 1. Get existing submission

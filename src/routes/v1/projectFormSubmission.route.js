@@ -7,6 +7,15 @@ const {
   publicFormSubmitLimiter,
 } = require('../../middlewares/publicFormRateLimiter');
 
+const {
+  requireTenantParamAccess,
+  requireProjectFormTenantAccess,
+  requireSubmissionTenantAccess,
+    requireBusinessSubmissionTenantAccess,
+
+} = require('../../middlewares/tenantAccess');
+
+
 const router = express.Router();
 
 /**
@@ -63,6 +72,7 @@ const router = express.Router();
 // Create a new form submission (public route for form submissions)
 router.post(
   '/',
+  auth('create:form-submission'),
   validate(projectFormSubmissionValidation.createSubmission),
   projectFormSubmissionController.createSubmission
 );
@@ -202,6 +212,7 @@ router.get(
 router.get(
   '/project/:projectId',
   auth('view:form-submission'),
+  requireProjectFormTenantAccess('projectId'),
   validate(projectFormSubmissionValidation.getSubmissionsByProject),
   projectFormSubmissionController.getSubmissionsByProject
 );
@@ -210,6 +221,7 @@ router.get(
 router.get(
   '/tenant/:tenantId',
   auth('view:form-submission'),
+  requireTenantParamAccess('tenantId'),
   validate(projectFormSubmissionValidation.getSubmissionsByTenant),
   projectFormSubmissionController.getSubmissionsByTenant
 );
@@ -218,6 +230,7 @@ router.get(
 router.get(
   '/project/:projectId/stats',
   auth('view:form-submission'),
+  requireProjectFormTenantAccess('projectId'),
   validate(projectFormSubmissionValidation.getSubmissionStats),
   projectFormSubmissionController.getSubmissionStats
 );
@@ -226,14 +239,28 @@ router.get(
 router.get(
   '/project/:projectId/export',
   auth('view:form-submission'),
+  requireProjectFormTenantAccess('projectId'),
   validate(projectFormSubmissionValidation.exportSubmissions),
   projectFormSubmissionController.exportSubmissions
 );
 
 // Get submission by ID
+
+router.get(
+  '/by-submission-id/:submissionId',
+  auth('view:form-submission'),
+  requireBusinessSubmissionTenantAccess('submissionId'),
+  validate(projectFormSubmissionValidation.getSubmissionByBusinessId),
+  projectFormSubmissionController.getSubmissionBySubmissionId
+);
+
+
+
+
 router.get(
   '/:submissionId',
   auth('view:form-submission'),
+  requireSubmissionTenantAccess('submissionId'),
   validate(projectFormSubmissionValidation.getSubmission),
   projectFormSubmissionController.getSubmission
 );
@@ -242,6 +269,7 @@ router.get(
 router.patch(
   '/:submissionId',
   auth('update:form-submission'),
+  requireSubmissionTenantAccess('submissionId'),
   validate(projectFormSubmissionValidation.updateSubmission),
   projectFormSubmissionController.updateSubmission
 );
@@ -277,6 +305,7 @@ router.patch(
 router.patch(
   '/:submissionId/status',
   auth('update:form-submission'),
+  requireSubmissionTenantAccess('submissionId'),
   validate(projectFormSubmissionValidation.updateSubmissionStatus),
   projectFormSubmissionController.updateSubmissionStatus
 );
@@ -329,6 +358,7 @@ router.patch(
 router.delete(
   '/:submissionId',
   auth('delete:form-submission'),
+  requireSubmissionTenantAccess('submissionId'),
   validate(projectFormSubmissionValidation.deleteSubmission),
   projectFormSubmissionController.deleteSubmission
 );

@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { postgresPool } = require('../config/postgres');
 const logger = require('../config/logger');
 const ApiError = require('../utils/ApiError');
+const copilotApprovalService = require('./copilotApproval.service');
 
 const DEFAULT_FEED_LIMIT = 50;
 const ACTION_ITEM_STATUS_TRANSITIONS = {
@@ -123,6 +124,8 @@ const createAction = async ({
   entityId,
   payload = {},
   idempotencyKey,
+  correlationId = null,
+  approvalToken = null,
   source = 'api',
   priority = 0,
   enforceRbac = true,
@@ -150,6 +153,7 @@ const createAction = async ({
   try {
     await client.query('BEGIN');
     const normalizedActorUserId = normalizeActorUserId(actorUserId);
+    let approvalDecision = null;
 
     if (enforceRbac) {
       await enforceActionPermission({
@@ -191,13 +195,40 @@ const createAction = async ({
       }
     }
 
+    if (source !== 'tool_runtime' && catalog.requires_approval) {
+      if (!approvalToken) {
+        throw new ApiError(
+          httpStatus.CONFLICT,
+          `Action ${actionType} requires approval before execution`
+        );
+      }
+
+      approvalDecision = await copilotApprovalService.validateApprovalDecision({
+        client,
+        tenantId,
+        userId: normalizedActorUserId,
+        toolName: null,
+        actionType,
+        entityId: entityId || null,
+        payload,
+        approvalToken,
+      });
+
+      if (!approvalDecision.ok) {
+        throw new ApiError(
+          httpStatus.CONFLICT,
+          `Approval is invalid for action execution: ${approvalDecision.reason}`
+        );
+      }
+    }
+
     const eventResult = await client.query(
       `INSERT INTO copilot.action_events (
         tenant_id, actor_user_id, action_type, entity_type, entity_id,
-        payload_json, status, idempotency_key, source, priority,
+        payload_json, status, idempotency_key, correlation_id, source, priority,
         created_at, queued_at, updated_at
       ) VALUES (
-        $1,$2,$3,$4,$5,$6,'queued',$7,$8,$9,NOW(),NOW(),NOW()
+        $1,$2,$3,$4,$5,$6,'queued',$7,$8,$9,$10,NOW(),NOW(),NOW()
       )
       RETURNING *`,
       [
@@ -208,6 +239,7 @@ const createAction = async ({
         entityId || null,
         payload,
         idempotencyKey || null,
+        correlationId || null,
         source,
         priority,
       ]
@@ -414,6 +446,19 @@ const reverseAction = async ({
           { eventId: reverseEvent.id, status: reverseEvent.status },
         ]
       );
+    }
+
+    if (approvalDecision?.approvalId) {
+      await copilotApprovalService.consumeApprovalDecision({
+        client,
+        approvalId: approvalDecision.approvalId,
+        result: {
+          actionType,
+          eventId: event.id,
+          mode: 'action_event',
+          deduped: false,
+        },
+      });
     }
 
     await client.query('COMMIT');

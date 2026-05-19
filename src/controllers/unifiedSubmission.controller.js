@@ -17,7 +17,11 @@ const { logActivity } = require('../utils/activityLogger');
 const SubmissionModel = require('../models/submission.model');
 const ActivityLogModel = require('../models/activityLog.model');
 const ProjectForm = require('../models/projectForm.model');
-const { eventCalendarService, eventComplianceService } = require('../services');
+const {
+  eventCalendarService,
+  eventComplianceService,
+  projectFormService,
+} = require('../services');
 const { getAllowedDates } = require('../services/calendarEnforcement.service');
 const Nodes = require('../models/node.model');
 const { postgresPool } = require('../config/postgres');
@@ -68,9 +72,9 @@ const submitData = catchAsync(async (req, res) => {
     'project_name',
     'project_category',
     'formId',
-    'nodeId',
+    'nodeId',//complete node payload sub 
     'node_id', // snake_case alias from clients
-    'userId',
+    'userId', // complete user payload sub
     'payload',
     'source',
     'meta',
@@ -1132,12 +1136,18 @@ const updateSubmission = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
   }
 
+  if (existing.tenant_id !== tenantId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Not authorized to access this submission'
+    );
+  }
+
   // Permission check - user must own the submission or be admin/sabyUser
   const canEdit =
     req.user?.role === 'admin' ||
     req.user?.role === 'sabyUser' ||
-    existing.user_id === userId?.toString() ||
-    existing.tenant_id === tenantId;
+    existing.user_id === userId?.toString()
 
   if (!canEdit) {
     throw new ApiError(
@@ -1176,6 +1186,8 @@ const updateSubmission = catchAsync(async (req, res) => {
     updates: { data, payload, status, meta },
     userId,
     tenantId,
+    force: !!force,
+    actorRole: req.user?.role,
   });
 
   const normalizedStatus = (status || '').toLowerCase().trim();
@@ -1229,12 +1241,17 @@ const deleteSubmission = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
   }
 
+  if (existing.tenant_id !== tenantId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Not authorized to access this submission'
+    );
+  }
   // Permission check
   const canDelete =
     req.user?.role === 'admin' ||
     req.user?.role === 'sabyUser' ||
-    existing.user_id === userId?.toString() ||
-    existing.tenant_id === tenantId;
+    existing.user_id === userId?.toString();
 
   if (!canDelete) {
     throw new ApiError(
@@ -1566,9 +1583,73 @@ const getAllowedDatesHandler = catchAsync(async (req, res) => {
   });
 });
 
+const submitPublicDataByReference = catchAsync(async (req, res) => {
+  const { reference } = req.params;
+  const {
+    payload,
+    meta,
+    nodeId,
+    node_id: nodeIdAlias,
+    event_date: eventDate,
+    submission_date: submissionDate,
+    month,
+    year,
+    idempotency_key: idempotencyKey,
+  } = req.body;
+
+  const resolved = await projectFormService.getPublicProjectFormByReference(
+    reference
+  );
+
+  const projectForm = resolved.projectForm;
+
+  const submissionBody = {
+    tenantId: projectForm.tenantId,
+    projectId: projectForm.projectId,
+    project_name: projectForm.configuration?.projectName,
+    project_category:
+      projectForm.configuration?.category ||
+      projectForm.configuration?.analysisProfile?.domain,
+    formId: projectForm.formId,
+    nodeId: nodeId || nodeIdAlias || null,
+    payload,
+    source: 'public_standard_form',
+    meta: {
+      ...(meta || {}),
+      publicAccess: {
+        reference,
+        canonicalRef: resolved.canonicalRef,
+        resolvedBy: resolved.resolvedBy,
+        shareRef: projectForm.shareRef || null,
+        publicRef: projectForm.publicRef || null,
+        shareCode: projectForm.shareCode || null,
+        pipelineTarget: 'postgres_unified',
+      },
+      anonymous: true,
+    },
+    event_date: eventDate,
+    submission_date: submissionDate,
+    month,
+    year,
+    idempotency_key: idempotencyKey,
+  };
+
+  const result = await queueSubmission(submissionBody);
+
+  res.status(httpStatus.ACCEPTED).send({
+    success: true,
+    message: 'Public submission received and queued for processing',
+    jobId: result.jobId,
+    status: result.status,
+    canonicalRef: resolved.canonicalRef,
+  });
+});
+
+
 module.exports = {
   submitData,
   retrySubmission,
+  submitPublicDataByReference,
   getActivityLogs,
   getActivityLogSummary,
   getEnhancedActivityLogs,

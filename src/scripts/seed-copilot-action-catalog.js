@@ -9,7 +9,7 @@ const ACTIONS = [
   ['reactivate_user', 'user', true, 'deactivate_user', false, true, 0],
   ['delete_user', 'user', false, null, true, true, 0],
   ['reset_password', 'user', false, null, false, true, 0],
-  ['verify_account', 'user', false, null, false, true, 0],
+  ['verify_account', 'user', false, null, false, false, 0],
   ['create_role', 'role', true, 'delete_role', false, true, 0],
   ['delete_role', 'role', false, null, true, true, 0],
   ['assign_role', 'user_role', true, 'unassign_role', false, true, 0],
@@ -34,7 +34,7 @@ const ACTIONS = [
   ],
   ['create_project', 'project', true, 'archive_project', false, true, 0],
   ['archive_project', 'project', true, 'restore_project', false, true, 0],
-  ['restore_project', 'project', true, 'archive_project', false, true, 0],
+  ['restore_project', 'project', true, 'archive_project', false, false, 0],
   ['create_payment', 'payment', false, null, false, true, 0],
   ['process_payment', 'payment', false, null, false, true, 0],
   ['complete_payment', 'payment', false, null, false, true, 0],
@@ -42,8 +42,8 @@ const ACTIONS = [
   ['refund_payment', 'payment', false, null, false, true, 0],
   ['create_node', 'node', true, 'delete_node', false, true, 0],
   ['delete_node', 'node', false, null, true, true, 0],
-  ['restore_node', 'node', true, 'delete_node', false, true, 0],
-  ['move_node', 'node', false, null, false, true, 0],
+  ['restore_node', 'node', true, 'delete_node', false, false, 0],
+  ['move_node', 'node', false, null, false, false, 0],
   [
     'assign_user_to_node',
     'node_user',
@@ -89,7 +89,7 @@ const ACTIONS = [
     true,
     'reject_submission',
     false,
-    true,
+    false,
     0,
   ],
   ['delete_submission', 'submission', false, null, true, true, 0],
@@ -112,8 +112,11 @@ const seed = async () => {
         requires_approval,
         preempt_window_sec,
         default_payload_schema,
-        metadata
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,'{}'::jsonb,'{}'::jsonb)
+        metadata,
+        approval_type
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,'{}'::jsonb,'{}'::jsonb,
+        CASE WHEN $6 THEN 'auto' ELSE 'auto' END
+      )
       ON CONFLICT (action_type) DO UPDATE SET
         entity_type = EXCLUDED.entity_type,
         can_reverse = EXCLUDED.can_reverse,
@@ -121,6 +124,7 @@ const seed = async () => {
         is_destructive = EXCLUDED.is_destructive,
         requires_approval = EXCLUDED.requires_approval,
         preempt_window_sec = EXCLUDED.preempt_window_sec,
+        approval_type = COALESCE(copilot.action_catalog.approval_type, 'auto'),
         updated_at = NOW()`,
         action
       )

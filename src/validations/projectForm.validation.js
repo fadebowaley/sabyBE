@@ -171,6 +171,8 @@ const metadataIntegrationsSchema = Joi.alternatives()
 
 const metadataSchema = Joi.object({
   version: Joi.string().default('1.0.0'),
+  schemaVersion: Joi.string().default('1.1.0'),
+  enabledCapabilities: Joi.array().items(Joi.string()).default([]),
   formCategory: Joi.string().valid('standard', 'system').default('standard'),
   systemTarget: Joi.string()
     .valid('user_profile', 'node_profile')
@@ -190,6 +192,81 @@ const metadataSchema = Joi.object({
   permEnabled: Joi.boolean().optional(),
 }).unknown(true);
 
+const capabilitiesSchema = Joi.object({
+  experience: Joi.object({
+    security: Joi.object({
+      enabled: Joi.boolean().default(false),
+      mode: Joi.string().valid('public', 'private').default('public'),
+      authRequired: Joi.boolean().default(false),
+      allowedRoles: Joi.array().items(Joi.string()).default([]),
+      allowedUsers: Joi.array().items(Joi.string()).default([]),
+      restrictByLocation: Joi.boolean().default(false),
+      allowedCountries: Joi.array().items(Joi.string()).default([]),
+      requireNodeAccess: Joi.boolean().default(false),
+    }).default({}),
+    compliance: Joi.object({
+      enabled: Joi.boolean().default(false),
+      trackingMode: Joi.string().valid('none', 'daily', 'weekly').default('none'),
+      frequency: Joi.string()
+        .valid('none', 'daily', 'weekly', 'biweekly', 'monthly')
+        .default('none'),
+      requireNodeId: Joi.boolean().default(true),
+      requireMonth: Joi.boolean().default(true),
+      trackCompliance: Joi.boolean().default(false),
+      autoGenerateCalendar: Joi.boolean().default(false),
+      autoLockMonthEnd: Joi.boolean().default(false),
+      calendarRequired: Joi.boolean().default(false),
+    }).default({}),
+    workflow: Joi.object({
+      enabled: Joi.boolean().default(false),
+      approvalMode: Joi.string().default('none'),
+      triggerOn: Joi.string().default('submission'),
+      steps: Joi.array().items(Joi.object().unknown(true)).default([]),
+    }).default({}),
+  }).default({}),
+  transaction: Joi.object({
+    payment: Joi.object({
+      enabled: Joi.boolean().default(false),
+      mode: Joi.string().default('none'),
+      enabledChannels: Joi.array().items(Joi.string()).default([]),
+      defaultChannel: Joi.string().allow(null).default(null),
+      settlementType: Joi.string().default('none'),
+      receivingAccount: Joi.any().allow(null).default(null),
+      channelConfigs: Joi.object().unknown(true).default({}),
+    }).default({}),
+    remittance: Joi.object({
+      enabled: Joi.boolean().default(false),
+      accountSource: Joi.string().default('none'),
+      requireNodeAccount: Joi.boolean().default(false),
+      nodeAccountField: Joi.string().allow(null).default(null),
+      settlementRule: Joi.any().allow(null).default(null),
+    }).default({}),
+    invoice: Joi.object({
+      enabled: Joi.boolean().default(false),
+      calculationMode: Joi.string().default('none'),
+      currency: Joi.string().allow(null).default(null),
+      lineItemsEnabled: Joi.boolean().default(false),
+      discountsEnabled: Joi.boolean().default(false),
+      taxEnabled: Joi.boolean().default(false),
+      rules: Joi.array().items(Joi.object().unknown(true)).default([]),
+    }).default({}),
+  }).default({}),
+}).default({});
+
+const smartMappingsSchema = Joi.object({
+  enabled: Joi.boolean().default(true),
+  autoDetect: Joi.boolean().default(true),
+  allowManualOverride: Joi.boolean().default(true),
+  fields: Joi.object({
+    phone: Joi.string().allow('', null).optional(),
+    email: Joi.string().allow('', null).optional(),
+    fullName: Joi.string().allow('', null).optional(),
+    dob: Joi.string().allow('', null).optional(),
+    joinDate: Joi.string().allow('', null).optional(),
+    eventDate: Joi.string().allow('', null).optional(),
+  }).default({}),
+}).default({});
+
 const enforceSystemFormContract = (value, helpers) => {
   const category = value?.metadata?.formCategory;
   if (category !== 'system') {
@@ -208,6 +285,26 @@ const enforceSystemFormContract = (value, helpers) => {
       message: 'System forms must set configuration.security to private',
     });
   }
+
+  return value;
+};
+
+const validateSmartMappingsAgainstElements = (value, helpers) => {
+  const elements = Array.isArray(value?.elements) ? value.elements : [];
+  const validIds = new Set(
+    elements
+      .map((element) => String(element?.id || '').trim())
+      .filter(Boolean)
+  );
+  const mappingFields = value?.smartMappings?.fields || {};
+
+  Object.entries(mappingFields).forEach(([mappingKey, mappedFieldId]) => {
+    const id = String(mappedFieldId || '').trim();
+    if (!id) return;
+    if (!validIds.has(id)) {
+      delete mappingFields[mappingKey];
+    }
+  });
 
   return value;
 };
@@ -315,6 +412,7 @@ const workflowSchema = Joi.object({
 const createProjectForm = {
   body: Joi.object()
     .keys({
+      workspaceId: Joi.string().trim().optional(),
       configuration: projectConfigurationSchema.required(),
       elements: Joi.array().items(formElementSchema).default([]),
       style: Joi.string().default('default'),
@@ -323,16 +421,20 @@ const createProjectForm = {
       userSettings: userSettingsSchema,
       permSettings: permSettingsSchema,
       paymentConfig: paymentConfigSchema,
+      capabilities: capabilitiesSchema,
+      smartMappings: smartMappingsSchema,
       calendar: Joi.object().unknown(true).optional(),
       behaviorHooks: Joi.object().unknown(true).optional(),
       metadata: metadataSchema,
       workflows: Joi.array().items(workflowSchema).default([]),
     })
-    .custom(enforceSystemFormContract, 'system form contract'),
+    .custom(enforceSystemFormContract, 'system form contract')
+    .custom(validateSmartMappingsAgainstElements, 'smart mapping validation'),
 };
 
 const getProjectForms = {
   query: Joi.object().keys({
+    workspaceId: Joi.string().trim(),
     status: Joi.string().valid('active', 'inactive', 'archived'),
     'configuration.projectName': Joi.string(),
     'configuration.tags': Joi.string(),
@@ -358,6 +460,7 @@ const getProjectFormsByTenant = {
     tenantId: Joi.string().required(),
   }),
   query: Joi.object().keys({
+    workspaceId: Joi.string().trim(),
     status: Joi.string().valid('active', 'inactive', 'archived'),
     'configuration.projectName': Joi.string(),
     'configuration.tags': Joi.string(),
@@ -380,6 +483,7 @@ const getProjectFormsByUser = {
     userId: Joi.string().custom(objectId).required(),
   }),
   query: Joi.object().keys({
+    workspaceId: Joi.string().trim(),
     status: Joi.string().valid('active', 'inactive', 'archived'),
     'configuration.projectName': Joi.string(),
     'configuration.tags': Joi.string(),
@@ -504,6 +608,7 @@ const updateProjectForm = {
   }),
   body: Joi.object()
     .keys({
+      workspaceId: Joi.string().trim(),
       configuration: projectConfigurationSchema,
       elements: Joi.array().items(formElementSchema),
       style: Joi.string(),
@@ -512,6 +617,8 @@ const updateProjectForm = {
       userSettings: userSettingsSchema,
       permSettings: permSettingsSchema,
       paymentConfig: paymentConfigSchema,
+      capabilities: capabilitiesSchema,
+      smartMappings: smartMappingsSchema,
       calendar: Joi.object().unknown(true).optional(),
       behaviorHooks: Joi.object().unknown(true).optional(),
       metadata: metadataSchema,
@@ -519,6 +626,7 @@ const updateProjectForm = {
       workflows: Joi.array().items(workflowSchema).default([]),
     })
     .custom(enforceSystemFormContract, 'system form contract')
+    .custom(validateSmartMappingsAgainstElements, 'smart mapping validation')
     .min(1),
   query: Joi.object().keys({
     populate: Joi.string(),
@@ -531,6 +639,7 @@ const updateProjectFormByProjectId = {
   }),
   body: Joi.object()
     .keys({
+      workspaceId: Joi.string().trim(),
       configuration: projectConfigurationSchema,
       elements: Joi.array().items(formElementSchema),
       style: Joi.string(),
@@ -539,6 +648,8 @@ const updateProjectFormByProjectId = {
       userSettings: userSettingsSchema,
       permSettings: permSettingsSchema,
       paymentConfig: paymentConfigSchema,
+      capabilities: capabilitiesSchema,
+      smartMappings: smartMappingsSchema,
       calendar: Joi.object().unknown(true).optional(),
       behaviorHooks: Joi.object().unknown(true).optional(),
       metadata: metadataSchema,
@@ -546,6 +657,7 @@ const updateProjectFormByProjectId = {
       workflows: Joi.array().items(workflowSchema).default([]),
     })
     .custom(enforceSystemFormContract, 'system form contract')
+    .custom(validateSmartMappingsAgainstElements, 'smart mapping validation')
     .min(1),
   query: Joi.object().keys({
     populate: Joi.string(),
@@ -561,6 +673,12 @@ const bootstrapSystemForms = {
   }),
 };
 
+const getSystemProjectForm = {
+  params: Joi.object().keys({
+    target: Joi.string().valid('user_profile', 'node_profile').required(),
+  }),
+};
+
 const submitSystemForm = {
   params: Joi.object().keys({
     publicRef: Joi.string().required(),
@@ -568,6 +686,69 @@ const submitSystemForm = {
   body: Joi.object().keys({
     targetId: Joi.string().optional(),
     submissionData: Joi.object().unknown(true).required(),
+  }),
+};
+
+const listProjectWorkspaces = {
+  query: Joi.object().keys({}),
+};
+
+const createProjectWorkspace = {
+  body: Joi.object().keys({
+    name: Joi.string().trim().min(2).max(120).required(),
+    visibility: Joi.string().valid('private', 'public').default('private'),
+  }),
+};
+
+const renameProjectWorkspace = {
+  params: Joi.object().keys({
+    workspaceId: Joi.string().trim().required(),
+  }),
+  body: Joi.object().keys({
+    name: Joi.string().trim().min(2).max(120).required(),
+    visibility: Joi.string().valid('private', 'public').optional(),
+  }),
+};
+
+const addProjectWorkspaceMember = {
+  params: Joi.object().keys({
+    workspaceId: Joi.string().trim().required(),
+  }),
+  body: Joi.object()
+    .keys({
+      userId: Joi.string().custom(objectId).optional(),
+      email: Joi.string().email().optional(),
+      role: Joi.string().valid('owner', 'editor', 'viewer').required(),
+    })
+    .or('userId', 'email'),
+};
+
+const removeProjectWorkspaceMember = {
+  params: Joi.object().keys({
+    workspaceId: Joi.string().trim().required(),
+    userId: Joi.string().custom(objectId).required(),
+  }),
+};
+
+const leaveProjectWorkspace = {
+  params: Joi.object().keys({
+    workspaceId: Joi.string().trim().required(),
+  }),
+};
+
+const deleteProjectWorkspace = {
+  params: Joi.object().keys({
+    workspaceId: Joi.string().trim().required(),
+  }),
+};
+
+const duplicateProjectForm = {
+  params: Joi.object().keys({
+    projectId: Joi.string().required(),
+  }),
+  body: Joi.object().keys({
+    name: Joi.string().trim().max(120).optional(),
+    workspaceId: Joi.string().trim().optional(),
   }),
 };
 
@@ -603,6 +784,12 @@ const publishProjectForm = {
       }).optional(),
     })
     .optional(),
+};
+
+const unpublishProjectForm = {
+  params: Joi.object().keys({
+    projectFormId: Joi.string().custom(objectId).required(),
+  }),
 };
 
 const archiveProjectForm = {
@@ -657,6 +844,7 @@ const bulkOperations = {
 const searchProjectForms = {
   query: Joi.object().keys({
     q: Joi.string().required().min(1),
+    workspaceId: Joi.string().trim().optional(),
     sortBy: Joi.string(),
     limit: Joi.number().integer().min(1).max(100),
     page: Joi.number().integer().min(1),
@@ -682,13 +870,23 @@ module.exports = {
   getPublicAccessPrefill,
   submitPublicAccessForm,
   bootstrapSystemForms,
+  getSystemProjectForm,
   submitSystemForm,
+  listProjectWorkspaces,
+  createProjectWorkspace,
+  renameProjectWorkspace,
+  addProjectWorkspaceMember,
+  removeProjectWorkspaceMember,
+  leaveProjectWorkspace,
+  deleteProjectWorkspace,
   updateProjectForm,
   updateProjectFormByProjectId,
+  duplicateProjectForm,
   deleteProjectForm,
   softDeleteProjectForm,
   restoreProjectForm,
   publishProjectForm,
+  unpublishProjectForm,
   archiveProjectForm,
   getProjectAnalytics,
   getProjectPublicAccessMetrics,

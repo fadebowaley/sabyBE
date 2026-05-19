@@ -153,6 +153,31 @@ const deleteSubmissionById = {
   }),
 };
 
+
+
+const submitPublicDataByReference = {
+  params: Joi.object().keys({
+    reference: Joi.string().required(),
+  }),
+  body: Joi.object().keys({
+    payload: Joi.object().required().unknown(true),
+    meta: Joi.object().optional(),
+    nodeId: Joi.string().optional().allow(''),
+    node_id: Joi.string().optional().allow(''),
+    event_date: Joi.string()
+      .optional()
+      .pattern(/^\d{4}-\d{2}-\d{2}$/),
+    submission_date: Joi.string()
+      .optional()
+      .pattern(/^\d{4}-\d{2}-\d{2}$/),
+    month: Joi.string()
+      .optional()
+      .pattern(/^\d{4}-\d{2}(-\d{2})?$/),
+    year: Joi.number().integer().min(2000).max(2100).optional(),
+    idempotency_key: Joi.string().max(255).optional(),
+  }),
+};
+
 const cleanupTestData = {
   body: Joi.object().keys({
     tenantId: Joi.string().required().description('Tenant ID to filter cleanup'),
@@ -180,4 +205,5 @@ module.exports = {
   updateSubmission,
   deleteSubmissionById,
   cleanupTestData,
+  submitPublicDataByReference,
 };

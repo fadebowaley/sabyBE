@@ -32,6 +32,23 @@ const normalizeIdRef = (value) => {
   return String(value);
 };
 
+const normalizeIdList = (value) => {
+  if (!value) return [];
+  return (Array.isArray(value) ? value : [value]).map(String).filter(Boolean);
+};
+
+const assertTenantOwned = ({ entity, tenantId, entityName }) => {
+  if (!entity) {
+    throw new ApiError(httpStatus.NOT_FOUND, `${entityName} not found`);
+  }
+  if (String(entity.tenantId || '') !== String(tenantId || '')) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      `${entityName} does not belong to tenant`
+    );
+  }
+};
+
 const escapeRegex = (value) =>
   String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -657,6 +674,25 @@ const handleAssignRole = async (event) => {
     );
   }
 
+  const targetUser = await userService.getUserById(userId);
+  assertTenantOwned({
+    entity: targetUser,
+    tenantId: event.tenant_id,
+    entityName: 'User',
+  });
+
+  const roleIdList = normalizeIdList(roleIds);
+  const roles = await Promise.all(
+    roleIdList.map((roleId) => roleService.getRoleById(roleId))
+  );
+  roles.forEach((role) =>
+    assertTenantOwned({
+      entity: role,
+      tenantId: event.tenant_id,
+      entityName: 'Role',
+    })
+  );
+
   const updatedUser = await userService.assignRoles(userId, roleIds);
   await invalidateUserSearchAndResolveCache(event.tenant_id || updatedUser?.tenantId);
   return {
@@ -686,13 +722,25 @@ const handleUnassignRole = async (event) => {
     );
   }
 
-  const actorUser = await resolveActorUser(event);
   const roleIdList = (Array.isArray(roleIds) ? roleIds : [roleIds]).map(String);
   const targetUser = await userService.getUserById(userId);
-  if (!targetUser) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
-  }
+  assertTenantOwned({
+    entity: targetUser,
+    tenantId: event.tenant_id,
+    entityName: 'User',
+  });
+  const roles = await Promise.all(
+    roleIdList.map((roleId) => roleService.getRoleById(roleId))
+  );
+  roles.forEach((role) =>
+    assertTenantOwned({
+      entity: role,
+      tenantId: event.tenant_id,
+      entityName: 'Role',
+    })
+  );
 
+  const actorUser = await resolveActorUser(event);
   const currentRoleIds = (targetUser.roles || []).map(String);
   const filteredRoles = currentRoleIds.filter((id) => !roleIdList.includes(id));
   const updatedUser = await userService.updateUserById(
@@ -733,6 +781,13 @@ const handleGrantPermission = async (event) => {
     );
   }
 
+  const role = await roleService.getRoleById(roleId);
+  assertTenantOwned({
+    entity: role,
+    tenantId: event.tenant_id,
+    entityName: 'Role',
+  });
+
   const updatedRole = await roleService.assignPermissions(roleId, permissionIds);
   await invalidateRoleSearchAndResolveCache(event.tenant_id || updatedRole?.tenantId);
   return {
@@ -767,6 +822,13 @@ const handleRevokePermission = async (event) => {
       'revoke_permission requires permissionId/permissionIds/permissions'
     );
   }
+
+  const role = await roleService.getRoleById(roleId);
+  assertTenantOwned({
+    entity: role,
+    tenantId: event.tenant_id,
+    entityName: 'Role',
+  });
 
   const updatedRole = await roleService.removePermissionsFromRole(
     roleId,
@@ -830,6 +892,21 @@ const handleMoveNode = async (event) => {
       'move_node requires nodeId/entity_id and targetParentId'
     );
   }
+
+  const [sourceNode, targetParentNode] = await Promise.all([
+    nodeService.getNodeById(nodeId, { populate: '' }),
+    nodeService.getNodeById(targetParentId, { populate: '' }),
+  ]);
+  assertTenantOwned({
+    entity: sourceNode,
+    tenantId: event.tenant_id,
+    entityName: 'Node',
+  });
+  assertTenantOwned({
+    entity: targetParentNode,
+    tenantId: event.tenant_id,
+    entityName: 'Target parent node',
+  });
 
   if (moveFamily && level) {
     await cascadeMoveFamilyLevelAlignment({
@@ -1006,6 +1083,13 @@ const handleArchiveProject = async (event) => {
       'archive_project requires projectFormId or project entity_id'
     );
   }
+  const projectForm = await projectFormService.getProjectFormById(projectFormId);
+  assertTenantOwned({
+    entity: projectForm,
+    tenantId: event.tenant_id,
+    entityName: 'Project',
+  });
+
   const archived = await projectFormService.archiveProjectForm(projectFormId);
   return {
     handled: true,
@@ -1025,6 +1109,16 @@ const handleRestoreProject = async (event) => {
       'restore_project requires projectFormId or project entity_id'
     );
   }
+  const projectForm = await projectFormService.getProjectFormById(
+    projectFormId,
+    { includeDeleted: true }
+  );
+  assertTenantOwned({
+    entity: projectForm,
+    tenantId: event.tenant_id,
+    entityName: 'Project',
+  });
+
   const restored = await projectFormService.restoreProjectFormById(projectFormId);
   return {
     handled: true,

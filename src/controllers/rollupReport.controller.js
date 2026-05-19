@@ -14,29 +14,33 @@ const buildFilters = (req) =>
     'offset',
   ]);
 
+const applyTenantScope = (req, filters) => {
+  if (!filters.tenant_id && req.user?.tenantId) {
+    return { ...filters, tenant_id: req.user.tenantId };
+  }
+  return filters;
+};
+
 const getDailyRollup = catchAsync(async (req, res) => {
-  const filters = buildFilters(req);
+  const filters = applyTenantScope(req, buildFilters(req));
   const data = await rollupReportService.getDailyRollup(filters);
   res.status(httpStatus.OK).send({ success: true, ...data });
 });
 
 const getWeeklyRollup = catchAsync(async (req, res) => {
-  const filters = buildFilters(req);
+  const filters = applyTenantScope(req, buildFilters(req));
   const data = await rollupReportService.getWeeklyRollup(filters);
   res.status(httpStatus.OK).send({ success: true, ...data });
 });
 
 const getMonthlyRollup = catchAsync(async (req, res) => {
-  const filters = buildFilters(req);
+  const filters = applyTenantScope(req, buildFilters(req));
   const data = await rollupReportService.getMonthlyRollup(filters);
   res.status(httpStatus.OK).send({ success: true, ...data });
 });
 
 const getSubmissionStatus = catchAsync(async (req, res) => {
-  const filters = buildFilters(req);
-  if (!filters.tenant_id && req.user?.tenantId) {
-    filters.tenant_id = req.user.tenantId;
-  }
+  const filters = applyTenantScope(req, buildFilters(req));
   const status = await rollupReportService.getSubmissionStatus(filters);
   res.status(httpStatus.OK).send({ success: true, status });
 });

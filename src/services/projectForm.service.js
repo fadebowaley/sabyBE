@@ -9,6 +9,7 @@ const ApiError = require('../utils/ApiError');
 const fieldCatalogService = require('./fieldCatalog.service');
 const userService = require('./user.service');
 const nodeService = require('./node.service');
+const projectFormWorkspaceService = require('./projectFormWorkspace.service');
 
 const BLOCK_TYPES = new Set([
   'header',
@@ -677,6 +678,488 @@ const normalizeTags = (tags = []) =>
     )
   );
 
+const SMART_MAPPING_TARGETS = {
+  phone: ['phone', 'mobile', 'telephone', 'whatsapp', 'phone_number'],
+  email: ['email', 'email_address', 'mail'],
+  fullName: ['name', 'full_name', 'member_name', 'fullname'],
+  dob: ['dob', 'date_of_birth', 'birth_date'],
+  joinDate: ['join_date', 'membership_date', 'start_date'],
+  eventDate: ['event_date', 'service_date', 'meeting_date'],
+};
+
+const defaultCapabilities = () => ({
+  experience: {
+    security: {
+      enabled: false,
+      mode: 'public',
+      authRequired: false,
+      allowedRoles: [],
+      allowedUsers: [],
+      restrictByLocation: false,
+      allowedCountries: [],
+      requireNodeAccess: false,
+    },
+    compliance: {
+      enabled: false,
+      trackingMode: 'none',
+      frequency: 'none',
+      requireNodeId: true,
+      requireMonth: true,
+      trackCompliance: false,
+      autoGenerateCalendar: false,
+      autoLockMonthEnd: false,
+      calendarRequired: false,
+    },
+    workflow: {
+      enabled: false,
+      approvalMode: 'none',
+      triggerOn: 'submission',
+      steps: [],
+    },
+  },
+  transaction: {
+    payment: {
+      enabled: false,
+      mode: 'none',
+      enabledChannels: [],
+      defaultChannel: null,
+      settlementType: 'none',
+      receivingAccount: null,
+      channelConfigs: {},
+    },
+    remittance: {
+      enabled: false,
+      accountSource: 'none',
+      requireNodeAccount: false,
+      nodeAccountField: null,
+      settlementRule: null,
+    },
+    invoice: {
+      enabled: false,
+      calculationMode: 'none',
+      currency: null,
+      lineItemsEnabled: false,
+      discountsEnabled: false,
+      taxEnabled: false,
+      rules: [],
+    },
+  },
+});
+
+const defaultSmartMappings = () => ({
+  enabled: true,
+  autoDetect: true,
+  allowManualOverride: true,
+  fields: {
+    phone: 'phone_number',
+    email: 'email',
+    fullName: 'full_name',
+    dob: 'date_of_birth',
+    joinDate: 'join_date',
+    eventDate: 'event_date',
+  },
+});
+
+const toLookupTokens = (value = '') =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .split('_')
+    .filter(Boolean);
+
+const detectSmartMappings = (elements = [], existingFields = {}) => {
+  const detected = { ...existingFields };
+  const allowedIds = new Set(
+    (Array.isArray(elements) ? elements : [])
+      .map((element) => String(element?.id || '').trim())
+      .filter(Boolean)
+  );
+
+  Object.entries(existingFields || {}).forEach(([key, value]) => {
+    if (!value || !allowedIds.has(String(value).trim())) {
+      delete detected[key];
+    }
+  });
+
+  (Array.isArray(elements) ? elements : []).forEach((element = {}) => {
+    const elementId = String(element?.id || '').trim();
+    if (!elementId) return;
+
+    const candidates = new Set([
+      elementId.toLowerCase(),
+      ...toLookupTokens(elementId),
+      String(element?.properties?.label || '').trim().toLowerCase(),
+      ...toLookupTokens(element?.properties?.label || ''),
+      ...(Array.isArray(element?.aliases)
+        ? element.aliases.flatMap((alias) => [
+            String(alias || '').trim().toLowerCase(),
+            ...toLookupTokens(alias),
+          ])
+        : []),
+      String(element?.type || '').trim().toLowerCase(),
+      String(element?.semantic?.valueType || '').trim().toLowerCase(),
+    ]);
+
+    Object.entries(SMART_MAPPING_TARGETS).forEach(([mappingKey, synonyms]) => {
+      if (detected[mappingKey]) return;
+      if (synonyms.some((synonym) => candidates.has(synonym))) {
+        detected[mappingKey] = elementId;
+      }
+    });
+  });
+
+  return detected;
+};
+
+const synchronizeCapabilitiesWithLegacyFields = ({
+  configuration = {},
+  userSettings = {},
+  permSettings = {},
+  workflows = [],
+  paymentConfig = {},
+  capabilities = {},
+}) => {
+  const base = defaultCapabilities();
+  const next = {
+    experience: {
+      security: {
+        ...base.experience.security,
+        ...(capabilities?.experience?.security || {}),
+      },
+      compliance: {
+        ...base.experience.compliance,
+        ...(capabilities?.experience?.compliance || {}),
+      },
+      workflow: {
+        ...base.experience.workflow,
+        ...(capabilities?.experience?.workflow || {}),
+      },
+    },
+    transaction: {
+      payment: {
+        ...base.transaction.payment,
+        ...(capabilities?.transaction?.payment || {}),
+      },
+      remittance: {
+        ...base.transaction.remittance,
+        ...(capabilities?.transaction?.remittance || {}),
+      },
+      invoice: {
+        ...base.transaction.invoice,
+        ...(capabilities?.transaction?.invoice || {}),
+      },
+    },
+  };
+
+  next.experience.security = {
+    ...next.experience.security,
+    enabled:
+      next.experience.security.enabled ||
+      configuration?.security === 'private' ||
+      configuration?.publicSecureMode === 'single_qr_passwordless',
+    mode: configuration?.security === 'private' ? 'private' : 'public',
+    authRequired:
+      next.experience.security.authRequired ||
+      configuration?.publicSecureMode === 'single_qr_passwordless',
+    allowedRoles: Array.isArray(userSettings?.access?.allowedRoles)
+      ? userSettings.access.allowedRoles
+      : next.experience.security.allowedRoles,
+    allowedUsers: Array.isArray(userSettings?.access?.allowedUsers)
+      ? userSettings.access.allowedUsers
+      : next.experience.security.allowedUsers,
+    restrictByLocation:
+      typeof userSettings?.access?.restrictByLocation === 'boolean'
+        ? userSettings.access.restrictByLocation
+        : next.experience.security.restrictByLocation,
+    allowedCountries: Array.isArray(userSettings?.access?.allowedCountries)
+      ? userSettings.access.allowedCountries
+      : next.experience.security.allowedCountries,
+  };
+
+  next.experience.compliance = {
+    ...next.experience.compliance,
+    enabled: Boolean(permSettings?.enabled),
+    trackingMode: permSettings?.trackingMode || next.experience.compliance.trackingMode,
+    frequency:
+      permSettings?.trackingMode && permSettings.trackingMode !== 'none'
+        ? permSettings.trackingMode
+        : next.experience.compliance.frequency,
+    requireNodeId:
+      typeof permSettings?.requireNodeId === 'boolean'
+        ? permSettings.requireNodeId
+        : next.experience.compliance.requireNodeId,
+    requireMonth:
+      typeof permSettings?.requireMonth === 'boolean'
+        ? permSettings.requireMonth
+        : next.experience.compliance.requireMonth,
+    trackCompliance:
+      typeof permSettings?.trackCompliance === 'boolean'
+        ? permSettings.trackCompliance
+        : next.experience.compliance.trackCompliance,
+    autoGenerateCalendar:
+      typeof permSettings?.autoGenerateCalendar === 'boolean'
+        ? permSettings.autoGenerateCalendar
+        : next.experience.compliance.autoGenerateCalendar,
+    autoLockMonthEnd:
+      typeof permSettings?.autoLockMonthEnd === 'boolean'
+        ? permSettings.autoLockMonthEnd
+        : next.experience.compliance.autoLockMonthEnd,
+    calendarRequired:
+      typeof permSettings?.calendarRequired === 'boolean'
+        ? permSettings.calendarRequired
+        : next.experience.compliance.calendarRequired,
+  };
+
+  next.experience.workflow = {
+    ...next.experience.workflow,
+    enabled: Array.isArray(workflows) && workflows.length > 0,
+    approvalMode:
+      Array.isArray(workflows) && workflows.length > 0
+        ? workflows[0]?.type || 'custom'
+        : next.experience.workflow.approvalMode,
+    triggerOn:
+      Array.isArray(workflows) && workflows.length > 0
+        ? workflows[0]?.triggerOn || 'submission'
+        : next.experience.workflow.triggerOn,
+    steps:
+      Array.isArray(workflows) && workflows.length > 0
+        ? workflows.flatMap((workflow) => workflow?.steps || [])
+        : next.experience.workflow.steps,
+  };
+
+  next.transaction.payment = {
+    ...next.transaction.payment,
+    enabled: Boolean(paymentConfig?.enabled),
+    mode: paymentConfig?.enabled ? 'payment' : next.transaction.payment.mode,
+    enabledChannels: Array.isArray(paymentConfig?.enabledChannels)
+      ? paymentConfig.enabledChannels
+      : next.transaction.payment.enabledChannels,
+    defaultChannel:
+      paymentConfig?.defaultChannel !== undefined
+        ? paymentConfig.defaultChannel
+        : next.transaction.payment.defaultChannel,
+    channelConfigs:
+      paymentConfig?.channelConfigs || next.transaction.payment.channelConfigs,
+  };
+
+  return next;
+};
+
+const applyLegacyFieldsFromCapabilities = (payload = {}, existing = {}) => {
+  const next = { ...payload };
+  const capabilities = payload?.capabilities;
+  if (!capabilities || typeof capabilities !== 'object') {
+    return next;
+  }
+
+  const existingConfiguration =
+    existing?.configuration?.toObject
+      ? existing.configuration.toObject()
+      : existing?.configuration || {};
+  const existingUserSettings =
+    existing?.userSettings?.toObject
+      ? existing.userSettings.toObject()
+      : existing?.userSettings || {};
+  const existingPermSettings =
+    existing?.permSettings?.toObject
+      ? existing.permSettings.toObject()
+      : existing?.permSettings || {};
+  const existingPaymentConfig =
+    existing?.paymentConfig?.toObject
+      ? existing.paymentConfig.toObject()
+      : existing?.paymentConfig || {};
+
+  const securityCapability = capabilities?.experience?.security || {};
+  const complianceCapability = capabilities?.experience?.compliance || {};
+  const workflowCapability = capabilities?.experience?.workflow || {};
+  const paymentCapability = capabilities?.transaction?.payment || {};
+  const remittanceCapability = capabilities?.transaction?.remittance || {};
+  const invoiceCapability = capabilities?.transaction?.invoice || {};
+
+  next.configuration = {
+    ...existingConfiguration,
+    ...(next.configuration || {}),
+  };
+  next.userSettings = {
+    ...existingUserSettings,
+    ...(next.userSettings || {}),
+    access: {
+      ...(existingUserSettings.access || {}),
+      ...((next.userSettings && next.userSettings.access) || {}),
+    },
+  };
+  next.permSettings = {
+    ...existingPermSettings,
+    ...(next.permSettings || {}),
+  };
+  next.paymentConfig = {
+    ...existingPaymentConfig,
+    ...(next.paymentConfig || {}),
+  };
+
+  if (Object.keys(securityCapability).length > 0) {
+    if (securityCapability.mode) {
+      next.configuration.security = securityCapability.mode;
+    }
+    if (securityCapability.authRequired !== undefined) {
+      next.configuration.publicSecureMode = securityCapability.authRequired
+        ? 'single_qr_passwordless'
+        : 'off';
+    }
+    next.userSettings.access.allowedRoles = Array.isArray(securityCapability.allowedRoles)
+      ? securityCapability.allowedRoles
+      : next.userSettings.access.allowedRoles || [];
+    next.userSettings.access.allowedUsers = Array.isArray(securityCapability.allowedUsers)
+      ? securityCapability.allowedUsers
+      : next.userSettings.access.allowedUsers || [];
+    if (typeof securityCapability.restrictByLocation === 'boolean') {
+      next.userSettings.access.restrictByLocation =
+        securityCapability.restrictByLocation;
+    }
+    next.userSettings.access.allowedCountries = Array.isArray(
+      securityCapability.allowedCountries
+    )
+      ? securityCapability.allowedCountries
+      : next.userSettings.access.allowedCountries || [];
+  }
+
+  if (Object.keys(complianceCapability).length > 0) {
+    next.permSettings.enabled = Boolean(complianceCapability.enabled);
+    if (complianceCapability.trackingMode) {
+      next.permSettings.trackingMode = complianceCapability.trackingMode;
+    }
+    [
+      'requireNodeId',
+      'requireMonth',
+      'trackCompliance',
+      'autoGenerateCalendar',
+      'autoLockMonthEnd',
+      'calendarRequired',
+    ].forEach((key) => {
+      if (typeof complianceCapability[key] === 'boolean') {
+        next.permSettings[key] = complianceCapability[key];
+      }
+    });
+  }
+
+  if (Object.keys(workflowCapability).length > 0 && Array.isArray(next.workflows)) {
+    next.workflows = next.workflows.map((workflow, index) =>
+      index === 0
+        ? {
+            ...workflow,
+            triggerOn: workflowCapability.triggerOn || workflow.triggerOn,
+            type:
+              workflowCapability.approvalMode && workflowCapability.approvalMode !== 'none'
+                ? workflowCapability.approvalMode
+                : workflow.type,
+            steps: Array.isArray(workflowCapability.steps) && workflowCapability.steps.length > 0
+              ? workflowCapability.steps
+              : workflow.steps,
+          }
+        : workflow
+    );
+  }
+
+  if (Object.keys(paymentCapability).length > 0) {
+    next.paymentConfig.enabled = Boolean(paymentCapability.enabled);
+    next.paymentConfig.enabledChannels = Array.isArray(paymentCapability.enabledChannels)
+      ? paymentCapability.enabledChannels
+      : next.paymentConfig.enabledChannels || [];
+    if (paymentCapability.defaultChannel !== undefined) {
+      next.paymentConfig.defaultChannel = paymentCapability.defaultChannel;
+    }
+    if (paymentCapability.channelConfigs) {
+      next.paymentConfig.channelConfigs = paymentCapability.channelConfigs;
+    }
+  }
+
+  if (Object.keys(remittanceCapability).length > 0) {
+    next.paymentConfig.remittance = {
+      ...(next.paymentConfig.remittance || {}),
+      ...remittanceCapability,
+    };
+  }
+
+  if (Object.keys(invoiceCapability).length > 0) {
+    next.paymentConfig.invoice = {
+      ...(next.paymentConfig.invoice || {}),
+      ...invoiceCapability,
+    };
+  }
+
+  return next;
+};
+
+const applyProjectFormSchemaDefaults = (projectFormLike = {}, options = {}) => {
+  const source =
+    typeof projectFormLike?.toObject === 'function'
+      ? projectFormLike.toObject()
+      : projectFormLike || {};
+
+  const elements = Array.isArray(source.elements) ? source.elements : [];
+  const smartMappings = {
+    ...defaultSmartMappings(),
+    ...(source.smartMappings || {}),
+    fields: detectSmartMappings(
+      elements,
+      {
+        ...defaultSmartMappings().fields,
+        ...((source.smartMappings && source.smartMappings.fields) || {}),
+      }
+    ),
+  };
+
+  const capabilities = synchronizeCapabilitiesWithLegacyFields({
+    configuration: source.configuration || {},
+    userSettings: source.userSettings || {},
+    permSettings: source.permSettings || {},
+    workflows: source.workflows || [],
+    paymentConfig: source.paymentConfig || {},
+    capabilities: source.capabilities || {},
+  });
+
+  const metadata = {
+    ...(source.metadata || {}),
+    formCategory: source?.metadata?.formCategory || 'standard',
+    systemTarget: source?.metadata?.systemTarget || null,
+    systemVersion: source?.metadata?.systemVersion || null,
+    schemaVersion: source?.metadata?.schemaVersion || '1.1.0',
+    enabledCapabilities: Array.isArray(source?.metadata?.enabledCapabilities)
+      ? source.metadata.enabledCapabilities
+      : [],
+  };
+
+  const configuration = {
+    ...(source.configuration || {}),
+    publicSecureMode:
+      source?.configuration?.publicSecureMode === 'single_qr_passwordless'
+        ? 'single_qr_passwordless'
+        : 'off',
+  };
+
+  const normalized = {
+    ...source,
+    workspaceId:
+      source?.workspaceId || projectFormWorkspaceService.DEFAULT_WORKSPACE_ID,
+    configuration,
+    capabilities,
+    smartMappings,
+    metadata,
+  };
+
+  if (options.asDocument && projectFormLike && typeof projectFormLike.set === 'function') {
+    projectFormLike.set('workspaceId', normalized.workspaceId);
+    projectFormLike.set('configuration', configuration);
+    projectFormLike.set('capabilities', capabilities);
+    projectFormLike.set('smartMappings', smartMappings);
+    projectFormLike.set('metadata', metadata);
+    return projectFormLike;
+  }
+
+  return normalized;
+};
+
 const inferDomainFromTags = (tags = []) => {
   const set = new Set(tags);
   if (
@@ -1079,8 +1562,14 @@ const getProjectStorageFolderByProjectId = async (projectId) => {
  * @param {ObjectId} createdBy - The user creating the project
  * @returns {Promise<ProjectForm>}
  */
-const createProjectForm = async (projectFormBody, tenantId, createdBy) => {
+const createProjectForm = async (
+  projectFormBody,
+  tenantId,
+  createdBy,
+  options = {}
+) => {
   let normalizedBody = { ...projectFormBody };
+  normalizedBody = applyLegacyFieldsFromCapabilities(normalizedBody, null);
   normalizedBody = normalizeSystemFormContract({
     body: normalizedBody,
     existing: null,
@@ -1093,6 +1582,15 @@ const createProjectForm = async (projectFormBody, tenantId, createdBy) => {
     configuration: normalizedBody.configuration || {},
     elements: normalizedBody.elements || [],
   });
+  normalizedBody = applyProjectFormSchemaDefaults(normalizedBody);
+
+  const workspaceId = await projectFormWorkspaceService.resolveWorkspaceForFormWrite({
+    tenantId,
+    actorUserId: options.actorUserId || createdBy,
+    workspaceId: normalizedBody.workspaceId || options.workspaceId,
+  });
+  normalizedBody.workspaceId = workspaceId;
+
   const projectForm = await ProjectForm.createProjectForm(
     normalizedBody,
     tenantId,
@@ -1126,7 +1624,58 @@ const queryProjectForms = async (filter, options) => {
     populate: options.populate || 'createdBy',
   });
 
+  if (Array.isArray(projectForms?.results)) {
+    projectForms.results = projectForms.results.map((projectForm) =>
+      applyProjectFormSchemaDefaults(projectForm)
+    );
+  }
+
   return projectForms;
+};
+
+/**
+ * Get the canonical system form for a tenant and target.
+ * This bypasses generic list pagination so clients always resolve
+ * the tenant's exact user_profile or node_profile form.
+ *
+ * @param {Object} params
+ * @param {string} params.tenantId
+ * @param {'user_profile'|'node_profile'} params.target
+ * @param {boolean} [params.syncTemplate=true]
+ * @returns {Promise<ProjectForm>}
+ */
+const getSystemProjectFormForTenant = async ({
+  tenantId,
+  target,
+  syncTemplate = true,
+}) => {
+  if (!tenantId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId is required');
+  }
+
+  if (!VALID_SYSTEM_TARGETS.has(target)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid system form target');
+  }
+
+  let projectForm = await ProjectForm.findOne({
+    tenantId,
+    deletedAt: null,
+    'metadata.formCategory': SYSTEM_FORM_CATEGORY,
+    'metadata.systemTarget': target,
+  }).populate('createdBy');
+
+  if (!projectForm) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'System form not found');
+  }
+
+  if (syncTemplate) {
+    projectForm = await syncSystemFormTemplateIfNeeded(projectForm);
+    if (projectForm?.populate) {
+      await projectForm.populate('createdBy');
+    }
+  }
+
+  return projectForm;
 };
 
 /**
@@ -1139,11 +1688,11 @@ const getProjectFormById = async (id, options = {}) => {
   const populateFields = options.populate || 'createdBy';
   const projectForm = await ProjectForm.findById(id).populate(populateFields);
 
-  if (!projectForm || projectForm.deletedAt) {
+  if (!projectForm || (!options.includeDeleted && projectForm.deletedAt)) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
   }
 
-  return projectForm;
+  return applyProjectFormSchemaDefaults(projectForm, { asDocument: true });
 };
 
 /**
@@ -1163,7 +1712,7 @@ const getProjectFormByProjectId = async (projectId, options = {}) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
   }
 
-  return projectForm;
+  return applyProjectFormSchemaDefaults(projectForm, { asDocument: true });
 };
 
 /**
@@ -1183,7 +1732,7 @@ const getProjectFormByPublicRef = async (publicRef, options = {}) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
   }
 
-  return projectForm;
+  return applyProjectFormSchemaDefaults(projectForm, { asDocument: true });
 };
 
 /**
@@ -1307,6 +1856,101 @@ const getProjectFormsByUser = async (userId, filter = {}, options = {}) => {
 };
 
 /**
+ * Duplicate a project form by projectId
+ * @param {Object} params
+ * @param {string} params.projectId
+ * @param {string} params.tenantId
+ * @param {ObjectId|string} params.actorUserId
+ * @param {string} [params.name]
+ * @param {string} [params.workspaceId]
+ * @returns {Promise<ProjectForm>}
+ */
+const duplicateProjectFormByProjectId = async ({
+  projectId,
+  tenantId,
+  actorUserId,
+  name = '',
+  workspaceId = '',
+}) => {
+  const source = await ProjectForm.findOne({
+    projectId,
+    tenantId,
+    deletedAt: null,
+  });
+
+  if (!source) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
+  }
+
+  const sourceWorkspaceId = String(
+    source.workspaceId || projectFormWorkspaceService.DEFAULT_WORKSPACE_ID
+  );
+
+  await projectFormWorkspaceService.assertWorkspaceAccess({
+    tenantId,
+    workspaceId: sourceWorkspaceId,
+    userId: actorUserId,
+    allowedRoles: [
+      projectFormWorkspaceService.WORKSPACE_ROLE_OWNER,
+      projectFormWorkspaceService.WORKSPACE_ROLE_EDITOR,
+    ],
+  });
+
+  const targetWorkspaceId =
+    (workspaceId && String(workspaceId).trim()) || sourceWorkspaceId;
+
+  await projectFormWorkspaceService.assertWorkspaceAccess({
+    tenantId,
+    workspaceId: targetWorkspaceId,
+    userId: actorUserId,
+    allowedRoles: [
+      projectFormWorkspaceService.WORKSPACE_ROLE_OWNER,
+      projectFormWorkspaceService.WORKSPACE_ROLE_EDITOR,
+    ],
+  });
+
+  const sourceObj = source.toObject();
+  const baseProjectName =
+    sourceObj?.configuration?.projectName || sourceObj?.projectId || 'Module';
+  const duplicateName = String(name || '').trim() || `${baseProjectName} Copy`;
+
+  const duplicatePayload = {
+    configuration: {
+      ...(sourceObj.configuration || {}),
+      projectName: duplicateName,
+    },
+    elements: Array.isArray(sourceObj.elements) ? sourceObj.elements : [],
+    style: sourceObj.style || 'default',
+    wizardMode: Boolean(sourceObj.wizardMode),
+    columnSpans: sourceObj.columnSpans || {},
+    userSettings: sourceObj.userSettings || {},
+    permSettings: sourceObj.permSettings || {},
+    paymentConfig: sourceObj.paymentConfig || {},
+    workflows: Array.isArray(sourceObj.workflows) ? sourceObj.workflows : [],
+    metadata: {
+      ...(sourceObj.metadata || {}),
+      deploymentStatus: 'draft',
+      version: '1.0.0',
+      lastModified: new Date(),
+    },
+    status: 'inactive',
+    workspaceId: targetWorkspaceId,
+  };
+
+  const created = await createProjectForm(
+    duplicatePayload,
+    tenantId,
+    actorUserId,
+    {
+      actorUserId,
+      workspaceId: targetWorkspaceId,
+    }
+  );
+
+  return created;
+};
+
+/**
  * Update project form by id
  * @param {ObjectId} projectFormId - The project form ID
  * @param {Object} updateBody - The update data
@@ -1323,6 +1967,27 @@ const updateProjectFormById = async (
     normalizedUpdateBody.workflows = normalizeWorkflowTriggerOn(updateBody.workflows);
   }
   const projectForm = await getProjectFormById(projectFormId);
+  normalizedUpdateBody = applyLegacyFieldsFromCapabilities(
+    normalizedUpdateBody,
+    projectForm
+  );
+  if (
+    Object.prototype.hasOwnProperty.call(normalizedUpdateBody, 'workspaceId')
+  ) {
+    if (!options.actorUserId) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'actorUserId is required to move a module between workspaces'
+      );
+    }
+    const resolvedWorkspaceId =
+      await projectFormWorkspaceService.resolveWorkspaceForFormWrite({
+        tenantId: projectForm.tenantId,
+        actorUserId: options.actorUserId,
+        workspaceId: normalizedUpdateBody.workspaceId,
+      });
+    normalizedUpdateBody.workspaceId = resolvedWorkspaceId;
+  }
   normalizedUpdateBody = normalizeSystemFormContract({
     body: normalizedUpdateBody,
     existing: projectForm,
@@ -1353,6 +2018,37 @@ const updateProjectFormById = async (
     existingProfile: projectForm?.configuration?.analysisProfile || null,
   });
   normalizedUpdateBody.configuration = mergedConfiguration;
+  normalizedUpdateBody = applyProjectFormSchemaDefaults({
+    ...(projectForm?.toObject ? projectForm.toObject() : projectForm),
+    ...normalizedUpdateBody,
+    configuration: mergedConfiguration,
+    elements: mergedElements,
+    workflows: normalizedUpdateBody.workflows || projectForm.workflows || [],
+    userSettings: {
+      ...(projectForm.userSettings?.toObject
+        ? projectForm.userSettings.toObject()
+        : projectForm.userSettings || {}),
+      ...(normalizedUpdateBody.userSettings || {}),
+    },
+    permSettings: {
+      ...(projectForm.permSettings?.toObject
+        ? projectForm.permSettings.toObject()
+        : projectForm.permSettings || {}),
+      ...(normalizedUpdateBody.permSettings || {}),
+    },
+    paymentConfig: {
+      ...(projectForm.paymentConfig?.toObject
+        ? projectForm.paymentConfig.toObject()
+        : projectForm.paymentConfig || {}),
+      ...(normalizedUpdateBody.paymentConfig || {}),
+    },
+    metadata: {
+      ...(projectForm.metadata?.toObject
+        ? projectForm.metadata.toObject()
+        : projectForm.metadata || {}),
+      ...(normalizedUpdateBody.metadata || {}),
+    },
+  });
 
   Object.assign(projectForm, normalizedUpdateBody);
   await projectForm.save();
@@ -1814,6 +2510,16 @@ const publishProjectForm = async (projectFormId, options = {}) => {
 };
 
 /**
+ * Unpublish project form
+ * @param {ObjectId} projectFormId - The project form ID
+ * @returns {Promise<ProjectForm>}
+ */
+const unpublishProjectForm = async (projectFormId) => {
+  const projectForm = await getProjectFormById(projectFormId);
+  return projectForm.unpublish();
+};
+
+/**
  * Archive project form
  * @param {ObjectId} projectFormId - The project form ID
  * @returns {Promise<ProjectForm>}
@@ -2055,6 +2761,7 @@ const searchProjectForms = async (query, filter = {}, options = {}) => {
 module.exports = {
   createProjectForm,
   queryProjectForms,
+  getSystemProjectFormForTenant,
   getProjectFormById,
   getProjectFormByProjectId,
   getProjectFormByPublicRef,
@@ -2063,6 +2770,7 @@ module.exports = {
   buildPublicQrContext,
   getProjectFormsByTenant,
   getProjectFormsByUser,
+  duplicateProjectFormByProjectId,
   updateProjectFormById,
   updateProjectFormByProjectId,
   deleteProjectFormById,
@@ -2071,6 +2779,7 @@ module.exports = {
   deleteProjectForm,
   getDeletedProjectForms,
   publishProjectForm,
+  unpublishProjectForm,
   archiveProjectForm,
   incrementProjectViews,
   incrementProjectSubmissions,

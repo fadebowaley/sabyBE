@@ -41,6 +41,13 @@ const catchAsync = require('../utils/catchAsync');
 const logger = require('../config/logger');
 const auth = require('./auth');
 
+const debugLog = (...args) => {
+  if (process.env.API_KEY_AUTH_DEBUG === 'true') {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+};
+
 /**
  * Extract API key from request headers
  * Checks x-api-key header first, then Authorization header for Bearer sk_... format
@@ -90,8 +97,8 @@ const extractApiKey = (req) => {
   }
 
   // Log extraction result (mask sensitive data)
-  console.log('[extractApiKey] 🔍 Extracting API key from request headers...');
-  console.log('[extractApiKey] Checking headers:', {
+  debugLog('[extractApiKey] 🔍 Extracting API key from request headers...');
+  debugLog('[extractApiKey] Checking headers:', {
     'x-api-key': req.header('x-api-key') ? 'present' : 'missing',
     'X-API-Key': req.header('X-API-Key') ? 'present' : 'missing',
     Authorization: req.header('Authorization') ? 'present' : 'missing',
@@ -99,10 +106,10 @@ const extractApiKey = (req) => {
 
   if (apiKey) {
     const masked = apiKey.length > 20 ? `${apiKey.substring(0, 20)}...` : '***';
-    console.log('[extractApiKey] ✅ API key extracted:', masked);
+    debugLog('[extractApiKey] ✅ API key extracted:', masked);
     logger.info('Extracted API key:', masked);
   } else {
-    console.log('[extractApiKey] ❌ No API key found in request headers');
+    debugLog('[extractApiKey] ❌ No API key found in request headers');
     logger.info('Extracted API key: (none)');
   }
 
@@ -153,8 +160,8 @@ const apiKeyAuth = () =>
       throw new ApiError(httpStatus.UNAUTHORIZED, 'API key is required');
     }
 
-    console.log('[apiKeyAuth] 🔍 Required API key authentication starting...');
-    console.log('[apiKeyAuth] Request details:', {
+    debugLog('[apiKeyAuth] 🔍 Required API key authentication starting...');
+    debugLog('[apiKeyAuth] Request details:', {
       endpoint: req.originalUrl,
       method: req.method,
       ip: req.ip,
@@ -163,9 +170,9 @@ const apiKeyAuth = () =>
 
     try {
       // Verify the API key (includes: hash validation, active check, expired check, approval status, usage limits)
-      console.log('[apiKeyAuth] 📞 Calling apiKeyService.verifyApiKey()...');
+      debugLog('[apiKeyAuth] 📞 Calling apiKeyService.verifyApiKey()...');
       const apiKeyDoc = await apiKeyService.verifyApiKey(apiKey);
-      console.log('[apiKeyAuth] ✅ API key verification successful');
+      debugLog('[apiKeyAuth] ✅ API key verification successful');
 
       // Add API key info to request for downstream middleware/controllers
       // Structure matches requireAccess.js expectations
@@ -184,7 +191,7 @@ const apiKeyAuth = () =>
       req.tenantId = apiKeyDoc.tenant._id;
       req.tenant = apiKeyDoc.tenant;
 
-      console.log(
+      debugLog(
         '[apiKeyAuth] ✅✅✅ Authentication successful. Setting req.apiKey:',
         {
           id: req.apiKey.id,
@@ -196,7 +203,7 @@ const apiKeyAuth = () =>
 
       next();
     } catch (error) {
-      console.log('[apiKeyAuth] ❌ API key verification failed:', {
+      debugLog('[apiKeyAuth] ❌ API key verification failed:', {
         error: error.message,
         statusCode: error.statusCode,
         endpoint: req.originalUrl,
@@ -259,10 +266,10 @@ apiKeyAuth.optional = () =>
     }
 
     // If API key is present, validate it
-    console.log(
+    debugLog(
       '[apiKeyAuth.optional] 🔍 API key detected, starting verification...'
     );
-    console.log('[apiKeyAuth.optional] Request details:', {
+    debugLog('[apiKeyAuth.optional] Request details:', {
       endpoint: req.originalUrl,
       method: req.method,
       ip: req.ip,
@@ -271,11 +278,11 @@ apiKeyAuth.optional = () =>
 
     try {
       // Verify the API key (includes all validation)
-      console.log(
+      debugLog(
         '[apiKeyAuth.optional] 📞 Calling apiKeyService.verifyApiKey()...'
       );
       const apiKeyDoc = await apiKeyService.verifyApiKey(apiKey);
-      console.log('[apiKeyAuth.optional] ✅ API key verification successful');
+      debugLog('[apiKeyAuth.optional] ✅ API key verification successful');
 
       // Add API key info to request
       req.apiKey = {
@@ -293,7 +300,7 @@ apiKeyAuth.optional = () =>
       req.tenantId = apiKeyDoc.tenant._id;
       req.tenant = apiKeyDoc.tenant;
 
-      console.log(
+      debugLog(
         '[apiKeyAuth.optional] ✅✅✅ Authentication successful. Setting req.apiKey:',
         {
           id: req.apiKey.id,
@@ -305,7 +312,7 @@ apiKeyAuth.optional = () =>
 
       next();
     } catch (error) {
-      console.log('[apiKeyAuth.optional] ❌ API key verification failed:', {
+      debugLog('[apiKeyAuth.optional] ❌ API key verification failed:', {
         error: error.message,
         statusCode: error.statusCode,
         endpoint: req.originalUrl,
@@ -323,7 +330,7 @@ apiKeyAuth.optional = () =>
             error.message.includes('not approved') ||
             error.message.includes('not ready')));
 
-      console.log('[apiKeyAuth.optional] Error classification:', {
+      debugLog('[apiKeyAuth.optional] Error classification:', {
         isCriticalError,
         statusCode: error.statusCode,
         message: error.message,
@@ -331,14 +338,14 @@ apiKeyAuth.optional = () =>
 
       if (isCriticalError) {
         // For critical errors, throw the error (don't proceed)
-        console.log(
+        debugLog(
           '[apiKeyAuth.optional] 🚫 Critical error - blocking request'
         );
         throw error;
       }
 
       // For non-critical errors (e.g., invalid key format), log and proceed without req.apiKey
-      console.log(
+      debugLog(
         '[apiKeyAuth.optional] ⚠️ Non-critical error - proceeding without authentication'
       );
       logger.warn('Optional API key validation failed (non-critical)', {

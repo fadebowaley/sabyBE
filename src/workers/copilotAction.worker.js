@@ -2,6 +2,7 @@ const { postgresPool } = require('../config/postgres');
 const config = require('../config/config');
 const logger = require('../config/logger');
 const { executeActionEvent } = require('../services/copilotCommandHandler.service');
+const workflowEngineService = require('../services/workflowEngine.service');
 
 const POLL_MS = Number(config.copilot?.workerIntervalMs || 3000);
 const BATCH_SIZE = Number(config.copilot?.workerBatchSize || 20);
@@ -25,6 +26,7 @@ const deriveStateFromAction = (actionType) => {
 
 const processOutboxRecord = async (record) => {
   const client = await postgresPool.connect();
+  let event = null;
   try {
     await client.query('BEGIN');
 
@@ -40,7 +42,7 @@ const processOutboxRecord = async (record) => {
       throw new Error(`Action event not found for outbox record ${record.id}`);
     }
 
-    const event = eventResult.rows[0];
+    event = eventResult.rows[0];
     const projectedState = deriveStateFromAction(event.action_type);
     const executionResult = await executeActionEvent(event);
     const resolvedEntityId = executionResult?.entityId || event.entity_id || null;
@@ -59,6 +61,11 @@ const processOutboxRecord = async (record) => {
        WHERE id = $1`,
       [event.id]
     );
+    await workflowEngineService.markActionEventExecuting({
+      tenantId: event.tenant_id,
+      actionEventId: event.id,
+      client,
+    });
 
     if (event.entity_type && resolvedEntityId) {
       await client.query(
@@ -156,6 +163,13 @@ const processOutboxRecord = async (record) => {
       [record.id]
     );
 
+    await workflowEngineService.completeActionEvent({
+      tenantId: event.tenant_id,
+      actionEventId: event.id,
+      outputJson: executionResult || {},
+      client,
+    });
+
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
@@ -220,6 +234,20 @@ const processOutboxRecord = async (record) => {
         },
       ]
     );
+
+    if (event?.tenant_id) {
+      await workflowEngineService.failActionEvent({
+        tenantId: event.tenant_id,
+        actionEventId: record.event_id,
+        outputJson: {
+          error: error.message,
+          statusCode: Number(error?.statusCode || 500),
+          retryCount: retries,
+          deadLettered: shouldDeadLetter,
+        },
+        errorMessage: error.message,
+      });
+    }
 
     logger.error(
       `[CopilotWorker] Failed to process outbox ${record.id}: ${error.message}`

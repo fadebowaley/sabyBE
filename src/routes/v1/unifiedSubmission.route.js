@@ -4,8 +4,12 @@ const validate = require('../../middlewares/validate');
 const submissionValidation = require('../../validations/submission.validation');
 const unifiedSubmissionController = require('../../controllers/unifiedSubmission.controller');
 const workflowController = require('../../controllers/workflow.controller');
+const {
+  publicFormSubmitLimiter,
+} = require('../../middlewares/rateLimiter');
 
 const router = express.Router();
+
 
 /**
  * @swagger
@@ -105,6 +109,13 @@ router.get(
   unifiedSubmissionController.getAllowedDatesHandler
 );
 
+
+router.post(
+  '/public/ref/:reference',
+  publicFormSubmitLimiter,
+  validate(submissionValidation.submitPublicDataByReference),
+  unifiedSubmissionController.submitPublicDataByReference
+);
 // Main submission endpoint
 router
   .route('/')
@@ -155,5 +166,7 @@ router.post(
   auth(),
   workflowController.actionWorkflowStep
 );
+
+
 
 module.exports = router;

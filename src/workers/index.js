@@ -31,6 +31,11 @@ const {
   createOnboardingMaintenanceWorker,
 } = require('./onboardingMaintenance.worker');
 const { initializeBaselineWorkers, shutdownBaselineWorkers } = require('./baseline.worker');
+const { createComplianceAgentWorker }    = require('./complianceAgent.worker');
+const { createDataIntelligenceWorker }   = require('./dataIntelligence.worker');
+const { createDocIngestionWorker }       = require('./docIngestion.worker');
+const { createAgentEvalWorker }            = require('./agentEval.worker');
+const { createPromptImprovementWorker }    = require('./promptImprovement.worker');
 
 // Email ingestor is optional (requires imap-simple)
 let createEmailIngestorWorker = null;
@@ -52,6 +57,11 @@ let onboardingImportWorker = null;
 let onboardingMaintenanceWorker = null;
 let emailIngestorWorker = null;
 let baselineWorkersInitialized = false;
+let complianceAgentWorker    = null;
+let dataIntelligenceWorker   = null;
+let docIngestionWorker       = null;
+let agentEvalWorker            = null;
+let promptImprovementWorker    = null;
 
 /**
  * Initialize all workers
@@ -106,6 +116,48 @@ const initializeWorkers = async () => {
       logger.info('⊘ Email ingestor worker disabled (EMAIL_ENABLED=false)');
     }
 
+    // Start compliance agent worker (optional — disabled when COMPLIANCE_AGENT_ENABLED=false)
+    if (config.compliance?.agentEnabled !== false) {
+      complianceAgentWorker = createComplianceAgentWorker();
+      logger.info('✅ Compliance agent worker started');
+    } else {
+      logger.info('⊘ Compliance agent worker disabled (COMPLIANCE_AGENT_ENABLED=false)');
+    }
+
+    // Start data intelligence worker (optional — disabled when DATA_INTELLIGENCE_ENABLED=false)
+    if (config.dataIntelligence?.enabled !== false) {
+      dataIntelligenceWorker = createDataIntelligenceWorker();
+      logger.info('✅ Data intelligence worker started');
+    } else {
+      logger.info('⊘ Data intelligence worker disabled (DATA_INTELLIGENCE_ENABLED=false)');
+    }
+
+    // Start document ingestion worker (optional — disabled when RAG_ENABLED=false)
+    if (config.rag?.enabled !== false) {
+      docIngestionWorker = createDocIngestionWorker();
+      logger.info('✅ Document ingestion worker started');
+    } else {
+      logger.info('⊘ Document ingestion worker disabled (RAG_ENABLED=false)');
+    }
+
+    // Start agent eval worker (optional — disabled when AGENT_EVAL_ENABLED=false)
+    if (config.agentEval?.enabled !== false) {
+      agentEvalWorker = createAgentEvalWorker();
+      logger.info('✅ Agent eval worker started');
+    } else {
+      logger.info('⊘ Agent eval worker disabled (AGENT_EVAL_ENABLED=false)');
+    }
+
+    // Start prompt improvement worker — reads eval/feedback scores weekly and
+    // auto-promotes draft prompts when quality drops below threshold.
+    // Disabled when PROMPT_IMPROVEMENT_ENABLED=false.
+    if (config.promptImprovement?.enabled !== false) {
+      promptImprovementWorker = createPromptImprovementWorker();
+      logger.info('✅ Prompt improvement worker started');
+    } else {
+      logger.info('⊘ Prompt improvement worker disabled (PROMPT_IMPROVEMENT_ENABLED=false)');
+    }
+
     // Initialize baseline intelligence workers
     try {
       await initializeBaselineWorkers();
@@ -128,6 +180,11 @@ const initializeWorkers = async () => {
       onboardingMaintenanceWorker ? 'onboarding-maintenance' : null,
       emailIngestorWorker ? 'email-ingestor' : null,
       baselineWorkersInitialized ? 'baseline' : null,
+      complianceAgentWorker  ? 'compliance-agent'    : null,
+      dataIntelligenceWorker ? 'data-intelligence'   : null,
+      docIngestionWorker     ? 'doc-ingestion'       : null,
+      agentEvalWorker          ? 'agent-eval'           : null,
+      promptImprovementWorker  ? 'prompt-improvement'   : null,
     ].filter(Boolean);
     logger.info(`[Workers] Active at boot: ${activeWorkers.join(', ') || 'none'}`);
 
@@ -223,6 +280,46 @@ const shutdownWorkers = async () => {
       emailIngestorWorker
         .close()
         .then(() => logger.info('✅ Email ingestor worker stopped'))
+    );
+  }
+
+  if (complianceAgentWorker) {
+    shutdownPromises.push(
+      Promise.resolve(complianceAgentWorker.close()).then(() =>
+        logger.info('✅ Compliance agent worker stopped')
+      )
+    );
+  }
+
+  if (dataIntelligenceWorker) {
+    shutdownPromises.push(
+      Promise.resolve(dataIntelligenceWorker.close()).then(() =>
+        logger.info('✅ Data intelligence worker stopped')
+      )
+    );
+  }
+
+  if (docIngestionWorker) {
+    shutdownPromises.push(
+      Promise.resolve(docIngestionWorker.close()).then(() =>
+        logger.info('✅ Document ingestion worker stopped')
+      )
+    );
+  }
+
+  if (agentEvalWorker) {
+    shutdownPromises.push(
+      Promise.resolve(agentEvalWorker.close()).then(() =>
+        logger.info('✅ Agent eval worker stopped')
+      )
+    );
+  }
+
+  if (promptImprovementWorker) {
+    shutdownPromises.push(
+      Promise.resolve(promptImprovementWorker.close()).then(() =>
+        logger.info('✅ Prompt improvement worker stopped')
+      )
     );
   }
 

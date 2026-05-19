@@ -297,6 +297,141 @@ const UserSettingsSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const CapabilityExperienceSecuritySchema = new mongoose.Schema(
+  {
+    enabled: { type: Boolean, default: false },
+    mode: { type: String, enum: ['public', 'private'], default: 'public' },
+    authRequired: { type: Boolean, default: false },
+    allowedRoles: [{ type: String }],
+    allowedUsers: [{ type: String }],
+    restrictByLocation: { type: Boolean, default: false },
+    allowedCountries: [{ type: String }],
+    requireNodeAccess: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+const CapabilityExperienceComplianceSchema = new mongoose.Schema(
+  {
+    enabled: { type: Boolean, default: false },
+    trackingMode: {
+      type: String,
+      enum: ['none', 'daily', 'weekly'],
+      default: 'none',
+    },
+    frequency: {
+      type: String,
+      enum: ['none', 'daily', 'weekly', 'biweekly', 'monthly'],
+      default: 'none',
+    },
+    requireNodeId: { type: Boolean, default: true },
+    requireMonth: { type: Boolean, default: true },
+    trackCompliance: { type: Boolean, default: false },
+    autoGenerateCalendar: { type: Boolean, default: false },
+    autoLockMonthEnd: { type: Boolean, default: false },
+    calendarRequired: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+const CapabilityExperienceWorkflowSchema = new mongoose.Schema(
+  {
+    enabled: { type: Boolean, default: false },
+    approvalMode: { type: String, default: 'none' },
+    triggerOn: { type: String, default: 'submission' },
+    steps: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  },
+  { _id: false }
+);
+
+const CapabilityTransactionPaymentSchema = new mongoose.Schema(
+  {
+    enabled: { type: Boolean, default: false },
+    mode: { type: String, default: 'none' },
+    enabledChannels: [{ type: String }],
+    defaultChannel: { type: String, default: null },
+    settlementType: { type: String, default: 'none' },
+    receivingAccount: { type: mongoose.Schema.Types.Mixed, default: null },
+    channelConfigs: { type: mongoose.Schema.Types.Mixed, default: {} },
+  },
+  { _id: false }
+);
+
+const CapabilityTransactionRemittanceSchema = new mongoose.Schema(
+  {
+    enabled: { type: Boolean, default: false },
+    accountSource: { type: String, default: 'none' },
+    requireNodeAccount: { type: Boolean, default: false },
+    nodeAccountField: { type: String, default: null },
+    settlementRule: { type: mongoose.Schema.Types.Mixed, default: null },
+  },
+  { _id: false }
+);
+
+const CapabilityTransactionInvoiceSchema = new mongoose.Schema(
+  {
+    enabled: { type: Boolean, default: false },
+    calculationMode: { type: String, default: 'none' },
+    currency: { type: String, default: null },
+    lineItemsEnabled: { type: Boolean, default: false },
+    discountsEnabled: { type: Boolean, default: false },
+    taxEnabled: { type: Boolean, default: false },
+    rules: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  },
+  { _id: false }
+);
+
+const CapabilitiesSchema = new mongoose.Schema(
+  {
+    experience: {
+      security: {
+        type: CapabilityExperienceSecuritySchema,
+        default: () => ({}),
+      },
+      compliance: {
+        type: CapabilityExperienceComplianceSchema,
+        default: () => ({}),
+      },
+      workflow: {
+        type: CapabilityExperienceWorkflowSchema,
+        default: () => ({}),
+      },
+    },
+    transaction: {
+      payment: {
+        type: CapabilityTransactionPaymentSchema,
+        default: () => ({}),
+      },
+      remittance: {
+        type: CapabilityTransactionRemittanceSchema,
+        default: () => ({}),
+      },
+      invoice: {
+        type: CapabilityTransactionInvoiceSchema,
+        default: () => ({}),
+      },
+    },
+  },
+  { _id: false }
+);
+
+const SmartMappingsSchema = new mongoose.Schema(
+  {
+    enabled: { type: Boolean, default: true },
+    autoDetect: { type: Boolean, default: true },
+    allowManualOverride: { type: Boolean, default: true },
+    fields: {
+      phone: { type: String, default: 'phone_number' },
+      email: { type: String, default: 'email' },
+      fullName: { type: String, default: 'full_name' },
+      dob: { type: String, default: 'date_of_birth' },
+      joinDate: { type: String, default: 'join_date' },
+      eventDate: { type: String, default: 'event_date' },
+    },
+  },
+  { _id: false }
+);
+
 // Main project form schema
 const ProjectFormSchema = new mongoose.Schema(
   {
@@ -344,6 +479,12 @@ const ProjectFormSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    workspaceId: {
+      type: String,
+      trim: true,
+      default: 'ws_default',
+      index: true,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -364,6 +505,16 @@ const ProjectFormSchema = new mongoose.Schema(
 
     // User settings
     userSettings: UserSettingsSchema,
+
+    capabilities: {
+      type: CapabilitiesSchema,
+      default: () => ({}),
+    },
+
+    smartMappings: {
+      type: SmartMappingsSchema,
+      default: () => ({}),
+    },
 
     // ✨ NEW: PERM Settings (Flexible Calendar & Compliance Tracking)
     permSettings: {
@@ -466,6 +617,11 @@ const ProjectFormSchema = new mongoose.Schema(
     // Metadata
     metadata: {
       version: { type: String, default: '1.0.0' },
+      schemaVersion: { type: String, default: '1.1.0' },
+      enabledCapabilities: {
+        type: [String],
+        default: [],
+      },
       formCategory: {
         type: String,
         enum: ['standard', 'system'],
@@ -527,6 +683,7 @@ const ProjectFormSchema = new mongoose.Schema(
 ProjectFormSchema.plugin(toJSON);
 ProjectFormSchema.plugin(paginate);
 ProjectFormSchema.plugin(tenantPlugin);
+ProjectFormSchema.index({ tenantId: 1, workspaceId: 1, deletedAt: 1, updatedAt: -1 });
 ProjectFormSchema.index({ tenantId: 1, 'configuration.tags': 1 });
 ProjectFormSchema.index({ tenantId: 1, 'configuration.analysisProfile.domain': 1 });
 ProjectFormSchema.index({ tenantId: 1, 'configuration.analysisProfile.dataNature': 1 });
@@ -900,6 +1057,18 @@ ProjectFormSchema.methods.publish = async function (options = {}) {
     }
   }
 
+  await this.save();
+  return this;
+};
+
+/**
+ * Unpublish project without archiving it
+ * @returns {Promise<ProjectForm>}
+ */
+ProjectFormSchema.methods.unpublish = async function () {
+  this.metadata.deploymentStatus = 'draft';
+  this.status = 'inactive';
+  this.archivedAt = null;
   await this.save();
   return this;
 };

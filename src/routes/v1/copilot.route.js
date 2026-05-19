@@ -33,6 +33,29 @@ router.get(
   copilotController.getFeed
 );
 router.get(
+  '/tasks',
+  auth(),
+  validate(copilotValidation.listAgentTasks),
+  copilotController.listAgentTasks
+);
+router.get(
+  '/tasks/:taskId',
+  auth(),
+  validate(copilotValidation.getAgentTaskById),
+  copilotController.getAgentTaskById
+);
+router.post(
+  '/compliance-agent/run',
+  auth(),
+  copilotController.triggerComplianceAgentRun
+);
+router.get(
+  '/compliance-agent/snapshots',
+  auth(),
+  validate(copilotValidation.listComplianceSnapshots),
+  copilotController.listComplianceSnapshots
+);
+router.get(
   '/actions/:eventId',
   auth(),
   validate(copilotValidation.getActionById),
@@ -133,6 +156,32 @@ router.get(
   auth(),
   validate(copilotValidation.listTools),
   copilotController.listTools
+);
+router.post(
+  '/approvals',
+  auth(),
+  validate(copilotValidation.createApprovalDecision),
+  copilotController.createApprovalDecision
+);
+router.post(
+  '/approvals/human',
+  auth(),
+  copilotController.queueHumanApproval
+);
+router.get(
+  '/approvals/pending',
+  auth(),
+  copilotController.listPendingApprovals
+);
+router.post(
+  '/approvals/:approvalToken/approve',
+  auth(),
+  copilotController.approveDecision
+);
+router.post(
+  '/approvals/:approvalToken/reject',
+  auth(),
+  copilotController.rejectDecision
 );
 router.post(
   '/tools/:toolName/call',
@@ -253,6 +302,286 @@ router.get(
   auth(),
   validate(copilotValidation.getOnboardingJobById),
   copilotController.streamOnboardingJobEvents
+);
+
+// ── Phase 5: Data Intelligence ────────────────────────────────────────────────
+
+router.get(
+  '/projects/:projectId/metrics',
+  auth(),
+  validate(copilotValidation.getProjectMetrics),
+  copilotController.getProjectMetrics
+);
+router.get(
+  '/intelligence/anomalies',
+  auth(),
+  validate(copilotValidation.listAnomalies),
+  copilotController.listAnomalies
+);
+// SSE endpoint — streams merged anomaly + incident alerts every 10 s.
+// Replaces client-side polling. No request body; auth via JWT cookie/header.
+router.get(
+  '/intelligence/alerts/stream',
+  auth(),
+  copilotController.streamAlerts
+);
+router.post(
+  '/intelligence/insights/generate',
+  auth(),
+  validate(copilotValidation.generateInsight),
+  copilotController.generateInsight
+);
+router.get(
+  '/intelligence/insights',
+  auth(),
+  validate(copilotValidation.listInsights),
+  copilotController.listInsights
+);
+router.get(
+  '/intelligence/insights/:insightId',
+  auth(),
+  validate(copilotValidation.getInsightById),
+  copilotController.getInsightById
+);
+router.post(
+  '/intelligence/insights/:insightId/complete',
+  auth(),
+  validate(copilotValidation.completeInsight),
+  copilotController.completeInsight
+);
+router.post(
+  '/intelligence/insights/:insightId/fail',
+  auth(),
+  validate(copilotValidation.failInsight),
+  copilotController.failInsight
+);
+
+// ── Phase 4: Intelligence Gateway ─────────────────────────────────────────────
+
+router.get(
+  '/intelligence/models',
+  auth(),
+  validate(copilotValidation.listModelRegistry),
+  copilotController.listModelRegistry
+);
+router.post(
+  '/intelligence/resolve',
+  auth(),
+  validate(copilotValidation.resolveCallPlan),
+  copilotController.resolveCallPlan
+);
+router.post(
+  '/intelligence/log-usage',
+  auth(),
+  validate(copilotValidation.logIntelligenceUsage),
+  copilotController.logIntelligenceUsage
+);
+router.get(
+  '/intelligence/usage',
+  auth(),
+  validate(copilotValidation.getIntelligenceUsageSummary),
+  copilotController.getIntelligenceUsageSummary
+);
+router.get(
+  '/intelligence/prompts',
+  auth(),
+  validate(copilotValidation.listPrompts),
+  copilotController.listPrompts
+);
+router.post(
+  '/intelligence/prompts',
+  auth(),
+  validate(copilotValidation.createPromptVersion),
+  copilotController.createPromptVersion
+);
+router.get(
+  '/intelligence/prompts/:promptKey/:version',
+  auth(),
+  validate(copilotValidation.getPromptVersion),
+  copilotController.getPromptVersion
+);
+router.post(
+  '/intelligence/prompts/:promptKey/:version/activate',
+  auth(),
+  validate(copilotValidation.activatePromptVersion),
+  copilotController.activatePromptVersion
+);
+
+// ── Phase 6: RAG / Knowledge Layer ────────────────────────────────────────────
+
+router.post(
+  '/docs',
+  auth(),
+  validate(copilotValidation.ingestDocument),
+  copilotController.ingestDoc
+);
+router.get(
+  '/docs',
+  auth(),
+  validate(copilotValidation.listDocs),
+  copilotController.listDocs
+);
+router.post(
+  '/docs/search',
+  auth(),
+  validate(copilotValidation.searchDocs),
+  copilotController.searchDocs
+);
+router.get(
+  '/docs/:docId',
+  auth(),
+  validate(copilotValidation.getDoc),
+  copilotController.getDoc
+);
+router.delete(
+  '/docs/:docId',
+  auth(),
+  validate(copilotValidation.deleteDoc),
+  copilotController.deleteDoc
+);
+router.get(
+  '/docs/:docId/chunks',
+  auth(),
+  validate(copilotValidation.getDocChunks),
+  copilotController.getDocChunks
+);
+router.post(
+  '/docs/:docId/reindex',
+  auth(),
+  validate(copilotValidation.reindexDoc),
+  copilotController.reindexDoc
+);
+
+// ── Phase 7: Enterprise Autonomy ──────────────────────────────────────────────
+
+// Workflow Definitions
+router.post(
+  '/workflows',
+  auth(),
+  validate(copilotValidation.registerWorkflowDefinition),
+  copilotController.registerWorkflowDefinition
+);
+router.get(
+  '/workflows',
+  auth(),
+  validate(copilotValidation.listWorkflowDefinitions),
+  copilotController.listWorkflowDefinitions
+);
+router.post(
+  '/workflows/:workflowName/runs',
+  auth(),
+  validate(copilotValidation.startWorkflowRun),
+  copilotController.startWorkflowRun
+);
+router.get(
+  '/workflows/:workflowName/runs',
+  auth(),
+  validate(copilotValidation.listWorkflowRuns),
+  copilotController.listWorkflowRuns
+);
+router.get(
+  '/workflows/:workflowName/stats',
+  auth(),
+  validate(copilotValidation.getWorkflowStats),
+  copilotController.getWorkflowStats
+);
+
+// Agent Feedback
+router.post(
+  '/feedback',
+  auth(),
+  validate(copilotValidation.submitFeedback),
+  copilotController.submitFeedback
+);
+router.get(
+  '/feedback',
+  auth(),
+  validate(copilotValidation.listFeedback),
+  copilotController.listFeedback
+);
+router.get(
+  '/feedback/summary',
+  auth(),
+  validate(copilotValidation.getFeedbackSummary),
+  copilotController.getFeedbackSummary
+);
+
+// Eval Datasets & Results
+router.post(
+  '/evals',
+  auth(),
+  validate(copilotValidation.createEvalDataset),
+  copilotController.createEvalDataset
+);
+router.get(
+  '/evals',
+  auth(),
+  validate(copilotValidation.listEvalDatasets),
+  copilotController.listEvalDatasets
+);
+router.get(
+  '/evals/stats',
+  auth(),
+  validate(copilotValidation.getEvalStats),
+  copilotController.getEvalStats
+);
+router.post(
+  '/evals/:datasetId/results',
+  auth(),
+  validate(copilotValidation.recordEvalResult),
+  copilotController.recordEvalResult
+);
+
+// Incident Playbooks
+router.post(
+  '/incident-playbooks',
+  auth(),
+  validate(copilotValidation.createPlaybook),
+  copilotController.createPlaybook
+);
+router.get(
+  '/incident-playbooks',
+  auth(),
+  validate(copilotValidation.listPlaybooks),
+  copilotController.listPlaybooks
+);
+
+// Incidents
+router.post(
+  '/incidents',
+  auth(),
+  validate(copilotValidation.openIncident),
+  copilotController.openIncident
+);
+router.get(
+  '/incidents',
+  auth(),
+  validate(copilotValidation.listIncidents),
+  copilotController.listIncidents
+);
+router.get(
+  '/incidents/:incidentId',
+  auth(),
+  validate(copilotValidation.getIncidentById),
+  copilotController.getIncidentById
+);
+router.patch(
+  '/incidents/:incidentId/status',
+  auth(),
+  validate(copilotValidation.updateIncidentStatus),
+  copilotController.updateIncidentStatus
+);
+router.post(
+  '/incidents/:incidentId/acknowledge',
+  auth(),
+  validate(copilotValidation.acknowledgeIncident),
+  copilotController.acknowledgeIncident
+);
+router.post(
+  '/incidents/:incidentId/resolve',
+  auth(),
+  validate(copilotValidation.resolveIncident),
+  copilotController.resolveIncident
 );
 
 module.exports = router;

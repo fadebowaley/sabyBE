@@ -1,6 +1,66 @@
 const mongoose = require('mongoose');
 const { toJSON } = require('./plugins');
 
+const workspaceMemberSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    role: {
+      type: String,
+      enum: ['owner', 'editor', 'viewer'],
+      default: 'viewer',
+    },
+    status: {
+      type: String,
+      enum: ['active', 'inactive'],
+      default: 'active',
+    },
+  },
+  { _id: false }
+);
+
+const workspaceSchema = new mongoose.Schema(
+  {
+    workspaceId: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      default: 'My workspace',
+    },
+    visibility: {
+      type: String,
+      enum: ['private', 'public'],
+      default: 'private',
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+    members: {
+      type: [workspaceMemberSchema],
+      default: [],
+    },
+  },
+  { _id: false }
+);
+
 const tenantOnboardingSchema = new mongoose.Schema(
   {
     tenantId: {
@@ -47,6 +107,10 @@ const tenantOnboardingSchema = new mongoose.Schema(
       },
       skipped: { type: mongoose.Schema.Types.Mixed, default: {} },
       lastSavedAt: { type: Date, default: Date.now },
+    },
+    workspaces: {
+      type: [workspaceSchema],
+      default: [],
     },
     completedAt: { type: Date, default: null },
     version: { type: Number, default: 1 },

@@ -12,6 +12,36 @@ const {
   buildPhoneLookupCandidates,
 } = require('../utils/phoneNumber');
 
+const inferUserProfileAutoCompliance = (plainUser) => {
+  const requiredFields = {
+    gender: plainUser?.profile?.gender,
+    dateOfBirth: plainUser?.profile?.dateOfBirth,
+    stateOfOrigin: plainUser?.profile?.stateOfOrigin,
+    maritalStatus: plainUser?.profile?.maritalStatus,
+    occupation: plainUser?.profile?.occupation,
+  };
+
+  const allRequiredFieldsFilled = Object.values(requiredFields).every(
+    (value) => value !== undefined && value !== null && value !== ''
+  );
+
+  const hasCustomFieldsConfigured =
+    plainUser?.customFields &&
+    typeof plainUser.customFields === 'object' &&
+    Object.keys(plainUser.customFields).length > 0;
+
+  const hasCustomFieldValues =
+    hasCustomFieldsConfigured &&
+    Object.values(plainUser.customFields).some(
+      (value) => value !== undefined && value !== null && value !== ''
+    );
+
+  return (
+    allRequiredFieldsFilled &&
+    (!hasCustomFieldsConfigured || hasCustomFieldValues)
+  );
+};
+
 const buildUserResponse = (userDoc) => {
   if (!userDoc) {
     return null;
@@ -27,6 +57,23 @@ const buildUserResponse = (userDoc) => {
       response[field] = plain[field];
     }
   });
+
+  const inferredProfileCompliant = inferUserProfileAutoCompliance(plain);
+  if (
+    response.profileUpdateCompliant === undefined ||
+    response.profileUpdateCompliant !== inferredProfileCompliant
+  ) {
+    response.profileUpdateCompliant = inferredProfileCompliant;
+  }
+
+  if (
+    inferredProfileCompliant &&
+    (response.profileUpdateCompliantAt === undefined ||
+      response.profileUpdateCompliantAt === null)
+  ) {
+    response.profileUpdateCompliantAt =
+      plain.profileUpdateCompliantAt || plain.profileLastEditedAt || plain.updatedAt || null;
+  }
 
   if (response.profile === undefined) {
     response.profile = plain.profile || {};
@@ -986,8 +1033,8 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
       `🎖️ [UserService.updateUserById] New privileges: isSaby=${user.isSaby}, isSuper=${user.isSuper}, isOwner=${user.isOwner}`
     );
 
-    // Trigger compliance recalculation if profile was updated
-    // This runs asynchronously to avoid blocking the response
+    // Persist auto-compliance flags immediately after profile updates so
+    // list endpoints reflect the current profile completion state.
     if (Object.keys(profileUpdate).length > 0) {
       setImmediate(async () => {
         try {
@@ -998,6 +1045,21 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
               null,
               user.tenantId
             );
+          const userComplianceDetails = complianceScore?.userCompliance?.details || {};
+          await User.updateOne(
+            { _id: user._id, tenantId: user.tenantId },
+            {
+              $set: {
+                profileUpdateCompliant: Boolean(
+                  userComplianceDetails.profileUpdateCompliant
+                ),
+                profileUpdateCompliantAt:
+                  userComplianceDetails.profileUpdateCompliantAt || null,
+                profileUpdateCompliantBy:
+                  userComplianceDetails.profileUpdateCompliantBy || null,
+              },
+            }
+          );
           logger.info(
             `✅ [UserService.updateUserById] Compliance recalculated for ${user.firstname} ${user.lastname}: overall=${complianceScore.overallCompliance}%, isCompliant=${complianceScore.isCompliant}`
           );

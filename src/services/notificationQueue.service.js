@@ -150,6 +150,41 @@ class NotificationQueueService {
   }
 
   /**
+   * Queue an anomaly alert notification for admin/ops recipients.
+   *
+   * Called by dataIntelligence.worker when detectAnomalies() returns anomalies
+   * with severity >= 'high'. Each anomaly becomes one queued job so retries
+   * are per-anomaly and don't block each other.
+   *
+   * @param {Object} opts
+   * @param {string} opts.tenantId
+   * @param {Object} opts.anomaly   — the anomaly record from anomalyDetection.service
+   * @param {string} opts.projectId
+   * @param {string} opts.projectName
+   * @param {string} opts.monthLabel
+   * @returns {Promise<Object>}
+   */
+  async queueAnomalyAlert({ tenantId, anomaly, projectId, projectName, monthLabel }) {
+    try {
+      const job = await this.queue.add('anomaly_alert', {
+        type: 'anomaly_alert',
+        tenantId,
+        anomaly,
+        projectId,
+        projectName,
+        monthLabel,
+        timestamp: new Date().toISOString(),
+      });
+
+      logger.info(`🚨 Queued anomaly alert - severity=${anomaly?.severity} job=${job.id}`);
+      return { success: true, jobId: job.id };
+    } catch (error) {
+      logger.error('❌ Failed to queue anomaly alert:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Queue a custom notification
    * @param {Object} notificationData - Custom notification data
    * @returns {Promise<Object>} Job queuing result
@@ -258,6 +293,10 @@ class NotificationQueueService {
             );
           break;
 
+        case 'anomaly_alert':
+          notificationResult = await this.handleAnomalyAlert(job.data);
+          break;
+
         case 'custom_notification':
           // Handle custom notifications
           notificationResult = await this.handleCustomNotification(
@@ -289,6 +328,62 @@ class NotificationQueueService {
     } catch (error) {
       logger.error(`❌ Error processing notification job:`, error.message);
       throw error; // Re-throw to trigger retry
+    }
+  }
+
+  /**
+   * Handle anomaly alert notifications.
+   * Sends an in-app/email alert to tenant admins about a high/critical anomaly.
+   *
+   * @param {Object} jobData - Job payload from queueAnomalyAlert
+   * @returns {Promise<Object>}
+   */
+  async handleAnomalyAlert(jobData) {
+    const { tenantId, anomaly, projectName, monthLabel } = jobData;
+    const metricKey    = anomaly?.metricKey || anomaly?.metric_key || 'unknown metric';
+    const severity     = (anomaly?.severity || 'high').toUpperCase();
+    const deviation    = anomaly?.deviation != null
+      ? `${Number(anomaly.deviation).toFixed(1)}%`
+      : 'significant';
+
+    const subject = `[${severity}] Anomaly detected: ${metricKey} — ${projectName || 'project'}`;
+    const message =
+      `A ${severity} anomaly was detected in "${projectName || 'your project'}" ` +
+      `for ${monthLabel || 'the current period'}.\n\n` +
+      `Metric: ${metricKey}\n` +
+      `Deviation: ${deviation} from baseline\n\n` +
+      `Log in to Saby to investigate and resolve this alert.`;
+
+    try {
+      // Attempt to notify tenant admins by looking up admin emails.
+      // Falls back gracefully if the user service is unavailable.
+      const { postgresPool } = require('../config/postgres');
+      const { rows: admins } = await postgresPool.query(
+        `SELECT u.email FROM users u
+         JOIN roles r ON r.id = ANY(u.role_ids)
+         WHERE u.tenant_id = $1
+           AND r.name ILIKE '%admin%'
+           AND u.is_active = true
+         LIMIT 10`,
+        [tenantId]
+      );
+
+      const { sendEmail } = require('./email.service');
+      const results = await Promise.allSettled(
+        admins.map((a) => sendEmail(a.email, subject, message))
+      );
+
+      const sent = results.filter((r) => r.status === 'fulfilled').length;
+      logger.info(`[AnomalyAlert] Sent to ${sent}/${admins.length} admins`, {
+        tenantId, severity, metricKey,
+      });
+
+      return { success: true, type: 'anomaly_alert', tenantId, sent };
+    } catch (err) {
+      logger.error('[AnomalyAlert] Delivery failed (non-fatal):', err.message);
+      // Return success=false but don't rethrow — anomaly detection should not
+      // be blocked by a transient email failure.
+      return { success: false, error: err.message, type: 'anomaly_alert' };
     }
   }
 

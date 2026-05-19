@@ -2,7 +2,10 @@ const httpStatus = require('http-status');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
-const { projectFormService } = require('../services');
+const {
+  projectFormService,
+  projectFormWorkspaceService,
+} = require('../services');
 const projectFormPublicAccessService = require('../services/projectFormPublicAccess.service');
 const {
   invalidateTenantEntityCaches,
@@ -20,6 +23,113 @@ const invalidateProjectResolverCache = async (tenantId) => {
   }
 };
 
+const resolveWorkspaceReadFilter = async ({
+  tenantId,
+  userId,
+  workspaceId,
+}) => {
+  const requestedWorkspaceId = String(workspaceId || '').trim();
+  if (requestedWorkspaceId) {
+    await projectFormWorkspaceService.assertWorkspaceAccess({
+      tenantId,
+      workspaceId: requestedWorkspaceId,
+      userId,
+    });
+    if (
+      requestedWorkspaceId === projectFormWorkspaceService.DEFAULT_WORKSPACE_ID
+    ) {
+      return {
+        $or: [
+          { workspaceId: requestedWorkspaceId },
+          { workspaceId: projectFormWorkspaceService.LEGACY_DEFAULT_WORKSPACE_ID },
+          { workspaceId: { $exists: false } },
+          { workspaceId: null },
+          { workspaceId: '' },
+        ],
+      };
+    }
+    return { workspaceId: requestedWorkspaceId };
+  }
+
+  const accessibleWorkspaceIds =
+    await projectFormWorkspaceService.getAccessibleWorkspaceIds({
+      tenantId,
+      userId,
+    });
+
+  if (!accessibleWorkspaceIds.length) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'You do not have access to any workspace'
+    );
+  }
+
+  const normalizedWorkspaceIds = Array.from(new Set(accessibleWorkspaceIds));
+  const includesDefaultWorkspace = normalizedWorkspaceIds.includes(
+    projectFormWorkspaceService.DEFAULT_WORKSPACE_ID
+  );
+
+  if (includesDefaultWorkspace) {
+    return {
+      $or: [
+        { workspaceId: { $in: normalizedWorkspaceIds } },
+        { workspaceId: projectFormWorkspaceService.LEGACY_DEFAULT_WORKSPACE_ID },
+        { workspaceId: { $exists: false } },
+        { workspaceId: null },
+        { workspaceId: '' },
+      ],
+    };
+  }
+
+  return { workspaceId: { $in: normalizedWorkspaceIds } };
+};
+
+const assertWorkspaceWriteAccessForProjectForm = async ({
+  projectForm,
+  userId,
+}) => {
+  if (!projectForm) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
+  }
+
+  const workspaceId = String(
+    projectForm.workspaceId ||
+      projectFormWorkspaceService.DEFAULT_WORKSPACE_ID
+  ).trim();
+
+  await projectFormWorkspaceService.assertWorkspaceAccess({
+    tenantId: projectForm.tenantId,
+    workspaceId:
+      workspaceId || projectFormWorkspaceService.DEFAULT_WORKSPACE_ID,
+    userId,
+    allowedRoles: [
+      projectFormWorkspaceService.WORKSPACE_ROLE_OWNER,
+      projectFormWorkspaceService.WORKSPACE_ROLE_EDITOR,
+    ],
+  });
+};
+
+const assertWorkspaceReadAccessForProjectForm = async ({
+  projectForm,
+  userId,
+}) => {
+  if (!projectForm) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
+  }
+
+  const workspaceId = String(
+    projectForm.workspaceId ||
+      projectFormWorkspaceService.DEFAULT_WORKSPACE_ID
+  ).trim();
+
+  await projectFormWorkspaceService.assertWorkspaceAccess({
+    tenantId: projectForm.tenantId,
+    workspaceId:
+      workspaceId || projectFormWorkspaceService.DEFAULT_WORKSPACE_ID,
+    userId,
+  });
+};
+
 /**
  * Create a project form
  */
@@ -30,7 +140,8 @@ const createProjectForm = catchAsync(async (req, res) => {
   const projectForm = await projectFormService.createProjectForm(
     req.body,
     tenantId,
-    createdBy
+    createdBy,
+    { actorUserId: createdBy }
   );
   await invalidateProjectResolverCache(tenantId || projectForm?.tenantId);
   console.log('🔍 [SERVER DATA] Module Created:', req.body);
@@ -83,12 +194,40 @@ const submitSystemForm = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).send(result);
 });
 
+const applyDefaultStandardFormFilter = (filter = {}, query = {}) => {
+  const requestedCategory = query?.['metadata.formCategory'];
+  const requestedTarget = query?.['metadata.systemTarget'];
+
+  if (requestedCategory || requestedTarget) {
+    return filter;
+  }
+
+  return {
+    ...filter,
+    'metadata.formCategory': { $ne: 'system' },
+  };
+};
+
+/**
+ * Get the current tenant's canonical system form by target.
+ */
+const getSystemProjectForm = catchAsync(async (req, res) => {
+  const { target } = req.params;
+  const projectForm = await projectFormService.getSystemProjectFormForTenant({
+    tenantId: req.user.tenantId,
+    target,
+  });
+
+  res.send(projectForm);
+});
+
 /**
  * Get all project forms
  */
 const getProjectForms = catchAsync(async (req, res) => {
   const filter = pick(req.query, [
     'status',
+    'workspaceId',
     'configuration.projectName',
     'configuration.tags',
     'configuration.security',
@@ -97,13 +236,21 @@ const getProjectForms = catchAsync(async (req, res) => {
     'metadata.deploymentStatus',
   ]);
 
-  const { q, tenantId } = req.query;
+  const { q, tenantId, workspaceId } = req.query;
+  const workspaceFilter = await resolveWorkspaceReadFilter({
+    tenantId: req.user.tenantId,
+    userId: req.user._id,
+    workspaceId,
+  });
+  const normalizedFilter = applyDefaultStandardFormFilter(filter, req.query);
 
   // If search query is provided, use search functionality
   if (q) {
     const searchFilter = tenantId
       ? { tenantId }
       : { tenantId: req.user.tenantId };
+    Object.assign(searchFilter, workspaceFilter);
+    Object.assign(searchFilter, applyDefaultStandardFormFilter({}, req.query));
     const options = pick(req.query, ['sortBy', 'limit', 'page']);
     const result = await projectFormService.searchProjectForms(
       q,
@@ -115,13 +262,180 @@ const getProjectForms = catchAsync(async (req, res) => {
 
   // Apply tenant filter
   if (req.user.tenantId) {
-    filter.tenantId = req.user.tenantId;
+    normalizedFilter.tenantId = req.user.tenantId;
   }
+  Object.assign(normalizedFilter, workspaceFilter);
 
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
-  const result = await projectFormService.queryProjectForms(filter, options);
+  const result = await projectFormService.queryProjectForms(normalizedFilter, options);
 
   res.send(result);
+});
+
+/**
+ * List workspaces for current tenant/user
+ */
+const listProjectWorkspaces = catchAsync(async (req, res) => {
+  const { tenantId, _id: userId } = req.user;
+  const result = await projectFormWorkspaceService.listWorkspaces({
+    tenantId,
+    userId,
+  });
+  console.log(
+    '[ProjectForms][listWorkspaces]',
+    JSON.stringify({
+      email: req.user?.email || null,
+      userId: String(userId || ''),
+      tenantId: tenantId || null,
+      defaultWorkspaceId: result?.defaultWorkspaceId || null,
+      workspaceCount: Array.isArray(result?.workspaces)
+        ? result.workspaces.length
+        : 0,
+      workspaces: Array.isArray(result?.workspaces)
+        ? result.workspaces.map((workspace) => ({
+            workspaceId: workspace.workspaceId,
+            name: workspace.name,
+            visibility: workspace.visibility,
+            role: workspace.role,
+            formCount: workspace.formCount,
+          }))
+        : [],
+    })
+  );
+  res.send(result);
+});
+
+/**
+ * Create workspace
+ */
+const createProjectWorkspace = catchAsync(async (req, res) => {
+  const { tenantId, _id: userId } = req.user;
+  const workspace = await projectFormWorkspaceService.createWorkspace({
+    tenantId,
+    actorUserId: userId,
+    name: req.body?.name,
+    visibility: req.body?.visibility,
+  });
+  res.status(httpStatus.CREATED).send({
+    message: 'Workspace created successfully',
+    workspace,
+  });
+});
+
+/**
+ * Rename workspace
+ */
+const renameProjectWorkspace = catchAsync(async (req, res) => {
+  const { tenantId, _id: userId } = req.user;
+  const { workspaceId } = req.params;
+  const workspace = await projectFormWorkspaceService.renameWorkspace({
+    tenantId,
+    actorUserId: userId,
+    workspaceId,
+    name: req.body?.name,
+    visibility: req.body?.visibility,
+  });
+  res.send({
+    message: 'Workspace renamed successfully',
+    workspace,
+  });
+});
+
+/**
+ * Add workspace member
+ */
+const addProjectWorkspaceMember = catchAsync(async (req, res) => {
+  const { tenantId, _id: userId } = req.user;
+  const { workspaceId } = req.params;
+  const result = await projectFormWorkspaceService.addWorkspaceMember({
+    tenantId,
+    actorUserId: userId,
+    workspaceId,
+    role: req.body?.role,
+    userId: req.body?.userId,
+    email: req.body?.email,
+  });
+  res.send({
+    message: 'Workspace member updated successfully',
+    ...result,
+  });
+});
+
+/**
+ * Remove workspace member
+ */
+const removeProjectWorkspaceMember = catchAsync(async (req, res) => {
+  const { tenantId, _id: actorUserId } = req.user;
+  const { workspaceId, userId } = req.params;
+  const workspace = await projectFormWorkspaceService.removeWorkspaceMember({
+    tenantId,
+    actorUserId,
+    workspaceId,
+    userId,
+  });
+  res.send({
+    message: 'Workspace member removed successfully',
+    workspace,
+  });
+});
+
+/**
+ * Leave workspace
+ */
+const leaveProjectWorkspace = catchAsync(async (req, res) => {
+  const { tenantId, _id: actorUserId } = req.user;
+  const { workspaceId } = req.params;
+  const workspace = await projectFormWorkspaceService.leaveWorkspace({
+    tenantId,
+    actorUserId,
+    workspaceId,
+  });
+  res.send({
+    message: 'Workspace left successfully',
+    workspace,
+  });
+});
+
+/**
+ * Delete workspace and archive linked forms
+ */
+const deleteProjectWorkspace = catchAsync(async (req, res) => {
+  const { tenantId, _id: actorUserId } = req.user;
+  const { workspaceId } = req.params;
+  const result = await projectFormWorkspaceService.deleteWorkspace({
+    tenantId,
+    actorUserId,
+    workspaceId,
+  });
+  await invalidateProjectResolverCache(tenantId);
+  res.send({
+    message: 'Workspace deleted successfully',
+    ...result,
+  });
+});
+
+/**
+ * Duplicate a form by projectId
+ */
+const duplicateProjectForm = catchAsync(async (req, res) => {
+  const { tenantId, _id: actorUserId } = req.user;
+  const { projectId } = req.params;
+  const duplicated = await projectFormService.duplicateProjectFormByProjectId({
+    projectId,
+    tenantId,
+    actorUserId,
+    name: req.body?.name,
+    workspaceId: req.body?.workspaceId,
+  });
+  await invalidateProjectResolverCache(tenantId);
+  res.status(httpStatus.CREATED).send({
+    message: 'Module duplicated successfully',
+    projectForm: duplicated,
+    formId: duplicated.projectId,
+    publicRef: duplicated.publicRef,
+    shareRef: duplicated.shareRef,
+    shareCode: duplicated.shareCode,
+  });
 });
 
 /**
@@ -131,16 +445,24 @@ const getProjectFormsByTenant = catchAsync(async (req, res) => {
   const { tenantId } = req.params;
   const filter = pick(req.query, [
     'status',
+    'workspaceId',
     'configuration.projectName',
     'configuration.tags',
     'metadata.formCategory',
     'metadata.systemTarget',
     'metadata.deploymentStatus',
   ]);
+  const workspaceFilter = await resolveWorkspaceReadFilter({
+    tenantId,
+    userId: req.user._id,
+    workspaceId: filter.workspaceId,
+  });
+  const normalizedFilter = applyDefaultStandardFormFilter(filter, req.query);
+  Object.assign(normalizedFilter, workspaceFilter);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
   let result = await projectFormService.getProjectFormsByTenant(
     tenantId,
-    filter,
+    normalizedFilter,
     options
   );
 
@@ -158,7 +480,7 @@ const getProjectFormsByTenant = catchAsync(async (req, res) => {
       });
       result = await projectFormService.getProjectFormsByTenant(
         tenantId,
-        filter,
+        normalizedFilter,
         options
       );
     } catch (bootstrapError) {
@@ -170,6 +492,29 @@ const getProjectFormsByTenant = catchAsync(async (req, res) => {
     }
   }
 
+  console.log(
+    '[ProjectForms][getByTenant]',
+    JSON.stringify({
+      email: req.user?.email || null,
+      userId: String(req.user?._id || ''),
+      sessionTenantId: req.user?.tenantId || null,
+      requestedTenantId: tenantId || null,
+      requestedWorkspaceId: req.query?.workspaceId || null,
+      normalizedFilter,
+      totalResults: result?.totalResults || 0,
+      resultCount: Array.isArray(result?.results) ? result.results.length : 0,
+      sample: Array.isArray(result?.results)
+        ? result.results.slice(0, 5).map((item) => ({
+            id: item?.id || null,
+            projectId: item?.projectId || null,
+            workspaceId: item?.workspaceId || null,
+            projectName: item?.configuration?.projectName || null,
+            formCategory: item?.metadata?.formCategory || null,
+          }))
+        : [],
+    })
+  );
+
   res.send(result);
 });
 
@@ -180,17 +525,25 @@ const getProjectFormsByUser = catchAsync(async (req, res) => {
   const { userId } = req.params;
   const filter = pick(req.query, [
     'status',
+    'workspaceId',
     'configuration.projectName',
     'configuration.tags',
     'metadata.formCategory',
     'metadata.systemTarget',
     'metadata.deploymentStatus',
   ]);
+  const workspaceFilter = await resolveWorkspaceReadFilter({
+    tenantId: req.user.tenantId,
+    userId: req.user._id,
+    workspaceId: filter.workspaceId,
+  });
+  const normalizedFilter = applyDefaultStandardFormFilter(filter, req.query);
+  Object.assign(normalizedFilter, workspaceFilter);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
 
   const result = await projectFormService.getProjectFormsByUser(
     userId,
-    filter,
+    normalizedFilter,
     options
   );
 
@@ -208,6 +561,10 @@ const getProjectForm = catchAsync(async (req, res) => {
     projectFormId,
     options
   );
+  await assertWorkspaceReadAccessForProjectForm({
+    projectForm,
+    userId: req.user._id,
+  });
 
   res.send(projectForm);
 });
@@ -223,6 +580,10 @@ const getProjectFormByProjectId = catchAsync(async (req, res) => {
     projectId,
     options
   );
+  await assertWorkspaceReadAccessForProjectForm({
+    projectForm,
+    userId: req.user._id,
+  });
 
   // Increment views if not the owner viewing (only for authenticated users)
   if (
@@ -250,6 +611,10 @@ const getProjectFormByPublicRef = catchAsync(async (req, res) => {
     publicRef,
     options
   );
+  await assertWorkspaceReadAccessForProjectForm({
+    projectForm,
+    userId: req.user._id,
+  });
 
   res.send(projectForm);
 });
@@ -462,6 +827,11 @@ const getProjectPublicAccessMetrics = catchAsync(async (req, res) => {
   const { projectId } = req.params;
   const tenantId = req.user?.tenantId;
   const recentWindowHours = Number(req.query?.windowHours || 24);
+  const projectForm = await projectFormService.getProjectFormByProjectId(projectId);
+  await assertWorkspaceReadAccessForProjectForm({
+    projectForm,
+    userId: req.user._id,
+  });
 
   const metrics =
     await projectFormPublicAccessService.getProjectPublicAccessMetrics({
@@ -490,11 +860,21 @@ const getProjectStorageFolder = catchAsync(async (req, res) => {
 const updateProjectForm = catchAsync(async (req, res) => {
   const { projectFormId } = req.params;
   const options = pick(req.query, ['populate']);
+  const existingProjectForm = await projectFormService.getProjectFormById(
+    projectFormId
+  );
+  await assertWorkspaceWriteAccessForProjectForm({
+    projectForm: existingProjectForm,
+    userId: req.user._id,
+  });
 
   const projectForm = await projectFormService.updateProjectFormById(
     projectFormId,
     req.body,
-    options
+    {
+      ...options,
+      actorUserId: req.user._id,
+    }
   );
   await invalidateProjectResolverCache(req.user?.tenantId || projectForm?.tenantId);
 
@@ -510,11 +890,21 @@ const updateProjectForm = catchAsync(async (req, res) => {
 const updateProjectFormByProjectId = catchAsync(async (req, res) => {
   const { projectId } = req.params;
   const options = pick(req.query, ['populate']);
+  const existingProjectForm = await projectFormService.getProjectFormByProjectId(
+    projectId
+  );
+  await assertWorkspaceWriteAccessForProjectForm({
+    projectForm: existingProjectForm,
+    userId: req.user._id,
+  });
 
   const projectForm = await projectFormService.updateProjectFormByProjectId(
     projectId,
     req.body,
-    options
+    {
+      ...options,
+      actorUserId: req.user._id,
+    }
   );
   await invalidateProjectResolverCache(req.user?.tenantId || projectForm?.tenantId);
 
@@ -531,6 +921,13 @@ const updateProjectFormByProjectId = catchAsync(async (req, res) => {
  */
 const softDeleteProjectForm = catchAsync(async (req, res) => {
   const { projectFormId } = req.params;
+  const existingProjectForm = await projectFormService.getProjectFormById(
+    projectFormId
+  );
+  await assertWorkspaceWriteAccessForProjectForm({
+    projectForm: existingProjectForm,
+    userId: req.user._id,
+  });
 
   const projectForm = await projectFormService.softDeleteProjectFormById(
     projectFormId
@@ -549,6 +946,13 @@ const softDeleteProjectForm = catchAsync(async (req, res) => {
 const publishProjectForm = catchAsync(async (req, res) => {
   const { projectFormId } = req.params;
   const { calendarGeneration } = req.body;
+  const existingProjectForm = await projectFormService.getProjectFormById(
+    projectFormId
+  );
+  await assertWorkspaceWriteAccessForProjectForm({
+    projectForm: existingProjectForm,
+    userId: req.user._id,
+  });
 
   // Extract calendar options if provided
   const publishOptions = {};
@@ -573,10 +977,39 @@ const publishProjectForm = catchAsync(async (req, res) => {
 });
 
 /**
+ * Unpublish a project form
+ */
+const unpublishProjectForm = catchAsync(async (req, res) => {
+  const { projectFormId } = req.params;
+  const existingProjectForm = await projectFormService.getProjectFormById(
+    projectFormId
+  );
+  await assertWorkspaceWriteAccessForProjectForm({
+    projectForm: existingProjectForm,
+    userId: req.user._id,
+  });
+
+  const projectForm = await projectFormService.unpublishProjectForm(projectFormId);
+  await invalidateProjectResolverCache(req.user?.tenantId || projectForm?.tenantId);
+
+  res.send({
+    message: 'Module unpublished successfully',
+    projectForm,
+  });
+});
+
+/**
  * Archive a project form
  */
 const archiveProjectForm = catchAsync(async (req, res) => {
   const { projectFormId } = req.params;
+  const existingProjectForm = await projectFormService.getProjectFormById(
+    projectFormId
+  );
+  await assertWorkspaceWriteAccessForProjectForm({
+    projectForm: existingProjectForm,
+    userId: req.user._id,
+  });
 
   const projectForm = await projectFormService.archiveProjectForm(
     projectFormId
@@ -597,6 +1030,13 @@ const deleteProjectForm = catchAsync(async (req, res) => {
   const { permanent } = req.body;
   const userId = req.user._id;
   const userRole = req.user.role;
+  const existingProjectForm = await projectFormService.getProjectFormByProjectId(
+    projectId
+  );
+  await assertWorkspaceWriteAccessForProjectForm({
+    projectForm: existingProjectForm,
+    userId,
+  });
 
   // Only sabyUser can do permanent deletion
   if (permanent && userRole !== 'sabyUser') {
@@ -652,6 +1092,10 @@ const updatePaymentConfig = catchAsync(async (req, res) => {
   const { enabledChannels, channelConfigs } = req.body;
 
   const projectForm = await projectFormService.getProjectFormByProjectId(projectId);
+  await assertWorkspaceWriteAccessForProjectForm({
+    projectForm,
+    userId: req.user._id,
+  });
 
   if (!projectForm) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
@@ -690,6 +1134,11 @@ const updatePaymentConfig = catchAsync(async (req, res) => {
  */
 const getProjectAnalytics = catchAsync(async (req, res) => {
   const { projectId } = req.params;
+  const projectForm = await projectFormService.getProjectFormByProjectId(projectId);
+  await assertWorkspaceReadAccessForProjectForm({
+    projectForm,
+    userId: req.user._id,
+  });
 
   const analytics = await projectFormService.getProjectAnalytics(projectId);
 
@@ -701,6 +1150,11 @@ const getProjectAnalytics = catchAsync(async (req, res) => {
  */
 const getProjectSchemaProfile = catchAsync(async (req, res) => {
   const { projectId } = req.params;
+  const projectForm = await projectFormService.getProjectFormByProjectId(projectId);
+  await assertWorkspaceReadAccessForProjectForm({
+    projectForm,
+    userId: req.user._id,
+  });
   const profile = await projectFormService.getProjectSchemaProfile(projectId);
   res.send(profile);
 });
@@ -740,18 +1194,28 @@ const bulkOperations = catchAsync(async (req, res) => {
  * Search project forms
  */
 const searchProjectForms = catchAsync(async (req, res) => {
-  const { q } = req.query;
+  const { q, workspaceId } = req.query;
 
   if (!q) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Search query is required');
   }
 
-  const filter = { tenantId: req.user.tenantId };
+  const workspaceFilter = await resolveWorkspaceReadFilter({
+    tenantId: req.user.tenantId,
+    userId: req.user._id,
+    workspaceId,
+  });
+
+  const filter = {
+    tenantId: req.user.tenantId,
+  };
+  Object.assign(filter, workspaceFilter);
+  const normalizedFilter = applyDefaultStandardFormFilter(filter, req.query);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
 
   const result = await projectFormService.searchProjectForms(
     q,
-    filter,
+    normalizedFilter,
     options
   );
 
@@ -796,6 +1260,13 @@ const getProjectFormStats = catchAsync(async (req, res) => {
 module.exports = {
   createProjectForm,
   getProjectForms,
+  listProjectWorkspaces,
+  createProjectWorkspace,
+  renameProjectWorkspace,
+  addProjectWorkspaceMember,
+  removeProjectWorkspaceMember,
+  leaveProjectWorkspace,
+  deleteProjectWorkspace,
   getProjectFormsByTenant,
   getProjectFormsByUser,
   getProjectForm,
@@ -814,11 +1285,13 @@ module.exports = {
   getProjectStorageFolder,
   updateProjectForm,
   updateProjectFormByProjectId,
+  duplicateProjectForm,
   deleteProjectForm,
   softDeleteProjectForm,
   restoreProjectForm,
   getDeletedProjectForms,
   publishProjectForm,
+  unpublishProjectForm,
   archiveProjectForm,
   updatePaymentConfig,
   getProjectAnalytics,
@@ -828,5 +1301,6 @@ module.exports = {
   searchProjectForms,
   getProjectFormStats,
   bootstrapSystemForms,
+  getSystemProjectForm,
   submitSystemForm,
 };

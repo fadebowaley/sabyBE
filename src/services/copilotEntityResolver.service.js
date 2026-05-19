@@ -543,7 +543,6 @@ const resolveEntityReference = async ({
   });
   if (candidates.length === 0) {
     const output = { status: 'not_found', candidate: null, candidates: [] };
-    await setCache(cacheKey, output);
     await logResolution({
       tenantId,
       actorUserId,

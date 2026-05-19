@@ -63,6 +63,15 @@ const getSubmissions = {
   }),
 };
 
+const getSubmissionByBusinessId = {
+  params: Joi.object().keys({
+    submissionId: Joi.string().required(),
+  }),
+  query: Joi.object().keys({
+    populate: Joi.string(),
+  }),
+};
+
 const getSubmissionsByProject = {
   params: Joi.object().keys({
     projectId: Joi.string().required(),
@@ -179,4 +188,5 @@ module.exports = {
   deleteSubmission,
   getSubmissionStats,
   exportSubmissions,
+  getSubmissionByBusinessId,
 };

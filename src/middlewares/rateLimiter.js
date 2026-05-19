@@ -61,7 +61,41 @@ const loginLimiter = rateLimit({
   },
 });
 
+const publicFormSubmitLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 submissions per IP per minute
+  message: {
+    error: 'TOO_MANY_REQUESTS',
+    message:
+      'Too many form submissions from this IP address. Please try again shortly.',
+    retryAfter: 60,
+  },
+  standardHeaders: true,
+  legacyHeaders: true,
+  keyGenerator: (req) => {
+    const reference = req.params?.reference || 'unknown-form';
+    const ip =
+      req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.ip;
+
+    return `${reference}:${ip}`;
+  },
+  onLimitReached: (req) => {
+    logger.warn({
+      event: 'PUBLIC_FORM_SUBMIT_RATE_LIMIT_HIT',
+      ip: req.ip,
+      realIp: req.headers['x-real-ip'],
+      forwardedFor: req.headers['x-forwarded-for'],
+      reference: req.params?.reference,
+      path: req.path,
+      method: req.method,
+      userAgent: req.headers['user-agent'],
+      timestamp: new Date().toISOString(),
+    });
+  },
+});
+
 module.exports = {
   authLimiter,
   loginLimiter,
+  publicFormSubmitLimiter,
 };

@@ -7,12 +7,45 @@ const REFRESH_DELAY_MS = Number(
 
 let refreshTimer = null;
 let refreshInFlight = false;
+let availableRollupViews = null;
+let hasLoggedMissingRollups = false;
 
 const refreshStatements = [
-  'REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_submission_rollup;',
-  'REFRESH MATERIALIZED VIEW CONCURRENTLY mv_weekly_submission_rollup;',
-  'REFRESH MATERIALIZED VIEW CONCURRENTLY mv_monthly_submission_rollup;',
+  {
+    viewName: 'mv_daily_submission_rollup',
+    statement:
+      'REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_submission_rollup;',
+  },
+  {
+    viewName: 'mv_weekly_submission_rollup',
+    statement:
+      'REFRESH MATERIALIZED VIEW CONCURRENTLY mv_weekly_submission_rollup;',
+  },
+  {
+    viewName: 'mv_monthly_submission_rollup',
+    statement:
+      'REFRESH MATERIALIZED VIEW CONCURRENTLY mv_monthly_submission_rollup;',
+  },
 ];
+
+const getAvailableRollupViews = async () => {
+  if (availableRollupViews) {
+    return availableRollupViews;
+  }
+
+  const result = await postgresPool.query(
+    `
+      SELECT matviewname
+      FROM pg_matviews
+      WHERE schemaname = 'public'
+        AND matviewname = ANY($1::text[])
+    `,
+    [refreshStatements.map((item) => item.viewName)]
+  );
+
+  availableRollupViews = new Set(result.rows.map((row) => row.matviewname));
+  return availableRollupViews;
+};
 
 const refreshRollups = async () => {
   if (refreshInFlight) {
@@ -21,12 +54,30 @@ const refreshRollups = async () => {
 
   refreshInFlight = true;
   try {
-    for (const statement of refreshStatements) {
+    const existingViews = await getAvailableRollupViews();
+    const statementsToRun = refreshStatements.filter((item) =>
+      existingViews.has(item.viewName)
+    );
+
+    if (statementsToRun.length === 0) {
+      if (!hasLoggedMissingRollups) {
+        logger.warn(
+          '[Rollup] Submission rollup views are missing; refresh is skipped until migrations run'
+        );
+        hasLoggedMissingRollups = true;
+      }
+      return;
+    }
+
+    for (const { statement, viewName } of statementsToRun) {
       try {
         await postgresPool.query(statement);
       } catch (err) {
+        if (err.code === '42P01') {
+          availableRollupViews = null;
+        }
         logger.warn(
-          `[Rollup] Failed to execute "${statement.trim()}": ${err.message}`
+          `[Rollup] Failed to refresh ${viewName}: ${err.message}`
         );
       }
     }
@@ -53,4 +104,3 @@ module.exports = {
   refreshRollups,
   scheduleRefresh,
 };
-

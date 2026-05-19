@@ -1,23 +1,33 @@
 /* eslint-disable no-param-reassign */
 
+const logger = require('../../config/logger');
+
 const tenantPlugin = (schema) => {
+  const debugEnabled = process.env.TENANT_PLUGIN_DEBUG === 'true';
+
+  const debugLog = (...args) => {
+    if (!debugEnabled) {
+      return;
+    }
+
+    logger.debug(args.join(' '));
+  };
+
   function applyTenantFilter(next) {
-    console.log('[TenantPlugin] Pre-hook triggered for:', this.op);
-    console.log('[TenantPlugin] Options:', this.options);
+    debugLog('[TenantPlugin] Pre-hook triggered for:', this.op);
+    debugLog('[TenantPlugin] Options:', JSON.stringify(this.options || {}));
 
     const user = this.options?.user;
 
     // SabyUser can see all users across all tenants
     if (user?.isSaby) {
-      console.log(
-        '[TenantPlugin] SabyUser detected - no tenant filtering applied'
-      );
+      debugLog('[TenantPlugin] SabyUser detected - no tenant filtering applied');
       return next();
     }
 
     // SuperUser and Owner can only see users within their tenant
     if ((user?.isSuper || user?.isOwner) && !user?.isSaby) {
-      console.log('[TenantPlugin] Applying tenantId filter:', user.tenantId);
+      debugLog('[TenantPlugin] Applying tenantId filter:', user.tenantId);
       this.setQuery({
         ...this.getQuery(),
         tenantId: user.tenantId,
@@ -34,12 +44,15 @@ const tenantPlugin = (schema) => {
   const originalPaginate = schema.statics.paginate;
 
   schema.statics.paginate = async function (filter = {}, options = {}) {
-    console.log('[TenantPlugin] paginate() - incoming options:', options);
+    debugLog(
+      '[TenantPlugin] paginate() - incoming options:',
+      JSON.stringify(options || {})
+    );
     const { user } = options;
 
     // SabyUser can see all users across all tenants
     if (user?.isSaby) {
-      console.log(
+      debugLog(
         '[TenantPlugin] SabyUser detected - no tenant filtering in pagination'
       );
       return originalPaginate.call(this, filter, options);
@@ -47,8 +60,8 @@ const tenantPlugin = (schema) => {
 
     // SuperUser and Owner can only see users within their tenant
     if ((user?.isSuper || user?.isOwner) && !user?.isSaby) {
-      console.log('[TenantPlugin] Adding tenantId to filter:', user.tenantId);
-      console.log('[TenantPlugin] Adding tenantId to user:', user);
+      debugLog('[TenantPlugin] Adding tenantId to filter:', user.tenantId);
+      debugLog('[TenantPlugin] Adding tenantId to user:', JSON.stringify(user));
       filter = { ...filter, tenantId: user.tenantId };
     }
 

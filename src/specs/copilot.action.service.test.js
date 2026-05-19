@@ -4,10 +4,15 @@ const mockPostgresPool = {
   query: jest.fn(),
   connect: jest.fn(),
 };
+const mockCopilotApprovalService = {
+  validateApprovalDecision: jest.fn(),
+  consumeApprovalDecision: jest.fn(),
+};
 
 jest.mock('../config/postgres', () => ({
   postgresPool: mockPostgresPool,
 }));
+jest.mock('../services/copilotApproval.service', () => mockCopilotApprovalService);
 
 const copilotActionService = require('../services/copilotAction.service');
 
@@ -22,6 +27,14 @@ const makeClient = ({ onQuery }) => {
 describe('copilotAction.service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCopilotApprovalService.validateApprovalDecision.mockResolvedValue({
+      ok: true,
+      approvalId: 'approval-1',
+    });
+    mockCopilotApprovalService.consumeApprovalDecision.mockResolvedValue({
+      id: 'approval-1',
+      status: 'consumed',
+    });
   });
 
   test('rejects unknown action type', async () => {
@@ -143,6 +156,47 @@ describe('copilotAction.service', () => {
 
     expect(client.query).toHaveBeenCalledWith('ROLLBACK');
     expect(client.release).toHaveBeenCalled();
+  });
+
+  test('blocks approval-required action without approval token', async () => {
+    mockPostgresPool.query.mockResolvedValueOnce({
+      rows: [
+        {
+          action_type: 'assign_role',
+          entity_type: 'user_role',
+          can_reverse: true,
+          reverse_action_type: 'unassign_role',
+          requires_approval: true,
+        },
+      ],
+    });
+
+    const client = makeClient({
+      onQuery: async (sql) => {
+        if (sql.includes('BEGIN')) return { rows: [] };
+        if (sql.includes('FROM copilot.action_permissions') && sql.includes('COUNT')) {
+          return { rows: [{ count: 0 }] };
+        }
+        if (sql.includes('ROLLBACK')) return { rows: [] };
+        return { rows: [] };
+      },
+    });
+
+    mockPostgresPool.connect.mockResolvedValue(client);
+
+    await expect(
+      copilotActionService.createAction({
+        tenantId: 'tenant-1',
+        actorUserId: 'user-1',
+        actionType: 'assign_role',
+        entityType: 'user_role',
+        entityId: 'user-1',
+        payload: { userId: 'user-1', roleIds: ['role-1'] },
+      })
+    ).rejects.toMatchObject({
+      statusCode: httpStatus.CONFLICT,
+      message: expect.stringContaining('requires approval'),
+    });
   });
 
   test('reconciles queued event to failed when outbox is dead_letter', async () => {

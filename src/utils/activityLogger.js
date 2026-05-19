@@ -2,6 +2,43 @@ const { postgresPool } = require('../config/postgres');
 const { emitActivityUpdate } = require('../config/socket');
 const logger = require('../config/logger');
 
+let activityLogTableColumns = null;
+let activityLogTableMissing = false;
+let hasLoggedMissingActivityTable = false;
+
+const getActivityLogTableColumns = async () => {
+  if (activityLogTableMissing) {
+    return null;
+  }
+
+  if (activityLogTableColumns) {
+    return activityLogTableColumns;
+  }
+
+  const existenceResult = await postgresPool.query(
+    `SELECT to_regclass('public.submission_activity_log') AS table_name`
+  );
+
+  if (!existenceResult.rows[0]?.table_name) {
+    activityLogTableMissing = true;
+    return null;
+  }
+
+  const columnResult = await postgresPool.query(
+    `
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'submission_activity_log'
+    `
+  );
+
+  activityLogTableColumns = new Set(
+    columnResult.rows.map((row) => row.column_name)
+  );
+  return activityLogTableColumns;
+};
+
 /**
  * Get enriched data from submission payload or fallback to lookup
  * Priority: Use payload data first, fallback to DB lookup only if needed
@@ -114,6 +151,17 @@ const logActivity = async (activityData) => {
   } = activityData;
 
   try {
+    const columns = await getActivityLogTableColumns();
+    if (!columns) {
+      if (!hasLoggedMissingActivityTable) {
+        logger.warn(
+          '[Activity] Table submission_activity_log is missing; activity logging is disabled until migrations run'
+        );
+        hasLoggedMissingActivityTable = true;
+      }
+      return;
+    }
+
     // Get enriched data - prefer from payload, fallback to DB lookup
     const enrichedData = await getEnrichedData(
       {
@@ -127,32 +175,38 @@ const logActivity = async (activityData) => {
       { user_id, node_id, project_id }
     );
 
+    const insertableValues = {
+      tenant_id,
+      project_id,
+      project_name,
+      project_category,
+      form_id,
+      node_id,
+      user_id,
+      action,
+      status,
+      job_id,
+      message,
+      source,
+      user_name: enrichedData.user_name,
+      user_email: enrichedData.user_email,
+      user_phone: enrichedData.user_phone,
+      node_reference: enrichedData.node_reference,
+      node_name: enrichedData.node_name,
+      form_reference: enrichedData.form_reference,
+    };
+
+    const fieldNames = Object.keys(insertableValues).filter((field) =>
+      columns.has(field)
+    );
+
+    const placeholders = fieldNames.map((_, index) => `$${index + 1}`).join(', ');
+    const values = fieldNames.map((field) => insertableValues[field]);
+
     await postgresPool.query(
-      `INSERT INTO submission_activity_log 
-       (tenant_id, project_id, project_name, project_category, form_id, node_id, user_id, 
-        action, status, job_id, message, source,
-        user_name, user_email, user_phone, node_reference, node_name, form_reference)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-      [
-        tenant_id,
-        project_id,
-        project_name,
-        project_category,
-        form_id,
-        node_id,
-        user_id,
-        action,
-        status,
-        job_id,
-        message,
-        source,
-        enrichedData.user_name,
-        enrichedData.user_email,
-        enrichedData.user_phone,
-        enrichedData.node_reference,
-        enrichedData.node_name,
-        enrichedData.form_reference,
-      ]
+      `INSERT INTO submission_activity_log (${fieldNames.join(', ')})
+       VALUES (${placeholders})`,
+      values
     );
 
     // Emit real-time update via Socket.IO
@@ -170,13 +224,16 @@ const logActivity = async (activityData) => {
       } - ${message}`
     );
   } catch (error) {
+    if (error.code === '42P01') {
+      activityLogTableMissing = true;
+    }
+    if (error.code === '42703') {
+      activityLogTableColumns = null;
+    }
     logger.error(
-      '[Activity] Failed to log activity:',
-      error.message,
-      '| node_id:',
-      node_id,
-      '| stack:',
-      error.stack
+      `[Activity] Failed to log activity: ${error.message} | node_id: ${
+        node_id || 'n/a'
+      }${error.stack ? ` | stack: ${error.stack}` : ''}`
     );
     // Don't throw - logging failure shouldn't break submission
   }

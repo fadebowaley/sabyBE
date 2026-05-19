@@ -437,7 +437,7 @@ const getSubmissions = async (filters, options = {}) => {
   try {
     const { limit = 50, offset = 0 } = options;
 
-    const result = await SubmissionModel.getSubmissions({
+    const result = await SubmissionModel.getFilteredSubmissions({
       ...filters,
       limit: parseInt(limit, 10),
       offset: parseInt(offset, 10),

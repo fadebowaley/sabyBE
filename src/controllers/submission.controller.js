@@ -7,6 +7,9 @@ const {
   getActivityLogs: getActivityLogsService,
   getSubmissionById,
   getActivityLogSummary: getActivityLogSummaryService,
+  listSubmissions: listSubmissionsService,
+  deleteSubmission: deleteSubmissionService,
+  retrySubmission: retrySubmissionService,
 } = require('../services/submission.service');
 const { postgresPool } = require('../config/postgres');
 const { emitActivityUpdate } = require('../config/socket');
@@ -102,6 +105,7 @@ const submitData = catchAsync(async (req, res) => {
  * @route GET /v1/submit-api
  */
 const listSubmissions = catchAsync(async (req, res) => {
+  console.log('[LEGACY api-submit] listSubmissions handler reached', req.query);
   const filters = pick(req.query, [
     'tenant_id',
     'project_id',
@@ -111,7 +115,7 @@ const listSubmissions = catchAsync(async (req, res) => {
     'status',
     'source',
   ]);
-  const submissions = await listSubmissions(filters);
+  const submissions = await listSubmissionsService(filters);
   res.send({ results: submissions });
 });
 

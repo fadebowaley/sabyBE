@@ -138,24 +138,60 @@ const getSubmissionsByProject = catchAsync(async (req, res) => {
 /**
  * Get submissions by tenant
  */
+
 const getSubmissionsByTenant = catchAsync(async (req, res) => {
   const { tenantId } = req.params;
+
+  const userTenantId = req.user?.tenantId;
+
+  const canCrossTenant =
+    req.user?.isSuper === true || req.user?.isSaby === true;
+
+  if (!canCrossTenant && userTenantId !== tenantId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+
+      'Cannot access form submissions for another tenant'
+    );
+  }
+
   const filter = pick(req.query, [
     'projectId',
     'status',
     'submittedBy',
     'submittedAt',
   ]);
-  const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
 
+  const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
+  console.log('We have hit the project submission stuffs . . . ')
   const result = await projectFormSubmissionService.getSubmissionsByTenant(
     tenantId,
     filter,
     options
   );
 
+  console.log('Getting the result',result);
+
   res.send(result);
 });
+
+
+
+
+const getSubmissionBySubmissionId = catchAsync(async (req, res) => {
+  const { submissionId } = req.params;
+  const options = pick(req.query, ['populate']);
+
+  const submission =
+    await projectFormSubmissionService.getSubmissionBySubmissionId(
+      submissionId,
+      options
+    );
+
+  res.send(submission);
+});
+
+
 
 /**
  * Get a submission by ID
@@ -265,4 +301,5 @@ module.exports = {
   deleteSubmission,
   exportSubmissions,
   getSubmissionStats,
+  getSubmissionBySubmissionId,
 };
