@@ -1291,6 +1291,14 @@ const upsertOnboardingDraft = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).send(result);
 });
 
+const updateOnboardingReceivingAccounts = catchAsync(async (req, res) => {
+  const result = await tenantOnboardingService.updateReceivingAccountsOnly({
+    userId: req.user.id,
+    receivingAccounts: req.body.receivingAccounts,
+  });
+  res.status(httpStatus.OK).send(result);
+});
+
 module.exports = {
   register,
   login,
@@ -1316,4 +1324,5 @@ module.exports = {
   getOnboardingProfile,
   upsertOnboardingProfile,
   upsertOnboardingDraft,
+  updateOnboardingReceivingAccounts,
 };

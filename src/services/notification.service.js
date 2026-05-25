@@ -97,9 +97,7 @@ class NotificationService {
    */
   createConfirmationTemplate(submission, user, projectForm) {
     const submissionDate = new Date(submission.createdAt).toLocaleString();
-    const projectName =
-      (projectForm.configuration && projectForm.configuration.projectName) ||
-      'Project';
+    const projectName = projectForm?.identity?.name || 'Project';
 
     return {
       subject: `✅ Submission Received - ${projectName}`,
@@ -127,9 +125,7 @@ The ${projectName} Team`,
    */
   createProcessingTemplate(submission, user, projectForm, status) {
     const submissionDate = new Date(submission.createdAt).toLocaleString();
-    const projectName =
-      (projectForm.configuration && projectForm.configuration.projectName) ||
-      'Project';
+    const projectName = projectForm?.identity?.name || 'Project';
 
     let statusText = 'Processing';
 

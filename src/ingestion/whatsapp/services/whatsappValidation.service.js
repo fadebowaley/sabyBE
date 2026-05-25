@@ -121,7 +121,7 @@ class WhatsAppValidationService {
       // Check if project is active and published
       if (
         projectForm.status !== 'active' ||
-        projectForm.metadata.deploymentStatus !== 'published'
+        projectForm.identity?.status !== 'published'
       ) {
         logger.warn(`❌ Project ${projectId} is not active or published`);
         return {
@@ -501,11 +501,7 @@ class WhatsAppValidationService {
       };
 
       const projectData = {
-        projectName:
-          (projectForm &&
-            projectForm.configuration &&
-            projectForm.configuration.projectName) ||
-          'Your Project',
+        projectName: projectForm?.identity?.name || 'Your Project',
       };
 
       // Get the first error step for notification

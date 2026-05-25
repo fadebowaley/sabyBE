@@ -167,6 +167,26 @@ const createSubmissionWorker = () => {
 
     let resolvedNodeName = node_name;
     let resolvedNodeReference = node_reference;
+    let resolvedFormId = formId;
+
+    if (!resolvedFormId && projectId) {
+      try {
+        const projectForm = await ProjectForm.findOne({
+          projectId,
+          deletedAt: null,
+        })
+          .select('formId projectId')
+          .lean();
+
+        resolvedFormId =
+          projectForm?.formId || projectForm?.projectId || projectId;
+      } catch (formLookupError) {
+        logger.warn(
+          `[Worker] Unable to resolve formId for project_id=${projectId}: ${formLookupError.message}`
+        );
+        resolvedFormId = projectId;
+      }
+    }
 
     if ((!resolvedNodeName || !resolvedNodeReference) && nodeId) {
       try {
@@ -208,7 +228,7 @@ const createSubmissionWorker = () => {
       project_id: projectId,
       project_name,
       project_category,
-      form_id: formId,
+      form_id: resolvedFormId,
       node_id: nodeId,
       node_name: resolvedNodeName || null,
       node_reference: resolvedNodeReference || null,
@@ -242,7 +262,7 @@ const createSubmissionWorker = () => {
       project_id: projectId,
       project_name,
       project_category,
-      form_id: formId,
+      form_id: resolvedFormId,
       node_id: nodeId,
       user_id: userId,
       action: 'processing',
@@ -419,9 +439,11 @@ const createSubmissionWorker = () => {
         // ── Workflow init — fire-and-forget ───────────────────────────────
         try {
           const form = await ProjectForm.findOne({ projectId })
-            .select('workflows')
+            .select('capabilities.experience.workflow.workflows')
             .lean();
-          const activeWorkflows = (form?.workflows || []).filter(
+          const activeWorkflows = (
+            form?.capabilities?.experience?.workflow?.workflows || []
+          ).filter(
             (wf) => wf.enabled !== false && wf.triggerOn !== 'manual'
           );
           if (activeWorkflows.length > 0) {
@@ -453,7 +475,7 @@ const createSubmissionWorker = () => {
         project_id: projectId,
         project_name,
         project_category,
-        form_id: formId,
+        form_id: resolvedFormId,
         node_id: nodeId,
         user_id: userId,
         action: 'completed',

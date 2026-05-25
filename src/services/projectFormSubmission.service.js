@@ -329,7 +329,7 @@ const exportSubmissions = async (projectId, format = 'csv', exportedBy) => {
     deletedAt: null,
   })
     .populate('submittedBy', 'name email')
-    .populate('projectFormId', 'configuration.projectName')
+    .populate('projectFormId', 'identity.name')
     .sort({ submittedAt: -1 });
 
   if (submissions.length === 0) {

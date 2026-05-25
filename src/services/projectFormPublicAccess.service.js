@@ -1285,9 +1285,9 @@ const submitWithAccess = async ({
   const queuePayload = {
     tenantId: decoded.tenantId,
     projectId: decoded.projectId,
-    project_name: projectForm?.configuration?.projectName || null,
-    project_category: Array.isArray(projectForm?.configuration?.tags)
-      ? projectForm.configuration.tags[0] || null
+    project_name: projectForm?.identity?.name || null,
+    project_category: Array.isArray(projectForm?.identity?.tags)
+      ? projectForm.identity.tags[0] || null
       : null,
     formId: projectForm.formId || projectForm.projectId,
     nodeId: String(node._id),
@@ -1312,7 +1312,7 @@ const submitWithAccess = async ({
     queuePayload.event_date = submittedAt;
   }
 
-  if (projectForm.permSettings?.enabled) {
+  if (projectForm.capabilities?.experience?.compliance?.enabled) {
     queuePayload.perm_enabled = true;
     const payloadMonth =
       queuePayload.payload?.month ||

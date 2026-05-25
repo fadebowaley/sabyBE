@@ -459,7 +459,7 @@ Use /start to begin a new form submission.`
         const availableProjects =
           await projectFormService.getProjectFormsByTenant(session.tenantId, {
             status: 'active',
-            'metadata.deploymentStatus': 'published',
+            'identity.status': 'published',
           });
 
         if (availableProjects && availableProjects.results) {

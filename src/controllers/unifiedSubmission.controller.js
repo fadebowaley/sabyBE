@@ -118,7 +118,7 @@ const submitData = catchAsync(async (req, res) => {
   // Fetch form to check PERM settings and resolve tenantId
   const form = await ProjectForm.findOne({
     projectId: submissionBody.projectId,
-  }).select('permSettings formId projectId tenantId');
+  }).select('capabilities.experience.compliance formId projectId tenantId');
 
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
@@ -178,25 +178,24 @@ const submitData = catchAsync(async (req, res) => {
   // Non-PERM forms that happen to carry a nodeId (for analytics/tracing) are
   // not accidentally promoted to PERM mode.
   const isPERM =
-    form.permSettings?.enabled === true ||
+    form.capabilities?.experience?.compliance?.enabled === true ||
     submissionBody.perm_enabled === true;
 
   if (isPERM) {
     submissionBody.perm_enabled = true; // Normalise the flag
     const trackingMode =
-      form?.permSettings?.trackingMode ||
-      form?.permSettings?.tracking_mode ||
+      form?.capabilities?.experience?.compliance?.trackingMode ||
       'none';
 
     // Validate required PERM fields based on the form's explicit settings
-    if (form.permSettings?.requireNodeId && !submissionBody.nodeId) {
+    if (form.capabilities?.experience?.compliance?.requireNodeId && !submissionBody.nodeId) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         '"nodeId" is required for this PERM-enabled form'
       );
     }
 
-    if (form.permSettings?.requireMonth && !submissionBody.month) {
+    if (form.capabilities?.experience?.compliance?.requireMonth && !submissionBody.month) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         '"month" is required for this PERM-enabled form — please select a reporting month before submitting'
@@ -262,7 +261,10 @@ const submitData = catchAsync(async (req, res) => {
     }
 
     // Validate calendar lock when calendarRequired is set
-    if (form.permSettings?.calendarRequired && submissionBody.month) {
+    if (
+      form.capabilities?.experience?.compliance?.calendarRequired &&
+      submissionBody.month
+    ) {
       try {
         const calendar = await eventCalendarService.getCalendar(
           submissionBody.tenantId,

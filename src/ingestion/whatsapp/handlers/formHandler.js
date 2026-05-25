@@ -1002,7 +1002,7 @@ exports.getAvailableProjects = async function getAvailableProjects(tenantId) {
         tenantId,
         {
           status: 'active',
-          'metadata.deploymentStatus': 'published',
+          'identity.status': 'published',
           deletedAt: null,
           ...integrationFilter,
         }
@@ -1021,7 +1021,7 @@ exports.getAvailableProjects = async function getAvailableProjects(tenantId) {
       .find({
         tenantId,
         status: 'active',
-        'metadata.deploymentStatus': 'published',
+        'identity.status': 'published',
         deletedAt: null,
         ...integrationFilter,
       })

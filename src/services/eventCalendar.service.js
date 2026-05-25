@@ -286,7 +286,7 @@ const getEventsByMonth = async (tenant_id, project_id, month, year) => {
  * Master function that routes to appropriate generator based on trackingMode
  */
 const generateCalendarFromForm = async (form, month, year) => {
-  const { permSettings } = form;
+  const permSettings = form?.capabilities?.experience?.compliance || {};
 
   if (!permSettings?.enabled) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'PERM is not enabled for this form');
@@ -354,7 +354,8 @@ const generateMonthOnlyCalendar = async (form, month, year) => {
  */
 const generateDailyCalendar = async (form, month, year) => {
   try {
-    const { tenantId, projectId, formId, permSettings } = form;
+    const { tenantId, projectId, formId } = form;
+    const permSettings = form?.capabilities?.experience?.compliance || {};
     const { dailyConfig } = permSettings;
 
     if (!dailyConfig?.activeDays || dailyConfig.activeDays.length === 0) {
@@ -453,7 +454,8 @@ const generateDailyCalendar = async (form, month, year) => {
  */
 const generateWeeklyCalendar = async (form, month, year) => {
   try {
-    const { tenantId, projectId, formId, permSettings } = form;
+    const { tenantId, projectId, formId } = form;
+    const permSettings = form?.capabilities?.experience?.compliance || {};
     const { weeklyConfig } = permSettings;
 
     if (!weeklyConfig?.days || weeklyConfig.days.length === 0) {

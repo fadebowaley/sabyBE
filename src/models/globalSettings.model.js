@@ -1,6 +1,22 @@
 const mongoose = require('mongoose');
 const validator = require('validator'); // Validator is used for validating input data, such as checking if a string is a valid email format.
 const { toJSON, paginate, tenantPlugin } = require('./plugins'); // toJSON plugin is used to convert Mongoose documents to JSON format, while paginate helps in paginating results.
+const { randomUUID } = require('crypto');
+
+const receivingAccountSchema = new mongoose.Schema(
+  {
+    id: { type: String, default: () => randomUUID() },
+    label: { type: String, default: '' },
+    accountNumber: { type: String, default: '' },
+    bankName: { type: String, default: '' },
+    bankCode: { type: String, default: '' },
+    bankCategory: { type: String, default: '' },
+    accountName: { type: String, default: '' },
+    isPrimary: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
+  },
+  { _id: false }
+);
 
 const globalSettingsSchema = new mongoose.Schema(
   {
@@ -41,6 +57,10 @@ const globalSettingsSchema = new mongoose.Schema(
     // Finance & Payment Settings
     enablePayments: { type: Boolean, default: true }, // Enable payment processing
     currency: { type: String, default: 'USD' },
+    receivingAccounts: {
+      type: [receivingAccountSchema],
+      default: [],
+    },
     exchangeRates: { type: Object, default: {} }, // Multi-currency support
     donationCategories: {
       type: [String],

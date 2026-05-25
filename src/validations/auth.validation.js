@@ -1,6 +1,18 @@
 const Joi = require('joi');
 const { password } = require('./custom.validation');
 
+const receivingAccountSchema = Joi.object().keys({
+  id: Joi.string().allow('', null),
+  label: Joi.string().allow('', null),
+  accountNumber: Joi.string().allow('', null),
+  bankName: Joi.string().allow('', null),
+  bankCode: Joi.string().allow('', null),
+  bankCategory: Joi.string().allow('', null),
+  accountName: Joi.string().allow('', null),
+  isPrimary: Joi.boolean(),
+  isActive: Joi.boolean(),
+});
+
 const register = {
   body: Joi.object().keys({
     firstname: Joi.string().required(),
@@ -158,6 +170,7 @@ const onboardingProfileUpsert = {
         state: Joi.string().allow('', null),
         city: Joi.string().allow('', null),
         address: Joi.string().allow('', null),
+        receivingAccounts: Joi.array().items(receivingAccountSchema).default([]),
       })
       .required(),
     node: Joi.object()
@@ -200,6 +213,7 @@ const onboardingDraftUpsert = {
             state: Joi.string().allow('', null),
             city: Joi.string().allow('', null),
             address: Joi.string().allow('', null),
+            receivingAccounts: Joi.array().items(receivingAccountSchema).default([]),
           })
           .default({}),
         node: Joi.object()
@@ -225,6 +239,12 @@ const onboardingDraftUpsert = {
   }),
 };
 
+const onboardingReceivingAccountsUpdate = {
+  body: Joi.object().keys({
+    receivingAccounts: Joi.array().items(receivingAccountSchema).default([]),
+  }),
+};
+
 module.exports = {
   register,
   login,
@@ -247,4 +267,5 @@ module.exports = {
   onboardingPhoneOtpVerify,
   onboardingProfileUpsert,
   onboardingDraftUpsert,
+  onboardingReceivingAccountsUpdate,
 };

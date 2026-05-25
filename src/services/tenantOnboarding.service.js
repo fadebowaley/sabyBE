@@ -17,6 +17,97 @@ const sanitizeText = (value, fallback = '') =>
 
 const DEFAULT_TIMEZONE = 'Africa/Lagos';
 
+const sanitizeReceivingAccounts = (accounts) => {
+  if (!Array.isArray(accounts)) return [];
+  const cleaned = accounts
+    .map((account) => ({
+      id: sanitizeText(account?.id),
+      label: sanitizeText(account?.label),
+      accountNumber: sanitizeText(account?.accountNumber),
+      bankName: sanitizeText(account?.bankName),
+      bankCode: sanitizeText(account?.bankCode),
+      bankCategory: sanitizeText(account?.bankCategory),
+      accountName: sanitizeText(account?.accountName),
+      isPrimary: sanitizeBoolean(account?.isPrimary, false),
+      isActive: sanitizeBoolean(account?.isActive, true),
+    }))
+    .filter(
+      (account) =>
+        account.accountNumber || account.bankName || account.accountName || account.label
+    );
+
+  let foundPrimary = false;
+  return cleaned.map((account, index) => {
+    const isPrimary = account.isActive && (account.isPrimary || (!foundPrimary && index === 0));
+    if (isPrimary) foundPrimary = true;
+    return {
+      ...account,
+      isPrimary,
+    };
+  });
+};
+
+const updateReceivingAccountsOnly = async ({ userId, receivingAccounts }) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  if (!(user.isOwner || user.isSuper || user.isSaby)) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Only tenant owner accounts can manage receiving accounts.'
+    );
+  }
+
+  const tenantId = user.tenantId;
+  const sanitizedReceivingAccounts = sanitizeReceivingAccounts(receivingAccounts || []);
+
+  await GlobalSettings.findOneAndUpdate(
+    { tenantId },
+    {
+      $set: {
+        tenantId,
+        receivingAccounts: sanitizedReceivingAccounts,
+      },
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+
+  const existingProfile = await TenantOnboarding.findOne({ tenantId }).lean();
+  const nextProfile = await TenantOnboarding.findOneAndUpdate(
+    { tenantId },
+    {
+      $set: {
+        tenantId,
+        ownerUserId: user._id,
+        company: {
+          name: sanitizeText(existingProfile?.company?.name),
+          email: sanitizeText(existingProfile?.company?.email),
+          phone: sanitizeText(existingProfile?.company?.phone),
+          industry: sanitizeText(existingProfile?.company?.industry),
+          size: sanitizeText(existingProfile?.company?.size),
+          timezone: sanitizeText(existingProfile?.company?.timezone, DEFAULT_TIMEZONE),
+          country: sanitizeText(existingProfile?.company?.country),
+          state: sanitizeText(existingProfile?.company?.state),
+          city: sanitizeText(existingProfile?.company?.city),
+          address: sanitizeText(existingProfile?.company?.address),
+          receivingAccounts: sanitizedReceivingAccounts,
+        },
+      },
+      $inc: { version: 1 },
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+
+  return {
+    ok: true,
+    tenantId,
+    profile: nextProfile,
+    receivingAccounts: sanitizedReceivingAccounts,
+  };
+};
+
 const ALLOWED_COMPANY_SIZES = new Set([
   '1-10',
   '11-50',
@@ -410,6 +501,7 @@ const getOnboardingStatus = async ({ userId }) => {
         state: sanitizeText(profile?.company?.state),
         city: sanitizeText(profile?.company?.city),
         address: sanitizeText(profile?.company?.address),
+        receivingAccounts: sanitizeReceivingAccounts(settings?.receivingAccounts || []),
       },
       owner: {
         phoneNumber: sanitizePhone(profile?.owner?.phoneNumber || user.phoneNumber || ''),
@@ -558,6 +650,9 @@ const completeOnboarding = async ({ userId, payload }) => {
   const sanitizedOwnerPhone = sanitizePhone(owner.phoneNumber);
   const sanitizedCompanyPhone = sanitizePhone(company.phone);
   const sanitizedCompanyEmail = sanitizeEmail(company.email, user.email || '');
+  const sanitizedReceivingAccounts = sanitizeReceivingAccounts(
+    company.receivingAccounts || []
+  );
   const onboardingPhoneOtp = user?.customFields?.onboarding?.phoneOtp || null;
   if (sanitizedOwnerPhone) {
     const ownerDigits = normalizePhoneForVerification(sanitizedOwnerPhone);
@@ -629,6 +724,7 @@ const completeOnboarding = async ({ userId, payload }) => {
         contactEmail: sanitizedCompanyEmail,
         contactPhone: sanitizeText(sanitizedCompanyPhone, user.phoneNumber || ''),
         timezone: sanitizedTimezone,
+        receivingAccounts: sanitizedReceivingAccounts,
       },
     },
     { new: true, upsert: true, setDefaultsOnInsert: true }
@@ -651,6 +747,7 @@ const completeOnboarding = async ({ userId, payload }) => {
           state: sanitizeText(company.state),
           city: sanitizeText(company.city),
           address: sanitizeText(company.address),
+          receivingAccounts: sanitizedReceivingAccounts,
         },
         owner: {
           roleTitle: sanitizeText(owner.roleTitle, 'Owner'),
@@ -691,6 +788,7 @@ const completeOnboarding = async ({ userId, payload }) => {
       state: sanitizeText(previousProfile?.company?.state),
       city: sanitizeText(previousProfile?.company?.city),
       address: sanitizeText(previousProfile?.company?.address),
+      receivingAccounts: sanitizeReceivingAccounts(previousSettings?.receivingAccounts || []),
     },
     owner: {
       phoneNumber: sanitizeText(previousProfile?.owner?.phoneNumber, user.phoneNumber || ''),
@@ -725,6 +823,7 @@ const completeOnboarding = async ({ userId, payload }) => {
       state: sanitizeText(company.state),
       city: sanitizeText(company.city),
       address: sanitizeText(company.address),
+      receivingAccounts: sanitizedReceivingAccounts,
     },
     owner: {
       phoneNumber: sanitizedOwnerPhone,
@@ -768,4 +867,5 @@ module.exports = {
   getOnboardingStatus,
   saveOnboardingDraft,
   completeOnboarding,
+  updateReceivingAccountsOnly,
 };

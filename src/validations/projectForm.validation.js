@@ -106,7 +106,7 @@ const projectConfigurationSchema = Joi.object({
   tags: Joi.array().items(Joi.string().trim()).default([]),
   analysisProfile: projectAnalysisProfileSchema,
   publicSecureMode: Joi.string()
-    .valid('off', 'single_qr_passwordless')
+    .valid('off', 'link_only', 'otp', 'access_code')
     .default('off'),
   accessibility: Joi.array()
     .items(Joi.string().valid('api', 'embedded', 'javascript', 'mobile'))
@@ -192,6 +192,102 @@ const metadataSchema = Joi.object({
   permEnabled: Joi.boolean().optional(),
 }).unknown(true);
 
+const invoiceConditionSchema = Joi.object({
+  sourceType: Joi.string()
+    .valid('field', 'submission_status', 'workflow_status')
+    .default('field'),
+  fieldId: Joi.string().allow('', null).default(null),
+  statusKey: Joi.string().allow('', null).default(null),
+  operator: Joi.string()
+    .valid('eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'contains', 'in')
+    .default('eq'),
+  value: Joi.alternatives()
+    .try(Joi.string().allow(''), Joi.number(), Joi.boolean(), Joi.allow(null))
+    .default(null),
+}).unknown(true);
+
+const invoiceLineItemSchema = Joi.object({
+  id: Joi.string().optional(),
+  label: Joi.string().allow('').default(''),
+  sourceField: Joi.string().allow('', null).default(null),
+  enabled: Joi.boolean().default(true),
+  calculationType: Joi.string().valid('fixed', 'percentage', 'formula').default('fixed'),
+  rate: Joi.number().min(0).default(0),
+  fixedAmount: Joi.number().allow(null).default(null),
+  quantityField: Joi.string().allow('', null).default(null),
+  baseExpression: Joi.string().allow('', null).default(null),
+  computedExpression: Joi.string().allow('', null).default(null),
+  includeInSubtotal: Joi.boolean().default(true),
+  conditions: Joi.array().items(invoiceConditionSchema).default([]),
+  active: Joi.boolean().default(true),
+}).unknown(true);
+
+const invoiceChargeAdjustmentSchema = Joi.object({
+  enabled: Joi.boolean().default(false),
+  mode: Joi.string().valid('none', 'fixed', 'percentage', 'formula').default('none'),
+  value: Joi.number().default(0),
+  expression: Joi.string().allow('', null).default(null),
+  conditions: Joi.array().items(invoiceConditionSchema).default([]),
+}).default({});
+
+const invoiceConfigSchema = Joi.object({
+  enabled: Joi.boolean().default(false),
+  calculationMode: Joi.string()
+    .valid('none', 'fixed', 'field_based', 'line_items', 'rule_based')
+    .default('none'),
+  baseAmount: Joi.number().min(0).default(0),
+  amountSourceField: Joi.string().allow('', null).default(null),
+  lineItemsEnabled: Joi.boolean().default(false),
+  lineItems: Joi.array().items(invoiceLineItemSchema).default([]),
+  discountsEnabled: Joi.boolean().default(false),
+  taxEnabled: Joi.boolean().default(false),
+  discounts: invoiceChargeAdjustmentSchema,
+  tax: invoiceChargeAdjustmentSchema,
+  totals: Joi.object({
+    subtotalExpression: Joi.string().allow('', null).default(null),
+    discountExpression: Joi.string().allow('', null).default(null),
+    taxExpression: Joi.string().allow('', null).default(null),
+    grandTotalExpression: Joi.string().allow('', null).default(null),
+  }).default({}),
+  invoiceNumbering: Joi.object({
+    mode: Joi.string().default('auto'),
+    prefix: Joi.string().allow('').default(''),
+    nextNumber: Joi.number().integer().min(1).default(1),
+  }).default({}),
+  presentation: Joi.object({
+    showPaymentInstructions: Joi.boolean().default(true),
+    showRemittanceDetails: Joi.boolean().default(true),
+    showDueDate: Joi.boolean().default(true),
+    showSubtotal: Joi.boolean().default(true),
+    showDiscount: Joi.boolean().default(true),
+    showTax: Joi.boolean().default(true),
+    showGrandTotal: Joi.boolean().default(true),
+  }).default({}),
+})
+  .custom((value, helpers) => {
+    if (value.calculationMode === 'fixed' && Number(value.baseAmount) < 0) {
+      return helpers.error('any.custom', { message: 'baseAmount must be 0 or greater' });
+    }
+    if (value.calculationMode === 'field_based' && !value.amountSourceField) {
+      return helpers.error('any.custom', {
+        message: 'amountSourceField is required when calculationMode is field_based',
+      });
+    }
+    if (
+      ['line_items', 'rule_based'].includes(value.calculationMode) &&
+      (!Array.isArray(value.lineItems) || value.lineItems.length === 0)
+    ) {
+      return helpers.error('any.custom', {
+        message: 'lineItems are required when calculationMode is line_items or rule_based',
+      });
+    }
+    return value;
+  })
+  .messages({
+    'any.custom': '{{#message}}',
+  })
+  .default({});
+
 const capabilitiesSchema = Joi.object({
   experience: Joi.object({
     security: Joi.object({
@@ -228,29 +324,69 @@ const capabilitiesSchema = Joi.object({
     payment: Joi.object({
       enabled: Joi.boolean().default(false),
       mode: Joi.string().default('none'),
+      currency: Joi.string().allow('', null).default(null),
       enabledChannels: Joi.array().items(Joi.string()).default([]),
       defaultChannel: Joi.string().allow(null).default(null),
+      collectionStage: Joi.string().default('submission'),
       settlementType: Joi.string().default('none'),
       receivingAccount: Joi.any().allow(null).default(null),
       channelConfigs: Joi.object().unknown(true).default({}),
+      policies: Joi.object({
+        requirePaymentBeforeSubmit: Joi.boolean().default(false),
+        allowPartialPayment: Joi.boolean().default(false),
+        allowOverpayment: Joi.boolean().default(false),
+        refundPolicy: Joi.string().default('none'),
+      }).default({}),
     }).default({}),
     remittance: Joi.object({
       enabled: Joi.boolean().default(false),
-      accountSource: Joi.string().default('none'),
+      accountSource: Joi.string()
+        .valid('tenant_global', 'specific_node', 'dynamic_node', 'level_nodes', 'form_field')
+        .default('tenant_global'),
+      specificNodeId: Joi.string().allow('', null).default(null),
+      targetLevelId: Joi.string().allow('', null).default(null),
       requireNodeAccount: Joi.boolean().default(false),
-      nodeAccountField: Joi.string().allow(null).default(null),
-      settlementRule: Joi.any().allow(null).default(null),
+      nodeAccountField: Joi.string().allow('', null).default(null),
+      inheritParentAccount: Joi.boolean().default(false),
+      settlementRule: Joi.object({
+        mode: Joi.string().default('single'),
+        splitType: Joi.string().default('selection'),
+        targets: Joi.array()
+          .items(
+            Joi.object({
+              nodeId: Joi.string().required(),
+              percentage: Joi.number().min(0).max(100).optional(),
+            })
+          )
+          .default([]),
+      }).default({}),
+      routing: Joi.object({
+        byNode: Joi.boolean().default(false),
+        bySubmissionValue: Joi.boolean().default(false),
+        fallbackAccountId: Joi.string().allow('', null).default(null),
+      }).default({}),
     }).default({}),
-    invoice: Joi.object({
-      enabled: Joi.boolean().default(false),
-      calculationMode: Joi.string().default('none'),
-      currency: Joi.string().allow(null).default(null),
-      lineItemsEnabled: Joi.boolean().default(false),
-      discountsEnabled: Joi.boolean().default(false),
-      taxEnabled: Joi.boolean().default(false),
-      rules: Joi.array().items(Joi.object().unknown(true)).default([]),
-    }).default({}),
-  }).default({}),
+    invoice: invoiceConfigSchema.default({}),
+  })
+    .custom((value, helpers) => {
+      if (value?.payment?.enabled) {
+        if (!value?.invoice?.enabled) {
+          return helpers.error('any.custom', {
+            message: 'invoice.enabled is required when payment is enabled',
+          });
+        }
+        if (!value?.invoice?.calculationMode || value.invoice.calculationMode === 'none') {
+          return helpers.error('any.custom', {
+            message: 'invoice.calculationMode cannot be none when payment is enabled',
+          });
+        }
+      }
+      return value;
+    })
+    .messages({
+      'any.custom': '{{#message}}',
+    })
+    .default({}),
 }).default({});
 
 const smartMappingsSchema = Joi.object({
@@ -267,54 +403,182 @@ const smartMappingsSchema = Joi.object({
   }).default({}),
 }).default({});
 
-const enforceSystemFormContract = (value, helpers) => {
-  const category = value?.metadata?.formCategory;
-  if (category !== 'system') {
-    return value;
-  }
+const identitySchema = Joi.object({
+  name: Joi.string().required().trim().min(1).max(100),
+  description: Joi.string().allow('').default(''),
+  category: Joi.string().required().trim(),
+  tags: Joi.array().items(Joi.string().trim()).default([]),
+  status: Joi.string().valid('draft', 'published', 'archived').default('draft'),
+}).required();
 
-  const target = value?.metadata?.systemTarget;
-  if (!target) {
-    return helpers.error('any.custom', {
-      message: 'metadata.systemTarget is required when metadata.formCategory is system',
-    });
-  }
+const layoutSchema = Joi.object({
+  style: Joi.string().default('default'),
+  wizardMode: Joi.boolean().default(false),
+  grid: Joi.object({
+    columns: Joi.number().integer().min(1).max(24).default(12),
+    columnSpans: Joi.object().default({}),
+  }).required(),
+  builder: Joi.object().unknown(true).default({}),
+}).required();
 
-  if (value?.configuration?.security && value.configuration.security !== 'private') {
-    return helpers.error('any.custom', {
-      message: 'System forms must set configuration.security to private',
-    });
-  }
+const securityAuthenticationSchema = Joi.object({
+  requireLogin: Joi.boolean().default(true),
+  allowAnonymous: Joi.boolean().default(false),
+  requireOtp: Joi.boolean().default(false),
+})
+  .unknown(true)
+  .default({});
 
-  return value;
-};
-
-const validateSmartMappingsAgainstElements = (value, helpers) => {
-  const elements = Array.isArray(value?.elements) ? value.elements : [];
-  const validIds = new Set(
-    elements
-      .map((element) => String(element?.id || '').trim())
-      .filter(Boolean)
-  );
-  const mappingFields = value?.smartMappings?.fields || {};
-
-  Object.entries(mappingFields).forEach(([mappingKey, mappedFieldId]) => {
-    const id = String(mappedFieldId || '').trim();
-    if (!id) return;
-    if (!validIds.has(id)) {
-      delete mappingFields[mappingKey];
-    }
-  });
-
-  return value;
-};
+const securitySubmissionProtectionSchema = Joi.object({
+  preventDuplicateSubmission: Joi.boolean().default(false),
+  duplicateCheckField: Joi.string().allow('', null).default(null),
+  rateLimitEnabled: Joi.boolean().default(false),
+  maxSubmissionsPerUser: Joi.number().integer().min(1).allow(null).default(null),
+})
+  .unknown(true)
+  .default({});
 
 const paymentConfigSchema = Joi.object({
   enabled: Joi.boolean().default(false),
+  mode: Joi.string().default('none'),
+  currency: Joi.string().allow('', null).default(null),
   enabledChannels: Joi.array().items(Joi.string()).default([]),
-  defaultChannel: Joi.string().allow('', null),
+  defaultChannel: Joi.string().allow('', null).default(null),
+  collectionStage: Joi.string().default('submission'),
+  settlementType: Joi.string().default('none'),
+  receivingAccount: Joi.any().allow(null).default(null),
   channelConfigs: Joi.object().unknown(true).default({}),
+  policies: Joi.object({
+    requirePaymentBeforeSubmit: Joi.boolean().default(false),
+    allowPartialPayment: Joi.boolean().default(false),
+    allowOverpayment: Joi.boolean().default(false),
+    refundPolicy: Joi.string().default('none'),
+  }).default({}),
 }).unknown(true);
+
+const remittanceConfigSchema = Joi.object({
+  enabled: Joi.boolean().default(false),
+  accountSource: Joi.string()
+    .valid('tenant_global', 'specific_node', 'dynamic_node', 'level_nodes', 'form_field')
+    .default('tenant_global'),
+  specificNodeId: Joi.string().allow('', null).default(null),
+  targetLevelId: Joi.string().allow('', null).default(null),
+  requireNodeAccount: Joi.boolean().default(false),
+  nodeAccountField: Joi.string().allow('', null).default(null),
+  inheritParentAccount: Joi.boolean().default(false),
+  settlementRule: Joi.object({
+    mode: Joi.string().default('single'),
+    splitType: Joi.string().default('selection'),
+    targets: Joi.array()
+      .items(
+        Joi.object({
+          nodeId: Joi.string().required(),
+          percentage: Joi.number().min(0).max(100).optional(),
+        })
+      )
+      .default([]),
+  }).default({}),
+  routing: Joi.object({
+    byNode: Joi.boolean().default(false),
+    bySubmissionValue: Joi.boolean().default(false),
+    fallbackAccountId: Joi.string().allow('', null).default(null),
+  }).default({}),
+})
+  .custom((value, helpers) => {
+    if (value.accountSource === 'specific_node' && !value.specificNodeId) {
+      return helpers.error('any.custom', {
+        message: 'specificNodeId is required when accountSource is specific_node',
+      });
+    }
+    if (value.accountSource === 'level_nodes') {
+      if (!value.targetLevelId) {
+        return helpers.error('any.custom', {
+          message: 'targetLevelId is required when accountSource is level_nodes',
+        });
+      }
+      const targets = Array.isArray(value?.settlementRule?.targets)
+        ? value.settlementRule.targets
+        : [];
+      const nodeIds = targets.map((target) => target.nodeId);
+      if (new Set(nodeIds).size !== nodeIds.length) {
+        return helpers.error('any.custom', {
+          message: 'settlementRule.targets cannot contain duplicate nodeId values',
+        });
+      }
+    }
+    if (value.accountSource === 'form_field' && !value.nodeAccountField) {
+      return helpers.error('any.custom', {
+        message: 'nodeAccountField is required when accountSource is form_field',
+      });
+    }
+    return value;
+  })
+  .messages({
+    'any.custom': '{{#message}}',
+  })
+  .default({});
+
+const automationRuleConditionSchema = Joi.object({
+  id: Joi.string().optional(),
+  sourceType: Joi.string()
+    .valid('field', 'submission_status', 'workflow_status')
+    .default('field'),
+  fieldId: Joi.string().allow('', null).default(null),
+  statusKey: Joi.string().allow('', null).default(null),
+  operator: Joi.string()
+    .valid('eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'contains', 'in')
+    .default('eq'),
+  value: Joi.alternatives()
+    .try(Joi.string().allow(''), Joi.number(), Joi.boolean(), Joi.array(), Joi.object().unknown(true), Joi.allow(null))
+    .default(null),
+}).unknown(true);
+
+const automationRuleSchema = Joi.object({
+  id: Joi.string().optional(),
+  name: Joi.string().allow('').default(''),
+  enabled: Joi.boolean().default(true),
+  priority: Joi.number().integer().min(1).default(1),
+  matchMode: Joi.string().valid('all', 'any').default('all'),
+  scope: Joi.object({
+    source: Joi.string().valid('submission', 'workflow').default('submission'),
+    trigger: Joi.string()
+      .valid('created', 'updated', 'approved', 'rejected', 'completed', 'manual')
+      .default('created'),
+  }).default({}),
+  conditions: Joi.array().items(automationRuleConditionSchema).default([]),
+  actionRefs: Joi.array().items(Joi.string()).default([]),
+  outcome: Joi.object({
+    statusOnMatch: Joi.string().allow('', null).default(null),
+    note: Joi.string().allow('').default(''),
+  }).default({}),
+}).unknown(true);
+
+const connectedActionSchema = Joi.object({
+  id: Joi.string().optional(),
+  name: Joi.string().allow('').default(''),
+  enabled: Joi.boolean().default(true),
+  provider: Joi.string()
+    .valid('internal', 'webhook', 'email', 'slack', 'zapier', 'power_automate')
+    .default('internal'),
+  actionType: Joi.string()
+    .valid('notify', 'status_update', 'integration_sync', 'assign', 'webhook_call')
+    .default('notify'),
+  target: Joi.string().allow('', null).default(null),
+  config: Joi.object().unknown(true).default({}),
+  retryPolicy: Joi.object({
+    enabled: Joi.boolean().default(false),
+    maxAttempts: Joi.number().integer().min(1).max(10).default(3),
+  }).default({}),
+}).unknown(true);
+
+const automationOperationalVisibilitySchema = Joi.object({
+  showRunLog: Joi.boolean().default(true),
+  showStatuses: Joi.boolean().default(true),
+  showOwners: Joi.boolean().default(true),
+  showAuditTrail: Joi.boolean().default(true),
+  showRuleMatches: Joi.boolean().default(true),
+  showLastRunAt: Joi.boolean().default(true),
+}).default({});
 
 // PERM Settings Schema
 const permSettingsSchema = Joi.object({
@@ -348,7 +612,6 @@ const permSettingsSchema = Joi.object({
   autoLockMonthEnd: Joi.boolean().default(false),
   calendarRequired: Joi.boolean().default(false),
   eventTypes: Joi.array().items(Joi.string()).default([]),
-  // Calendar Generation options for backdating
   calendarGeneration: Joi.object({
     startDate: Joi.string().isoDate().optional(),
     endDate: Joi.string().isoDate().optional(),
@@ -375,9 +638,7 @@ const workflowStepSchema = Joi.object({
   actionType: Joi.string()
     .valid('SUBMIT', 'REVIEW', 'APPROVE', 'REJECT', 'ESCALATE', 'NOTIFY')
     .required(),
-  // Multi-role assignment (preferred)
   assigneeRoles: Joi.array().items(Joi.string()).default([]),
-  // Legacy single-role (kept for backward compat)
   assigneeRole: Joi.string().allow('', null).optional(),
   assigneeType: Joi.string().valid('role', 'user', 'dynamic_field').default('role'),
   assigneeUsers: Joi.array().items(Joi.string()).default([]),
@@ -408,27 +669,213 @@ const workflowSchema = Joi.object({
   description: Joi.string().allow('', null).optional(),
 }).unknown(true);
 
+const v2CapabilitiesSchema = Joi.object({
+  experience: Joi.object({
+    security: Joi.object({
+      profile: Joi.string()
+        .valid(
+          'open_public',
+          'private_safe',
+          'restricted_team',
+          'internal_staff',
+          'high_security'
+        )
+        .default('private_safe'),
+      mode: Joi.string()
+        .valid('public', 'private', 'restricted', 'internal')
+        .default('private'),
+      publicSecureMode: Joi.string()
+        .valid('off', 'link_only', 'otp', 'access_code')
+        .default('off'),
+      access: Joi.object({
+        whoCanAccess: Joi.string()
+          .valid(
+            'anyone',
+            'authenticated_users',
+            'selected_roles',
+            'selected_users'
+          )
+          .default('authenticated_users'),
+        allowedRoles: Joi.array().items(Joi.string()).default([]),
+        allowedUsers: Joi.array().items(Joi.string()).default([]),
+        restrictByLocation: Joi.boolean().default(false),
+        allowedCountries: Joi.array().items(Joi.string()).default([]),
+      })
+        .unknown(true)
+        .default({}),
+      authentication: securityAuthenticationSchema,
+      submissionProtection: securitySubmissionProtectionSchema,
+      channels: Joi.array()
+        .items(
+          Joi.string().valid(
+            'web',
+            'api',
+            'embedded',
+            'javascript',
+            'mobile',
+            'whatsapp',
+            'telegram'
+          )
+        )
+        .default([]),
+    })
+      .required()
+      .unknown(true),
+    behavior: Joi.object().unknown(true).default({}),
+    distribution: Joi.object().unknown(true).default({}),
+    notifications: Joi.object().unknown(true).default({}),
+    compliance: permSettingsSchema.default({}),
+    workflow: Joi.object({
+      enabled: Joi.boolean().default(false),
+      approvalMode: Joi.string().default('none'),
+      triggerOn: Joi.string()
+        .valid('submission', 'submit', 'update', 'manual')
+        .default('submission'),
+      workflows: Joi.array().items(workflowSchema).default([]),
+    })
+      .unknown(true)
+      .default({}),
+  })
+    .required()
+    .unknown(true),
+  transaction: Joi.object({
+    payment: paymentConfigSchema.default({}),
+    remittance: remittanceConfigSchema.default({}),
+    invoice: invoiceConfigSchema.default({}),
+  })
+    .custom((value, helpers) => {
+      if (value?.payment?.enabled) {
+        if (!value?.invoice?.enabled) {
+          return helpers.error('any.custom', {
+            message: 'invoice.enabled is required when payment is enabled',
+          });
+        }
+        if (!value?.invoice?.calculationMode || value.invoice.calculationMode === 'none') {
+          return helpers.error('any.custom', {
+            message: 'invoice.calculationMode cannot be none when payment is enabled',
+          });
+        }
+      }
+      return value;
+    })
+    .messages({
+      'any.custom': '{{#message}}',
+    })
+    .required()
+    .unknown(true),
+  automation: Joi.object({
+    rules: Joi.array().items(automationRuleSchema).default([]),
+    connectedActions: Joi.array()
+      .items(connectedActionSchema)
+      .default([]),
+    operationalVisibility: automationOperationalVisibilitySchema,
+  })
+    .required()
+    .unknown(true),
+})
+  .required()
+  .unknown(true);
+
+const analyticsSchema = Joi.object({
+  profile: projectAnalysisProfileSchema.default({}),
+})
+  .required()
+  .unknown(true);
+
+const uiSchema = Joi.object({
+  theme: Joi.string().default('default'),
+  primaryColor: Joi.string().default('#3b82f6'),
+  layout: Joi.string().valid('single', 'multi-step').default('single'),
+  showProgressBar: Joi.boolean().default(true),
+})
+  .unknown(true)
+  .default({});
+
+const rejectLegacyRootFields = (value, helpers) => {
+  const forbidden = [
+    'configuration',
+    'userSettings',
+    'permSettings',
+    'paymentConfig',
+    'workflows',
+    'style',
+    'wizardMode',
+    'columnSpans',
+    'calendar',
+    'behaviorHooks',
+  ];
+  const found = forbidden.filter((key) =>
+    Object.prototype.hasOwnProperty.call(value || {}, key)
+  );
+  if (found.length > 0) {
+    return helpers.error('any.custom', {
+      message: `Legacy ProjectForm root fields are not supported: ${found.join(', ')}`,
+    });
+  }
+  return value;
+};
+
+const enforceSystemFormContract = (value, helpers) => {
+  const category = value?.identity?.category;
+  if (category !== 'system') {
+    return value;
+  }
+
+  const target = value?.metadata?.systemTarget;
+  if (!target) {
+    return helpers.error('any.custom', {
+      message: 'metadata.systemTarget is required when identity.category is system',
+    });
+  }
+
+  if (
+    value?.capabilities?.experience?.security?.mode &&
+    value.capabilities.experience.security.mode !== 'private'
+  ) {
+    return helpers.error('any.custom', {
+      message: 'System forms must set capabilities.experience.security.mode to private',
+    });
+  }
+
+  return value;
+};
+
+const validateSmartMappingsAgainstElements = (value, helpers) => {
+  const elements = Array.isArray(value?.elements) ? value.elements : [];
+  const validIds = new Set(
+    elements
+      .map((element) => String(element?.id || '').trim())
+      .filter(Boolean)
+  );
+  const mappingFields = value?.smartMappings?.fields || {};
+
+  Object.entries(mappingFields).forEach(([mappingKey, mappedFieldId]) => {
+    const id = String(mappedFieldId || '').trim();
+    if (!id) return;
+    if (!validIds.has(id)) {
+      delete mappingFields[mappingKey];
+    }
+  });
+
+  return value;
+};
+
 // Validation schemas
 const createProjectForm = {
   body: Joi.object()
     .keys({
+      schemaVersion: Joi.string().valid('2.0.0').required(),
       workspaceId: Joi.string().trim().optional(),
-      configuration: projectConfigurationSchema.required(),
+      identity: identitySchema,
       elements: Joi.array().items(formElementSchema).default([]),
-      style: Joi.string().default('default'),
-      wizardMode: Joi.boolean().default(false),
-      columnSpans: Joi.object().default({}),
-      userSettings: userSettingsSchema,
-      permSettings: permSettingsSchema,
-      paymentConfig: paymentConfigSchema,
-      capabilities: capabilitiesSchema,
+      layout: layoutSchema,
+      capabilities: v2CapabilitiesSchema,
       smartMappings: smartMappingsSchema,
-      calendar: Joi.object().unknown(true).optional(),
-      behaviorHooks: Joi.object().unknown(true).optional(),
+      analytics: analyticsSchema,
+      ui: uiSchema,
       metadata: metadataSchema,
-      workflows: Joi.array().items(workflowSchema).default([]),
     })
-    .custom(enforceSystemFormContract, 'system form contract')
+    .custom(rejectLegacyRootFields, 'legacy root field rejection')
     .custom(validateSmartMappingsAgainstElements, 'smart mapping validation'),
 };
 
@@ -436,12 +883,12 @@ const getProjectForms = {
   query: Joi.object().keys({
     workspaceId: Joi.string().trim(),
     status: Joi.string().valid('active', 'inactive', 'archived'),
-    'configuration.projectName': Joi.string(),
-    'configuration.tags': Joi.string(),
-    'configuration.security': Joi.string().valid('public', 'private'),
-    'metadata.formCategory': Joi.string().valid('standard', 'system'),
+    'identity.name': Joi.string(),
+    'identity.tags': Joi.string(),
+    'capabilities.experience.security.mode': Joi.string().valid('public', 'private'),
+    'identity.category': Joi.string().valid('standard', 'system'),
     'metadata.systemTarget': Joi.string().valid('user_profile', 'node_profile'),
-    'metadata.deploymentStatus': Joi.string().valid(
+    'identity.status': Joi.string().valid(
       'draft',
       'published',
       'archived'
@@ -462,11 +909,11 @@ const getProjectFormsByTenant = {
   query: Joi.object().keys({
     workspaceId: Joi.string().trim(),
     status: Joi.string().valid('active', 'inactive', 'archived'),
-    'configuration.projectName': Joi.string(),
-    'configuration.tags': Joi.string(),
-    'metadata.formCategory': Joi.string().valid('standard', 'system'),
+    'identity.name': Joi.string(),
+    'identity.tags': Joi.string(),
+    'identity.category': Joi.string().valid('standard', 'system'),
     'metadata.systemTarget': Joi.string().valid('user_profile', 'node_profile'),
-    'metadata.deploymentStatus': Joi.string().valid(
+    'identity.status': Joi.string().valid(
       'draft',
       'published',
       'archived'
@@ -485,11 +932,11 @@ const getProjectFormsByUser = {
   query: Joi.object().keys({
     workspaceId: Joi.string().trim(),
     status: Joi.string().valid('active', 'inactive', 'archived'),
-    'configuration.projectName': Joi.string(),
-    'configuration.tags': Joi.string(),
-    'metadata.formCategory': Joi.string().valid('standard', 'system'),
+    'identity.name': Joi.string(),
+    'identity.tags': Joi.string(),
+    'identity.category': Joi.string().valid('standard', 'system'),
     'metadata.systemTarget': Joi.string().valid('user_profile', 'node_profile'),
-    'metadata.deploymentStatus': Joi.string().valid(
+    'identity.status': Joi.string().valid(
       'draft',
       'published',
       'archived'
@@ -608,24 +1055,19 @@ const updateProjectForm = {
   }),
   body: Joi.object()
     .keys({
+      schemaVersion: Joi.string().valid('2.0.0'),
       workspaceId: Joi.string().trim(),
-      configuration: projectConfigurationSchema,
+      identity: identitySchema,
       elements: Joi.array().items(formElementSchema),
-      style: Joi.string(),
-      wizardMode: Joi.boolean(),
-      columnSpans: Joi.object(),
-      userSettings: userSettingsSchema,
-      permSettings: permSettingsSchema,
-      paymentConfig: paymentConfigSchema,
-      capabilities: capabilitiesSchema,
+      layout: layoutSchema,
+      capabilities: v2CapabilitiesSchema,
       smartMappings: smartMappingsSchema,
-      calendar: Joi.object().unknown(true).optional(),
-      behaviorHooks: Joi.object().unknown(true).optional(),
+      analytics: analyticsSchema,
+      ui: uiSchema,
       metadata: metadataSchema,
       status: Joi.string().valid('active', 'inactive', 'archived'),
-      workflows: Joi.array().items(workflowSchema).default([]),
     })
-    .custom(enforceSystemFormContract, 'system form contract')
+    .custom(rejectLegacyRootFields, 'legacy root field rejection')
     .custom(validateSmartMappingsAgainstElements, 'smart mapping validation')
     .min(1),
   query: Joi.object().keys({
@@ -639,24 +1081,19 @@ const updateProjectFormByProjectId = {
   }),
   body: Joi.object()
     .keys({
+      schemaVersion: Joi.string().valid('2.0.0'),
       workspaceId: Joi.string().trim(),
-      configuration: projectConfigurationSchema,
+      identity: identitySchema,
       elements: Joi.array().items(formElementSchema),
-      style: Joi.string(),
-      wizardMode: Joi.boolean(),
-      columnSpans: Joi.object(),
-      userSettings: userSettingsSchema,
-      permSettings: permSettingsSchema,
-      paymentConfig: paymentConfigSchema,
-      capabilities: capabilitiesSchema,
+      layout: layoutSchema,
+      capabilities: v2CapabilitiesSchema,
       smartMappings: smartMappingsSchema,
-      calendar: Joi.object().unknown(true).optional(),
-      behaviorHooks: Joi.object().unknown(true).optional(),
+      analytics: analyticsSchema,
+      ui: uiSchema,
       metadata: metadataSchema,
       status: Joi.string().valid('active', 'inactive', 'archived'),
-      workflows: Joi.array().items(workflowSchema).default([]),
     })
-    .custom(enforceSystemFormContract, 'system form contract')
+    .custom(rejectLegacyRootFields, 'legacy root field rejection')
     .custom(validateSmartMappingsAgainstElements, 'smart mapping validation')
     .min(1),
   query: Joi.object().keys({

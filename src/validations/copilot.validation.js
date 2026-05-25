@@ -354,20 +354,23 @@ const generateProjectWizardDraft = {
       .keys({
         tags: Joi.array().items(Joi.string().trim()).optional(),
         additionalTags: Joi.array().items(Joi.string().trim()).optional(),
-        accessibility: Joi.array()
-          .items(Joi.string().valid('api', 'embedded', 'javascript', 'mobile'))
-          .optional(),
-        security: Joi.string().valid('public', 'private').optional(),
-        style: Joi.string().max(64).optional(),
-        wizardMode: Joi.boolean().optional(),
-        includePerm: Joi.boolean().optional(),
-        permEnabled: Joi.boolean().optional(),
-        includeWorkflow: Joi.boolean().optional(),
-        workflowEnabled: Joi.boolean().optional(),
         publishNow: Joi.boolean().optional(),
-        permSettings: Joi.object().optional(),
-        workflows: Joi.array().items(Joi.object()).optional(),
-        userSettings: Joi.object().optional(),
+        layout: Joi.object()
+          .keys({
+            style: Joi.string().max(64).optional(),
+            wizardMode: Joi.boolean().optional(),
+            grid: Joi.object()
+              .keys({
+                columns: Joi.number().integer().min(1).max(24).optional(),
+                columnSpans: Joi.object().optional(),
+              })
+              .optional(),
+            builder: Joi.object().optional(),
+          })
+          .optional(),
+        capabilities: Joi.object().optional(),
+        analytics: Joi.object().optional(),
+        ui: Joi.object().optional(),
       })
       .optional(),
   }),

@@ -1,6 +1,18 @@
 const Joi = require('joi');
 const { objectId, nodeIdentifier } = require('./custom.validation');
 
+const receivingAccountSchema = Joi.object({
+  id: Joi.string().allow('', null),
+  label: Joi.string().allow('').default(''),
+  accountNumber: Joi.string().allow('').default(''),
+  bankName: Joi.string().allow('').default(''),
+  bankCode: Joi.string().allow('').default(''),
+  bankCategory: Joi.string().allow('').default(''),
+  accountName: Joi.string().allow('').default(''),
+  isPrimary: Joi.boolean().default(false),
+  isActive: Joi.boolean().default(true),
+});
+
 // Validation schema for creating a new node
 const createNode = {
   body: Joi.object().keys({
@@ -106,6 +118,7 @@ const updateNodeById = {
         ),
         averageAttendance: Joi.number().min(0).allow(null),
         averageIncome: Joi.number().min(0).allow(null),
+        receivingAccounts: Joi.array().items(receivingAccountSchema).default([]),
       }),
       customFields: Joi.object(),
     })

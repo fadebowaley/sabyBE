@@ -703,7 +703,7 @@ const deleteWorkspace = async ({ tenantId, actorUserId, workspaceId }) => {
       $set: {
         status: 'archived',
         archivedAt: now,
-        'metadata.deploymentStatus': 'archived',
+        'identity.status': 'archived',
         'metadata.lastModified': now,
       },
     }

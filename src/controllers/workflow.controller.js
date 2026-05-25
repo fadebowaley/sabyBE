@@ -53,10 +53,12 @@ const actionWorkflowStep = catchAsync(async (req, res) => {
   let workflowDef = null;
   if (wfInstance.workflow_def_id) {
     const form = await ProjectForm.findOne({ projectId: wfInstance.project_id })
-      .select('workflows')
+      .select('capabilities.experience.workflow.workflows')
       .lean();
     if (form) {
-      workflowDef = (form.workflows || []).find((w) => w.id === wfInstance.workflow_def_id);
+      workflowDef = (
+        form?.capabilities?.experience?.workflow?.workflows || []
+      ).find((w) => w.id === wfInstance.workflow_def_id);
     }
   }
 
@@ -122,9 +124,14 @@ const getInbox = catchAsync(async (req, res) => {
 // ---------------------------------------------------------------------------
 const getModuleWorkflows = catchAsync(async (req, res) => {
   const { projectId } = req.params;
-  const form = await ProjectForm.findOne({ projectId }).select('projectId workflows').lean();
+  const form = await ProjectForm.findOne({ projectId })
+    .select('projectId capabilities.experience.workflow.workflows')
+    .lean();
   if (!form) throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
-  res.status(httpStatus.OK).json({ projectId, workflows: form.workflows || [] });
+  res.status(httpStatus.OK).json({
+    projectId,
+    workflows: form?.capabilities?.experience?.workflow?.workflows || [],
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -153,13 +160,16 @@ const updateModuleWorkflows = catchAsync(async (req, res) => {
 
   const form = await ProjectForm.findOneAndUpdate(
     { projectId },
-    { $set: { workflows: normalised } },
+    { $set: { 'capabilities.experience.workflow.workflows': normalised } },
     { new: true, runValidators: true }
-  ).select('projectId workflows');
+  ).select('projectId capabilities.experience.workflow.workflows');
 
   if (!form) throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
 
-  res.status(httpStatus.OK).json({ projectId, workflows: form.workflows });
+  res.status(httpStatus.OK).json({
+    projectId,
+    workflows: form?.capabilities?.experience?.workflow?.workflows || [],
+  });
 });
 
 module.exports = {

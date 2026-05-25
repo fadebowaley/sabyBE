@@ -104,32 +104,50 @@ const ProjectAnalysisProfileSchema = new mongoose.Schema(
   { _id: false }
 );
 
-// Schema for configuration data from modal
-const ProjectConfigurationSchema = new mongoose.Schema({
-  projectName: { type: String, required: true, trim: true },
-  tags: [{ type: String, trim: true }], // Categories like CRM, Sales, etc.
-  analysisProfile: {
-    type: ProjectAnalysisProfileSchema,
-    default: undefined,
-  },
-  publicSecureMode: {
-    type: String,
-    enum: ['off', 'single_qr_passwordless'],
-    default: 'off',
-  },
-  accessibility: [
-    {
+const ProjectIdentitySchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    description: { type: String, default: '', trim: true },
+    category: {
       type: String,
-      enum: ['api', 'embedded', 'javascript', 'mobile'],
-      trim: true,
+      enum: ['standard', 'system'],
+      default: 'standard',
     },
-  ],
-  security: {
-    type: String,
-    enum: ['public', 'private'],
-    default: 'private',
+    tags: [{ type: String, trim: true }],
+    status: {
+      type: String,
+      enum: ['draft', 'published', 'archived'],
+      default: 'draft',
+    },
   },
-});
+  { _id: false }
+);
+
+const LayoutBuilderSchema = new mongoose.Schema(
+  {
+    gridSize: { type: Number, default: 12 },
+    snapToGrid: { type: Boolean, default: true },
+    showGridLines: { type: Boolean, default: false },
+    autoArrange: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+const LayoutSchema = new mongoose.Schema(
+  {
+    style: { type: String, default: 'default' },
+    wizardMode: { type: Boolean, default: false },
+    grid: {
+      columns: { type: Number, default: 12 },
+      columnSpans: { type: mongoose.Schema.Types.Mixed, default: {} },
+    },
+    builder: {
+      type: LayoutBuilderSchema,
+      default: () => ({}),
+    },
+  },
+  { _id: false }
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WORKFLOW SCHEMAS
@@ -191,6 +209,7 @@ const WorkflowStepSchema = new mongoose.Schema(
     // Service-level agreement
     sla: {
       hours:          { type: Number, default: 48 },
+      escalateTo: { type: String, default: null },
       escalateOnExpiry: { type: Boolean, default: false },
     },
 
@@ -235,7 +254,7 @@ const WorkflowSchema = new mongoose.Schema(
     // When to start this workflow
     triggerOn: {
       type: String,
-      enum: ['submission', 'manual'],
+      enum: ['submission', 'submit', 'update', 'manual'],
       default: 'submission',
     },
 
@@ -251,62 +270,132 @@ const WorkflowSchema = new mongoose.Schema(
 );
 
 // Schema for user settings (from userFormSettings)
-const UserSettingsSchema = new mongoose.Schema(
+const AccessSchema = new mongoose.Schema(
   {
-    access: {
-      allowedRoles: [String],
-      allowedUsers: [String],
-      restrictByLocation: { type: Boolean, default: false },
-      allowedCountries: [String],
+    whoCanAccess: {
+      type: String,
+      enum: [
+        'anyone',
+        'authenticated_users',
+        'selected_roles',
+        'selected_users',
+      ],
+      default: 'authenticated_users',
     },
-    behavior: {
-      allowMultipleSubmissions: { type: Boolean, default: true },
-      enableProgressSave: { type: Boolean, default: true },
-      autoSave: { type: Boolean, default: false },
-      submitOnComplete: { type: Boolean, default: true },
+    allowedRoles: [String],
+    allowedUsers: [String],
+    restrictByLocation: { type: Boolean, default: false },
+    allowedCountries: [String],
+    requireNodeAccess: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+const SecurityAuthenticationSchema = new mongoose.Schema(
+  {
+    requireLogin: { type: Boolean, default: true },
+    allowAnonymous: { type: Boolean, default: false },
+    requireOtp: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+const SecuritySubmissionProtectionSchema = new mongoose.Schema(
+  {
+    preventDuplicateSubmission: { type: Boolean, default: false },
+    duplicateCheckField: { type: String, default: null },
+    rateLimitEnabled: { type: Boolean, default: false },
+    maxSubmissionsPerUser: { type: Number, default: null },
+  },
+  { _id: false }
+);
+
+const ExperienceBehaviorSchema = new mongoose.Schema(
+  {
+    allowMultipleSubmissions: { type: Boolean, default: true },
+    enableProgressSave: { type: Boolean, default: true },
+    autoSave: { type: Boolean, default: false },
+    submitOnComplete: { type: Boolean, default: true },
+  },
+  { _id: false }
+);
+
+const ExperienceDistributionSchema = new mongoose.Schema(
+  {
+    enableSharing: { type: Boolean, default: true },
+    allowEmbedding: { type: Boolean, default: false },
+    generateQR: { type: Boolean, default: false },
+    enableDeepLinking: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+const ExperienceNotificationsSchema = new mongoose.Schema(
+  {
+    emailOnSubmission: { type: Boolean, default: false },
+    notifyOwner: { type: Boolean, default: true },
+    customEmails: [String],
+    smsNotifications: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+const UISchema = new mongoose.Schema(
+  {
+    theme: { type: String, default: 'default' },
+    primaryColor: { type: String, default: '#3b82f6' },
+    layout: {
+      type: String,
+      enum: ['single', 'multi-step'],
+      default: 'single',
     },
-    distribution: {
-      enableSharing: { type: Boolean, default: true },
-      allowEmbedding: { type: Boolean, default: false },
-      generateQR: { type: Boolean, default: false },
-      enableDeepLinking: { type: Boolean, default: false },
-    },
-    notifications: {
-      emailOnSubmission: { type: Boolean, default: false },
-      notifyOwner: { type: Boolean, default: true },
-      customEmails: [String],
-      smsNotifications: { type: Boolean, default: false },
-    },
-    ui: {
-      theme: { type: String, default: 'default' },
-      primaryColor: { type: String, default: '#3b82f6' },
-      layout: {
-        type: String,
-        enum: ['single', 'multi-step'],
-        default: 'single',
-      },
-      showProgressBar: { type: Boolean, default: true },
-    },
-    builder: {
-      gridSize: { type: Number, default: 12 },
-      snapToGrid: { type: Boolean, default: true },
-      showGridLines: { type: Boolean, default: false },
-      autoArrange: { type: Boolean, default: false },
-    },
+    showProgressBar: { type: Boolean, default: true },
   },
   { _id: false }
 );
 
 const CapabilityExperienceSecuritySchema = new mongoose.Schema(
   {
-    enabled: { type: Boolean, default: false },
-    mode: { type: String, enum: ['public', 'private'], default: 'public' },
-    authRequired: { type: Boolean, default: false },
-    allowedRoles: [{ type: String }],
-    allowedUsers: [{ type: String }],
-    restrictByLocation: { type: Boolean, default: false },
-    allowedCountries: [{ type: String }],
-    requireNodeAccess: { type: Boolean, default: false },
+    profile: {
+      type: String,
+      enum: [
+        'open_public',
+        'private_safe',
+        'restricted_team',
+        'internal_staff',
+        'high_security',
+      ],
+      default: 'private_safe',
+    },
+    mode: {
+      type: String,
+      enum: ['public', 'private', 'restricted', 'internal'],
+      default: 'private',
+    },
+    publicSecureMode: {
+      type: String,
+      enum: ['off', 'link_only', 'otp', 'access_code'],
+      default: 'off',
+    },
+    access: {
+      type: AccessSchema,
+      default: () => ({}),
+    },
+    authentication: {
+      type: SecurityAuthenticationSchema,
+      default: () => ({}),
+    },
+    submissionProtection: {
+      type: SecuritySubmissionProtectionSchema,
+      default: () => ({}),
+    },
+    channels: [
+      {
+        type: String,
+        enum: ['web', 'api', 'embedded', 'javascript', 'mobile', 'whatsapp', 'telegram'],
+        trim: true,
+      },
+    ],
   },
   { _id: false }
 );
@@ -319,6 +408,33 @@ const CapabilityExperienceComplianceSchema = new mongoose.Schema(
       enum: ['none', 'daily', 'weekly'],
       default: 'none',
     },
+    dailyConfig: {
+      activeDays: { type: [Number], default: [] },
+      frequencyPerDay: { type: Number, default: 1 },
+      skipWeekends: { type: Boolean, default: false },
+      skipHolidays: { type: Boolean, default: false },
+    },
+    weeklyConfig: {
+      days: {
+        type: [
+          new mongoose.Schema(
+            {
+              day: { type: Number, min: 0, max: 6, required: true },
+              name: { type: String, required: true },
+              frequency: {
+                type: String,
+                enum: ['weekly', 'biweekly', 'monthly'],
+                required: true,
+              },
+              occurrences: { type: Number, default: null },
+              enabled: { type: Boolean, default: true },
+            },
+            { _id: false }
+          ),
+        ],
+        default: [],
+      },
+    },
     frequency: {
       type: String,
       enum: ['none', 'daily', 'weekly', 'biweekly', 'monthly'],
@@ -326,10 +442,17 @@ const CapabilityExperienceComplianceSchema = new mongoose.Schema(
     },
     requireNodeId: { type: Boolean, default: true },
     requireMonth: { type: Boolean, default: true },
-    trackCompliance: { type: Boolean, default: false },
-    autoGenerateCalendar: { type: Boolean, default: false },
+    trackCompliance: { type: Boolean, default: true },
+    autoGenerateCalendar: { type: Boolean, default: true },
     autoLockMonthEnd: { type: Boolean, default: false },
     calendarRequired: { type: Boolean, default: false },
+    eventTypes: { type: [String], default: [] },
+    calendarGeneration: {
+      startDate: { type: String, default: null },
+      endDate: { type: String, default: null },
+      allowBackdating: { type: Boolean, default: false },
+      monthsToGenerate: { type: Number, default: null },
+    },
   },
   { _id: false }
 );
@@ -340,6 +463,7 @@ const CapabilityExperienceWorkflowSchema = new mongoose.Schema(
     approvalMode: { type: String, default: 'none' },
     triggerOn: { type: String, default: 'submission' },
     steps: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    workflows: { type: [WorkflowSchema], default: [] },
   },
   { _id: false }
 );
@@ -348,11 +472,19 @@ const CapabilityTransactionPaymentSchema = new mongoose.Schema(
   {
     enabled: { type: Boolean, default: false },
     mode: { type: String, default: 'none' },
+    currency: { type: String, default: null },
     enabledChannels: [{ type: String }],
     defaultChannel: { type: String, default: null },
+    collectionStage: { type: String, default: 'submission' },
     settlementType: { type: String, default: 'none' },
     receivingAccount: { type: mongoose.Schema.Types.Mixed, default: null },
     channelConfigs: { type: mongoose.Schema.Types.Mixed, default: {} },
+    policies: {
+      requirePaymentBeforeSubmit: { type: Boolean, default: false },
+      allowPartialPayment: { type: Boolean, default: false },
+      allowOverpayment: { type: Boolean, default: false },
+      refundPolicy: { type: String, default: 'none' },
+    },
   },
   { _id: false }
 );
@@ -360,10 +492,33 @@ const CapabilityTransactionPaymentSchema = new mongoose.Schema(
 const CapabilityTransactionRemittanceSchema = new mongoose.Schema(
   {
     enabled: { type: Boolean, default: false },
-    accountSource: { type: String, default: 'none' },
+    accountSource: { type: String, default: 'tenant_global' },
+    specificNodeId: { type: String, default: null },
+    targetLevelId: { type: String, default: null },
     requireNodeAccount: { type: Boolean, default: false },
     nodeAccountField: { type: String, default: null },
-    settlementRule: { type: mongoose.Schema.Types.Mixed, default: null },
+    inheritParentAccount: { type: Boolean, default: false },
+    settlementRule: {
+      mode: { type: String, default: 'single' },
+      splitType: { type: String, default: 'selection' },
+      targets: {
+        type: [
+          new mongoose.Schema(
+            {
+              nodeId: { type: String, default: null },
+              percentage: { type: Number, default: null },
+            },
+            { _id: false }
+          ),
+        ],
+        default: [],
+      },
+    },
+    routing: {
+      byNode: { type: Boolean, default: false },
+      bySubmissionValue: { type: Boolean, default: false },
+      fallbackAccountId: { type: String, default: null },
+    },
   },
   { _id: false }
 );
@@ -372,11 +527,161 @@ const CapabilityTransactionInvoiceSchema = new mongoose.Schema(
   {
     enabled: { type: Boolean, default: false },
     calculationMode: { type: String, default: 'none' },
-    currency: { type: String, default: null },
+    baseAmount: { type: Number, default: 0 },
+    amountSourceField: { type: String, default: null },
     lineItemsEnabled: { type: Boolean, default: false },
+    lineItems: {
+      type: [
+        new mongoose.Schema(
+          {
+            id: { type: String, default: null },
+            label: { type: String, default: '' },
+            sourceField: { type: String, default: null },
+            enabled: { type: Boolean, default: true },
+            calculationType: { type: String, default: 'fixed' },
+            rate: { type: Number, default: 0 },
+            fixedAmount: { type: Number, default: null },
+            quantityField: { type: String, default: null },
+            baseExpression: { type: String, default: null },
+            computedExpression: { type: String, default: null },
+            includeInSubtotal: { type: Boolean, default: true },
+            conditions: { type: [mongoose.Schema.Types.Mixed], default: [] },
+            active: { type: Boolean, default: true },
+          },
+          { _id: false }
+        ),
+      ],
+      default: [],
+    },
     discountsEnabled: { type: Boolean, default: false },
     taxEnabled: { type: Boolean, default: false },
-    rules: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    discounts: {
+      enabled: { type: Boolean, default: false },
+      mode: { type: String, default: 'none' },
+      value: { type: Number, default: 0 },
+      expression: { type: String, default: null },
+      conditions: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    },
+    tax: {
+      enabled: { type: Boolean, default: false },
+      mode: { type: String, default: 'none' },
+      value: { type: Number, default: 0 },
+      expression: { type: String, default: null },
+      conditions: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    },
+    totals: {
+      subtotalExpression: { type: String, default: null },
+      discountExpression: { type: String, default: null },
+      taxExpression: { type: String, default: null },
+      grandTotalExpression: { type: String, default: null },
+    },
+    invoiceNumbering: {
+      mode: { type: String, default: 'auto' },
+      prefix: { type: String, default: '' },
+      nextNumber: { type: Number, default: 1 },
+    },
+    presentation: {
+      showPaymentInstructions: { type: Boolean, default: true },
+      showRemittanceDetails: { type: Boolean, default: true },
+      showDueDate: { type: Boolean, default: true },
+      showSubtotal: { type: Boolean, default: true },
+      showDiscount: { type: Boolean, default: true },
+      showTax: { type: Boolean, default: true },
+      showGrandTotal: { type: Boolean, default: true },
+    },
+  },
+  { _id: false }
+);
+
+const CapabilityAutomationRuleConditionSchema = new mongoose.Schema(
+  {
+    id: { type: String, default: () => randomUUID() },
+    sourceType: {
+      type: String,
+      enum: ['field', 'submission_status', 'workflow_status'],
+      default: 'field',
+    },
+    fieldId: { type: String, default: null },
+    statusKey: { type: String, default: null },
+    operator: {
+      type: String,
+      enum: ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'contains', 'in'],
+      default: 'eq',
+    },
+    value: { type: mongoose.Schema.Types.Mixed, default: null },
+  },
+  { _id: false }
+);
+
+const CapabilityAutomationRuleSchema = new mongoose.Schema(
+  {
+    id: { type: String, default: () => randomUUID() },
+    name: { type: String, default: '' },
+    enabled: { type: Boolean, default: true },
+    priority: { type: Number, default: 1 },
+    matchMode: {
+      type: String,
+      enum: ['all', 'any'],
+      default: 'all',
+    },
+    scope: {
+      source: {
+        type: String,
+        enum: ['submission', 'workflow'],
+        default: 'submission',
+      },
+      trigger: {
+        type: String,
+        enum: ['created', 'updated', 'approved', 'rejected', 'completed', 'manual'],
+        default: 'created',
+      },
+    },
+    conditions: {
+      type: [CapabilityAutomationRuleConditionSchema],
+      default: [],
+    },
+    actionRefs: { type: [String], default: [] },
+    outcome: {
+      statusOnMatch: { type: String, default: null },
+      note: { type: String, default: '' },
+    },
+  },
+  { _id: false }
+);
+
+const CapabilityAutomationConnectedActionSchema = new mongoose.Schema(
+  {
+    id: { type: String, default: () => randomUUID() },
+    name: { type: String, default: '' },
+    enabled: { type: Boolean, default: true },
+    provider: {
+      type: String,
+      enum: ['internal', 'webhook', 'email', 'slack', 'zapier', 'power_automate'],
+      default: 'internal',
+    },
+    actionType: {
+      type: String,
+      enum: ['notify', 'status_update', 'integration_sync', 'assign', 'webhook_call'],
+      default: 'notify',
+    },
+    target: { type: String, default: null },
+    config: { type: mongoose.Schema.Types.Mixed, default: {} },
+    retryPolicy: {
+      enabled: { type: Boolean, default: false },
+      maxAttempts: { type: Number, default: 3 },
+    },
+  },
+  { _id: false }
+);
+
+const CapabilityAutomationOperationalVisibilitySchema = new mongoose.Schema(
+  {
+    showRunLog: { type: Boolean, default: true },
+    showStatuses: { type: Boolean, default: true },
+    showOwners: { type: Boolean, default: true },
+    showAuditTrail: { type: Boolean, default: true },
+    showRuleMatches: { type: Boolean, default: true },
+    showLastRunAt: { type: Boolean, default: true },
   },
   { _id: false }
 );
@@ -386,6 +691,18 @@ const CapabilitiesSchema = new mongoose.Schema(
     experience: {
       security: {
         type: CapabilityExperienceSecuritySchema,
+        default: () => ({}),
+      },
+      behavior: {
+        type: ExperienceBehaviorSchema,
+        default: () => ({}),
+      },
+      distribution: {
+        type: ExperienceDistributionSchema,
+        default: () => ({}),
+      },
+      notifications: {
+        type: ExperienceNotificationsSchema,
         default: () => ({}),
       },
       compliance: {
@@ -408,6 +725,20 @@ const CapabilitiesSchema = new mongoose.Schema(
       },
       invoice: {
         type: CapabilityTransactionInvoiceSchema,
+        default: () => ({}),
+      },
+    },
+    automation: {
+      rules: {
+        type: [CapabilityAutomationRuleSchema],
+        default: [],
+      },
+      connectedActions: {
+        type: [CapabilityAutomationConnectedActionSchema],
+        default: [],
+      },
+      operationalVisibility: {
+        type: CapabilityAutomationOperationalVisibilitySchema,
         default: () => ({}),
       },
     },
@@ -491,20 +822,21 @@ const ProjectFormSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Configuration from modal
-    configuration: {
-      type: ProjectConfigurationSchema,
+    schemaVersion: {
+      type: String,
+      enum: ['2.0.0'],
+      default: '2.0.0',
       required: true,
     },
-
-    // Form structure and elements
+    identity: {
+      type: ProjectIdentitySchema,
+      required: true,
+    },
     elements: [FormElementSchema],
-    style: { type: String, default: 'default' },
-    wizardMode: { type: Boolean, default: false },
-    columnSpans: { type: mongoose.Schema.Types.Mixed, default: {} },
-
-    // User settings
-    userSettings: UserSettingsSchema,
+    layout: {
+      type: LayoutSchema,
+      default: () => ({}),
+    },
 
     capabilities: {
       type: CapabilitiesSchema,
@@ -516,82 +848,20 @@ const ProjectFormSchema = new mongoose.Schema(
       default: () => ({}),
     },
 
-    // ✨ NEW: PERM Settings (Flexible Calendar & Compliance Tracking)
-    permSettings: {
-      enabled: { type: Boolean, default: false },
-      // Tracking mode: 'none' (month-only), 'daily', or 'weekly'
-      trackingMode: {
-        type: String,
-        enum: ['none', 'daily', 'weekly'],
-        default: 'none',
+    analytics: {
+      profile: {
+        type: ProjectAnalysisProfileSchema,
+        default: () => ({}),
       },
-      // Configuration for daily tracking mode
-      dailyConfig: {
-        activeDays: [{ type: Number }], // [0-6] where 0=Sunday, 1=Monday, etc.
-        frequencyPerDay: { type: Number, default: 1 }, // 1x, 2x, 3x, 4x per day
-        skipWeekends: { type: Boolean, default: false },
-        skipHolidays: { type: Boolean, default: false },
-      },
-      // Configuration for weekly tracking mode
-      weeklyConfig: {
-        days: [
-          {
-            day: { type: Number }, // 0-6 (Sunday-Saturday)
-            name: { type: String }, // "Sunday", "Monday", etc.
-            frequency: {
-              type: String,
-              enum: ['weekly', 'biweekly', 'monthly'],
-            },
-            occurrences: { type: Number }, // For biweekly/monthly: how many times in month
-            enabled: { type: Boolean, default: true },
-          },
-        ],
-      },
-      // Common settings
-      requireNodeId: { type: Boolean, default: true },
-      requireMonth: { type: Boolean, default: true },
-      trackCompliance: { type: Boolean, default: true },
-      autoGenerateCalendar: { type: Boolean, default: true },
-      autoLockMonthEnd: { type: Boolean, default: true },
-      // Legacy field (kept for backward compatibility)
-      eventTypes: [{ type: String }],
-      // Optional: Require calendar template before submissions
-      calendarRequired: { type: Boolean, default: false },
-      // Calendar generation options for backdating
-      calendarGeneration: {
-        startDate: { type: String },
-        endDate: { type: String },
-        allowBackdating: { type: Boolean, default: false },
-        monthsToGenerate: { type: Number },
-      },
+      views: { type: Number, default: 0 },
+      submissions: { type: Number, default: 0 },
+      lastAccessed: { type: Date },
+      conversionRate: { type: Number, default: 0 },
     },
 
-    // ─────────────────────────────────────────────────────────────────────
-    // WORKFLOW CONFIGURATIONS
-    // An ordered list of workflow add-ons attached to this module.
-    // Each add-on is independently enabled/disabled and can model anything
-    // from a simple email notification to a multi-step approval chain.
-    // ─────────────────────────────────────────────────────────────────────
-    workflows: {
-      type: [WorkflowSchema],
-      default: [],
-    },
-
-    // Payment configuration (for forms with financial tag)
-    paymentConfig: {
-      enabled: { type: Boolean, default: false },
-      enabledChannels: [{ type: String }], // ['sabypipe', 'paystack', etc.]
-      defaultChannel: { type: String, default: 'sabypipe' },
-      channelConfigs: {
-        sabypipe: { type: mongoose.Schema.Types.Mixed },
-        paystack: { type: mongoose.Schema.Types.Mixed },
-        psb9mobile: { type: mongoose.Schema.Types.Mixed },
-        flutterwave: { type: mongoose.Schema.Types.Mixed },
-        premiumtrust: { type: mongoose.Schema.Types.Mixed },
-        monnify: { type: mongoose.Schema.Types.Mixed },
-        remita: { type: mongoose.Schema.Types.Mixed },
-        seerbit: { type: mongoose.Schema.Types.Mixed },
-      },
+    ui: {
+      type: UISchema,
+      default: () => ({}),
     },
 
     // New access and API-related fields
@@ -616,17 +886,8 @@ const ProjectFormSchema = new mongoose.Schema(
 
     // Metadata
     metadata: {
-      version: { type: String, default: '1.0.0' },
-      schemaVersion: { type: String, default: '1.1.0' },
-      enabledCapabilities: {
-        type: [String],
-        default: [],
-      },
-      formCategory: {
-        type: String,
-        enum: ['standard', 'system'],
-        default: 'standard',
-      },
+      schemaVersion: { type: String, default: '2.0.0' },
+      enabledCapabilities: { type: [String], default: [] },
       systemTarget: {
         type: String,
         enum: ['user_profile', 'node_profile', null],
@@ -636,11 +897,6 @@ const ProjectFormSchema = new mongoose.Schema(
       elementsCount: { type: Number, default: 0 },
       hasValidation: { type: Boolean, default: false },
       lastModified: { type: Date, default: Date.now },
-      deploymentStatus: {
-        type: String,
-        enum: ['draft', 'published', 'archived'],
-        default: 'draft',
-      },
       integrations: {
         type: mongoose.Schema.Types.Mixed,
         default: ['web'],
@@ -654,14 +910,6 @@ const ProjectFormSchema = new mongoose.Schema(
           return values;
         },
       },
-    },
-
-    // Analytics and usage
-    analytics: {
-      views: { type: Number, default: 0 },
-      submissions: { type: Number, default: 0 },
-      lastAccessed: { type: Date },
-      conversionRate: { type: Number, default: 0 },
     },
 
     // Status and lifecycle
@@ -684,15 +932,15 @@ ProjectFormSchema.plugin(toJSON);
 ProjectFormSchema.plugin(paginate);
 ProjectFormSchema.plugin(tenantPlugin);
 ProjectFormSchema.index({ tenantId: 1, workspaceId: 1, deletedAt: 1, updatedAt: -1 });
-ProjectFormSchema.index({ tenantId: 1, 'configuration.tags': 1 });
-ProjectFormSchema.index({ tenantId: 1, 'configuration.analysisProfile.domain': 1 });
-ProjectFormSchema.index({ tenantId: 1, 'configuration.analysisProfile.dataNature': 1 });
+ProjectFormSchema.index({ tenantId: 1, 'identity.tags': 1 });
+ProjectFormSchema.index({ tenantId: 1, 'analytics.profile.domain': 1 });
+ProjectFormSchema.index({ tenantId: 1, 'analytics.profile.dataNature': 1 });
 ProjectFormSchema.index(
-  { tenantId: 1, 'metadata.formCategory': 1, 'metadata.systemTarget': 1 },
+  { tenantId: 1, 'identity.category': 1, 'metadata.systemTarget': 1 },
   {
     unique: true,
     partialFilterExpression: {
-      'metadata.formCategory': 'system',
+      'identity.category': 'system',
       deletedAt: null,
     },
   }
@@ -797,10 +1045,10 @@ ProjectFormSchema.statics.createProjectForm = async function (
   }
 
   const projectId = this.generateProjectId(
-    projectData?.configuration?.projectName || projectData?.name || ''
+    projectData?.identity?.name || projectData?.name || ''
   );
   let publicRef = this.generatePublicRef(
-    projectData?.configuration?.projectName || projectData?.name || ''
+    projectData?.identity?.name || projectData?.name || ''
   );
   let shareRef = this.generateShareRef();
   let shareCode = this.generateShareCode();
@@ -810,7 +1058,7 @@ ProjectFormSchema.statics.createProjectForm = async function (
     const exists = await this.exists({ publicRef });
     if (!exists) break;
     publicRef = this.generatePublicRef(
-      projectData?.configuration?.projectName || projectData?.name || ''
+      projectData?.identity?.name || projectData?.name || ''
     );
     attempts += 1;
   }
@@ -882,7 +1130,7 @@ ProjectFormSchema.statics.isProjectNameTaken = async function (
   excludeProjectId
 ) {
   const query = {
-    'configuration.projectName': projectName,
+    'identity.name': projectName,
     tenantId,
     deletedAt: null,
   };
@@ -926,7 +1174,7 @@ ProjectFormSchema.methods.softDelete = async function (userId = null) {
   this.deletedAt = new Date();
   this.deletedBy = userId;
   this.status = 'archived';
-  this.metadata.deploymentStatus = 'archived';
+  this.identity.status = 'archived';
   await this.save();
   return this;
 };
@@ -973,7 +1221,7 @@ ProjectFormSchema.methods.restore = async function () {
   this.deletedAt = null;
   this.deletedBy = null;
   this.status = 'inactive'; // Don't auto-activate, let user republish
-  this.metadata.deploymentStatus = 'draft';
+  this.identity.status = 'draft';
   await this.save();
   return this;
 };
@@ -993,7 +1241,7 @@ ProjectFormSchema.methods.publish = async function (options = {}) {
     allowBackdating = false,
   } = options;
 
-  this.metadata.deploymentStatus = 'published';
+  this.identity.status = 'published';
   this.publishedAt = new Date();
   this.status = 'active';
 
@@ -1003,7 +1251,10 @@ ProjectFormSchema.methods.publish = async function (options = {}) {
   }
 
   // Auto-generate calendar if PERM is enabled
-  if (this.permSettings?.enabled && this.permSettings?.autoGenerateCalendar) {
+  if (
+    this.capabilities?.experience?.compliance?.enabled &&
+    this.capabilities?.experience?.compliance?.autoGenerateCalendar
+  ) {
     try {
       const { eventCalendarService } = require('../services');
 
@@ -1066,7 +1317,7 @@ ProjectFormSchema.methods.publish = async function (options = {}) {
  * @returns {Promise<ProjectForm>}
  */
 ProjectFormSchema.methods.unpublish = async function () {
-  this.metadata.deploymentStatus = 'draft';
+  this.identity.status = 'draft';
   this.status = 'inactive';
   this.archivedAt = null;
   await this.save();
@@ -1078,7 +1329,7 @@ ProjectFormSchema.methods.unpublish = async function () {
  * @returns {Promise<ProjectForm>}
  */
 ProjectFormSchema.methods.archive = async function () {
-  this.metadata.deploymentStatus = 'archived';
+  this.identity.status = 'archived';
   this.archivedAt = new Date();
   this.status = 'archived';
   await this.save();
@@ -1095,7 +1346,7 @@ ProjectFormSchema.methods.generateAccessibilityUrls = function (
 ) {
   const urls = {};
 
-  this.configuration.accessibility.forEach((type) => {
+  (this.capabilities?.experience?.security?.channels || []).forEach((type) => {
     switch (type) {
       case 'api':
         urls.api = `${baseUrl}/api/v1/forms/${this.projectId}`;
@@ -1116,7 +1367,7 @@ ProjectFormSchema.methods.generateAccessibilityUrls = function (
   });
 
   // Always include the public form URL if published
-  if (this.metadata.deploymentStatus === 'published') {
+  if (this.identity?.status === 'published') {
     urls.public = `${baseUrl}/form/${this.publicRef || this.projectId}`;
   }
 
@@ -1132,21 +1383,21 @@ ProjectFormSchema.methods.generateEmbedHtml = function (options = {}) {
   const {
     width = '100%',
     height = '600px',
-    theme = this.userSettings.ui.theme || 'default',
+    theme = this.ui?.theme || 'default',
     showBorder = true,
     baseUrl = process.env.FRONTEND_URL || 'https://app.halo.com',
   } = options;
 
   const embedUrl = `${baseUrl}/embed/${this.projectId}?theme=${theme}`;
 
-  return `<!-- Halo Form Embed: ${this.configuration.projectName} -->
+  return `<!-- Halo Form Embed: ${this.identity.name} -->
 <iframe
   src="${embedUrl}"
   width="${width}"
   height="${height}"
   frameborder="${showBorder ? '1' : '0'}"
   scrolling="auto"
-  title="${this.configuration.projectName}"
+  title="${this.identity.name}"
   loading="lazy"
   allow="clipboard-write"
   sandbox="allow-scripts allow-same-origin allow-forms allow-popups">
@@ -1230,7 +1481,7 @@ ProjectFormSchema.methods.generateWebhookConfig = function (options = {}) {
 ProjectFormSchema.methods.generateJavaScriptLoader = function (options = {}) {
   const {
     containerId = 'halo-form-container',
-    theme = this.userSettings.ui.theme || 'default',
+    theme = this.ui?.theme || 'default',
     autoLoad = true,
     showLoader = true,
     baseUrl = process.env.FRONTEND_URL || 'https://app.halo.com',
@@ -1247,7 +1498,7 @@ ProjectFormSchema.methods.generateJavaScriptLoader = function (options = {}) {
       responsive: true,
       validation: this.metadata.hasValidation,
       allowMultipleSubmissions:
-        this.userSettings.behavior.allowMultipleSubmissions,
+        this.capabilities?.experience?.behavior?.allowMultipleSubmissions,
     },
   };
 
@@ -1318,10 +1569,10 @@ ProjectFormSchema.methods.generateIntegrationGuide = function (
   return {
     projectInfo: {
       projectId: this.projectId,
-      name: this.configuration.projectName,
-      status: this.metadata.deploymentStatus,
-      accessibility: this.configuration.accessibility,
-      security: this.configuration.security,
+      name: this.identity.name,
+      status: this.identity.status,
+      accessibility: this.capabilities?.experience?.security?.channels || [],
+      security: this.capabilities?.experience?.security?.mode,
     },
     urls,
     embed: {
@@ -1335,14 +1586,14 @@ ProjectFormSchema.methods.generateIntegrationGuide = function (
       endpoint: urls.api,
       method: 'GET',
       authentication:
-        this.configuration.security === 'private'
+        this.capabilities?.experience?.security?.mode === 'private'
           ? 'Bearer token required'
           : 'Public access',
       submitEndpoint: urls.apiSubmit,
       submitMethod: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(this.configuration.security === 'private' && {
+        ...(this.capabilities?.experience?.security?.mode === 'private' && {
           Authorization: 'Bearer YOUR_API_TOKEN',
         }),
       },
@@ -1352,12 +1603,12 @@ ProjectFormSchema.methods.generateIntegrationGuide = function (
 
 // Pre-save middleware
 ProjectFormSchema.pre('save', function (next) {
-  if (this.metadata?.formCategory === 'system') {
+  if (this.identity?.category === 'system') {
     if (!this.metadata.systemTarget) {
       return next(new Error('System forms must define metadata.systemTarget'));
     }
-    if (this.configuration?.security !== 'private') {
-      this.configuration.security = 'private';
+    if (this.capabilities?.experience?.security?.mode !== 'private') {
+      this.capabilities.experience.security.mode = 'private';
     }
     if (!this.metadata.systemVersion) {
       this.metadata.systemVersion = '1.0.0';

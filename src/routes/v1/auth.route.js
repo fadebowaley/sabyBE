@@ -734,6 +734,13 @@ router.patch(
   authController.upsertOnboardingDraft
 );
 
+router.patch(
+  '/onboarding/profile/receiving-accounts',
+  auth(),
+  validate(authValidation.onboardingReceivingAccountsUpdate),
+  authController.updateOnboardingReceivingAccounts
+);
+
 /**
  * @swagger
  * /auth/check-api-key-status:

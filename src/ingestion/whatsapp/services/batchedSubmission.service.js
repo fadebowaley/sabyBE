@@ -118,7 +118,7 @@ const buildSubmissionPayload = (session, projectForm) => {
     node_state: selectedNode?.state,
     node_country: selectedNode?.country,
     form_reference: projectForm.formReference,
-    perm_enabled: !!projectForm.permSettings?.enabled,
+    perm_enabled: !!projectForm.capabilities?.experience?.compliance?.enabled,
   };
 };
 

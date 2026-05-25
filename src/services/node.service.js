@@ -24,6 +24,36 @@ const ensureNodeDimensionsForBranch = async (nodeDoc) => {
   });
 };
 
+const normalizeReceivingAccounts = (accounts) => {
+  if (!Array.isArray(accounts)) return [];
+  const cleaned = accounts
+    .map((account) => ({
+      id: String(account?.id || '').trim() || undefined,
+      label: String(account?.label || '').trim(),
+      accountNumber: String(account?.accountNumber || '').trim(),
+      bankName: String(account?.bankName || '').trim(),
+      bankCode: String(account?.bankCode || '').trim(),
+      bankCategory: String(account?.bankCategory || '').trim(),
+      accountName: String(account?.accountName || '').trim(),
+      isPrimary: Boolean(account?.isPrimary),
+      isActive: account?.isActive === undefined ? true : Boolean(account?.isActive),
+    }))
+    .filter(
+      (account) =>
+        account.accountNumber || account.bankName || account.accountName || account.label
+    );
+
+  let primaryAssigned = false;
+  return cleaned.map((account, index) => {
+    const isPrimary = account.isActive && (account.isPrimary || (!primaryAssigned && index === 0));
+    if (isPrimary) primaryAssigned = true;
+    return {
+      ...account,
+      isPrimary,
+    };
+  });
+};
+
 /**
  * Create a new node
  * @param {Object} nodeBody
@@ -190,6 +220,7 @@ const updateNodeById = async (nodeId, updateBody) => {
     'facilityStatus',
     'averageAttendance',
     'averageIncome',
+    'receivingAccounts',
   ]);
 
   const normalizeProfileField = (field) => {
@@ -300,6 +331,8 @@ const updateNodeById = async (nodeId, updateBody) => {
     Object.keys(profileUpdate).forEach((key) => {
       if (key === 'dateOfEstablishment') {
         node.dateOfEstablishment = profileUpdate[key];
+      } else if (key === 'receivingAccounts') {
+        node.profile[key] = normalizeReceivingAccounts(profileUpdate[key]);
       } else {
         node.profile[key] = profileUpdate[key];
       }

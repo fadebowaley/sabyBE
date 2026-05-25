@@ -363,7 +363,7 @@ async function getAvailableProjects(tenantId) {
       tenantId,
       {
         status: 'active',
-        'metadata.deploymentStatus': 'published',
+        'identity.status': 'published',
         deletedAt: null,
       }
     );

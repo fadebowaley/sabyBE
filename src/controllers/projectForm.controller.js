@@ -195,7 +195,7 @@ const submitSystemForm = catchAsync(async (req, res) => {
 });
 
 const applyDefaultStandardFormFilter = (filter = {}, query = {}) => {
-  const requestedCategory = query?.['metadata.formCategory'];
+  const requestedCategory = query?.['identity.category'];
   const requestedTarget = query?.['metadata.systemTarget'];
 
   if (requestedCategory || requestedTarget) {
@@ -204,7 +204,7 @@ const applyDefaultStandardFormFilter = (filter = {}, query = {}) => {
 
   return {
     ...filter,
-    'metadata.formCategory': { $ne: 'system' },
+    'identity.category': { $ne: 'system' },
   };
 };
 
@@ -228,12 +228,12 @@ const getProjectForms = catchAsync(async (req, res) => {
   const filter = pick(req.query, [
     'status',
     'workspaceId',
-    'configuration.projectName',
-    'configuration.tags',
-    'configuration.security',
-    'metadata.formCategory',
+    'identity.name',
+    'identity.tags',
+    'capabilities.experience.security.mode',
+    'identity.category',
     'metadata.systemTarget',
-    'metadata.deploymentStatus',
+    'identity.status',
   ]);
 
   const { q, tenantId, workspaceId } = req.query;
@@ -446,11 +446,11 @@ const getProjectFormsByTenant = catchAsync(async (req, res) => {
   const filter = pick(req.query, [
     'status',
     'workspaceId',
-    'configuration.projectName',
-    'configuration.tags',
-    'metadata.formCategory',
+    'identity.name',
+    'identity.tags',
+    'identity.category',
     'metadata.systemTarget',
-    'metadata.deploymentStatus',
+    'identity.status',
   ]);
   const workspaceFilter = await resolveWorkspaceReadFilter({
     tenantId,
@@ -508,8 +508,8 @@ const getProjectFormsByTenant = catchAsync(async (req, res) => {
             id: item?.id || null,
             projectId: item?.projectId || null,
             workspaceId: item?.workspaceId || null,
-            projectName: item?.configuration?.projectName || null,
-            formCategory: item?.metadata?.formCategory || null,
+            projectName: item?.identity?.name || null,
+            formCategory: item?.identity?.category || null,
           }))
         : [],
     })
@@ -526,11 +526,11 @@ const getProjectFormsByUser = catchAsync(async (req, res) => {
   const filter = pick(req.query, [
     'status',
     'workspaceId',
-    'configuration.projectName',
-    'configuration.tags',
-    'metadata.formCategory',
+    'identity.name',
+    'identity.tags',
+    'identity.category',
     'metadata.systemTarget',
-    'metadata.deploymentStatus',
+    'identity.status',
   ]);
   const workspaceFilter = await resolveWorkspaceReadFilter({
     tenantId: req.user.tenantId,
@@ -1103,8 +1103,8 @@ const updatePaymentConfig = catchAsync(async (req, res) => {
 
   // Check if form has financial tag
   const hasFinancial =
-    projectForm.configuration?.tags?.includes('financial') ||
-    projectForm.configuration?.tags?.includes('payment');
+    projectForm.identity?.tags?.includes('financial') ||
+    projectForm.identity?.tags?.includes('payment');
 
   if (!hasFinancial) {
     throw new ApiError(
@@ -1113,7 +1113,9 @@ const updatePaymentConfig = catchAsync(async (req, res) => {
     );
   }
 
-  projectForm.paymentConfig = {
+  projectForm.capabilities = projectForm.capabilities || {};
+  projectForm.capabilities.transaction = projectForm.capabilities.transaction || {};
+  projectForm.capabilities.transaction.payment = {
     enabled: true,
     enabledChannels,
     channelConfigs,
@@ -1125,7 +1127,7 @@ const updatePaymentConfig = catchAsync(async (req, res) => {
 
   res.send({
     message: 'Payment configuration updated',
-    paymentConfig: projectForm.paymentConfig,
+    payment: projectForm.capabilities.transaction.payment,
   });
 });
 
@@ -1235,17 +1237,17 @@ const getProjectFormStats = catchAsync(async (req, res) => {
   );
 
   const publishedProjects = await projectFormService.queryProjectForms(
-    { tenantId, 'metadata.deploymentStatus': 'published' },
+    { tenantId, 'identity.status': 'published' },
     { limit: 0 }
   );
 
   const draftProjects = await projectFormService.queryProjectForms(
-    { tenantId, 'metadata.deploymentStatus': 'draft' },
+    { tenantId, 'identity.status': 'draft' },
     { limit: 0 }
   );
 
   const archivedProjects = await projectFormService.queryProjectForms(
-    { tenantId, 'metadata.deploymentStatus': 'archived' },
+    { tenantId, 'identity.status': 'archived' },
     { limit: 0 }
   );
 

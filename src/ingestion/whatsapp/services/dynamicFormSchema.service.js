@@ -48,7 +48,7 @@ class DynamicFormSchemaService {
       // Validate project is active and published
       if (
         projectForm.status !== 'active' ||
-        projectForm.metadata?.deploymentStatus !== 'published'
+        projectForm.identity?.status !== 'published'
       ) {
         logger.warn(`❌ Project ${projectId} is not active or published`);
         return {
@@ -86,13 +86,14 @@ class DynamicFormSchemaService {
   processFormSchema(projectForm) {
     try {
       const elements = projectForm.elements || [];
-      const configuration = projectForm.configuration || {};
+      const identity = projectForm.identity || {};
       const metadata = projectForm.metadata || {};
+      const capabilities = projectForm.capabilities || {};
 
       const processedSchema = {
         projectId: projectForm.projectId,
-        projectName: configuration.projectName || projectForm.projectId,
-        description: configuration.description || '',
+        projectName: identity.name || projectForm.projectId,
+        description: identity.description || '',
         version: metadata.version || '1.0',
         totalSteps: elements.length,
         elements: [],
@@ -111,9 +112,11 @@ class DynamicFormSchemaService {
           createdBy: projectForm.createdBy,
           createdAt: projectForm.createdAt,
           updatedAt: projectForm.updatedAt,
-          deploymentStatus: metadata.deploymentStatus,
-          formType: metadata.formType || 'standard',
-          category: metadata.category || 'general',
+          deploymentStatus: identity.status,
+          formType: identity.category || 'standard',
+          category: identity.category || 'general',
+          securityMode:
+            capabilities?.experience?.security?.mode || 'private',
         },
       };
 

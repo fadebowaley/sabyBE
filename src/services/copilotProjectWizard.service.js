@@ -220,38 +220,110 @@ const buildDraftFromPrompt = ({ prompt, projectName, options = {} }) => {
     )
   );
 
-  const accessibility = Array.isArray(options.accessibility) && options.accessibility.length
-    ? options.accessibility
+  const experienceSecurity = options.capabilities?.experience?.security || {};
+  const experienceWorkflow = options.capabilities?.experience?.workflow || {};
+  const experienceCompliance = options.capabilities?.experience?.compliance || {};
+  const transaction = options.capabilities?.transaction || {};
+  const automation = options.capabilities?.automation || {};
+
+  const accessibility =
+    Array.isArray(experienceSecurity.channels) &&
+    experienceSecurity.channels.length
+      ? experienceSecurity.channels
     : ['api'];
 
-  const workflowEnabled = Boolean(options.includeWorkflow || options.workflowEnabled);
-  const permEnabled = Boolean(options.includePerm || options.permEnabled);
+  const workflowEnabled = Boolean(
+    experienceWorkflow.enabled ||
+      (Array.isArray(experienceWorkflow.workflows) &&
+        experienceWorkflow.workflows.length > 0)
+  );
+  const permEnabled = Boolean(experienceCompliance.enabled);
   const publishNow = Boolean(options.publishNow);
 
   const draft = {
-    configuration: {
-      projectName: baseName,
+    schemaVersion: '2.0.0',
+    identity: {
+      name: baseName,
+      description: '',
+      category: 'standard',
       tags,
-      accessibility,
-      security: options.security === 'public' ? 'public' : 'private',
+      status: publishNow ? 'published' : 'draft',
     },
     elements,
-    style: options.style || 'default',
-    wizardMode: options.wizardMode !== false,
-    columnSpans: {},
-    userSettings: options.userSettings || {},
-    permSettings: options.permSettings || buildDefaultPermSettings(permEnabled),
-    workflows: Array.isArray(options.workflows)
-      ? options.workflows
-      : buildDefaultWorkflow(workflowEnabled),
+    layout: {
+      style: options.layout?.style || 'default',
+      wizardMode: options.layout?.wizardMode !== false,
+      grid: {
+        columns: options.layout?.grid?.columns || 12,
+        columnSpans: options.layout?.grid?.columnSpans || {},
+      },
+      builder: options.layout?.builder || {},
+    },
+    capabilities: {
+      experience: {
+        security: {
+          mode: experienceSecurity.mode === 'public' ? 'public' : 'private',
+          publicSecureMode: experienceSecurity.publicSecureMode || 'off',
+          access: experienceSecurity.access || {},
+          authentication: experienceSecurity.authentication || {
+            requireLogin: true,
+            allowAnonymous: false,
+            requireOtp: false,
+          },
+          submissionProtection: experienceSecurity.submissionProtection || {
+            preventDuplicateSubmission: false,
+            duplicateCheckField: null,
+            rateLimitEnabled: false,
+            maxSubmissionsPerUser: null,
+          },
+          channels: accessibility,
+        },
+        behavior: options.capabilities?.experience?.behavior || {},
+        distribution: options.capabilities?.experience?.distribution || {},
+        notifications: options.capabilities?.experience?.notifications || {},
+        compliance:
+          Object.keys(experienceCompliance).length > 0
+            ? experienceCompliance
+            : buildDefaultPermSettings(permEnabled),
+        workflow: {
+          enabled: workflowEnabled,
+          approvalMode:
+            experienceWorkflow.approvalMode ||
+            (workflowEnabled ? 'approval' : 'none'),
+          triggerOn: experienceWorkflow.triggerOn || 'submission',
+          workflows: Array.isArray(experienceWorkflow.workflows)
+            ? experienceWorkflow.workflows
+            : buildDefaultWorkflow(workflowEnabled),
+        },
+      },
+      transaction: {
+        payment: transaction.payment || {},
+        remittance: transaction.remittance || {},
+        invoice: transaction.invoice || {},
+      },
+      automation: {
+        rules: automation.rules || [],
+        connectedActions: automation.connectedActions || [],
+        operationalVisibility: automation.operationalVisibility || {},
+      },
+    },
+    smartMappings: {
+      enabled: true,
+      autoDetect: true,
+      allowManualOverride: true,
+      fields: {},
+    },
+    analytics: {
+      profile: options.analytics?.profile || {},
+    },
+    ui: options.ui || {},
     metadata: {
-      version: '1.0.0',
+      schemaVersion: '2.0.0',
       elementsCount: elements.length,
       hasValidation: true,
-      deploymentStatus: publishNow ? 'published' : 'draft',
       batchMode: 'single_prompt',
       integrations: accessibility,
-      permEnabled,
+      enabledCapabilities: [],
     },
   };
 
@@ -259,15 +331,17 @@ const buildDraftFromPrompt = ({ prompt, projectName, options = {} }) => {
     draft,
     summary: {
       inferredDomain: domain,
-      projectName: draft.configuration.projectName,
-      tags: draft.configuration.tags,
+      projectName: draft.identity.name,
+      tags: draft.identity.tags,
       fieldsCount: draft.elements.length,
       firstFields: draft.elements.slice(0, 8).map((el) => ({
         id: el.id,
         type: el.type,
         label: el?.properties?.label || el.id,
       })),
-      workflowEnabled: workflowEnabled || draft.workflows.length > 0,
+      workflowEnabled:
+        workflowEnabled ||
+        (draft.capabilities.experience.workflow.workflows || []).length > 0,
       permEnabled,
       publishNow,
     },
@@ -294,9 +368,11 @@ const generateProjectWizardDraft = async ({
   return {
     ...built,
     checklist: {
-      hasProjectName: Boolean(built?.draft?.configuration?.projectName),
+      hasProjectName: Boolean(built?.draft?.identity?.name),
       hasFields: Array.isArray(built?.draft?.elements) && built.draft.elements.length > 0,
-      hasAccess: Array.isArray(built?.draft?.configuration?.accessibility),
+      hasAccess: Array.isArray(
+        built?.draft?.capabilities?.experience?.security?.channels
+      ),
       canFinalize: true,
     },
     suggestedNextPrompts: [
@@ -324,8 +400,8 @@ const finalizeProjectWizardDraft = async ({
   if (!draft || typeof draft !== 'object') {
     throw new ApiError(httpStatus.BAD_REQUEST, 'draft is required');
   }
-  if (!draft.configuration || !draft.configuration.projectName) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'draft.configuration.projectName is required');
+  if (!draft.identity || !draft.identity.name) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'draft.identity.name is required');
   }
 
   const created = await projectFormService.createProjectForm(
@@ -346,9 +422,9 @@ const finalizeProjectWizardDraft = async ({
   return {
     projectId: finalDoc.projectId,
     projectFormId: finalDoc._id,
-    deploymentStatus: finalDoc?.metadata?.deploymentStatus,
+    deploymentStatus: finalDoc?.identity?.status,
     status: finalDoc.status,
-    projectName: finalDoc?.configuration?.projectName,
+    projectName: finalDoc?.identity?.name,
     published: Boolean(publish),
     schemaProfile,
   };

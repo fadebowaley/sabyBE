@@ -275,9 +275,9 @@ const searchProjects = async ({ tenantId, query, limit }) => {
   const docs = await ProjectForm.find({
     tenantId,
     deletedAt: null,
-    $or: [{ projectId: regex }, { 'configuration.projectName': regex }],
+    $or: [{ projectId: regex }, { 'identity.name': regex }],
   })
-    .select('_id tenantId projectId status configuration.projectName')
+    .select('_id tenantId projectId status identity.name')
     .limit(limit)
     .lean();
   return docs.map((doc) => mapProjectCandidate(query, doc)).sort(byScoreDesc);
@@ -483,9 +483,9 @@ const resolveEntityReference = async ({
     const found = await ProjectForm.findOne({
       tenantId,
       deletedAt: null,
-      $or: [{ projectId: ref }, { 'configuration.projectName': ref }],
+      $or: [{ projectId: ref }, { 'identity.name': ref }],
     })
-      .select('_id tenantId projectId status configuration.projectName')
+      .select('_id tenantId projectId status identity.name')
       .lean();
     if (found) {
       const candidate = mapProjectCandidate(ref, found);

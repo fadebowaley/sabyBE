@@ -113,7 +113,7 @@ class EmailValidationService {
       // Check if project is active and published
       if (
         projectForm.status !== 'active' ||
-        projectForm.metadata.deploymentStatus !== 'published'
+        projectForm.identity?.status !== 'published'
       ) {
         logger.warn(`❌ Project ${projectId} is not active or published`);
         return {
@@ -519,11 +519,7 @@ class EmailValidationService {
       };
 
       const projectData = {
-        projectName:
-          (projectForm &&
-            projectForm.configuration &&
-            projectForm.configuration.projectName) ||
-          'Your Project',
+        projectName: projectForm?.identity?.name || 'Your Project',
       };
 
       // Get the first error step for notification
@@ -696,8 +692,8 @@ class EmailValidationService {
             tenantId: projectForm.tenantId,
             status: projectForm.status,
             deploymentStatus:
-              projectForm.metadata && projectForm.metadata.deploymentStatus
-                ? projectForm.metadata.deploymentStatus
+              projectForm.identity && projectForm.identity.status
+                ? projectForm.identity.status
                 : null,
           });
         }
@@ -756,7 +752,7 @@ class EmailValidationService {
       // Step 4: Validate project form status
       if (
         projectForm.status !== 'active' ||
-        projectForm.metadata.deploymentStatus !== 'published'
+        projectForm.identity?.status !== 'published'
       ) {
         logger.warn(`❌ Project ${projectId} is not active or published`);
         validationResult.errors.push({

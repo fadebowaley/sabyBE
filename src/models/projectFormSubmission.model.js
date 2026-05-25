@@ -176,7 +176,7 @@ ProjectFormSubmissionSchema.statics.createSubmission = async function (
 
   // Check if form is published and active
   if (
-    projectForm.metadata.deploymentStatus !== 'published' ||
+    projectForm.identity?.status !== 'published' ||
     projectForm.status !== 'active'
   ) {
     throw new Error('This module is not currently accepting submissions');

@@ -1044,10 +1044,10 @@ const handleCreateProject = async (event) => {
   const payload = event.payload_json;
   const projectFormBody = payload.projectFormBody || { ...payload };
 
-  if (!projectFormBody.configuration?.projectName) {
+  if (!projectFormBody.identity?.name) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      'create_project requires payload.projectFormBody.configuration.projectName'
+      'create_project requires payload.projectFormBody.identity.name'
     );
   }
 

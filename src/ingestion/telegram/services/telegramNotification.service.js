@@ -285,7 +285,7 @@ Use /menu to see available options or /reset to start fresh.`;
       const availableProjects =
         await projectFormService.getProjectFormsByTenant(session.tenantId, {
           status: 'active',
-          'metadata.deploymentStatus': 'published',
+          'identity.status': 'published',
         });
 
       if (

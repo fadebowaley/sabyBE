@@ -344,16 +344,20 @@ const normalizeSystemFormContract = ({
 }) => {
   const normalized = { ...body };
   const existingMetadata = existing?.metadata || {};
-  const existingCategory = existingMetadata?.formCategory || 'standard';
-  const incomingCategory = normalized?.metadata?.formCategory;
+  const existingCategory = existing?.identity?.category || 'standard';
+  const incomingCategory = normalized?.identity?.category;
   const category =
     existingCategory === SYSTEM_FORM_CATEGORY
       ? SYSTEM_FORM_CATEGORY
       : incomingCategory || existingCategory;
   const isSystem = category === SYSTEM_FORM_CATEGORY;
 
+  normalized.identity = {
+    ...(existing?.identity?.toObject ? existing.identity.toObject() : existing?.identity || {}),
+    ...(normalized.identity || {}),
+    category,
+  };
   if (!normalized.metadata) normalized.metadata = {};
-  normalized.metadata.formCategory = category;
 
   if (!isSystem) {
     return normalized;
@@ -374,16 +378,44 @@ const normalizeSystemFormContract = ({
     existingMetadata?.systemVersion ||
     '1.0.0';
 
-  normalized.configuration = {
-    ...(existing?.configuration?.toObject
-      ? existing.configuration.toObject()
-      : existing?.configuration || {}),
-    ...(normalized.configuration || {}),
+  normalized.capabilities = {
+    ...defaultCapabilities(),
+    ...(existing?.capabilities?.toObject
+      ? existing.capabilities.toObject()
+      : existing?.capabilities || {}),
+    ...(normalized.capabilities || {}),
   };
-  normalized.configuration.security = 'private';
-  normalized.configuration.publicSecureMode = 'off';
-  normalized.configuration.tags = Array.from(
-    new Set([...(normalized.configuration.tags || []), 'system', 'profile'])
+  normalized.capabilities.experience = {
+    ...defaultCapabilities().experience,
+    ...(normalized.capabilities.experience || {}),
+  };
+  normalized.capabilities.experience.security = {
+    profile: 'private_safe',
+    mode: 'private',
+    publicSecureMode: 'off',
+    access: {
+      whoCanAccess: 'authenticated_users',
+      allowedRoles: [],
+      allowedUsers: [],
+      restrictByLocation: false,
+      allowedCountries: [],
+    },
+    authentication: {
+      requireLogin: true,
+      allowAnonymous: false,
+      requireOtp: false,
+    },
+    submissionProtection: {
+      preventDuplicateSubmission: false,
+      duplicateCheckField: null,
+      rateLimitEnabled: false,
+      maxSubmissionsPerUser: null,
+    },
+    channels: ['web'],
+    ...(normalized.capabilities.experience.security || {}),
+  };
+  normalized.identity.tags = Array.from(
+    new Set([...(normalized.identity.tags || []), 'system', 'profile'])
   );
 
   if (enforceForCreate && (!normalized.elements || normalized.elements.length === 0)) {
@@ -690,58 +722,172 @@ const SMART_MAPPING_TARGETS = {
 const defaultCapabilities = () => ({
   experience: {
     security: {
-      enabled: false,
-      mode: 'public',
-      authRequired: false,
-      allowedRoles: [],
-      allowedUsers: [],
-      restrictByLocation: false,
-      allowedCountries: [],
-      requireNodeAccess: false,
+      profile: 'private_safe',
+      mode: 'private',
+      publicSecureMode: 'off',
+      channels: ['web'],
+      access: {
+        whoCanAccess: 'authenticated_users',
+        allowedRoles: [],
+        allowedUsers: [],
+        restrictByLocation: false,
+        allowedCountries: [],
+      },
+      authentication: {
+        requireLogin: true,
+        allowAnonymous: false,
+        requireOtp: false,
+      },
+      submissionProtection: {
+        preventDuplicateSubmission: false,
+        duplicateCheckField: null,
+        rateLimitEnabled: false,
+        maxSubmissionsPerUser: null,
+      },
+    },
+    behavior: {
+      allowMultipleSubmissions: true,
+      enableProgressSave: true,
+      autoSave: false,
+      submitOnComplete: true,
+    },
+    distribution: {
+      enableSharing: true,
+      allowEmbedding: false,
+      generateQR: false,
+      enableDeepLinking: false,
+    },
+    notifications: {
+      emailOnSubmission: false,
+      notifyOwner: true,
+      customEmails: [],
+      smsNotifications: false,
     },
     compliance: {
       enabled: false,
       trackingMode: 'none',
-      frequency: 'none',
+      dailyConfig: {
+        activeDays: [],
+        frequencyPerDay: 1,
+        skipWeekends: false,
+        skipHolidays: false,
+      },
+      weeklyConfig: {
+        days: [],
+      },
       requireNodeId: true,
       requireMonth: true,
-      trackCompliance: false,
-      autoGenerateCalendar: false,
+      trackCompliance: true,
+      autoGenerateCalendar: true,
       autoLockMonthEnd: false,
       calendarRequired: false,
+      eventTypes: [],
+      calendarGeneration: {
+        startDate: null,
+        endDate: null,
+        allowBackdating: false,
+        monthsToGenerate: null,
+      },
     },
     workflow: {
       enabled: false,
       approvalMode: 'none',
       triggerOn: 'submission',
-      steps: [],
+      workflows: [],
     },
   },
   transaction: {
     payment: {
       enabled: false,
       mode: 'none',
+      currency: null,
       enabledChannels: [],
       defaultChannel: null,
+      collectionStage: 'submission',
       settlementType: 'none',
       receivingAccount: null,
       channelConfigs: {},
+      policies: {
+        requirePaymentBeforeSubmit: false,
+        allowPartialPayment: false,
+        allowOverpayment: false,
+        refundPolicy: 'none',
+      },
     },
     remittance: {
       enabled: false,
-      accountSource: 'none',
+      accountSource: 'tenant_global',
+      specificNodeId: null,
+      targetLevelId: null,
       requireNodeAccount: false,
       nodeAccountField: null,
-      settlementRule: null,
+      inheritParentAccount: false,
+      settlementRule: {
+        mode: 'single',
+        splitType: 'selection',
+        targets: [],
+      },
+      routing: {
+        byNode: false,
+        bySubmissionValue: false,
+        fallbackAccountId: null,
+      },
     },
     invoice: {
       enabled: false,
       calculationMode: 'none',
-      currency: null,
+      baseAmount: 0,
+      amountSourceField: null,
       lineItemsEnabled: false,
+      lineItems: [],
       discountsEnabled: false,
       taxEnabled: false,
-      rules: [],
+      discounts: {
+        enabled: false,
+        mode: 'none',
+        value: 0,
+        expression: null,
+        conditions: [],
+      },
+      tax: {
+        enabled: false,
+        mode: 'none',
+        value: 0,
+        expression: null,
+        conditions: [],
+      },
+      totals: {
+        subtotalExpression: null,
+        discountExpression: null,
+        taxExpression: null,
+        grandTotalExpression: null,
+      },
+      invoiceNumbering: {
+        mode: 'auto',
+        prefix: '',
+        nextNumber: 1,
+      },
+      presentation: {
+        showPaymentInstructions: true,
+        showRemittanceDetails: true,
+        showDueDate: true,
+        showSubtotal: true,
+        showDiscount: true,
+        showTax: true,
+        showGrandTotal: true,
+      },
+    },
+  },
+  automation: {
+    rules: [],
+    connectedActions: [],
+    operationalVisibility: {
+      showRunLog: true,
+      showStatuses: true,
+      showOwners: true,
+      showAuditTrail: true,
+      showRuleMatches: true,
+      showLastRunAt: true,
     },
   },
 });
@@ -812,285 +958,6 @@ const detectSmartMappings = (elements = [], existingFields = {}) => {
   return detected;
 };
 
-const synchronizeCapabilitiesWithLegacyFields = ({
-  configuration = {},
-  userSettings = {},
-  permSettings = {},
-  workflows = [],
-  paymentConfig = {},
-  capabilities = {},
-}) => {
-  const base = defaultCapabilities();
-  const next = {
-    experience: {
-      security: {
-        ...base.experience.security,
-        ...(capabilities?.experience?.security || {}),
-      },
-      compliance: {
-        ...base.experience.compliance,
-        ...(capabilities?.experience?.compliance || {}),
-      },
-      workflow: {
-        ...base.experience.workflow,
-        ...(capabilities?.experience?.workflow || {}),
-      },
-    },
-    transaction: {
-      payment: {
-        ...base.transaction.payment,
-        ...(capabilities?.transaction?.payment || {}),
-      },
-      remittance: {
-        ...base.transaction.remittance,
-        ...(capabilities?.transaction?.remittance || {}),
-      },
-      invoice: {
-        ...base.transaction.invoice,
-        ...(capabilities?.transaction?.invoice || {}),
-      },
-    },
-  };
-
-  next.experience.security = {
-    ...next.experience.security,
-    enabled:
-      next.experience.security.enabled ||
-      configuration?.security === 'private' ||
-      configuration?.publicSecureMode === 'single_qr_passwordless',
-    mode: configuration?.security === 'private' ? 'private' : 'public',
-    authRequired:
-      next.experience.security.authRequired ||
-      configuration?.publicSecureMode === 'single_qr_passwordless',
-    allowedRoles: Array.isArray(userSettings?.access?.allowedRoles)
-      ? userSettings.access.allowedRoles
-      : next.experience.security.allowedRoles,
-    allowedUsers: Array.isArray(userSettings?.access?.allowedUsers)
-      ? userSettings.access.allowedUsers
-      : next.experience.security.allowedUsers,
-    restrictByLocation:
-      typeof userSettings?.access?.restrictByLocation === 'boolean'
-        ? userSettings.access.restrictByLocation
-        : next.experience.security.restrictByLocation,
-    allowedCountries: Array.isArray(userSettings?.access?.allowedCountries)
-      ? userSettings.access.allowedCountries
-      : next.experience.security.allowedCountries,
-  };
-
-  next.experience.compliance = {
-    ...next.experience.compliance,
-    enabled: Boolean(permSettings?.enabled),
-    trackingMode: permSettings?.trackingMode || next.experience.compliance.trackingMode,
-    frequency:
-      permSettings?.trackingMode && permSettings.trackingMode !== 'none'
-        ? permSettings.trackingMode
-        : next.experience.compliance.frequency,
-    requireNodeId:
-      typeof permSettings?.requireNodeId === 'boolean'
-        ? permSettings.requireNodeId
-        : next.experience.compliance.requireNodeId,
-    requireMonth:
-      typeof permSettings?.requireMonth === 'boolean'
-        ? permSettings.requireMonth
-        : next.experience.compliance.requireMonth,
-    trackCompliance:
-      typeof permSettings?.trackCompliance === 'boolean'
-        ? permSettings.trackCompliance
-        : next.experience.compliance.trackCompliance,
-    autoGenerateCalendar:
-      typeof permSettings?.autoGenerateCalendar === 'boolean'
-        ? permSettings.autoGenerateCalendar
-        : next.experience.compliance.autoGenerateCalendar,
-    autoLockMonthEnd:
-      typeof permSettings?.autoLockMonthEnd === 'boolean'
-        ? permSettings.autoLockMonthEnd
-        : next.experience.compliance.autoLockMonthEnd,
-    calendarRequired:
-      typeof permSettings?.calendarRequired === 'boolean'
-        ? permSettings.calendarRequired
-        : next.experience.compliance.calendarRequired,
-  };
-
-  next.experience.workflow = {
-    ...next.experience.workflow,
-    enabled: Array.isArray(workflows) && workflows.length > 0,
-    approvalMode:
-      Array.isArray(workflows) && workflows.length > 0
-        ? workflows[0]?.type || 'custom'
-        : next.experience.workflow.approvalMode,
-    triggerOn:
-      Array.isArray(workflows) && workflows.length > 0
-        ? workflows[0]?.triggerOn || 'submission'
-        : next.experience.workflow.triggerOn,
-    steps:
-      Array.isArray(workflows) && workflows.length > 0
-        ? workflows.flatMap((workflow) => workflow?.steps || [])
-        : next.experience.workflow.steps,
-  };
-
-  next.transaction.payment = {
-    ...next.transaction.payment,
-    enabled: Boolean(paymentConfig?.enabled),
-    mode: paymentConfig?.enabled ? 'payment' : next.transaction.payment.mode,
-    enabledChannels: Array.isArray(paymentConfig?.enabledChannels)
-      ? paymentConfig.enabledChannels
-      : next.transaction.payment.enabledChannels,
-    defaultChannel:
-      paymentConfig?.defaultChannel !== undefined
-        ? paymentConfig.defaultChannel
-        : next.transaction.payment.defaultChannel,
-    channelConfigs:
-      paymentConfig?.channelConfigs || next.transaction.payment.channelConfigs,
-  };
-
-  return next;
-};
-
-const applyLegacyFieldsFromCapabilities = (payload = {}, existing = {}) => {
-  const next = { ...payload };
-  const capabilities = payload?.capabilities;
-  if (!capabilities || typeof capabilities !== 'object') {
-    return next;
-  }
-
-  const existingConfiguration =
-    existing?.configuration?.toObject
-      ? existing.configuration.toObject()
-      : existing?.configuration || {};
-  const existingUserSettings =
-    existing?.userSettings?.toObject
-      ? existing.userSettings.toObject()
-      : existing?.userSettings || {};
-  const existingPermSettings =
-    existing?.permSettings?.toObject
-      ? existing.permSettings.toObject()
-      : existing?.permSettings || {};
-  const existingPaymentConfig =
-    existing?.paymentConfig?.toObject
-      ? existing.paymentConfig.toObject()
-      : existing?.paymentConfig || {};
-
-  const securityCapability = capabilities?.experience?.security || {};
-  const complianceCapability = capabilities?.experience?.compliance || {};
-  const workflowCapability = capabilities?.experience?.workflow || {};
-  const paymentCapability = capabilities?.transaction?.payment || {};
-  const remittanceCapability = capabilities?.transaction?.remittance || {};
-  const invoiceCapability = capabilities?.transaction?.invoice || {};
-
-  next.configuration = {
-    ...existingConfiguration,
-    ...(next.configuration || {}),
-  };
-  next.userSettings = {
-    ...existingUserSettings,
-    ...(next.userSettings || {}),
-    access: {
-      ...(existingUserSettings.access || {}),
-      ...((next.userSettings && next.userSettings.access) || {}),
-    },
-  };
-  next.permSettings = {
-    ...existingPermSettings,
-    ...(next.permSettings || {}),
-  };
-  next.paymentConfig = {
-    ...existingPaymentConfig,
-    ...(next.paymentConfig || {}),
-  };
-
-  if (Object.keys(securityCapability).length > 0) {
-    if (securityCapability.mode) {
-      next.configuration.security = securityCapability.mode;
-    }
-    if (securityCapability.authRequired !== undefined) {
-      next.configuration.publicSecureMode = securityCapability.authRequired
-        ? 'single_qr_passwordless'
-        : 'off';
-    }
-    next.userSettings.access.allowedRoles = Array.isArray(securityCapability.allowedRoles)
-      ? securityCapability.allowedRoles
-      : next.userSettings.access.allowedRoles || [];
-    next.userSettings.access.allowedUsers = Array.isArray(securityCapability.allowedUsers)
-      ? securityCapability.allowedUsers
-      : next.userSettings.access.allowedUsers || [];
-    if (typeof securityCapability.restrictByLocation === 'boolean') {
-      next.userSettings.access.restrictByLocation =
-        securityCapability.restrictByLocation;
-    }
-    next.userSettings.access.allowedCountries = Array.isArray(
-      securityCapability.allowedCountries
-    )
-      ? securityCapability.allowedCountries
-      : next.userSettings.access.allowedCountries || [];
-  }
-
-  if (Object.keys(complianceCapability).length > 0) {
-    next.permSettings.enabled = Boolean(complianceCapability.enabled);
-    if (complianceCapability.trackingMode) {
-      next.permSettings.trackingMode = complianceCapability.trackingMode;
-    }
-    [
-      'requireNodeId',
-      'requireMonth',
-      'trackCompliance',
-      'autoGenerateCalendar',
-      'autoLockMonthEnd',
-      'calendarRequired',
-    ].forEach((key) => {
-      if (typeof complianceCapability[key] === 'boolean') {
-        next.permSettings[key] = complianceCapability[key];
-      }
-    });
-  }
-
-  if (Object.keys(workflowCapability).length > 0 && Array.isArray(next.workflows)) {
-    next.workflows = next.workflows.map((workflow, index) =>
-      index === 0
-        ? {
-            ...workflow,
-            triggerOn: workflowCapability.triggerOn || workflow.triggerOn,
-            type:
-              workflowCapability.approvalMode && workflowCapability.approvalMode !== 'none'
-                ? workflowCapability.approvalMode
-                : workflow.type,
-            steps: Array.isArray(workflowCapability.steps) && workflowCapability.steps.length > 0
-              ? workflowCapability.steps
-              : workflow.steps,
-          }
-        : workflow
-    );
-  }
-
-  if (Object.keys(paymentCapability).length > 0) {
-    next.paymentConfig.enabled = Boolean(paymentCapability.enabled);
-    next.paymentConfig.enabledChannels = Array.isArray(paymentCapability.enabledChannels)
-      ? paymentCapability.enabledChannels
-      : next.paymentConfig.enabledChannels || [];
-    if (paymentCapability.defaultChannel !== undefined) {
-      next.paymentConfig.defaultChannel = paymentCapability.defaultChannel;
-    }
-    if (paymentCapability.channelConfigs) {
-      next.paymentConfig.channelConfigs = paymentCapability.channelConfigs;
-    }
-  }
-
-  if (Object.keys(remittanceCapability).length > 0) {
-    next.paymentConfig.remittance = {
-      ...(next.paymentConfig.remittance || {}),
-      ...remittanceCapability,
-    };
-  }
-
-  if (Object.keys(invoiceCapability).length > 0) {
-    next.paymentConfig.invoice = {
-      ...(next.paymentConfig.invoice || {}),
-      ...invoiceCapability,
-    };
-  }
-
-  return next;
-};
-
 const applyProjectFormSchemaDefaults = (projectFormLike = {}, options = {}) => {
   const source =
     typeof projectFormLike?.toObject === 'function'
@@ -1098,62 +965,76 @@ const applyProjectFormSchemaDefaults = (projectFormLike = {}, options = {}) => {
       : projectFormLike || {};
 
   const elements = Array.isArray(source.elements) ? source.elements : [];
+  const defaultMappings = defaultSmartMappings();
   const smartMappings = {
-    ...defaultSmartMappings(),
+    ...defaultMappings,
     ...(source.smartMappings || {}),
-    fields: detectSmartMappings(
-      elements,
-      {
-        ...defaultSmartMappings().fields,
-        ...((source.smartMappings && source.smartMappings.fields) || {}),
-      }
-    ),
-  };
-
-  const capabilities = synchronizeCapabilitiesWithLegacyFields({
-    configuration: source.configuration || {},
-    userSettings: source.userSettings || {},
-    permSettings: source.permSettings || {},
-    workflows: source.workflows || [],
-    paymentConfig: source.paymentConfig || {},
-    capabilities: source.capabilities || {},
-  });
-
-  const metadata = {
-    ...(source.metadata || {}),
-    formCategory: source?.metadata?.formCategory || 'standard',
-    systemTarget: source?.metadata?.systemTarget || null,
-    systemVersion: source?.metadata?.systemVersion || null,
-    schemaVersion: source?.metadata?.schemaVersion || '1.1.0',
-    enabledCapabilities: Array.isArray(source?.metadata?.enabledCapabilities)
-      ? source.metadata.enabledCapabilities
-      : [],
-  };
-
-  const configuration = {
-    ...(source.configuration || {}),
-    publicSecureMode:
-      source?.configuration?.publicSecureMode === 'single_qr_passwordless'
-        ? 'single_qr_passwordless'
-        : 'off',
+    fields: detectSmartMappings(elements, {
+      ...defaultMappings.fields,
+      ...((source.smartMappings && source.smartMappings.fields) || {}),
+    }),
   };
 
   const normalized = {
     ...source,
+    schemaVersion: '2.0.0',
     workspaceId:
       source?.workspaceId || projectFormWorkspaceService.DEFAULT_WORKSPACE_ID,
-    configuration,
-    capabilities,
+    identity: {
+      name: source?.identity?.name || '',
+      description: source?.identity?.description || '',
+      category: source?.identity?.category || 'standard',
+      tags: normalizeTags(source?.identity?.tags || []),
+      status: source?.identity?.status || 'draft',
+    },
+    layout: {
+      style: source?.layout?.style || 'default',
+      wizardMode: Boolean(source?.layout?.wizardMode),
+      grid: {
+        columns: source?.layout?.grid?.columns || 12,
+        columnSpans: source?.layout?.grid?.columnSpans || {},
+      },
+      builder: {
+        gridSize: source?.layout?.builder?.gridSize || 12,
+        snapToGrid:
+          source?.layout?.builder?.snapToGrid !== false,
+        showGridLines: Boolean(source?.layout?.builder?.showGridLines),
+        autoArrange: Boolean(source?.layout?.builder?.autoArrange),
+      },
+    },
+    capabilities: {
+      ...defaultCapabilities(),
+      ...(source.capabilities || {}),
+    },
     smartMappings,
-    metadata,
+    analytics: {
+      views: Number(source?.analytics?.views || 0),
+      submissions: Number(source?.analytics?.submissions || 0),
+      lastAccessed: source?.analytics?.lastAccessed || null,
+      conversionRate: Number(source?.analytics?.conversionRate || 0),
+      profile: source?.analytics?.profile || {},
+    },
+    ui: {
+      theme: source?.ui?.theme || 'default',
+      primaryColor: source?.ui?.primaryColor || '#3b82f6',
+      layout: source?.ui?.layout || 'single',
+      showProgressBar: source?.ui?.showProgressBar !== false,
+    },
+    metadata: {
+      ...(source.metadata || {}),
+      schemaVersion: '2.0.0',
+      enabledCapabilities: Array.isArray(source?.metadata?.enabledCapabilities)
+        ? source.metadata.enabledCapabilities
+        : [],
+      systemTarget: source?.metadata?.systemTarget || null,
+      systemVersion: source?.metadata?.systemVersion || null,
+    },
   };
 
   if (options.asDocument && projectFormLike && typeof projectFormLike.set === 'function') {
-    projectFormLike.set('workspaceId', normalized.workspaceId);
-    projectFormLike.set('configuration', configuration);
-    projectFormLike.set('capabilities', capabilities);
-    projectFormLike.set('smartMappings', smartMappings);
-    projectFormLike.set('metadata', metadata);
+    Object.entries(normalized).forEach(([key, value]) => {
+      projectFormLike.set(key, value);
+    });
     return projectFormLike;
   }
 
@@ -1190,8 +1071,8 @@ const isCatalogCandidate = (element) => {
   return true;
 };
 
-const inferAnalysisProfile = ({ configuration = {}, elements = [] }) => {
-  const tags = normalizeTags(configuration.tags || []);
+const inferAnalysisProfile = ({ identity = {}, elements = [] }) => {
+  const tags = normalizeTags(identity.tags || []);
   const candidates = (Array.isArray(elements) ? elements : []).filter(isCatalogCandidate);
   let numericFields = 0;
   let categoricalFields = 0;
@@ -1253,13 +1134,14 @@ const inferAnalysisProfile = ({ configuration = {}, elements = [] }) => {
   };
 };
 
-const enrichConfigurationWithAnalysisProfile = ({
-  configuration = {},
+const enrichAnalyticsProfile = ({
+  identity = {},
+  analytics = {},
   elements = [],
   existingProfile = null,
 }) => {
-  const inferred = inferAnalysisProfile({ configuration, elements });
-  const explicit = configuration.analysisProfile || {};
+  const inferred = inferAnalysisProfile({ identity, elements });
+  const explicit = analytics.profile || {};
   const base = existingProfile || {};
   const merged = {
     ...inferred,
@@ -1278,9 +1160,8 @@ const enrichConfigurationWithAnalysisProfile = ({
     inferredAt: explicit.inferredAt || new Date(),
   };
   return {
-    ...configuration,
-    tags: normalizeTags(configuration.tags || []),
-    analysisProfile: merged,
+    ...analytics,
+    profile: merged,
   };
 };
 
@@ -1331,9 +1212,10 @@ const isStrictPublicAccessible = (projectForm) => {
   if (!projectForm) return false;
   const isSystemForm = projectForm?.metadata?.formCategory === SYSTEM_FORM_CATEGORY;
   return (
-    projectForm?.metadata?.deploymentStatus === 'published' &&
+    projectForm?.identity?.status === 'published' &&
     projectForm?.status === 'active' &&
-    (projectForm?.configuration?.security === 'public' || isSystemForm)
+    (projectForm?.capabilities?.experience?.security?.mode === 'public' ||
+      isSystemForm)
   );
 };
 
@@ -1349,59 +1231,52 @@ const sanitizePublicForm = (projectForm) => {
       }))
     : [];
 
-  const behaviorSettings = source?.userSettings?.behavior || {};
-  const uiSettings = source?.userSettings?.ui || {};
-
   return {
     shareRef: source.shareRef || null,
     shareCode: source.shareCode || null,
     publicRef: source.publicRef,
     formReference: source.formReference || null,
-    configuration: {
-      projectName: source.configuration?.projectName || '',
-      tags: Array.isArray(source.configuration?.tags)
-        ? source.configuration.tags
-        : [],
-      security: source.configuration?.security || 'public',
-      publicSecureMode: source.configuration?.publicSecureMode || 'off',
+    identity: {
+      name: source.identity?.name || '',
+      description: source.identity?.description || '',
+      category: source.identity?.category || 'standard',
+      tags: Array.isArray(source.identity?.tags) ? source.identity.tags : [],
+      status: source.identity?.status || 'draft',
     },
     elements: safeElements,
-    style: source.style || 'default',
-    wizardMode: Boolean(source.wizardMode),
-    columnSpans: source.columnSpans || {},
-    userSettings: {
-      behavior: {
-        allowMultipleSubmissions:
-          behaviorSettings.allowMultipleSubmissions !== false,
-        submitOnComplete: behaviorSettings.submitOnComplete !== false,
+    layout: {
+      style: source.layout?.style || 'default',
+      wizardMode: Boolean(source.layout?.wizardMode),
+      grid: {
+        columns: source.layout?.grid?.columns || 12,
+        columnSpans: source.layout?.grid?.columnSpans || {},
       },
-      ui: uiSettings,
     },
+    capabilities: source.capabilities || defaultCapabilities(),
+    ui: source.ui || {},
     metadata: {
-      version: source.metadata?.version || '1.0.0',
       elementsCount:
         source.metadata?.elementsCount ||
         safeElements.length,
       hasValidation: Boolean(source.metadata?.hasValidation),
       lastModified: source.metadata?.lastModified || source.updatedAt || null,
-      formCategory: source.metadata?.formCategory || 'standard',
       systemTarget: source.metadata?.systemTarget || null,
       systemVersion: source.metadata?.systemVersion || null,
+      schemaVersion: '2.0.0',
     },
   };
 };
 
 const resolvePublicSecureMode = (projectForm) => {
-  if (projectForm?.metadata?.formCategory === SYSTEM_FORM_CATEGORY) {
-    return 'single_qr_passwordless';
+  if (projectForm?.identity?.category === SYSTEM_FORM_CATEGORY) {
+    return 'otp';
   }
   const mode = String(
-    projectForm?.configuration?.publicSecureMode ||
-      projectForm?.metadata?.publicSecureMode ||
+    projectForm?.capabilities?.experience?.security?.publicSecureMode ||
       'off'
   ).toLowerCase();
 
-  if (mode === 'single_qr_passwordless') return mode;
+  if (['off', 'link_only', 'otp', 'access_code'].includes(mode)) return mode;
   return 'off';
 };
 
@@ -1410,7 +1285,7 @@ const buildSchemaHash = (projectForm) => {
     projectId: projectForm?.projectId || '',
     publicRef: projectForm?.publicRef || '',
     shareRef: projectForm?.shareRef || '',
-    version: projectForm?.metadata?.version || '1.0.0',
+    version: projectForm?.schemaVersion || '2.0.0',
     updatedAt: projectForm?.updatedAt
       ? new Date(projectForm.updatedAt).toISOString()
       : null,
@@ -1430,7 +1305,8 @@ const buildSchemaHash = (projectForm) => {
 
 const buildPublicQrContext = (projectForm, options = {}) => {
   const secureMode = resolvePublicSecureMode(projectForm);
-  const requiresIdentityChallenge = secureMode === 'single_qr_passwordless';
+  const requiresIdentityChallenge =
+    secureMode === 'otp' || secureMode === 'access_code';
   const ttlSec = Number(config?.publicForm?.qrContextTtlSec || 900);
   const nowEpoch = Math.floor(Date.now() / 1000);
   const schemaHash = buildSchemaHash(projectForm);
@@ -1445,12 +1321,12 @@ const buildPublicQrContext = (projectForm, options = {}) => {
     publicRef: projectForm?.publicRef || null,
     shareRef: projectForm?.shareRef || null,
     shareCode: projectForm?.shareCode || null,
-    deploymentStatus: projectForm?.metadata?.deploymentStatus || null,
+    deploymentStatus: projectForm?.identity?.status || null,
     status: projectForm?.status || null,
-    security: projectForm?.configuration?.security || null,
+    security: projectForm?.capabilities?.experience?.security?.mode || null,
     publicSecureMode: secureMode,
     pipelineTarget: 'postgres_unified',
-    schemaVersion: projectForm?.metadata?.version || '1.0.0',
+    schemaVersion: projectForm?.schemaVersion || '2.0.0',
     schemaHash,
     qrVersion,
     issuedAt: new Date().toISOString(),
@@ -1489,7 +1365,7 @@ const ensureModuleStorageFolder = async (projectForm, { userId } = {}) => {
   }
 
   const folderName = normalizeModuleFolderName(
-    projectForm?.configuration?.projectName
+    projectForm?.identity?.name
   );
   const ownerId =
     userId || projectForm?.createdBy?._id || projectForm?.createdBy || null;
@@ -1524,7 +1400,7 @@ const ensureModuleStorageFolder = async (projectForm, { userId } = {}) => {
 const getProjectStorageFolderByProjectId = async (projectId) => {
   const projectForm = await getProjectFormByProjectId(projectId);
   const folderName = normalizeModuleFolderName(
-    projectForm?.configuration?.projectName
+    projectForm?.identity?.name
   );
 
   const existing = await StorageFolder.findOne({
@@ -1569,17 +1445,22 @@ const createProjectForm = async (
   options = {}
 ) => {
   let normalizedBody = { ...projectFormBody };
-  normalizedBody = applyLegacyFieldsFromCapabilities(normalizedBody, null);
   normalizedBody = normalizeSystemFormContract({
     body: normalizedBody,
     existing: null,
     enforceForCreate: true,
   });
-  normalizedBody.workflows = normalizeWorkflowTriggerOn(
-    normalizedBody.workflows || []
-  );
-  normalizedBody.configuration = enrichConfigurationWithAnalysisProfile({
-    configuration: normalizedBody.configuration || {},
+  normalizedBody.capabilities = {
+    ...defaultCapabilities(),
+    ...(normalizedBody.capabilities || {}),
+  };
+  normalizedBody.capabilities.experience.workflow.workflows =
+    normalizeWorkflowTriggerOn(
+      normalizedBody?.capabilities?.experience?.workflow?.workflows || []
+    );
+  normalizedBody.analytics = enrichAnalyticsProfile({
+    identity: normalizedBody.identity || {},
+    analytics: normalizedBody.analytics || {},
     elements: normalizedBody.elements || [],
   });
   normalizedBody = applyProjectFormSchemaDefaults(normalizedBody);
@@ -1660,7 +1541,7 @@ const getSystemProjectFormForTenant = async ({
   let projectForm = await ProjectForm.findOne({
     tenantId,
     deletedAt: null,
-    'metadata.formCategory': SYSTEM_FORM_CATEGORY,
+    'identity.category': SYSTEM_FORM_CATEGORY,
     'metadata.systemTarget': target,
   }).populate('createdBy');
 
@@ -1910,27 +1791,25 @@ const duplicateProjectFormByProjectId = async ({
   });
 
   const sourceObj = source.toObject();
-  const baseProjectName =
-    sourceObj?.configuration?.projectName || sourceObj?.projectId || 'Module';
+  const baseProjectName = sourceObj?.identity?.name || sourceObj?.projectId || 'Module';
   const duplicateName = String(name || '').trim() || `${baseProjectName} Copy`;
 
   const duplicatePayload = {
-    configuration: {
-      ...(sourceObj.configuration || {}),
-      projectName: duplicateName,
+    schemaVersion: '2.0.0',
+    identity: {
+      ...(sourceObj.identity || {}),
+      name: duplicateName,
+      status: 'draft',
     },
     elements: Array.isArray(sourceObj.elements) ? sourceObj.elements : [],
-    style: sourceObj.style || 'default',
-    wizardMode: Boolean(sourceObj.wizardMode),
-    columnSpans: sourceObj.columnSpans || {},
-    userSettings: sourceObj.userSettings || {},
-    permSettings: sourceObj.permSettings || {},
-    paymentConfig: sourceObj.paymentConfig || {},
-    workflows: Array.isArray(sourceObj.workflows) ? sourceObj.workflows : [],
+    layout: sourceObj.layout || {},
+    capabilities: sourceObj.capabilities || defaultCapabilities(),
+    smartMappings: sourceObj.smartMappings || defaultSmartMappings(),
+    analytics: sourceObj.analytics || {},
+    ui: sourceObj.ui || {},
     metadata: {
       ...(sourceObj.metadata || {}),
-      deploymentStatus: 'draft',
-      version: '1.0.0',
+      schemaVersion: '2.0.0',
       lastModified: new Date(),
     },
     status: 'inactive',
@@ -1963,14 +1842,16 @@ const updateProjectFormById = async (
   options = {}
 ) => {
   let normalizedUpdateBody = { ...updateBody };
-  if (Array.isArray(updateBody.workflows)) {
-    normalizedUpdateBody.workflows = normalizeWorkflowTriggerOn(updateBody.workflows);
+  if (Array.isArray(updateBody?.capabilities?.experience?.workflow?.workflows)) {
+    normalizedUpdateBody.capabilities = normalizedUpdateBody.capabilities || {};
+    normalizedUpdateBody.capabilities.experience =
+      normalizedUpdateBody.capabilities.experience || {};
+    normalizedUpdateBody.capabilities.experience.workflow =
+      normalizedUpdateBody.capabilities.experience.workflow || {};
+    normalizedUpdateBody.capabilities.experience.workflow.workflows =
+      normalizeWorkflowTriggerOn(updateBody.capabilities.experience.workflow.workflows);
   }
   const projectForm = await getProjectFormById(projectFormId);
-  normalizedUpdateBody = applyLegacyFieldsFromCapabilities(
-    normalizedUpdateBody,
-    projectForm
-  );
   if (
     Object.prototype.hasOwnProperty.call(normalizedUpdateBody, 'workspaceId')
   ) {
@@ -1997,50 +1878,56 @@ const updateProjectFormById = async (
   // Update metadata
   if (normalizedUpdateBody.metadata) {
     normalizedUpdateBody.metadata.lastModified = new Date();
-    const currentVersion = String(projectForm?.metadata?.version || '1.0.0');
-    const [major = 1, minor = 0, patch = 0] = currentVersion
+    const currentVersion = String(projectForm?.schemaVersion || '2.0.0');
+    const [major = 2, minor = 0, patch = 0] = currentVersion
       .split('.')
       .map((part) => Number(part) || 0);
-    normalizedUpdateBody.metadata.version = `${major}.${minor}.${patch + 1}`;
+    normalizedUpdateBody.metadata.schemaVersion = `${major}.${minor}.${patch + 1}`;
   }
 
   const mergedElements = Array.isArray(normalizedUpdateBody.elements)
     ? normalizedUpdateBody.elements
     : projectForm.elements || [];
-  const mergedConfiguration = enrichConfigurationWithAnalysisProfile({
-    configuration: {
-      ...(projectForm.configuration?.toObject
-        ? projectForm.configuration.toObject()
-        : projectForm.configuration || {}),
-      ...(normalizedUpdateBody.configuration || {}),
+  const mergedIdentity = {
+    ...(projectForm.identity?.toObject
+      ? projectForm.identity.toObject()
+      : projectForm.identity || {}),
+    ...(normalizedUpdateBody.identity || {}),
+  };
+  const mergedAnalytics = enrichAnalyticsProfile({
+    identity: mergedIdentity,
+    analytics: {
+      ...(projectForm.analytics?.toObject
+        ? projectForm.analytics.toObject()
+        : projectForm.analytics || {}),
+      ...(normalizedUpdateBody.analytics || {}),
     },
     elements: mergedElements,
-    existingProfile: projectForm?.configuration?.analysisProfile || null,
+    existingProfile: projectForm?.analytics?.profile || null,
   });
-  normalizedUpdateBody.configuration = mergedConfiguration;
   normalizedUpdateBody = applyProjectFormSchemaDefaults({
     ...(projectForm?.toObject ? projectForm.toObject() : projectForm),
     ...normalizedUpdateBody,
-    configuration: mergedConfiguration,
+    identity: mergedIdentity,
+    analytics: mergedAnalytics,
     elements: mergedElements,
-    workflows: normalizedUpdateBody.workflows || projectForm.workflows || [],
-    userSettings: {
-      ...(projectForm.userSettings?.toObject
-        ? projectForm.userSettings.toObject()
-        : projectForm.userSettings || {}),
-      ...(normalizedUpdateBody.userSettings || {}),
+    capabilities: {
+      ...(projectForm.capabilities?.toObject
+        ? projectForm.capabilities.toObject()
+        : projectForm.capabilities || {}),
+      ...(normalizedUpdateBody.capabilities || {}),
     },
-    permSettings: {
-      ...(projectForm.permSettings?.toObject
-        ? projectForm.permSettings.toObject()
-        : projectForm.permSettings || {}),
-      ...(normalizedUpdateBody.permSettings || {}),
+    layout: {
+      ...(projectForm.layout?.toObject
+        ? projectForm.layout.toObject()
+        : projectForm.layout || {}),
+      ...(normalizedUpdateBody.layout || {}),
     },
-    paymentConfig: {
-      ...(projectForm.paymentConfig?.toObject
-        ? projectForm.paymentConfig.toObject()
-        : projectForm.paymentConfig || {}),
-      ...(normalizedUpdateBody.paymentConfig || {}),
+    ui: {
+      ...(projectForm.ui?.toObject
+        ? projectForm.ui.toObject()
+        : projectForm.ui || {}),
+      ...(normalizedUpdateBody.ui || {}),
     },
     metadata: {
       ...(projectForm.metadata?.toObject
@@ -2065,66 +1952,166 @@ const updateProjectFormById = async (
 const buildSystemFormTemplate = (target) => {
   if (target === SYSTEM_TARGET_USER_PROFILE) {
     return {
-      configuration: {
-        projectName: 'User Profile',
+      schemaVersion: '2.0.0',
+      identity: {
+        name: 'User Profile',
+        description: '',
+        category: SYSTEM_FORM_CATEGORY,
         tags: ['system', 'profile', 'user'],
-        accessibility: ['api', 'mobile'],
-        security: 'private',
-        publicSecureMode: 'off',
+        status: 'published',
       },
       elements: getUserProfileSystemElements(),
-      style: 'default',
-      wizardMode: false,
-      userSettings: {
-        behavior: {
-          allowMultipleSubmissions: true,
-          enableProgressSave: true,
-        },
-        distribution: {
-          enableSharing: false,
-          allowEmbedding: false,
-          generateQR: false,
+      layout: {
+        style: 'default',
+        wizardMode: false,
+        grid: { columns: 12, columnSpans: {} },
+        builder: {},
+      },
+      capabilities: {
+        ...defaultCapabilities(),
+        experience: {
+          ...defaultCapabilities().experience,
+          security: {
+            profile: 'private_safe',
+            mode: 'private',
+            publicSecureMode: 'off',
+            access: {
+              whoCanAccess: 'authenticated_users',
+              allowedRoles: [],
+              allowedUsers: [],
+              restrictByLocation: false,
+              allowedCountries: [],
+            },
+            authentication: {
+              requireLogin: true,
+              allowAnonymous: false,
+              requireOtp: false,
+            },
+            submissionProtection: {
+              preventDuplicateSubmission: false,
+              duplicateCheckField: null,
+              rateLimitEnabled: false,
+              maxSubmissionsPerUser: null,
+            },
+            channels: ['web'],
+          },
+          behavior: {
+            allowMultipleSubmissions: true,
+            enableProgressSave: true,
+            autoSave: false,
+            submitOnComplete: true,
+          },
+          distribution: {
+            enableSharing: false,
+            allowEmbedding: false,
+            generateQR: false,
+            enableDeepLinking: false,
+          },
+          workflow: {
+            enabled: false,
+            approvalMode: 'none',
+            triggerOn: 'submission',
+            steps: [],
+            workflows: [],
+          },
         },
       },
+      smartMappings: defaultSmartMappings(),
+      analytics: {
+        profile: inferAnalysisProfile({
+          identity: { tags: ['system', 'profile', 'user'] },
+          elements: getUserProfileSystemElements(),
+        }),
+      },
+      ui: {},
       metadata: {
-        deploymentStatus: 'published',
-        formCategory: SYSTEM_FORM_CATEGORY,
         systemTarget: SYSTEM_TARGET_USER_PROFILE,
         systemVersion: '1.0.0',
         integrations: ['web', 'mobile'],
+        schemaVersion: '2.0.0',
       },
     };
   }
 
   if (target === SYSTEM_TARGET_NODE_PROFILE) {
     return {
-      configuration: {
-        projectName: 'Node Profile',
+      schemaVersion: '2.0.0',
+      identity: {
+        name: 'Node Profile',
+        description: '',
+        category: SYSTEM_FORM_CATEGORY,
         tags: ['system', 'profile', 'node'],
-        accessibility: ['api', 'mobile'],
-        security: 'private',
-        publicSecureMode: 'off',
+        status: 'published',
       },
       elements: getNodeProfileSystemElements(),
-      style: 'default',
-      wizardMode: false,
-      userSettings: {
-        behavior: {
-          allowMultipleSubmissions: true,
-          enableProgressSave: true,
-        },
-        distribution: {
-          enableSharing: false,
-          allowEmbedding: false,
-          generateQR: false,
+      layout: {
+        style: 'default',
+        wizardMode: false,
+        grid: { columns: 12, columnSpans: {} },
+        builder: {},
+      },
+      capabilities: {
+        ...defaultCapabilities(),
+        experience: {
+          ...defaultCapabilities().experience,
+          security: {
+            profile: 'private_safe',
+            mode: 'private',
+            publicSecureMode: 'off',
+            access: {
+              whoCanAccess: 'authenticated_users',
+              allowedRoles: [],
+              allowedUsers: [],
+              restrictByLocation: false,
+              allowedCountries: [],
+            },
+            authentication: {
+              requireLogin: true,
+              allowAnonymous: false,
+              requireOtp: false,
+            },
+            submissionProtection: {
+              preventDuplicateSubmission: false,
+              duplicateCheckField: null,
+              rateLimitEnabled: false,
+              maxSubmissionsPerUser: null,
+            },
+            channels: ['web'],
+          },
+          behavior: {
+            allowMultipleSubmissions: true,
+            enableProgressSave: true,
+            autoSave: false,
+            submitOnComplete: true,
+          },
+          distribution: {
+            enableSharing: false,
+            allowEmbedding: false,
+            generateQR: false,
+            enableDeepLinking: false,
+          },
+          workflow: {
+            enabled: false,
+            approvalMode: 'none',
+            triggerOn: 'submission',
+            steps: [],
+            workflows: [],
+          },
         },
       },
+      smartMappings: defaultSmartMappings(),
+      analytics: {
+        profile: inferAnalysisProfile({
+          identity: { tags: ['system', 'profile', 'node'] },
+          elements: getNodeProfileSystemElements(),
+        }),
+      },
+      ui: {},
       metadata: {
-        deploymentStatus: 'published',
-        formCategory: SYSTEM_FORM_CATEGORY,
         systemTarget: SYSTEM_TARGET_NODE_PROFILE,
         systemVersion: '1.1.0',
         integrations: ['web', 'mobile'],
+        schemaVersion: '2.0.0',
       },
     };
   }
@@ -2134,7 +2121,7 @@ const buildSystemFormTemplate = (target) => {
 
 const syncSystemFormTemplateIfNeeded = async (projectForm) => {
   if (!projectForm || projectForm.deletedAt) return projectForm;
-  if (projectForm?.metadata?.formCategory !== SYSTEM_FORM_CATEGORY) return projectForm;
+  if (projectForm?.identity?.category !== SYSTEM_FORM_CATEGORY) return projectForm;
 
   const target = projectForm?.metadata?.systemTarget;
   if (!VALID_SYSTEM_TARGETS.has(target)) return projectForm;
@@ -2148,15 +2135,19 @@ const syncSystemFormTemplateIfNeeded = async (projectForm) => {
   projectForm.metadata = {
     ...(projectForm.metadata || {}),
     ...template.metadata,
-    deploymentStatus:
-      projectForm?.metadata?.deploymentStatus || template.metadata.deploymentStatus,
   };
-  projectForm.configuration = {
-    ...(projectForm.configuration?.toObject
-      ? projectForm.configuration.toObject()
-      : projectForm.configuration || {}),
-    ...(template.configuration || {}),
+  projectForm.identity = {
+    ...(projectForm.identity?.toObject
+      ? projectForm.identity.toObject()
+      : projectForm.identity || {}),
+    ...(template.identity || {}),
+    status: projectForm?.identity?.status || template.identity.status,
   };
+  projectForm.layout = template.layout;
+  projectForm.capabilities = template.capabilities;
+  projectForm.smartMappings = template.smartMappings;
+  projectForm.analytics = template.analytics;
+  projectForm.ui = template.ui;
   await projectForm.save();
   return projectForm;
 };
@@ -2188,8 +2179,8 @@ const bootstrapSystemFormsForTenant = async ({
     // eslint-disable-next-line no-await-in-loop
     const existing = await ProjectForm.findOne({
       tenantId,
-      deletedAt: null,
-      'metadata.formCategory': SYSTEM_FORM_CATEGORY,
+    deletedAt: null,
+      'identity.category': SYSTEM_FORM_CATEGORY,
       'metadata.systemTarget': target,
     });
 
@@ -2497,14 +2488,17 @@ const getDeletedProjectForms = async (tenantId) => {
 const publishProjectForm = async (projectFormId, options = {}) => {
   const projectForm = await getProjectFormById(projectFormId);
   await projectForm.publish(options);
-  projectForm.configuration = enrichConfigurationWithAnalysisProfile({
-    configuration: projectForm.configuration?.toObject
-      ? projectForm.configuration.toObject()
-      : projectForm.configuration || {},
+  projectForm.analytics = enrichAnalyticsProfile({
+    identity: projectForm.identity?.toObject
+      ? projectForm.identity.toObject()
+      : projectForm.identity || {},
+    analytics: projectForm.analytics?.toObject
+      ? projectForm.analytics.toObject()
+      : projectForm.analytics || {},
     elements: projectForm.elements || [],
-    existingProfile: projectForm?.configuration?.analysisProfile || null,
+    existingProfile: projectForm?.analytics?.profile || null,
   });
-  projectForm.markModified('configuration');
+  projectForm.markModified('analytics');
   await projectForm.save();
   return projectForm;
 };
@@ -2558,7 +2552,7 @@ const getProjectAnalytics = async (projectId) => {
   const projectForm = await getProjectFormByProjectId(projectId);
   return {
     projectId: projectForm.projectId,
-    projectName: projectForm.configuration.projectName,
+    projectName: projectForm.identity?.name,
     analytics: projectForm.analytics,
     metadata: projectForm.metadata,
     status: projectForm.status,
@@ -2575,15 +2569,15 @@ const getProjectAnalytics = async (projectId) => {
  */
 const getProjectSchemaProfile = async (projectId) => {
   const projectForm = await getProjectFormByProjectId(projectId);
-  const configuration = projectForm.configuration?.toObject
-    ? projectForm.configuration.toObject()
-    : projectForm.configuration || {};
+  const identity = projectForm.identity?.toObject
+    ? projectForm.identity.toObject()
+    : projectForm.identity || {};
   const analysisProfile =
-    configuration.analysisProfile &&
-    Object.keys(configuration.analysisProfile).length > 0
-      ? configuration.analysisProfile
+    projectForm.analytics?.profile &&
+    Object.keys(projectForm.analytics.profile).length > 0
+      ? projectForm.analytics.profile
       : inferAnalysisProfile({
-          configuration,
+          identity,
           elements: projectForm.elements || [],
         });
 
@@ -2673,10 +2667,10 @@ const getProjectSchemaProfile = async (projectId) => {
   return {
     projectId: projectForm.projectId,
     tenantId: projectForm.tenantId,
-    projectName: configuration.projectName,
+    projectName: identity.name,
     status: projectForm.status,
-    deploymentStatus: projectForm.metadata?.deploymentStatus || null,
-    tags: Array.isArray(configuration.tags) ? configuration.tags : [],
+    deploymentStatus: projectForm.identity?.status || null,
+    tags: Array.isArray(identity.tags) ? identity.tags : [],
     analysisProfile,
     formFieldCount: fields.length,
     fields,
@@ -2745,8 +2739,8 @@ const searchProjectForms = async (query, filter = {}, options = {}) => {
     ...filter,
     deletedAt: null,
     $or: [
-      { 'configuration.projectName': searchRegex },
-      { 'configuration.tags': { $in: [searchRegex] } },
+      { 'identity.name': searchRegex },
+      { 'identity.tags': { $in: [searchRegex] } },
       { projectId: searchRegex },
       { shareRef: searchRegex },
       { shareCode: searchRegex },

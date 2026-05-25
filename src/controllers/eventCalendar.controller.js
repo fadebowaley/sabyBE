@@ -268,14 +268,14 @@ const previewCalendar = catchAsync(async (req, res) => {
 
   // Fetch form
   const form = await ProjectForm.findOne({ formId }).select(
-    'permSettings projectId tenantId formId configuration'
+    'capabilities.experience.compliance projectId tenantId formId identity'
   );
 
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');
   }
 
-  if (!form.permSettings?.enabled) {
+  if (!form.capabilities?.experience?.compliance?.enabled) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'PERM is not enabled for this module'
@@ -305,7 +305,7 @@ const previewCalendar = catchAsync(async (req, res) => {
     form: {
       formId: form.formId,
       projectId: form.projectId,
-      name: form.configuration?.projectName,
+      name: form.identity?.name,
     },
   });
 });
@@ -337,7 +337,7 @@ const regenerateCalendar = catchAsync(async (req, res) => {
   // Fetch form
   const form = await ProjectForm.findOne({
     projectId: existingCalendar.project_id,
-  }).select('permSettings projectId tenantId formId');
+  }).select('capabilities.experience.compliance projectId tenantId formId');
 
   if (!form) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Module not found');

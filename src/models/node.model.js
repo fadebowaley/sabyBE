@@ -2,6 +2,22 @@ const mongoose = require('mongoose');
 const { toJSON, paginate, tenantPlugin } = require('./plugins');
 const { HaloNCounter } = require('./haloCounter.model');
 const hierarchyPlugin = require('./plugins/hierarchy.plugin');
+const { randomUUID } = require('crypto');
+
+const receivingAccountSchema = new mongoose.Schema(
+  {
+    id: { type: String, default: () => randomUUID() },
+    label: { type: String, default: '' },
+    accountNumber: { type: String, default: '' },
+    bankName: { type: String, default: '' },
+    bankCode: { type: String, default: '' },
+    bankCategory: { type: String, default: '' },
+    accountName: { type: String, default: '' },
+    isPrimary: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
+  },
+  { _id: false }
+);
 
 const nodeSchema = mongoose.Schema(
   {
@@ -106,6 +122,10 @@ const nodeSchema = mongoose.Schema(
       averageIncome: {
         type: mongoose.Schema.Types.Decimal128,
         default: 0,
+      },
+      receivingAccounts: {
+        type: [receivingAccountSchema],
+        default: [],
       },
     },
   },

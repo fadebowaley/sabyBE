@@ -105,9 +105,7 @@ async function processFormSubmission(bot, session) {
       projectForm
         ? {
             projectId: projectForm.projectId,
-            projectName:
-              projectForm.configuration &&
-              projectForm.configuration.projectName,
+            projectName: projectForm.identity && projectForm.identity.name,
             elementsCount: projectForm.elements
               ? projectForm.elements.length
               : 0,
