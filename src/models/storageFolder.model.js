@@ -20,6 +20,28 @@ const storageFolderSchema = mongoose.Schema(
       required: true,
       index: true,
     },
+    ownerType: {
+      type: String,
+      enum: ['user', 'tenant', 'submission', 'node'],
+      default: 'user',
+      index: true,
+    },
+    ownerId: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true,
+    },
+    visibility: {
+      type: String,
+      enum: ['private', 'tenant', 'restricted', 'public_share'],
+      default: 'private',
+      index: true,
+    },
     name: {
       type: String,
       required: true,
@@ -52,7 +74,12 @@ const storageFolderSchema = mongoose.Schema(
     },
     permissions: [
       {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        subjectType: {
+          type: String,
+          enum: ['user', 'role', 'node'],
+          default: 'user',
+        },
+        subjectId: { type: String, required: true },
         permission: {
           type: String,
           enum: ['read', 'write', 'admin'],
@@ -90,6 +117,15 @@ storageFolderSchema.statics.generateShareToken = function () {
 storageFolderSchema.pre('save', function (next) {
   if (!this.folderId) {
     this.folderId = this.constructor.generateFolderId();
+  }
+  if (!this.ownerId && this.userId) {
+    this.ownerId = String(this.userId);
+  }
+  if (!this.createdBy && this.userId) {
+    this.createdBy = this.userId;
+  }
+  if (!this.visibility) {
+    this.visibility = this.shareSettings?.isShared ? 'public_share' : 'private';
   }
 
   // Generate path - set default if not provided

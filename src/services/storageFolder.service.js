@@ -1,6 +1,12 @@
 const httpStatus = require('http-status');
 const { StorageFolder, Storage, StorageActivity } = require('../models');
 const ApiError = require('../utils/ApiError');
+const {
+  buildAccessibleStorageQuery,
+  canReadStorageEntity,
+  canWriteStorageEntity,
+  canAdminStorageEntity,
+} = require('./storageAccess.service');
 
 const createFolder = async (folderData, userInfo) => {
   const { tenantId, userId } = userInfo;
@@ -8,9 +14,10 @@ const createFolder = async (folderData, userInfo) => {
   // Check if folder name exists in the same parent
   const existingFolder = await StorageFolder.findOne({
     tenantId,
-    userId,
     name: folderData.name,
     parentFolder: folderData.parentFolder || null,
+    ownerType: folderData.ownerType || 'user',
+    ownerId: folderData.ownerId || String(userId),
     status: 'active',
   });
 
@@ -25,6 +32,11 @@ const createFolder = async (folderData, userInfo) => {
     ...folderData,
     tenantId,
     userId,
+    ownerType: folderData.ownerType || 'user',
+    ownerId: folderData.ownerId || String(userId),
+    createdBy: folderData.createdBy || userId,
+    visibility: folderData.visibility || 'private',
+    permissions: Array.isArray(folderData.permissions) ? folderData.permissions : [],
   });
 
   // Log activity
@@ -40,25 +52,29 @@ const createFolder = async (folderData, userInfo) => {
 };
 
 const getFolders = async (filter, options, userInfo) => {
-  const { tenantId, userId } = userInfo;
-  const queryFilter = { ...filter, tenantId, userId, status: 'active' };
+  const { tenantId } = userInfo;
+  const accessQuery = buildAccessibleStorageQuery({
+    tenantId,
+    userInfo,
+    permission: 'read',
+  });
+  const queryFilter = { $and: [accessQuery, filter] };
 
   return StorageFolder.paginate(queryFilter, {
     ...options,
-    populate: 'parentFolder userId',
+    populate: 'parentFolder userId createdBy',
   });
 };
 
 const getFolderById = async (folderId, userInfo) => {
-  const { tenantId, userId } = userInfo;
+  const { tenantId } = userInfo;
   const folder = await StorageFolder.findOne({
     _id: folderId,
     tenantId,
-    userId,
     status: 'active',
-  }).populate('parentFolder userId');
+  }).populate('parentFolder userId createdBy');
 
-  if (!folder) {
+  if (!folder || !canReadStorageEntity(userInfo, folder)) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Folder not found');
   }
 
@@ -66,20 +82,23 @@ const getFolderById = async (folderId, userInfo) => {
 };
 
 const getFolderContents = async (folderId, userInfo) => {
-  const { tenantId, userId } = userInfo;
+  const { tenantId } = userInfo;
+  const folder = await getFolderById(folderId, userInfo);
+  if (!canReadStorageEntity(userInfo, folder)) {
+    throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to view this folder');
+  }
+  const folderAccessQuery = buildAccessibleStorageQuery({
+    tenantId,
+    userInfo,
+    permission: 'read',
+  });
 
   const [subfolders, files] = await Promise.all([
     StorageFolder.find({
-      tenantId,
-      userId,
-      parentFolder: folderId,
-      status: 'active',
+      $and: [folderAccessQuery, { parentFolder: folderId }],
     }).sort({ name: 1 }),
     Storage.find({
-      tenantId,
-      userId,
-      folderId,
-      status: 'active',
+      $and: [folderAccessQuery, { folderId }],
     }).sort({ originalName: 1 }),
   ]);
 
@@ -89,14 +108,18 @@ const getFolderContents = async (folderId, userInfo) => {
 const updateFolder = async (folderId, updateData, userInfo) => {
   const { tenantId, userId } = userInfo;
   const folder = await getFolderById(folderId, userInfo);
+  if (!canWriteStorageEntity(userInfo, folder)) {
+    throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to update this folder');
+  }
 
   // Check for name conflicts if name is being updated
   if (updateData.name && updateData.name !== folder.name) {
     const existingFolder = await StorageFolder.findOne({
       tenantId,
-      userId,
       name: updateData.name,
       parentFolder: folder.parentFolder,
+      ownerType: folder.ownerType || 'user',
+      ownerId: folder.ownerId || String(folder.userId),
       status: 'active',
       _id: { $ne: folderId },
     });
@@ -118,20 +141,22 @@ const updateFolder = async (folderId, updateData, userInfo) => {
 const deleteFolder = async (folderId, userInfo) => {
   const { tenantId, userId } = userInfo;
   const folder = await getFolderById(folderId, userInfo);
+  if (!canWriteStorageEntity(userInfo, folder)) {
+    throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to delete this folder');
+  }
 
   // Check if folder has contents
+  const accessQuery = buildAccessibleStorageQuery({
+    tenantId,
+    userInfo,
+    permission: 'read',
+  });
   const [subfolders, files] = await Promise.all([
     StorageFolder.countDocuments({
-      tenantId,
-      userId,
-      parentFolder: folderId,
-      status: 'active',
+      $and: [accessQuery, { parentFolder: folderId }],
     }),
     Storage.countDocuments({
-      tenantId,
-      userId,
-      folderId,
-      status: 'active',
+      $and: [accessQuery, { folderId }],
     }),
   ]);
 
@@ -162,10 +187,13 @@ const deleteFolder = async (folderId, userInfo) => {
 const moveFolder = async (folderId, newParentId, userInfo) => {
   const { tenantId, userId } = userInfo;
   const folder = await getFolderById(folderId, userInfo);
+  if (!canWriteStorageEntity(userInfo, folder)) {
+    throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to move this folder');
+  }
 
   // Validate new parent exists
   if (newParentId) {
-    const newParent = await getFolderById(newParentId, userInfo);
+    await getFolderById(newParentId, userInfo);
 
     // Check for circular reference
     if (await isCircularReference(folderId, newParentId)) {
@@ -179,9 +207,10 @@ const moveFolder = async (folderId, newParentId, userInfo) => {
   // Check for name conflicts in new location
   const existingFolder = await StorageFolder.findOne({
     tenantId,
-    userId,
     name: folder.name,
     parentFolder: newParentId || null,
+    ownerType: folder.ownerType || 'user',
+    ownerId: folder.ownerId || String(folder.userId),
     status: 'active',
     _id: { $ne: folderId },
   });
@@ -216,6 +245,9 @@ const moveFolder = async (folderId, newParentId, userInfo) => {
 const shareFolder = async (folderId, shareOptions, userInfo) => {
   const { tenantId, userId } = userInfo;
   const folder = await getFolderById(folderId, userInfo);
+  if (!canAdminStorageEntity(userInfo, folder)) {
+    throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to share this folder');
+  }
 
   const shareToken = StorageFolder.generateShareToken();
 
@@ -226,6 +258,7 @@ const shareFolder = async (folderId, shareOptions, userInfo) => {
     allowUpload: shareOptions.allowUpload || false,
     password: shareOptions.password,
   };
+  folder.visibility = 'public_share';
 
   await folder.save();
 
@@ -236,7 +269,7 @@ const shareFolder = async (folderId, shareOptions, userInfo) => {
 };
 
 const getFolderHierarchy = async (folderId, userInfo) => {
-  const { tenantId, userId } = userInfo;
+  const { tenantId } = userInfo;
   const hierarchy = [];
   let currentFolder = await getFolderById(folderId, userInfo);
 
@@ -251,7 +284,6 @@ const getFolderHierarchy = async (folderId, userInfo) => {
       currentFolder = await StorageFolder.findOne({
         _id: currentFolder.parentFolder,
         tenantId,
-        userId,
         status: 'active',
       });
     } else {
@@ -280,6 +312,22 @@ const isCircularReference = async (folderId, newParentId) => {
 const logFolderActivity = async (activityData) =>
   StorageActivity.create(activityData);
 
+const updateFolderPermissions = async (folderId, permissions, visibility, userInfo) => {
+  const folder = await getFolderById(folderId, userInfo);
+  if (!canAdminStorageEntity(userInfo, folder)) {
+    throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to update folder permissions');
+  }
+
+  if (Array.isArray(permissions)) {
+    folder.permissions = permissions;
+  }
+  if (visibility) {
+    folder.visibility = visibility;
+  }
+  await folder.save();
+  return folder;
+};
+
 module.exports = {
   createFolder,
   getFolders,
@@ -290,4 +338,5 @@ module.exports = {
   moveFolder,
   shareFolder,
   getFolderHierarchy,
+  updateFolderPermissions,
 };

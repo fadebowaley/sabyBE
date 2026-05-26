@@ -12,11 +12,16 @@ const uploadFile = catchAsync(async (req, res) => {
   const fileData = {
     ...req.file,
     folderId: req.body.folderId,
+    description: req.body.description,
+    tags: req.body.tags,
+    ingestionMode: req.body.ingestionMode,
   };
 
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   const file = await storageService.uploadFile(fileData, userInfo);
@@ -31,11 +36,16 @@ const uploadMultipleFiles = catchAsync(async (req, res) => {
   const filesData = req.files.map((file) => ({
     ...file,
     folderId: req.body.folderId,
+    description: req.body.description,
+    tags: req.body.tags,
+    ingestionMode: req.body.ingestionMode,
   }));
 
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   const files = await storageService.uploadMultipleFiles(filesData, userInfo);
@@ -52,6 +62,8 @@ const getFiles = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   const result = await storageService.getFiles(filter, options, userInfo);
@@ -62,6 +74,8 @@ const getFile = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   const file = await storageService.getFileById(req.params.fileId, userInfo);
@@ -72,6 +86,8 @@ const deleteFile = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   await storageService.deleteFile(req.params.fileId, userInfo);
@@ -89,6 +105,8 @@ const shareFile = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   const shareResult = await storageService.shareFile(
@@ -145,6 +163,8 @@ const searchFiles = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   const files = await storageService.searchFiles(query, userInfo);
@@ -155,6 +175,8 @@ const getStorageStats = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   const stats = await storageService.getStorageStats(userInfo);
@@ -166,10 +188,10 @@ const moveFile = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
-  const file = await storageService.getFileById(req.params.fileId, userInfo);
-  file.folderId = folderId || null;
-  await file.save();
+  const file = await storageService.moveFile(req.params.fileId, folderId, userInfo);
   res.send(file);
 });
 
@@ -179,49 +201,48 @@ const copyFile = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
-
-  const originalFile = await storageService.getFileById(
-    req.params.fileId,
-    userInfo
-  );
-
-  // Copy file in cloud storage
-  const {
-    StorageProviderFactory,
-  } = require('../services/providers/storageProvider');
-  const { nanoid } = require('nanoid');
-  const path = require('path');
-
-  const fileExtension = path.extname(originalFile.originalName);
-  const uniqueFileName = `${nanoid(16)}${fileExtension}`;
-  const newStoragePath = `${userInfo.tenantId}/${userInfo.userId}/${uniqueFileName}`;
-
-  const provider = StorageProviderFactory.create(
-    originalFile.storageProvider || 'aws-s3'
-  );
-  await provider.copy(originalFile.storagePath, newStoragePath);
-
-  // Create new file record
-  const { Storage } = require('../models');
-  const copiedFile = await Storage.create({
-    tenantId: userInfo.tenantId,
-    userId: userInfo.userId,
-    folderId: folderId || originalFile.folderId,
-    originalName: newName || `Copy of ${originalFile.originalName}`,
-    fileName: uniqueFileName,
-    fileSize: originalFile.fileSize,
-    mimeType: originalFile.mimeType,
-    fileExtension: originalFile.fileExtension,
-    storageProvider: originalFile.storageProvider,
-    storagePath: newStoragePath,
-    storageUrl: originalFile.storageUrl.replace(
-      originalFile.storagePath,
-      newStoragePath
-    ),
-  });
+  const copiedFile = await storageService.copyFile(req.params.fileId, {
+    folderId,
+    newName,
+  }, userInfo);
 
   res.status(httpStatus.CREATED).send(copiedFile);
+});
+
+const updateFileMetadata = catchAsync(async (req, res) => {
+  const userInfo = {
+    tenantId: req.user.tenantId,
+    userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
+  };
+
+  const file = await storageService.updateFileMetadata(
+    req.params.fileId,
+    req.body,
+    userInfo
+  );
+  res.send(file);
+});
+
+const updateFilePermissions = catchAsync(async (req, res) => {
+  const userInfo = {
+    tenantId: req.user.tenantId,
+    userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
+  };
+
+  const file = await storageService.updateFilePermissions(
+    req.params.fileId,
+    req.body.permissions,
+    req.body.visibility,
+    userInfo
+  );
+  res.send(file);
 });
 
 module.exports = {
@@ -237,4 +258,6 @@ module.exports = {
   getStorageStats,
   moveFile,
   copyFile,
+  updateFileMetadata,
+  updateFilePermissions,
 };

@@ -19,6 +19,7 @@ const { postgresPool }           = require('../config/postgres');
 const config                     = require('../config/config');
 const logger                     = require('../config/logger');
 const { embedDocumentChunks }    = require('../services/docEmbedding.service');
+const submissionAttachmentService = require('../services/submissionAttachment.service');
 
 const POLL_MS    = Number(config.rag?.workerIntervalMs || 30_000);
 const WORKER_ID  = `doc-ingestion-worker-${process.pid}`;
@@ -75,6 +76,25 @@ async function markDocFailed(docId) {
   );
 }
 
+async function getDocAttachmentRef(docId) {
+  const { rows } = await postgresPool.query(
+    `SELECT id, source_ref, metadata
+     FROM copilot.docs
+     WHERE id = $1
+     LIMIT 1`,
+    [docId]
+  );
+  return rows[0] || null;
+}
+
+async function syncAttachmentStatusFromDoc(docId, status, fields = {}) {
+  const doc = await getDocAttachmentRef(docId);
+  const attachmentId = doc?.source_ref;
+  if (!attachmentId) return;
+
+  await submissionAttachmentService.markIngestionStatus(attachmentId, status, fields);
+}
+
 // ─── Poll loop ────────────────────────────────────────────────────────────────
 
 async function poll() {
@@ -95,6 +115,10 @@ async function poll() {
     try {
       const { embeddedCount, totalTokens } = await embedDocumentChunks({ docId, tenantId });
       await markJobCompleted(jobId);
+      await syncAttachmentStatusFromDoc(docId, 'embedded', {
+        ingestionReason: 'doc_embedding_completed',
+        embeddedAt: new Date(),
+      });
       logger.info('[DocIngestion] Job completed', { jobId, tenantId, docId, embeddedCount, totalTokens });
     } catch (err) {
       const exhausted = attempts + 1 >= max_attempts;
@@ -105,6 +129,10 @@ async function poll() {
       await markJobFailed(jobId, err.message, !exhausted);
       if (exhausted) {
         await markDocFailed(docId);
+        await syncAttachmentStatusFromDoc(docId, 'failed', {
+          ingestionReason: 'doc_embedding_failed',
+          ingestionError: err.message,
+        });
       }
     }
   }

@@ -9,6 +9,8 @@ const createFolder = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   const folder = await storageFolderService.createFolder(folderData, userInfo);
@@ -21,6 +23,8 @@ const getFolders = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   console.log('🔍 getFolders filter:', filter);
@@ -40,6 +44,8 @@ const getFolder = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   const folder = await storageFolderService.getFolderById(
@@ -53,6 +59,8 @@ const getFolderContents = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   const contents = await storageFolderService.getFolderContents(
@@ -68,6 +76,8 @@ const updateFolder = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   const folder = await storageFolderService.updateFolder(
@@ -82,6 +92,8 @@ const deleteFolder = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   await storageFolderService.deleteFolder(req.params.folderId, userInfo);
@@ -94,6 +106,8 @@ const moveFolder = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   const folder = await storageFolderService.moveFolder(
@@ -114,6 +128,8 @@ const shareFolder = catchAsync(async (req, res) => {
   const userInfo = {
     tenantId: req.user.tenantId,
     userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
   };
 
   const shareResult = await storageFolderService.shareFolder(
@@ -204,6 +220,24 @@ const getRootFolders = catchAsync(async (req, res) => {
   res.send(result);
 });
 
+const updateFolderPermissions = catchAsync(async (req, res) => {
+  const userInfo = {
+    tenantId: req.user.tenantId,
+    userId: req.user._id,
+    roles: req.user.roles,
+    role: req.user.role,
+  };
+
+  const folder = await storageFolderService.updateFolderPermissions(
+    req.params.folderId,
+    req.body.permissions,
+    req.body.visibility,
+    userInfo
+  );
+
+  res.send(folder);
+});
+
 module.exports = {
   createFolder,
   getFolders,
@@ -216,4 +250,5 @@ module.exports = {
   getSharedFolder,
   getFolderHierarchy,
   getRootFolders,
+  updateFolderPermissions,
 };

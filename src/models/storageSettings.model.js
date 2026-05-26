@@ -45,6 +45,32 @@ const storageSettingsSchema = mongoose.Schema(
       emailOnQuotaWarning: { type: Boolean, default: true },
       quotaWarningThreshold: { type: Number, default: 80 }, // percentage
     },
+    ingestionPolicy: {
+      defaultMode: {
+        type: String,
+        enum: ['off', 'auto', 'force'],
+        default: 'off',
+      },
+      rules: [
+        {
+          name: { type: String, required: true },
+          enabled: { type: Boolean, default: true },
+          match: {
+            mimeTypes: { type: [String], default: [] },
+            extensions: { type: [String], default: [] },
+            pathPrefixes: { type: [String], default: [] },
+            namePatterns: { type: [String], default: [] },
+            ownerTypes: { type: [String], default: [] },
+            sourceTypes: { type: [String], default: [] },
+          },
+          mode: {
+            type: String,
+            enum: ['off', 'auto', 'force'],
+            default: 'auto',
+          },
+        },
+      ],
+    },
     integrations: {
       awsS3: {
         enabled: { type: Boolean, default: true },

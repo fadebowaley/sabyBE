@@ -159,6 +159,18 @@ router.post('/:fileId/copy',
   storageController.copyFile
 );
 
+router.patch('/:fileId/metadata',
+  auth('update:storage:file'),
+  validate(storageValidation.updateFileMetadata),
+  storageController.updateFileMetadata
+);
+
+router.patch('/:fileId/permissions',
+  auth('share:storage:file'),
+  validate(storageValidation.updateFilePermissions),
+  storageController.updateFilePermissions
+);
+
 // Public shared file access (no auth required)
 router.get('/shared/:shareToken',
   validate(storageValidation.getSharedFile),

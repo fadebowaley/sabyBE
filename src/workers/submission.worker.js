@@ -29,6 +29,7 @@ const submissionRollupService = require('../services/submissionRollup.service');
 const workflowService = require('../services/workflow.service');
 const ProjectForm = require('../models/projectForm.model');
 const ApiError = require('../utils/ApiError');
+const submissionAttachmentService = require('../services/submissionAttachment.service');
 
 const SUBMISSION_QUEUE_NAME = 'submissionQueue';
 let factsTableEnsured = false;
@@ -418,6 +419,20 @@ const createSubmissionWorker = () => {
       }
 
       if (result) {
+        try {
+          await submissionAttachmentService.createAttachmentsFromSubmission({
+            submission: result,
+            tenantId: submissionPayload.tenant_id,
+            projectId,
+            userId: submissionPayload.user_id || null,
+            nodeId: submissionPayload.node_id || null,
+          });
+        } catch (attachmentError) {
+          logger.warn(
+            `[Worker] Submission attachment processing failed for submission ${result.id}: ${attachmentError.message}`
+          );
+        }
+
         // ── Analytics facts ──────────────────────────────────────────────
         try {
           const catalog = await SubmissionCatalogService.getCatalogByProject(

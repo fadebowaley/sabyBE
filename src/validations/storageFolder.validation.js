@@ -108,11 +108,15 @@ const updateFolderPermissions = {
     permissions: Joi.array()
       .items(
         Joi.object().keys({
-          userId: Joi.string().custom(objectId).required(),
+          subjectType: Joi.string().valid('user', 'role', 'node').required(),
+          subjectId: Joi.string().required(),
           permission: Joi.string().valid('read', 'write', 'admin').required(),
         })
       )
       .required(),
+    visibility: Joi.string()
+      .valid('private', 'tenant', 'restricted', 'public_share')
+      .optional(),
   }),
 };
 

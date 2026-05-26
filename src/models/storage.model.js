@@ -20,6 +20,28 @@ const storageSchema = mongoose.Schema(
       required: true,
       index: true,
     },
+    ownerType: {
+      type: String,
+      enum: ['user', 'tenant', 'submission', 'node'],
+      default: 'user',
+      index: true,
+    },
+    ownerId: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true,
+    },
+    visibility: {
+      type: String,
+      enum: ['private', 'tenant', 'restricted', 'public_share'],
+      default: 'private',
+      index: true,
+    },
     folderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'StorageFolder',
@@ -78,6 +100,54 @@ const storageSchema = mongoose.Schema(
       tags: [String],
       customFields: mongoose.Schema.Types.Mixed,
     },
+    permissions: [
+      {
+        subjectType: {
+          type: String,
+          enum: ['user', 'role', 'node'],
+          required: true,
+        },
+        subjectId: {
+          type: String,
+          required: true,
+        },
+        permission: {
+          type: String,
+          enum: ['read', 'write', 'admin'],
+          required: true,
+        },
+      },
+    ],
+    ingestionMode: {
+      type: String,
+      enum: ['off', 'auto', 'force'],
+      default: 'off',
+    },
+    ingestionStatus: {
+      type: String,
+      enum: [
+        'pending',
+        'skipped',
+        'queued',
+        'extracting',
+        'embedded',
+        'failed',
+        'not_ingestible',
+      ],
+      default: 'pending',
+    },
+    ingestionReason: {
+      type: String,
+      default: null,
+    },
+    ingestionError: {
+      type: String,
+      default: null,
+    },
+    embeddedAt: {
+      type: Date,
+      default: null,
+    },
     versions: [
       {
         versionId: String,
@@ -121,6 +191,15 @@ storageSchema.statics.generateShareToken = function () {
 storageSchema.pre('save', function (next) {
   if (!this.fileId) {
     this.fileId = this.constructor.generateFileId();
+  }
+  if (!this.ownerId && this.userId) {
+    this.ownerId = String(this.userId);
+  }
+  if (!this.createdBy && this.userId) {
+    this.createdBy = this.userId;
+  }
+  if (!this.visibility) {
+    this.visibility = this.shareSettings?.isShared ? 'public_share' : 'private';
   }
   next();
 });

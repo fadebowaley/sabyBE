@@ -9,7 +9,7 @@ AWS.config.update({
 });
 
 const s3 = new AWS.S3();
-const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'halocrm-storage';
+const BUCKET_NAME = process.env.AWS_S3_BUCKET || process.env.AWS_BUCKET_NAME || 'halocrm-storage';
 
 const uploadToS3 = async (buffer, key, contentType) => {
   const params = {

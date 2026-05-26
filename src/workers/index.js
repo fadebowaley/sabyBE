@@ -34,6 +34,9 @@ const { initializeBaselineWorkers, shutdownBaselineWorkers } = require('./baseli
 const { createComplianceAgentWorker }    = require('./complianceAgent.worker');
 const { createDataIntelligenceWorker }   = require('./dataIntelligence.worker');
 const { createDocIngestionWorker }       = require('./docIngestion.worker');
+const {
+  createSubmissionAttachmentIngestionWorker,
+} = require('./submissionAttachmentIngestion.worker');
 const { createAgentEvalWorker }            = require('./agentEval.worker');
 const { createPromptImprovementWorker }    = require('./promptImprovement.worker');
 
@@ -60,6 +63,7 @@ let baselineWorkersInitialized = false;
 let complianceAgentWorker    = null;
 let dataIntelligenceWorker   = null;
 let docIngestionWorker       = null;
+let submissionAttachmentIngestionWorker = null;
 let agentEvalWorker            = null;
 let promptImprovementWorker    = null;
 
@@ -136,6 +140,9 @@ const initializeWorkers = async () => {
     if (config.rag?.enabled !== false) {
       docIngestionWorker = createDocIngestionWorker();
       logger.info('✅ Document ingestion worker started');
+      submissionAttachmentIngestionWorker =
+        await createSubmissionAttachmentIngestionWorker();
+      logger.info('✅ Submission attachment ingestion worker started');
     } else {
       logger.info('⊘ Document ingestion worker disabled (RAG_ENABLED=false)');
     }
@@ -183,6 +190,7 @@ const initializeWorkers = async () => {
       complianceAgentWorker  ? 'compliance-agent'    : null,
       dataIntelligenceWorker ? 'data-intelligence'   : null,
       docIngestionWorker     ? 'doc-ingestion'       : null,
+      submissionAttachmentIngestionWorker ? 'submission-attachment-ingestion' : null,
       agentEvalWorker          ? 'agent-eval'           : null,
       promptImprovementWorker  ? 'prompt-improvement'   : null,
     ].filter(Boolean);
@@ -240,6 +248,16 @@ const shutdownWorkers = async () => {
       copilotScoreboardWorker
         .close()
         .then(() => logger.info('✅ Copilot scoreboard worker stopped'))
+    );
+  }
+
+  if (submissionAttachmentIngestionWorker) {
+    shutdownPromises.push(
+      submissionAttachmentIngestionWorker
+        .close()
+        .then(() =>
+          logger.info('✅ Submission attachment ingestion worker stopped')
+        )
     );
   }
 

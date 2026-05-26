@@ -34,6 +34,7 @@ const collectionRoute = require('./collection.route');
 const inmailRoute = require('./inmail.route');
 const storageRoute = require('./storage.route');
 const storageFolderRoute = require('./storageFolder.route');
+const submissionAttachmentRoute = require('./submissionAttachment.route');
 const tenantConfigRoute = require('./tenantConfig.route');
 const schemaRoute = require('./schema.route');
 const submissionRoute = require('./submission.route');
@@ -210,6 +211,10 @@ const defaultRoutes = [
   {
     path: '/storage',
     route: storageRoute,
+  },
+  {
+    path: '/submission-attachments',
+    route: submissionAttachmentRoute,
   },
   {
     path: '/tenant-config',

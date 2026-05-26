@@ -133,6 +133,12 @@ router.post('/:folderId/share',
   storageFolderController.shareFolder
 );
 
+router.patch('/:folderId/permissions',
+  auth('share:storage:folder'),
+  validate(storageFolderValidation.updateFolderPermissions),
+  storageFolderController.updateFolderPermissions
+);
+
 // Public shared folder access (no auth required)
 router.get('/shared/:shareToken',
   validate(storageFolderValidation.getSharedFolder),

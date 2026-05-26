@@ -6,6 +6,7 @@ const uploadFile = {
     folderId: Joi.string().custom(objectId).optional(),
     description: Joi.string().optional(),
     tags: Joi.array().items(Joi.string()).optional(),
+    ingestionMode: Joi.string().valid('off', 'auto', 'force').optional(),
   }),
 };
 
@@ -14,6 +15,7 @@ const uploadMultipleFiles = {
     folderId: Joi.string().custom(objectId).optional(),
     description: Joi.string().optional(),
     tags: Joi.array().items(Joi.string()).optional(),
+    ingestionMode: Joi.string().valid('off', 'auto', 'force').optional(),
   }),
 };
 
@@ -107,6 +109,28 @@ const updateFileMetadata = {
   }),
 };
 
+const updateFilePermissions = {
+  params: Joi.object().keys({
+    fileId: Joi.string().custom(objectId).required(),
+  }),
+  body: Joi.object()
+    .keys({
+      visibility: Joi.string()
+        .valid('private', 'tenant', 'restricted', 'public_share')
+        .optional(),
+      permissions: Joi.array()
+        .items(
+          Joi.object().keys({
+            subjectType: Joi.string().valid('user', 'role', 'node').required(),
+            subjectId: Joi.string().required(),
+            permission: Joi.string().valid('read', 'write', 'admin').required(),
+          })
+        )
+        .optional(),
+    })
+    .min(1),
+};
+
 module.exports = {
   uploadFile,
   uploadMultipleFiles,
@@ -120,4 +144,5 @@ module.exports = {
   moveFile,
   copyFile,
   updateFileMetadata,
+  updateFilePermissions,
 };
