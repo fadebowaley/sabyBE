@@ -15,6 +15,7 @@ const projectFormService = require('./projectForm.service');
 const emailService = require('./email.service');
 const smsService = require('./sms.service');
 const { queueSubmission } = require('./submission.service');
+const { buildDeterministicIdempotencyKey } = require('../utils/idempotency');
 const {
   normalizePhoneToE164,
   buildPhoneLookupCandidates,
@@ -1327,6 +1328,16 @@ const submitWithAccess = async ({
     if (payloadMonth) queuePayload.month = String(payloadMonth);
     if (payloadYear) queuePayload.year = String(payloadYear);
   }
+
+  queuePayload.idempotency_key = buildDeterministicIdempotencyKey({
+    tenant_id: queuePayload.tenantId,
+    project_id: queuePayload.projectId,
+    form_id: queuePayload.formId,
+    node_id: queuePayload.nodeId,
+    event_date: queuePayload.event_date,
+    submitter_id: queuePayload.userId,
+    payload: queuePayload.payload,
+  });
 
   const queueResult = await queueSubmission(queuePayload);
 
