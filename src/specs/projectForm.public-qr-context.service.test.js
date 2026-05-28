@@ -12,9 +12,14 @@ describe('projectFormService.buildPublicQrContext', () => {
       shareRef: '471fc434-5ebe-4adb-ac8d-367a91eaebd0',
       shareCode: 'fqiyFQHL',
       status: 'active',
-      configuration: {
-        security: 'public',
-        publicSecureMode: 'single_qr_passwordless',
+      schemaVersion: '2.1.0',
+      capabilities: {
+        experience: {
+          security: {
+            mode: 'public',
+            publicSecureMode: 'otp',
+          },
+        },
       },
       metadata: {
         deploymentStatus: 'published',
@@ -30,7 +35,7 @@ describe('projectFormService.buildPublicQrContext', () => {
       resolvedBy: 'shareCode',
     });
 
-    expect(context.secureMode).toBe('single_qr_passwordless');
+    expect(context.secureMode).toBe('otp');
     expect(context.requiresIdentityChallenge).toBe(true);
     expect(context.pipelineTarget).toBe('postgres_unified');
     expect(context.schemaVersion).toBe('2.1.0');
@@ -51,7 +56,7 @@ describe('projectFormService.buildPublicQrContext', () => {
     expect(decoded.tenantId).toBe('tenant-alpha');
     expect(decoded.projectId).toBe('proj_alpha-report-1');
     expect(decoded.shareCode).toBe('fqiyFQHL');
-    expect(decoded.publicSecureMode).toBe('single_qr_passwordless');
+    expect(decoded.publicSecureMode).toBe('otp');
     expect(decoded.pipelineTarget).toBe('postgres_unified');
     expect(decoded.resolvedBy).toBe('shareCode');
   });

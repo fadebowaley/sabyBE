@@ -338,7 +338,7 @@ describe('tenantOnboarding.service', () => {
         onboarding: {
           phoneOtp: {
             verified: true,
-            phoneNumber: '2348145045108',
+            phoneNumber: '2348107771205',
           },
         },
       },
@@ -405,7 +405,7 @@ describe('tenantOnboarding.service', () => {
       completeOnboarding({
         userId: 'user-owner',
         payload: {
-          owner: { phoneNumber: '08145045108', roleTitle: 'Administrator' },
+          owner: { phoneNumber: '08107771205', roleTitle: 'Administrator' },
           company: { name: 'SABY', timezone: 'Africa/Lagos' },
           node: { rootNodeName: 'SABY HQ', rootLevelName: 'Headquarters' },
         },

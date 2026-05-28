@@ -116,6 +116,7 @@ describe('auth onboarding profile routes', () => {
         state: 'Oyo',
         city: 'Ibadan',
         address: 'Challenge, Ibadan',
+        receivingAccounts: [],
       },
       node: {
         rootNodeName: 'Acme HQ',

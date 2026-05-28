@@ -18,34 +18,69 @@ describe('copilotProjectWizard.service', () => {
       tenantId: 'tenant-1',
       actorUserId: 'user-1',
       prompt: 'create a payment collection module fields: payer name, amount, payment method, transaction date',
-      options: { includeWorkflow: true },
+      options: { capabilities: { experience: { workflow: { enabled: true } } } },
     });
 
     expect(result.summary.inferredDomain).toBe('finance');
-    expect(result.draft.configuration.projectName).toBeTruthy();
+    expect(result.draft.identity.name).toBeTruthy();
     expect(Array.isArray(result.draft.elements)).toBe(true);
     expect(result.draft.elements.length).toBeGreaterThan(3);
-    expect(result.draft.workflows.length).toBeGreaterThan(0);
+    expect(result.draft.capabilities.experience.workflow.workflows.length).toBeGreaterThan(0);
   });
 
   test('finalizes draft and publishes when requested', async () => {
     const draft = {
-      configuration: {
-        projectName: 'Finance Module',
+      identity: {
+        name: 'Finance Module',
+        description: '',
+        category: 'standard',
         tags: ['financial'],
-        accessibility: ['api'],
-        security: 'private',
+        status: 'draft',
       },
       elements: [
         { id: 'payer_name_01', type: 'text', properties: { label: 'Payer Name' } },
       ],
-      style: 'default',
-      wizardMode: true,
-      columnSpans: {},
-      userSettings: {},
-      permSettings: { enabled: false },
-      workflows: [],
-      metadata: { deploymentStatus: 'draft' },
+      layout: {
+        style: 'default',
+        wizardMode: true,
+        grid: { columns: 12, columnSpans: {} },
+        builder: {},
+      },
+      capabilities: {
+        experience: {
+          security: {
+            mode: 'private',
+            publicSecureMode: 'off',
+            access: {},
+            authentication: { requireLogin: true, allowAnonymous: false, requireOtp: false },
+            submissionProtection: {
+              preventDuplicateSubmission: false,
+              duplicateCheckField: null,
+              rateLimitEnabled: false,
+              maxSubmissionsPerUser: null,
+            },
+            channels: ['api'],
+          },
+          behavior: {},
+          distribution: {},
+          notifications: {},
+          compliance: { enabled: false },
+          workflow: { enabled: false, approvalMode: 'none', triggerOn: 'submission', workflows: [] },
+        },
+        transaction: { payment: {}, remittance: {}, invoice: {} },
+        automation: { rules: [], connectedActions: [], operationalVisibility: {} },
+      },
+      smartMappings: { enabled: true, autoDetect: true, allowManualOverride: true, fields: {} },
+      analytics: { profile: {} },
+      ui: {},
+      metadata: {
+        schemaVersion: '2.0.0',
+        elementsCount: 1,
+        hasValidation: true,
+        batchMode: 'single_prompt',
+        integrations: ['api'],
+        enabledCapabilities: [],
+      },
     };
 
     mockProjectFormService.createProjectForm.mockResolvedValue({
