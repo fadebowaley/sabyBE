@@ -618,7 +618,7 @@ const permSettingsSchema = Joi.object({
     allowBackdating: Joi.boolean().default(false),
     monthsToGenerate: Joi.number().integer().min(1).max(36).optional(),
   }).optional(),
-}).default({
+}).unknown(true).default({
   enabled: false,
   trackingMode: 'none',
   requireNodeId: true,

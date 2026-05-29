@@ -1149,6 +1149,10 @@ const updateSubmission = catchAsync(async (req, res) => {
   const canEdit =
     req.user?.role === 'admin' ||
     req.user?.role === 'sabyUser' ||
+    req.user?.isOwner === true ||
+    req.user?.isSuper === true ||
+    req.user?.isAdmin === true ||
+    req.user?.isSaby === true ||
     existing.user_id === userId?.toString()
 
   if (!canEdit) {
@@ -1165,7 +1169,12 @@ const updateSubmission = catchAsync(async (req, res) => {
   // Admin / sabyUser can override by passing `force: true` in the body.
   if (existing.is_locked === true || existing.is_locked === 'true') {
     const isPrivileged =
-      req.user?.role === 'admin' || req.user?.role === 'sabyUser';
+      req.user?.role === 'admin' ||
+      req.user?.role === 'sabyUser' ||
+      req.user?.isOwner === true ||
+      req.user?.isSuper === true ||
+      req.user?.isAdmin === true ||
+      req.user?.isSaby === true;
 
     if (!isPrivileged || !force) {
       throw new ApiError(
@@ -1253,6 +1262,10 @@ const deleteSubmission = catchAsync(async (req, res) => {
   const canDelete =
     req.user?.role === 'admin' ||
     req.user?.role === 'sabyUser' ||
+    req.user?.isOwner === true ||
+    req.user?.isSuper === true ||
+    req.user?.isAdmin === true ||
+    req.user?.isSaby === true ||
     existing.user_id === userId?.toString();
 
   if (!canDelete) {
