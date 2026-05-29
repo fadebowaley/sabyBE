@@ -377,6 +377,7 @@ const normalizeSystemFormContract = ({
     normalized?.metadata?.systemVersion ||
     existingMetadata?.systemVersion ||
     '1.0.0';
+  normalized.metadata.formCategory = SYSTEM_FORM_CATEGORY;
 
   normalized.capabilities = {
     ...defaultCapabilities(),
@@ -2183,6 +2184,8 @@ const bootstrapSystemFormsForTenant = async ({
     });
 
     if (existing && !force) {
+      // eslint-disable-next-line no-await-in-loop
+      await existing.publish();
       results.push({
         target,
         status: 'exists',
