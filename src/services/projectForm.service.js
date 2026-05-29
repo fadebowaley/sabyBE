@@ -1211,7 +1211,9 @@ const normalizeWorkflowTriggerOn = (workflows = []) => {
 
 const isStrictPublicAccessible = (projectForm) => {
   if (!projectForm) return false;
-  const isSystemForm = projectForm?.metadata?.formCategory === SYSTEM_FORM_CATEGORY;
+  const isSystemForm =
+    projectForm?.metadata?.formCategory === SYSTEM_FORM_CATEGORY ||
+    projectForm?.identity?.category === SYSTEM_FORM_CATEGORY;
   return (
     projectForm?.identity?.status === 'published' &&
     projectForm?.status === 'active' &&
@@ -2128,7 +2130,14 @@ const syncSystemFormTemplateIfNeeded = async (projectForm) => {
   const template = buildSystemFormTemplate(target);
   const currentVersion = String(projectForm?.metadata?.systemVersion || '');
   const expectedVersion = String(template?.metadata?.systemVersion || '');
-  if (currentVersion === expectedVersion) return projectForm;
+  if (currentVersion === expectedVersion) {
+    projectForm.metadata = {
+      ...(projectForm.metadata || {}),
+      formCategory: SYSTEM_FORM_CATEGORY,
+    };
+    await projectForm.save();
+    return projectForm;
+  }
 
   projectForm.elements = template.elements;
   projectForm.metadata = {
