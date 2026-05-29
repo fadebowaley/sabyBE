@@ -1540,7 +1540,7 @@ const importOnboardingCsv = async ({
       const node = resolveNodeRef(refs, {
         name: nodeName,
         levelRef: level?._id || null,
-        parentRef: parent ? parent._id : null,
+        parentRef: parent ? parent._id : undefined,
       });
       if (!user || !node) {
         throw new ApiError(
