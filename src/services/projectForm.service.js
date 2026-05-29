@@ -1479,7 +1479,6 @@ const createProjectForm = async (
   );
 
   await fieldCatalogService.syncCatalogFromForm(projectForm);
-  await ensureModuleStorageFolder(projectForm, { userId: createdBy });
   return projectForm;
 };
 
@@ -1945,7 +1944,6 @@ const updateProjectFormById = async (
   }
 
   await fieldCatalogService.syncCatalogFromForm(projectForm);
-  await ensureModuleStorageFolder(projectForm);
   return projectForm;
 };
 
@@ -2188,6 +2186,7 @@ const bootstrapSystemFormsForTenant = async ({
       results.push({
         target,
         status: 'exists',
+        id: String(existing._id || existing.id || ''),
         projectId: existing.projectId,
         publicRef: existing.publicRef,
         shareRef: existing.shareRef,
@@ -2204,9 +2203,12 @@ const bootstrapSystemFormsForTenant = async ({
     const template = buildSystemFormTemplate(target);
     // eslint-disable-next-line no-await-in-loop
     const created = await createProjectForm(template, tenantId, createdBy);
+    // eslint-disable-next-line no-await-in-loop
+    await created.publish();
     results.push({
       target,
       status: 'created',
+      id: String(created._id || created.id || ''),
       projectId: created.projectId,
       publicRef: created.publicRef,
       shareRef: created.shareRef,
