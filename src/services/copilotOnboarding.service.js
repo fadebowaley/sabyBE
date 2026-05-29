@@ -186,6 +186,16 @@ const appendNodeNameCandidate = (refs, node) => {
   refs.nodesByName.set(key, next);
 };
 
+const normalizeNodeRef = (node) => {
+  if (!node) return node;
+  ['level', 'structure', 'parent'].forEach((f) => {
+    if (node[f] && typeof node[f] === 'object' && !Array.isArray(node[f]) && node[f]._id) {
+      node[f] = node[f]._id;
+    }
+  });
+  return node;
+};
+
 const indexNodeRef = (refs, node) => {
   if (!refs || !node?._id) return;
   appendNodeNameCandidate(refs, node);
@@ -249,6 +259,7 @@ const resolveNodeRef = (refs, { name, levelRef = null, parentRef = undefined }) 
 
   if (filtered.length === 1) return filtered[0];
   if (filtered.length > 1) return filtered[filtered.length - 1];
+  if (hasLevelConstraint && !hasParentConstraint && filtered.length === 0 && candidates.length > 0) return candidates[candidates.length - 1];
   if (hasLevelConstraint || hasParentConstraint) return null;
   if (candidates.length === 1) return candidates[0];
   return candidates[candidates.length - 1] || null;
@@ -1248,6 +1259,7 @@ const importOnboardingCsv = async ({
         );
         const updatedRootObject = updatedRoot.toObject ? updatedRoot.toObject() : updatedRoot;
         refs.rootNode = updatedRootObject;
+        normalizeNodeRef(updatedRootObject);
         unindexNodeRef(refs, before);
         indexNodeRef(refs, updatedRootObject);
         undoStack.push(async () => {
@@ -1286,6 +1298,7 @@ const importOnboardingCsv = async ({
         });
         const updatedObject = updated.toObject ? updated.toObject() : updated;
         unindexNodeRef(refs, before);
+        normalizeNodeRef(updatedObject);
         indexNodeRef(refs, updatedObject);
         undoStack.push(async () => {
           await nodeService.updateNodeById(existing._id, {
@@ -1315,6 +1328,7 @@ const importOnboardingCsv = async ({
         ...(nodeAddress ? { address: nodeAddress } : {}),
       });
       const createdNode = created.toObject ? created.toObject() : created;
+      normalizeNodeRef(createdNode);
       indexNodeRef(refs, createdNode);
       if (isRootCsvRow || (!parentName && !refs.rootNode)) {
         refs.rootNode = createdNode;
@@ -1373,13 +1387,23 @@ const importOnboardingCsv = async ({
         return;
       }
 
-      const created = await roleService.createRole(
-        {
-          roleName,
-          roleDescription: roleDesc || '',
-        },
-        roleActor
-      );
+      let created;
+      try {
+        created = await roleService.createRole(
+          {
+            roleName,
+            roleDescription: roleDesc || '',
+          },
+          roleActor
+        );
+      } catch (err) {
+        if (err.code === 11000) {
+          created = await Role.findOne({ name: roleName, tenantId });
+          if (!created) throw err;
+        } else {
+          throw err;
+        }
+      }
       refs.rolesByName.set(key, created.toObject ? created.toObject() : created);
       undoStack.push(async () => {
         await Role.deleteOne({ _id: created._id });
@@ -1542,6 +1566,7 @@ const importOnboardingCsv = async ({
 
       const merged = [...currentUsers, userId];
       const updated = await nodeService.assignUsersToNode(String(node._id), merged);
+      normalizeNodeRef(updated);
       indexNodeRef(refs, updated.toObject ? updated.toObject() : updated);
       rowResults.push({
         line: lineNumber,
