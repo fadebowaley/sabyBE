@@ -31,7 +31,7 @@ const normalizePhoneToE164 = (value, options = {}) => {
     }
   }
 
-  // Local Nigerian with leading 0 (e.g. 08145045108)
+  // Local Nigerian with leading 0 (e.g. 08107771205)
   if (!hasPlus && digits.length === 11 && digits.startsWith('0')) {
     return `+${defaultCountryCode}${digits.slice(1)}`;
   }

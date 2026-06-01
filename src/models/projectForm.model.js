@@ -897,6 +897,7 @@ const ProjectFormSchema = new mongoose.Schema(
       elementsCount: { type: Number, default: 0 },
       hasValidation: { type: Boolean, default: false },
       lastModified: { type: Date, default: Date.now },
+      formCategory: { type: String, default: null },
       integrations: {
         type: mongoose.Schema.Types.Mixed,
         default: ['web'],
@@ -1608,6 +1609,9 @@ ProjectFormSchema.pre('save', function (next) {
       return next(new Error('System forms must define metadata.systemTarget'));
     }
     if (this.capabilities?.experience?.security?.mode !== 'private') {
+      if (!this.capabilities) this.capabilities = {};
+      if (!this.capabilities.experience) this.capabilities.experience = {};
+      if (!this.capabilities.experience.security) this.capabilities.experience.security = {};
       this.capabilities.experience.security.mode = 'private';
     }
     if (!this.metadata.systemVersion) {

@@ -24,7 +24,7 @@ const { sendSms } = require('../src/services/sms.service');
 const logger = require('../src/config/logger');
 
 /**
- * Test script to send SMS to 08145045108
+ * Test script to send SMS to 08107771205
  */
 async function testSms() {
   try {
@@ -58,7 +58,7 @@ async function testSms() {
       process.exit(1);
     }
 
-    const phoneNumber = '08145045108';
+    const phoneNumber = '08107771205';
     const message = 'Your saby verification Pin is: 123456. It expires in 30 minutes.';
 
     console.log(`Sending test SMS to ${phoneNumber}...`);

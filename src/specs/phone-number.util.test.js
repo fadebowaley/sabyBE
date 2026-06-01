@@ -6,14 +6,14 @@ const {
 
 describe('phoneNumber utils', () => {
   test('normalizes Nigerian local and international variants to canonical E.164', () => {
-    expect(normalizePhoneToE164('08145045108', { allowEmpty: false })).toBe(
-      '+2348145045108'
+    expect(normalizePhoneToE164('08107771205', { allowEmpty: false })).toBe(
+      '+2348107771205'
     );
-    expect(normalizePhoneToE164('2348145045108', { allowEmpty: false })).toBe(
-      '+2348145045108'
+    expect(normalizePhoneToE164('2348107771205', { allowEmpty: false })).toBe(
+      '+2348107771205'
     );
-    expect(normalizePhoneToE164('+2348145045108', { allowEmpty: false })).toBe(
-      '+2348145045108'
+    expect(normalizePhoneToE164('+2348107771205', { allowEmpty: false })).toBe(
+      '+2348107771205'
     );
   });
 
@@ -23,12 +23,12 @@ describe('phoneNumber utils', () => {
   });
 
   test('builds lookup candidates including canonical', () => {
-    const out = buildPhoneLookupCandidates('08145045108');
-    expect(out).toContain('+2348145045108');
+    const out = buildPhoneLookupCandidates('08107771205');
+    expect(out).toContain('+2348107771205');
     expect(out.length).toBeGreaterThan(0);
   });
 
   test('formats canonical value for readable international display', () => {
-    expect(formatPhoneForDisplay('+2348145045108')).toBe('+234 814 504 5108');
+    expect(formatPhoneForDisplay('+2348107771205')).toBe('+234 810 777 1205');
   });
 });

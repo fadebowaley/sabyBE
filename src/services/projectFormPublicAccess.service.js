@@ -174,7 +174,7 @@ const resolveSecureForm = async ({ reference, qrContextToken = null }) => {
     resolvedBy: resolved.resolvedBy,
   });
 
-  if (qrContext.secureMode !== 'single_qr_passwordless') {
+  if (!['single_qr_passwordless', 'otp'].includes(qrContext.secureMode)) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'This module is not in secure single-QR passwordless mode.'

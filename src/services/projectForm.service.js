@@ -1263,6 +1263,7 @@ const sanitizePublicForm = (projectForm) => {
         safeElements.length,
       hasValidation: Boolean(source.metadata?.hasValidation),
       lastModified: source.metadata?.lastModified || source.updatedAt || null,
+      formCategory: source.metadata?.formCategory || null,
       systemTarget: source.metadata?.systemTarget || null,
       systemVersion: source.metadata?.systemVersion || null,
       schemaVersion: '2.0.0',
@@ -1531,6 +1532,7 @@ const getSystemProjectFormForTenant = async ({
   tenantId,
   target,
   syncTemplate = true,
+  createdBy = null,
 }) => {
   if (!tenantId) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId is required');
@@ -1540,15 +1542,34 @@ const getSystemProjectFormForTenant = async ({
     throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid system form target');
   }
 
-  let projectForm = await ProjectForm.findOne({
+  const filter = {
     tenantId,
     deletedAt: null,
-    'identity.category': SYSTEM_FORM_CATEGORY,
     'metadata.systemTarget': target,
-  }).populate('createdBy');
+    $or: [
+      { 'identity.category': SYSTEM_FORM_CATEGORY },
+      { 'metadata.formCategory': SYSTEM_FORM_CATEGORY },
+    ],
+  };
+
+  let projectForm = await ProjectForm.findOne(filter);
 
   if (!projectForm) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'System form not found');
+    const template = buildSystemFormTemplate(target);
+    try {
+      projectForm = await createProjectForm(template, tenantId, createdBy);
+      await projectForm.publish();
+    } catch (err) {
+      if (err.code === 11000) {
+        // Race condition — another request created it first.
+        projectForm = await ProjectForm.findOne(filter);
+        if (!projectForm) {
+          throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to resolve system form');
+        }
+      } else {
+        throw err;
+      }
+    }
   }
 
   if (syncTemplate) {
@@ -2122,20 +2143,50 @@ const buildSystemFormTemplate = (target) => {
 
 const syncSystemFormTemplateIfNeeded = async (projectForm) => {
   if (!projectForm || projectForm.deletedAt) return projectForm;
-  if (projectForm?.identity?.category !== SYSTEM_FORM_CATEGORY) return projectForm;
+  const isSystemForm =
+    projectForm?.identity?.category === SYSTEM_FORM_CATEGORY ||
+    projectForm?.metadata?.formCategory === SYSTEM_FORM_CATEGORY;
+  if (!isSystemForm) return projectForm;
 
   const target = projectForm?.metadata?.systemTarget;
   if (!VALID_SYSTEM_TARGETS.has(target)) return projectForm;
+
+  const tenantId = projectForm.tenantId;
+
+  // Clean up duplicate system forms for this tenant+target (can happen from
+  // concurrent bootstrap calls before the unique index existed, or from
+  // bootstrap --force which soft-deletes the old form and creates a new one).
+  // We look at ALL docs (including soft-deleted) because the manual unique
+  // index on tenantId+formCategory+systemTarget is not partial on deletedAt.
+  const dups = await ProjectForm.find({
+    tenantId,
+    'metadata.systemTarget': target,
+    _id: { $ne: projectForm._id },
+    $or: [
+      { 'identity.category': SYSTEM_FORM_CATEGORY },
+      { 'metadata.formCategory': SYSTEM_FORM_CATEGORY },
+    ],
+  }).lean();
+
+  if (dups.length > 0) {
+    const dupIds = dups.map((d) => d._id);
+    await ProjectForm.deleteMany({ _id: { $in: dupIds } });
+    logger.warn(
+      `Cleaned up ${dupIds.length} system form(s) for tenant=${tenantId} target=${target}`
+    );
+  }
 
   const template = buildSystemFormTemplate(target);
   const currentVersion = String(projectForm?.metadata?.systemVersion || '');
   const expectedVersion = String(template?.metadata?.systemVersion || '');
   if (currentVersion === expectedVersion) {
-    projectForm.metadata = {
-      ...(projectForm.metadata || {}),
-      formCategory: SYSTEM_FORM_CATEGORY,
-    };
-    await projectForm.save();
+    if (projectForm?.metadata?.formCategory !== SYSTEM_FORM_CATEGORY) {
+      await ProjectForm.updateOne(
+        { _id: projectForm._id },
+        { $set: { 'metadata.formCategory': SYSTEM_FORM_CATEGORY } }
+      );
+      projectForm.metadata.formCategory = SYSTEM_FORM_CATEGORY;
+    }
     return projectForm;
   }
 

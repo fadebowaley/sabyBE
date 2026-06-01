@@ -84,7 +84,7 @@ const publicFormAccessSchema = mongoose.Schema(
     },
     secureMode: {
       type: String,
-      enum: ['off', 'single_qr_passwordless'],
+      enum: ['off', 'single_qr_passwordless', 'otp'],
       default: 'single_qr_passwordless',
     },
     pipelineTarget: {

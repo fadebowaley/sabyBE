@@ -607,6 +607,7 @@ const ingestDocument = {
     sourceRef:     Joi.string().max(512).optional().allow(null, ''),
     mimeType:      Joi.string().max(100).optional().default('text/plain'),
     contentText:   Joi.string().min(10).required(),
+    ingestionMode: Joi.string().valid('off', 'auto', 'force').optional(),
     accessPolicy:  Joi.object().optional().default({}),
     metadata:      Joi.object().optional().default({}),
   }),

@@ -13,6 +13,7 @@ const {
 } = require('./config/redis');
 const { assertCopilotSchemaReady } = require('./services/copilotSchemaGuard.service');
 const { assertLevelIndexesReady } = require('./services/levelIndexGuard.service');
+const { assertNodeIndexesReady } = require('./services/nodeIndexGuard.service');
 const { initializeSocket } = require('./config/socket');
 const { initializeWorkers, shutdownWorkers } = require('./workers/index');
 const {
@@ -38,6 +39,16 @@ const connectToDatabases = async () => {
       );
     } else {
       logger.info('✅ Level index guard passed (no changes required)');
+    }
+    const nodeIndexStatus = await assertNodeIndexesReady();
+    if (nodeIndexStatus.dropped.length || nodeIndexStatus.created.length) {
+      logger.info(
+        `✅ Node index guard applied (dropped: ${
+          nodeIndexStatus.dropped.join(', ') || 'none'
+        }; created: ${nodeIndexStatus.created.join(', ') || 'none'})`
+      );
+    } else {
+      logger.info('✅ Node index guard passed (no changes required)');
     }
 
     // Connect to PostgreSQL

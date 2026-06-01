@@ -216,6 +216,7 @@ const getSystemProjectForm = catchAsync(async (req, res) => {
   const projectForm = await projectFormService.getSystemProjectFormForTenant({
     tenantId: req.user.tenantId,
     target,
+    createdBy: req.user._id,
   });
 
   res.send(projectForm);

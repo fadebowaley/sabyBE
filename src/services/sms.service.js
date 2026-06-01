@@ -15,7 +15,7 @@ const OTP_MESSAGE_TEMPLATE =
 const hasSmsConfig = config.sms.sms_api_key && config.sms.sms_base_url;
 
 /**
- * Format phone number to international format (e.g., 08145045108 -> 2348145045108)
+ * Format phone number to international format (e.g., 08107771205 -> 2348107771205)
  * @param {string} phoneNumber - Phone number in local or international format
  * @returns {string} - Phone number in international format
  */

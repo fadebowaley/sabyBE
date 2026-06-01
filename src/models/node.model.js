@@ -138,6 +138,10 @@ nodeSchema.plugin(tenantPlugin);
 nodeSchema.plugin(hierarchyPlugin, { modelName: 'Nodes' });
 
 nodeSchema.index({ tenantId: 1, users: 1 });
+nodeSchema.index(
+  { tenantId: 1, name: 1 },
+  { unique: true, partialFilterExpression: { deletedAt: null } }
+);
 nodeSchema.index({ path: 1 });
 nodeSchema.index({ deletedAt: 1 });
 nodeSchema.index({ structure: 1, level: 1 });
