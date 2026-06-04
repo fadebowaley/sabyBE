@@ -2235,24 +2235,36 @@ const bootstrapSystemFormsForTenant = async ({
   const results = [];
 
   for (const target of normalizedTargets) {
-    // eslint-disable-next-line no-await-in-loop
-    const existing = await ProjectForm.findOne({
+    const systemFilter = {
       tenantId,
-    deletedAt: null,
-      'identity.category': SYSTEM_FORM_CATEGORY,
+      deletedAt: null,
       'metadata.systemTarget': target,
-    });
+      $or: [
+        { 'identity.category': SYSTEM_FORM_CATEGORY },
+        { 'metadata.formCategory': SYSTEM_FORM_CATEGORY },
+      ],
+    };
+
+    // eslint-disable-next-line no-await-in-loop
+    const existing = await ProjectForm.findOne(systemFilter);
 
     if (existing && !force) {
       // eslint-disable-next-line no-await-in-loop
-      await existing.publish();
+      const canonical = await getSystemProjectFormForTenant({
+        tenantId,
+        target,
+        syncTemplate: true,
+        createdBy,
+      });
+      // eslint-disable-next-line no-await-in-loop
+      await canonical.publish();
       results.push({
         target,
         status: 'exists',
-        id: String(existing._id || existing.id || ''),
-        projectId: existing.projectId,
-        publicRef: existing.publicRef,
-        shareRef: existing.shareRef,
+        id: String(canonical._id || canonical.id || ''),
+        projectId: canonical.projectId,
+        publicRef: canonical.publicRef,
+        shareRef: canonical.shareRef,
       });
       // eslint-disable-next-line no-continue
       continue;
@@ -2260,7 +2272,12 @@ const bootstrapSystemFormsForTenant = async ({
 
     if (existing && force) {
       // eslint-disable-next-line no-await-in-loop
-      await existing.softDelete(createdBy);
+      const forceForms = await ProjectForm.find(systemFilter);
+      // eslint-disable-next-line no-restricted-syntax
+      for (const form of forceForms) {
+        // eslint-disable-next-line no-await-in-loop
+        await form.softDelete(createdBy);
+      }
     }
 
     const template = buildSystemFormTemplate(target);

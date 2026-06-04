@@ -1,6 +1,9 @@
 const { postgresPool } = require('../config/postgres');
 const ApiError = require('../utils/ApiError');
 const calendarEnforcementService = require('./calendarEnforcement.service');
+const {
+  ensureRollupTables,
+} = require('./incrementalSubmissionRollup.service');
 
 const parseLimit = (value) => {
   const parsed = Number(value);
@@ -74,31 +77,35 @@ const bucketColumnTableAlias = (bucketColumn) => {
   }
 };
 
-const formatRollupResult = (rows = []) => {
+const formatRollupResult = (rows = [], sourceLabel = null) => {
   if (!rows.length) {
     return { results: [], total: 0 };
   }
 
   const total = Number(rows[0].total_count) || rows.length;
-  const formatted = rows.map(({ total_count, ...rest }) => rest);
+  const formatted = rows.map(({ total_count, ...rest }) => ({
+    ...rest,
+    ...(sourceLabel ? { rollup_source: sourceLabel } : {}),
+  }));
 
   return { results: formatted, total };
 };
 
-const getRollup = async (tableName, bucketColumn, filters = {}) => {
+const getRollup = async (tableName, bucketColumn, filters = {}, sourceLabel = null) => {
+  await ensureRollupTables();
   const { query, values } = buildRollupQuery(tableName, bucketColumn, filters);
   const { rows } = await postgresPool.query(query, values);
-  return formatRollupResult(rows);
+  return formatRollupResult(rows, sourceLabel);
 };
 
 const getDailyRollup = (filters = {}) =>
-  getRollup('mv_daily_submission_rollup', 'day_bucket', filters);
+  getRollup('submission_rollup_daily', 'day_bucket', filters, 'Incremental daily rollup');
 
 const getWeeklyRollup = (filters = {}) =>
-  getRollup('mv_weekly_submission_rollup', 'week_bucket', filters);
+  getRollup('submission_rollup_weekly', 'week_bucket', filters, 'Incremental weekly rollup');
 
 const getMonthlyRollup = (filters = {}) =>
-  getRollup('mv_monthly_submission_rollup', 'month_bucket', filters);
+  getRollup('submission_rollup_monthly', 'month_bucket', filters, 'Incremental monthly rollup');
 
 const getSubmissionStatus = async (filters = {}) => {
   const { tenant_id, project_id, node_id } = filters;

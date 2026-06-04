@@ -10,21 +10,15 @@ let refreshInFlight = false;
 let availableRollupViews = null;
 let hasLoggedMissingRollups = false;
 
-const refreshStatements = [
+const rollupViews = [
   {
     viewName: 'mv_daily_submission_rollup',
-    statement:
-      'REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_submission_rollup;',
   },
   {
     viewName: 'mv_weekly_submission_rollup',
-    statement:
-      'REFRESH MATERIALIZED VIEW CONCURRENTLY mv_weekly_submission_rollup;',
   },
   {
     viewName: 'mv_monthly_submission_rollup',
-    statement:
-      'REFRESH MATERIALIZED VIEW CONCURRENTLY mv_monthly_submission_rollup;',
   },
 ];
 
@@ -35,17 +29,24 @@ const getAvailableRollupViews = async () => {
 
   const result = await postgresPool.query(
     `
-      SELECT matviewname
+      SELECT matviewname, ispopulated
       FROM pg_matviews
       WHERE schemaname = 'public'
         AND matviewname = ANY($1::text[])
     `,
-    [refreshStatements.map((item) => item.viewName)]
+    [rollupViews.map((item) => item.viewName)]
   );
 
-  availableRollupViews = new Set(result.rows.map((row) => row.matviewname));
+  availableRollupViews = new Map(
+    result.rows.map((row) => [row.matviewname, row.ispopulated])
+  );
   return availableRollupViews;
 };
+
+const buildRefreshStatement = (viewName, isPopulated) =>
+  isPopulated
+    ? `REFRESH MATERIALIZED VIEW CONCURRENTLY ${viewName};`
+    : `REFRESH MATERIALIZED VIEW ${viewName};`;
 
 const refreshRollups = async () => {
   if (refreshInFlight) {
@@ -54,12 +55,12 @@ const refreshRollups = async () => {
 
   refreshInFlight = true;
   try {
-    const existingViews = await getAvailableRollupViews();
-    const statementsToRun = refreshStatements.filter((item) =>
-      existingViews.has(item.viewName)
+    const rollupViewState = await getAvailableRollupViews();
+    const viewsToRefresh = rollupViews.filter((item) =>
+      rollupViewState.has(item.viewName)
     );
 
-    if (statementsToRun.length === 0) {
+    if (viewsToRefresh.length === 0) {
       if (!hasLoggedMissingRollups) {
         logger.warn(
           '[Rollup] Submission rollup views are missing; refresh is skipped until migrations run'
@@ -69,9 +70,17 @@ const refreshRollups = async () => {
       return;
     }
 
-    for (const { statement, viewName } of statementsToRun) {
+    hasLoggedMissingRollups = false;
+
+    let refreshedCount = 0;
+
+    for (const { viewName } of viewsToRefresh) {
+      const isPopulated = rollupViewState.get(viewName);
+      const statement = buildRefreshStatement(viewName, isPopulated);
       try {
         await postgresPool.query(statement);
+        refreshedCount += 1;
+        availableRollupViews?.set(viewName, true);
       } catch (err) {
         if (err.code === '42P01') {
           availableRollupViews = null;
@@ -81,7 +90,18 @@ const refreshRollups = async () => {
         );
       }
     }
-    logger.info('[Rollup] Submission rollups refreshed');
+
+    if (refreshedCount === viewsToRefresh.length) {
+      logger.info(
+        `[Rollup] Submission rollups refreshed (${refreshedCount}/${viewsToRefresh.length})`
+      );
+    } else if (refreshedCount > 0) {
+      logger.warn(
+        `[Rollup] Submission rollups partially refreshed (${refreshedCount}/${viewsToRefresh.length})`
+      );
+    } else {
+      logger.warn('[Rollup] Submission rollups refresh failed for all views');
+    }
   } catch (error) {
     logger.error(`[Rollup] Refresh failed: ${error.message}`);
   } finally {

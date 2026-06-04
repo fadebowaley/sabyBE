@@ -105,6 +105,9 @@ const normaliseOptions = (element) => {
 const mapElementToRecord = (formDoc, element) => {
   const label = element?.properties?.label?.trim?.() || element?.id;
   const type = element?.type || 'text';
+  const elementOrder = Array.isArray(formDoc?.elements)
+    ? formDoc.elements.findIndex((entry) => entry?.id === element?.id)
+    : -1;
 
   return {
     project_id: formDoc.projectId,
@@ -124,6 +127,8 @@ const mapElementToRecord = (formDoc, element) => {
       placeholder: element?.properties?.placeholder || null,
       description: element?.properties?.description || null,
       section: element?.section || null,
+      order: elementOrder >= 0 ? elementOrder : null,
+      elementId: element?.id || null,
     },
   };
 };
@@ -247,4 +252,3 @@ module.exports = {
   syncCatalogFromForm,
   removeCatalogForProject,
 };
-

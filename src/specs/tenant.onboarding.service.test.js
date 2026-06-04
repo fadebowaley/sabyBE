@@ -7,6 +7,7 @@ const mockModels = {
   },
   User: {
     findById: jest.fn(),
+    updateMany: jest.fn(),
   },
   Level: {
     findOne: jest.fn(),

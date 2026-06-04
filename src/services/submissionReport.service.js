@@ -16,6 +16,7 @@
 
 const httpStatus = require('http-status');
 const SubmissionModel = require('../models/submission.model');
+const ProjectForm = require('../models/projectForm.model');
 const ApiError = require('../utils/ApiError');
 const { logActivity } = require('../utils/activityLogger');
 const { postgresPool } = require('../config/postgres');
@@ -26,6 +27,7 @@ const HIERARCHY_ORDERING_CACHE_MS = 60 * 1000;
 const FIXED_COLUMN_LABELS = {
   node_name: 'Node Name',
   nodeid: 'NodeId',
+  user_id: 'User',
   status: 'Status',
   submitted_at: 'Submitted At',
 };
@@ -67,6 +69,93 @@ const unwrapValue = (value) => {
     }
   }
   return value;
+};
+
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const NON_DATA_ELEMENT_TYPES = new Set([
+  'header',
+  'paragraph',
+  'description',
+  'spacer',
+  'divider',
+]);
+
+const resolvePublicSecureMode = (projectForm) => {
+  const mode = String(
+    projectForm?.capabilities?.experience?.security?.publicSecureMode || 'off'
+  ).toLowerCase();
+
+  if (['off', 'link_only', 'otp', 'access_code'].includes(mode)) {
+    return mode;
+  }
+  return 'off';
+};
+
+const isOpenFormWithoutAuthentication = (projectForm) => {
+  const security = projectForm?.capabilities?.experience?.security || {};
+  const authentication = security.authentication || {};
+  const mode = String(security.mode || 'public').toLowerCase();
+  const publicSecureMode = resolvePublicSecureMode(projectForm);
+
+  if (mode === 'private') return false;
+  if (publicSecureMode === 'otp' || publicSecureMode === 'access_code') return false;
+  if (authentication.requireLogin === true) return false;
+
+  return authentication.allowAnonymous !== false;
+};
+
+const getFieldOrder = (field = {}) => {
+  const metadata = field.metadata && typeof field.metadata === 'object' ? field.metadata : {};
+  const numericOrder = Number(metadata.order);
+  return Number.isFinite(numericOrder) ? numericOrder : Number.MAX_SAFE_INTEGER;
+};
+
+const getProjectFormReportContext = async ({ tenant_id, project_id }) => {
+  const projectForm = await ProjectForm.findOne(
+    { tenantId: tenant_id, projectId: project_id },
+    {
+      elements: 1,
+      capabilities: 1,
+      identity: 1,
+      projectId: 1,
+      tenantId: 1,
+    }
+  )
+    .lean()
+    .exec();
+
+  if (!projectForm) {
+    return {
+      projectForm: null,
+      orderedFields: [],
+      isOpenForm: false,
+      hideIdentityColumns: false,
+    };
+  }
+
+  const orderedFields = Array.isArray(projectForm.elements)
+    ? projectForm.elements
+        .filter((element) => {
+          if (!element?.id) return false;
+          if (!element?.properties?.label) return false;
+          return !NON_DATA_ELEMENT_TYPES.has(String(element.type || '').toLowerCase());
+        })
+        .map((element, index) => ({
+          field_key: element.id,
+          field_label: element?.properties?.label || element.id,
+          field_type: element?.type || null,
+          metadata: { order: index, elementId: element.id },
+        }))
+    : [];
+
+  const isOpenForm = isOpenFormWithoutAuthentication(projectForm);
+
+  return {
+    projectForm,
+    orderedFields,
+    isOpenForm,
+    hideIdentityColumns: isOpenForm,
+  };
 };
 
 const isTruthyDebugFlag = (value) => {
@@ -119,17 +208,28 @@ const isHierarchyOrderingAvailable = async () => {
   return hierarchyOrderingCapability.enabled;
 };
 
-const buildDynamicColumns = (catalogRows = [], submissionRows = []) => {
+const buildDynamicColumns = (
+  catalogRows = [],
+  submissionRows = [],
+  { hideIdentityColumns = false } = {}
+) => {
   const dynamicColumns = [];
-  const usedKeys = new Set(['node_name', 'nodeid', 'status', 'submitted_at']);
+  const usedKeys = new Set(['status', 'submitted_at']);
   const sourceKeyToColumnKey = new Map([
-    ['node_name', 'node_name'],
-    ['node_id', 'nodeid'],
-    ['node_reference', 'nodeid'],
     ['status', 'status'],
     ['created_at', 'submitted_at'],
     ['submitted_at', 'submitted_at'],
   ]);
+
+  if (!hideIdentityColumns) {
+    usedKeys.add('node_name');
+    usedKeys.add('nodeid');
+    usedKeys.add('user_id');
+    sourceKeyToColumnKey.set('node_name', 'node_name');
+    sourceKeyToColumnKey.set('node_id', 'nodeid');
+    sourceKeyToColumnKey.set('node_reference', 'nodeid');
+    sourceKeyToColumnKey.set('user_id', 'user_id');
+  }
 
   const register = (sourceKey, labelHint, preferredKey = null) => {
     if (!sourceKey) return;
@@ -148,24 +248,74 @@ const buildDynamicColumns = (catalogRows = [], submissionRows = []) => {
     dynamicColumns.push({ key: candidate, label, source_key: sourceKey });
   };
 
-  catalogRows.forEach((row) => {
+  catalogRows
+    .slice()
+    .sort((left, right) => {
+      const leftOrder = getFieldOrder(left);
+      const rightOrder = getFieldOrder(right);
+      if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+      return String(left.field_label || left.field_key || '').localeCompare(
+        String(right.field_label || right.field_key || '')
+      );
+    })
+    .forEach((row) => {
     register(row.field_key, row.field_label, toSnakeCase(row.field_key || ''));
-  });
+    });
 
   submissionRows.forEach((row) => {
     const payload = row.data && typeof row.data === 'object' ? row.data : {};
     Object.keys(payload).forEach((key) => register(key, null));
   });
 
-  const columns = [
-    { key: 'node_name', label: FIXED_COLUMN_LABELS.node_name, pinned: true },
-    { key: 'nodeid', label: FIXED_COLUMN_LABELS.nodeid, pinned: true },
+  const columns = [];
+  if (!hideIdentityColumns) {
+    columns.push(
+      { key: 'node_name', label: FIXED_COLUMN_LABELS.node_name, pinned: true },
+      { key: 'nodeid', label: FIXED_COLUMN_LABELS.nodeid, pinned: true },
+      { key: 'user_id', label: FIXED_COLUMN_LABELS.user_id }
+    );
+  }
+  columns.push(
     ...dynamicColumns,
     { key: 'status', label: FIXED_COLUMN_LABELS.status },
-    { key: 'submitted_at', label: FIXED_COLUMN_LABELS.submitted_at },
-  ];
+    { key: 'submitted_at', label: FIXED_COLUMN_LABELS.submitted_at }
+  );
 
   return { columns, sourceKeyToColumnKey };
+};
+
+const mergeOrderedFieldsWithCatalog = (orderedFields = [], catalogRows = []) => {
+  if (!Array.isArray(orderedFields) || orderedFields.length === 0) {
+    return catalogRows;
+  }
+
+  const catalogByKey = new Map(
+    (catalogRows || []).map((row) => [String(row.field_key || ''), row])
+  );
+  const merged = [];
+  const usedKeys = new Set();
+
+  orderedFields.forEach((field) => {
+    const fieldKey = String(field?.field_key || '');
+    if (!fieldKey) return;
+    usedKeys.add(fieldKey);
+    merged.push({
+      ...(catalogByKey.get(fieldKey) || {}),
+      ...field,
+      metadata: {
+        ...((catalogByKey.get(fieldKey) || {}).metadata || {}),
+        ...(field.metadata || {}),
+      },
+    });
+  });
+
+  (catalogRows || []).forEach((row) => {
+    const fieldKey = String(row?.field_key || '');
+    if (!fieldKey || usedKeys.has(fieldKey)) return;
+    merged.push(row);
+  });
+
+  return merged;
 };
 
 /**
@@ -194,6 +344,7 @@ const getModuleReportTable = async (filters = {}) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'project_id is required');
   }
   const includeDebug = isTruthyDebugFlag(debug);
+  const reportContext = await getProjectFormReportContext({ tenant_id, project_id });
 
   const safeLimit = Math.min(
     Math.max(Number(limit) || DEFAULT_TABLE_LIMIT, 1),
@@ -217,12 +368,20 @@ const getModuleReportTable = async (filters = {}) => {
     index += 1;
   }
   if (start_date) {
-    where.push(`fs.created_at >= $${index}`);
+    if (typeof start_date === 'string' && DATE_ONLY_PATTERN.test(start_date)) {
+      where.push(`fs.created_at >= $${index}::date`);
+    } else {
+      where.push(`fs.created_at >= $${index}`);
+    }
     values.push(start_date);
     index += 1;
   }
   if (end_date) {
-    where.push(`fs.created_at <= $${index}`);
+    if (typeof end_date === 'string' && DATE_ONLY_PATTERN.test(end_date)) {
+      where.push(`fs.created_at < ($${index}::date + INTERVAL '1 day')`);
+    } else {
+      where.push(`fs.created_at <= $${index}`);
+    }
     values.push(end_date);
     index += 1;
   }
@@ -287,6 +446,7 @@ const getModuleReportTable = async (filters = {}) => {
       fs.node_id,
       fs.node_reference,
       fs.node_name,
+      fs.user_id,
       fs.status,
       fs.data,
       fs.created_at,
@@ -311,6 +471,12 @@ const getModuleReportTable = async (filters = {}) => {
     SELECT
       COUNT(*)::bigint AS total_rows,
       COUNT(DISTINCT COALESCE(node_reference, node_id))::bigint AS unique_nodes,
+      COUNT(*) FILTER (
+        WHERE COALESCE(NULLIF(user_id, ''), NULLIF(node_id, ''), NULLIF(node_reference, '')) IS NULL
+      )::bigint AS anonymous_count,
+      COUNT(*) FILTER (
+        WHERE COALESCE(NULLIF(user_id, ''), NULLIF(node_id, ''), NULLIF(node_reference, '')) IS NOT NULL
+      )::bigint AS identified_count,
       MIN(created_at) AS first_submission_at,
       MAX(created_at) AS latest_submission_at,
       COUNT(*) FILTER (WHERE status = 'submitted')::bigint AS submitted_count,
@@ -324,6 +490,8 @@ const getModuleReportTable = async (filters = {}) => {
   `;
   const summaryResult = await postgresPool.query(summaryQuery, values);
   const summaryRow = summaryResult.rows[0] || {};
+  const anonymousCount = Number(summaryRow.anonymous_count || 0);
+  const identifiedCount = Number(summaryRow.identified_count || 0);
 
   let catalogRows = [];
   try {
@@ -332,7 +500,10 @@ const getModuleReportTable = async (filters = {}) => {
       FROM form_field_catalog
       WHERE tenant_id = $1
         AND project_id = $2
-      ORDER BY field_label ASC, field_key ASC
+      ORDER BY
+        COALESCE((metadata->>'order')::int, 2147483647) ASC,
+        field_label ASC,
+        field_key ASC
     `;
     const catalogResult = await postgresPool.query(catalogQuery, [
       tenant_id,
@@ -344,17 +515,21 @@ const getModuleReportTable = async (filters = {}) => {
     catalogRows = [];
   }
 
+  const orderedCatalogRows = mergeOrderedFieldsWithCatalog(
+    reportContext.orderedFields,
+    catalogRows
+  );
+
   const { columns, sourceKeyToColumnKey } = buildDynamicColumns(
-    catalogRows,
-    rowsResult.rows
+    orderedCatalogRows,
+    rowsResult.rows,
+    { hideIdentityColumns: reportContext.hideIdentityColumns }
   );
 
   const rows = rowsResult.rows.map((row, rowIndex) => {
     const reportRow = {
       sn: safeOffset + rowIndex + 1,
       submission_id: row.id,
-      nodeid: row.node_reference || row.node_id || null,
-      node_name: row.node_name || null,
       status: row.status,
       submitted_at: row.created_at,
       __lineage_refs: Array.isArray(row.hierarchy_lineage_refs)
@@ -369,6 +544,12 @@ const getModuleReportTable = async (filters = {}) => {
           : 0,
       __level_name: row.hierarchy_level_name || null,
     };
+
+    if (!reportContext.hideIdentityColumns) {
+      reportRow.nodeid = row.node_reference || row.node_id || null;
+      reportRow.node_name = row.node_name || null;
+      reportRow.user_id = row.user_id || null;
+    }
 
     const payload = row.data && typeof row.data === 'object' ? row.data : {};
     Object.entries(payload).forEach(([sourceKey, rawValue]) => {
@@ -388,7 +569,9 @@ const getModuleReportTable = async (filters = {}) => {
     display_order: columns.map((column) => column.key),
     summary: {
       total_rows: Number(summaryRow.total_rows || 0),
-      unique_nodes: Number(summaryRow.unique_nodes || 0),
+      unique_nodes: reportContext.hideIdentityColumns
+        ? 0
+        : Number(summaryRow.unique_nodes || 0),
       first_submission_at: summaryRow.first_submission_at || null,
       latest_submission_at: summaryRow.latest_submission_at || null,
       submitted_count: Number(summaryRow.submitted_count || 0),
@@ -397,6 +580,15 @@ const getModuleReportTable = async (filters = {}) => {
       rejected_count: Number(summaryRow.rejected_count || 0),
       completed_count: Number(summaryRow.completed_count || 0),
       failed_count: Number(summaryRow.failed_count || 0),
+    },
+    report_context: {
+      is_open_form: reportContext.isOpenForm,
+      hide_identity_columns: reportContext.hideIdentityColumns,
+      authentication_required: !reportContext.isOpenForm,
+      identity_mode: reportContext.isOpenForm ? 'open' : 'secured',
+      anonymous_submission_count: anonymousCount,
+      identified_submission_count: identifiedCount,
+      mixed_identity_history: anonymousCount > 0 && identifiedCount > 0,
     },
     columns,
     rows,

@@ -25,7 +25,7 @@ const dlqService = require('../services/dlq.service');
 const emailService = require('../services/email.service');
 const User = require('../models/user.model');
 const Node = require('../models/node.model');
-const submissionRollupService = require('../services/submissionRollup.service');
+const incrementalSubmissionRollupService = require('../services/incrementalSubmissionRollup.service');
 const workflowService = require('../services/workflow.service');
 const ProjectForm = require('../models/projectForm.model');
 const ApiError = require('../utils/ApiError');
@@ -34,6 +34,7 @@ const submissionAttachmentService = require('../services/submissionAttachment.se
 const SUBMISSION_QUEUE_NAME = 'submissionQueue';
 let factsTableEnsured = false;
 let formSubmissionColumnsCache = null;
+let incrementalRollupTablesEnsured = false;
 
 const resolveSlotCapacityForDate = (calendarRow, targetDate) => {
   if (!calendarRow || !targetDate) return null;
@@ -73,6 +74,14 @@ async function ensureFactsTable() {
   }
   await createFactsTableIfNeeded();
   factsTableEnsured = true;
+}
+
+async function ensureIncrementalRollupTables() {
+  if (incrementalRollupTablesEnsured) {
+    return;
+  }
+  await incrementalSubmissionRollupService.ensureRollupTables();
+  incrementalRollupTablesEnsured = true;
 }
 
 async function getFormSubmissionColumns() {
@@ -435,6 +444,8 @@ const createSubmissionWorker = () => {
 
         // ── Analytics facts ──────────────────────────────────────────────
         try {
+          await ensureFactsTable();
+          await ensureIncrementalRollupTables();
           const catalog = await SubmissionCatalogService.getCatalogByProject(
             projectId
           );
@@ -443,8 +454,10 @@ const createSubmissionWorker = () => {
             [];
           if (facts.length > 0) {
             await insertFacts(facts);
-            submissionRollupService.scheduleRefresh();
           }
+          await incrementalSubmissionRollupService.syncRollupsForSubmissionChange({
+            after: result,
+          });
         } catch (catalogError) {
           logger.warn(
             `[Worker] Catalog processing failed for submission ${result.id}: ${catalogError.message}`
@@ -704,7 +717,40 @@ const createSubmissionWorker = () => {
         client.release();
       }
 
-      // 5. Log activity
+      // 5. Refresh facts if data changed
+      if (updates?.data || updates?.payload) {
+        try {
+          await ensureFactsTable();
+          const catalog = await SubmissionCatalogService.getCatalogByProject(
+            existing.project_id
+          );
+          await postgresPool.query(
+            'DELETE FROM form_submission_facts WHERE submission_id = $1',
+            [submissionId]
+          );
+          const facts = await SubmissionModel.buildFactsFromSubmission(
+            updated,
+            catalog
+          );
+          if (facts?.length > 0) {
+            await insertFacts(facts);
+          }
+        } catch (e) {
+          logger.warn(`[Worker] Facts refresh failed: ${e.message}`);
+        }
+      }
+
+      try {
+        await ensureIncrementalRollupTables();
+        await incrementalSubmissionRollupService.syncRollupsForSubmissionChange({
+          before: existing,
+          after: updated,
+        });
+      } catch (e) {
+        logger.warn(`[Worker] Rollup sync failed: ${e.message}`);
+      }
+
+      // 6. Log activity
       await logActivity({
         tenant_id: tenantId,
         project_id: existing.project_id,
@@ -716,25 +762,6 @@ const createSubmissionWorker = () => {
         job_id: job.id,
         message: 'Submission updated successfully',
       });
-
-      // 6. Refresh facts if data changed
-      if (updates?.data || updates?.payload) {
-        try {
-          const catalog = await SubmissionCatalogService.getCatalogByProject(
-            existing.project_id
-          );
-          const facts = await SubmissionModel.buildFactsFromSubmission(
-            updated,
-            catalog
-          );
-          if (facts?.length > 0) {
-            await insertFacts(facts);
-            submissionRollupService.scheduleRefresh();
-          }
-        } catch (e) {
-          logger.warn(`[Worker] Facts refresh failed: ${e.message}`);
-        }
-      }
 
       logger.info(`[Worker] Submission ${submissionId} updated successfully`);
       return updated;
@@ -780,7 +807,7 @@ const createSubmissionWorker = () => {
         // Permanent delete - cascade
 
         // Delete facts
-        await client.query('DELETE FROM facts WHERE submission_id = $1', [
+        await client.query('DELETE FROM form_submission_facts WHERE submission_id = $1', [
           submissionId,
         ]);
 
@@ -811,6 +838,16 @@ const createSubmissionWorker = () => {
       throw e;
     } finally {
       client.release();
+    }
+
+    try {
+      await ensureIncrementalRollupTables();
+      await incrementalSubmissionRollupService.syncRollupsForSubmissionChange({
+        before: existing,
+        after: permanent ? null : { ...existing, status: 'deleted' },
+      });
+    } catch (e) {
+      logger.warn(`[Worker] Rollup delete sync failed: ${e.message}`);
     }
 
     // 3. Log activity
