@@ -149,6 +149,9 @@ const setOnboardingPhoneOtpState = (user, state) => {
   user.customFields = customFields;
 };
 
+const shouldExposeOnboardingDebugOtp =
+  config.env !== 'production' || Boolean(config.onboarding?.debugOtp);
+
 const withTimeout = (promise, timeoutMs, timeoutMessage) =>
   new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -194,6 +197,59 @@ const buildAuthUserResponse = async (user) => {
     permissions = Array.from(allPermissions);
   }
 
+  let onboardingStatus = user?.onboardingStatus;
+  let onboardingComplete =
+    typeof user?.onboardingComplete === 'boolean'
+      ? user.onboardingComplete
+      : undefined;
+  let requiresOnboarding =
+    typeof user?.requiresOnboarding === 'boolean'
+      ? user.requiresOnboarding
+      : undefined;
+
+  if (user?.isOwner || user?.isSuper || user?.isSaby) {
+    const hasOnboardingProjection =
+      typeof onboardingComplete === 'boolean' &&
+      typeof requiresOnboarding === 'boolean' &&
+      typeof onboardingStatus === 'string' &&
+      onboardingStatus.length > 0;
+
+    if (!hasOnboardingProjection) {
+      try {
+        const onboarding = await tenantOnboardingService.getOnboardingStatus({
+          userId: user.id || user._id,
+        });
+        onboardingComplete = Boolean(onboarding?.completed);
+        requiresOnboarding = Boolean(
+          onboarding?.requiresOnboarding && !onboarding?.completed
+        );
+        onboardingStatus = onboardingComplete
+          ? 'complete'
+          : requiresOnboarding
+            ? 'required'
+            : 'none';
+
+        await User.updateOne(
+          { _id: user._id || user.id },
+          {
+            $set: {
+              onboardingStatus,
+              onboardingComplete,
+              requiresOnboarding,
+              onboardingCompletedAt: onboardingComplete ? new Date() : null,
+            },
+          }
+        );
+      } catch (error) {
+        logger.warn('[Auth] Failed to resolve onboarding status for auth payload', {
+          userId: String(user?._id || user?.id || ''),
+          tenantId: String(user?.tenantId || ''),
+          error: error?.message || String(error),
+        });
+      }
+    }
+  }
+
   return {
     id: user.id,
     userId: user.userId,
@@ -212,6 +268,9 @@ const buildAuthUserResponse = async (user) => {
     isAgreed: user.isAgreed,
     isEmailVerified: user.isEmailVerified,
     isPhoneVerified: user.isPhoneVerified,
+    onboardingStatus,
+    onboardingComplete,
+    requiresOnboarding,
     status: user.status,
     createdAt: user.createdAt,
     roles: user.roles,
@@ -1108,6 +1167,7 @@ const sendOnboardingPhoneOtp = catchAsync(async (req, res) => {
         destination: maskPhoneForDisplay(normalizedPhone),
         email: user.email ? maskEmailForDisplay(user.email) : null,
         expiresInMinutes: ONBOARDING_PHONE_OTP_TTL_MINUTES,
+        ...(shouldExposeOnboardingDebugOtp ? { debugOtp: otp } : {}),
         channels: {
           sms: {
             sent: smsDelivery.sent,
@@ -1156,6 +1216,7 @@ const sendOnboardingPhoneOtp = catchAsync(async (req, res) => {
       destination: maskPhoneForDisplay(normalizedPhone),
       email: user.email ? maskEmailForDisplay(user.email) : null,
       expiresInMinutes: ONBOARDING_PHONE_OTP_TTL_MINUTES,
+      ...(shouldExposeOnboardingDebugOtp ? { debugOtp: otp } : {}),
       channels: {
         sms: {
           sent: smsDelivery.sent,

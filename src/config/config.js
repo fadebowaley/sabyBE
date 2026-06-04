@@ -63,6 +63,13 @@ const envVarsSchema = Joi.object()
     SMS_SENDER_ID: Joi.string().allow('').description('Termii sender ID'),
     SMS_BASE_URL: Joi.string().allow('').description('Termii API base URL'),
     SMS_API_KEY: Joi.string().allow('').description('Termii API key'),
+    ONBOARDING_DEBUG_OTP: Joi.boolean()
+      .truthy('true')
+      .truthy('1')
+      .falsy('false')
+      .falsy('0')
+      .default(false)
+      .description('Expose onboarding OTP in responses for local/debug environments'),
     SOCIAL_AUTH_SHARED_SECRET: Joi.string()
       .allow('')
       .description('Shared secret for trusted social-login exchange'),
@@ -325,6 +332,9 @@ module.exports = {
     sms_api_key: envVars.SMS_API_KEY,
     sms_base_url: envVars.SMS_BASE_URL,
     senderId: envVars.SMS_SENDER_ID,
+  },
+  onboarding: {
+    debugOtp: Boolean(envVars.ONBOARDING_DEBUG_OTP),
   },
   socialAuth: {
     sharedSecret: envVars.SOCIAL_AUTH_SHARED_SECRET,

@@ -85,6 +85,7 @@ const updateReceivingAccountsOnly = async ({ userId, receivingAccounts }) => {
           name: sanitizeText(existingProfile?.company?.name),
           email: sanitizeText(existingProfile?.company?.email),
           phone: sanitizeText(existingProfile?.company?.phone),
+          organizationType: sanitizeOrganizationType(existingProfile?.company?.organizationType),
           industry: sanitizeText(existingProfile?.company?.industry),
           size: sanitizeText(existingProfile?.company?.size),
           timezone: sanitizeText(existingProfile?.company?.timezone, DEFAULT_TIMEZONE),
@@ -108,6 +109,33 @@ const updateReceivingAccountsOnly = async ({ userId, receivingAccounts }) => {
   };
 };
 
+const syncTenantUserOnboardingProjection = async ({
+  tenantId,
+  onboardingStatus,
+  onboardingComplete,
+  requiresOnboarding,
+  onboardingCompletedAt = null,
+}) => {
+  const normalizedTenantId = sanitizeText(tenantId);
+  if (!normalizedTenantId) return;
+
+  await User.updateMany(
+    {
+      tenantId: normalizedTenantId,
+      $or: [{ isOwner: true }, { isSuper: true }, { isSaby: true }],
+      deletedAt: null,
+    },
+    {
+      $set: {
+        onboardingStatus,
+        onboardingComplete: Boolean(onboardingComplete),
+        requiresOnboarding: Boolean(requiresOnboarding),
+        onboardingCompletedAt: onboardingCompletedAt || null,
+      },
+    }
+  );
+};
+
 const ALLOWED_COMPANY_SIZES = new Set([
   '1-10',
   '11-50',
@@ -124,6 +152,18 @@ const ALLOWED_INDUSTRIES = new Set([
   'retail & commerce',
   'education & research',
   'non-profit & faith-based',
+  'other',
+]);
+const ALLOWED_ORGANIZATION_TYPES = new Set([
+  'company',
+  'ngo',
+  'nonprofit',
+  'faith-based organization',
+  'government',
+  'educational institution',
+  'healthcare organization',
+  'agency',
+  'cooperative',
   'other',
 ]);
 
@@ -168,6 +208,14 @@ const sanitizeIndustry = (value) => {
   const normalized = sanitizeText(value).toLowerCase();
   if (!normalized) return 'Other';
   return ALLOWED_INDUSTRIES.has(normalized)
+    ? normalized.replace(/\b\w/g, (char) => char.toUpperCase())
+    : 'Other';
+};
+
+const sanitizeOrganizationType = (value) => {
+  const normalized = sanitizeText(value).toLowerCase();
+  if (!normalized) return '';
+  return ALLOWED_ORGANIZATION_TYPES.has(normalized)
     ? normalized.replace(/\b\w/g, (char) => char.toUpperCase())
     : 'Other';
 };
@@ -491,6 +539,7 @@ const getOnboardingStatus = async ({ userId }) => {
         name: resolvedCompanyName,
         email: sanitizeEmail(profile?.company?.email, settings?.contactEmail || ''),
         phone: sanitizePhone(profile?.company?.phone || settings?.contactPhone || ''),
+        organizationType: sanitizeOrganizationType(profile?.company?.organizationType),
         industry: sanitizeIndustry(profile?.company?.industry),
         size: sanitizeCompanySize(profile?.company?.size),
         timezone: sanitizeTimezone(
@@ -574,6 +623,9 @@ const saveOnboardingDraft = async ({ userId, payload }) => {
           name: sanitizeText(company.name, fallbackCompany.name || ''),
           email: sanitizeEmail(company.email, fallbackCompany.email || user.email || ''),
           phone: sanitizePhone(company.phone || fallbackCompany.phone || ''),
+          organizationType: sanitizeOrganizationType(
+            company.organizationType || fallbackCompany.organizationType || ''
+          ),
           industry: sanitizeIndustry(company.industry || fallbackCompany.industry || ''),
           size: sanitizeCompanySize(company.size || fallbackCompany.size || ''),
           timezone: sanitizeTimezone(
@@ -608,6 +660,14 @@ const saveOnboardingDraft = async ({ userId, payload }) => {
     },
     { new: true, upsert: true, setDefaultsOnInsert: true }
   );
+
+  await syncTenantUserOnboardingProjection({
+    tenantId,
+    onboardingStatus: 'in_progress',
+    onboardingComplete: false,
+    requiresOnboarding: true,
+    onboardingCompletedAt: null,
+  });
 
   return {
     ok: true,
@@ -645,6 +705,7 @@ const completeOnboarding = async ({ userId, payload }) => {
   const rootNodeAddress = sanitizeText(node.rootNodeAddress, company.address || '');
   const nodeStructures = sanitizeBoolean(node.nodeStructures, false);
   const sanitizedTimezone = sanitizeTimezone(company.timezone, DEFAULT_TIMEZONE);
+  const sanitizedOrganizationType = sanitizeOrganizationType(company.organizationType);
   const sanitizedIndustry = sanitizeIndustry(company.industry);
   const sanitizedCompanySize = sanitizeCompanySize(company.size);
   const sanitizedOwnerPhone = sanitizePhone(owner.phoneNumber);
@@ -740,6 +801,7 @@ const completeOnboarding = async ({ userId, payload }) => {
           name: companyName,
           email: sanitizedCompanyEmail,
           phone: sanitizedCompanyPhone,
+          organizationType: sanitizedOrganizationType,
           industry: sanitizedIndustry,
           size: sanitizedCompanySize,
           timezone: sanitizedTimezone,
@@ -781,6 +843,7 @@ const completeOnboarding = async ({ userId, payload }) => {
       ),
       email: sanitizeText(previousProfile?.company?.email, previousSettings?.contactEmail || ''),
       phone: sanitizeText(previousProfile?.company?.phone, previousSettings?.contactPhone || ''),
+      organizationType: sanitizeOrganizationType(previousProfile?.company?.organizationType),
       industry: sanitizeText(previousProfile?.company?.industry),
       size: sanitizeText(previousProfile?.company?.size),
       timezone: sanitizeText(previousProfile?.company?.timezone, previousSettings?.timezone || ''),
@@ -816,6 +879,7 @@ const completeOnboarding = async ({ userId, payload }) => {
       name: companyName,
       email: sanitizedCompanyEmail,
       phone: sanitizedCompanyPhone,
+      organizationType: sanitizedOrganizationType,
       industry: sanitizedIndustry,
       size: sanitizedCompanySize,
       timezone: sanitizedTimezone,
@@ -848,6 +912,14 @@ const completeOnboarding = async ({ userId, payload }) => {
     rootNodeId: String(rootNode._id),
     rootLevelId: String(level._id),
     structureId: String(structure._id),
+  });
+
+  await syncTenantUserOnboardingProjection({
+    tenantId,
+    onboardingStatus: 'complete',
+    onboardingComplete: true,
+    requiresOnboarding: false,
+    onboardingCompletedAt: new Date(),
   });
 
   return {

@@ -114,6 +114,7 @@ const getOrCreateTenantOnboarding = async ({ tenantId, preferredUserId = null })
         name: '',
         email: ownerUser.email || '',
         phone: ownerUser.phoneNumber || '',
+        organizationType: '',
       },
       owner: {
         roleTitle: ownerUser.isOwner ? 'Owner' : 'Administrator',

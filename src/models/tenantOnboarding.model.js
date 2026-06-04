@@ -79,6 +79,7 @@ const tenantOnboardingSchema = new mongoose.Schema(
       name: { type: String, default: '' },
       email: { type: String, default: '' },
       phone: { type: String, default: '' },
+      organizationType: { type: String, default: '' },
       industry: { type: String, default: '' },
       size: { type: String, default: '' },
       timezone: { type: String, default: '' },

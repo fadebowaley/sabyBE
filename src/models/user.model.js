@@ -112,6 +112,24 @@ const userSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    onboardingStatus: {
+      type: String,
+      enum: ['none', 'required', 'in_progress', 'complete'],
+      default: 'none',
+      index: true,
+    },
+    onboardingComplete: {
+      type: Boolean,
+      default: false,
+    },
+    requiresOnboarding: {
+      type: Boolean,
+      default: false,
+    },
+    onboardingCompletedAt: {
+      type: Date,
+      default: null,
+    },
     avatar: {
       type: String,
       default: null,
@@ -344,6 +362,22 @@ userSchema.statics.createUser = async function (userBody) {
     userBody.isOwner = true;
     userBody.isSuper = true;
     console.log('Public signup: Auto-assigned isOwner=true, isSuper=true');
+  }
+
+  const canConfigureTenant = Boolean(
+    userBody.isOwner || userBody.isSuper || userBody.isSaby
+  );
+  if (!Object.prototype.hasOwnProperty.call(userBody, 'onboardingStatus')) {
+    userBody.onboardingStatus = canConfigureTenant ? 'required' : 'none';
+  }
+  if (!Object.prototype.hasOwnProperty.call(userBody, 'onboardingComplete')) {
+    userBody.onboardingComplete = !canConfigureTenant;
+  }
+  if (!Object.prototype.hasOwnProperty.call(userBody, 'requiresOnboarding')) {
+    userBody.requiresOnboarding = canConfigureTenant;
+  }
+  if (!Object.prototype.hasOwnProperty.call(userBody, 'onboardingCompletedAt')) {
+    userBody.onboardingCompletedAt = canConfigureTenant ? null : new Date();
   }
 
   userBody.userId = this.generateUserId();
