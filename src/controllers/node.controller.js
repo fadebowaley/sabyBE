@@ -12,7 +12,7 @@ const {
 const MAX_NODE_QUERY_LIMIT = 500;
 const DEFAULT_NODE_QUERY_LIMIT = 50;
 const TABLE_NODE_SELECT_FIELDS =
-  'nodeId name level parent structure path isActive isMain users createdAt updatedAt';
+  'nodeId name level parent structure path isActive isMain users createdAt updatedAt profileUpdateCompliant profileUpdateCompliantAt profileUpdateCompliantBy';
 const TABLE_NODE_POPULATE = [
   { path: 'level', select: 'name rank' },
   { path: 'structure', select: 'name level' },

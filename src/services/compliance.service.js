@@ -162,7 +162,6 @@ const calculateNodeCompliance = (node) => {
   // Check if ALL required profile fields are filled
   const requiredFields = {
     propertyStatus: node.profile?.propertyStatus,
-    buildingType: node.profile?.buildingType,
     dateOfEstablishment: node.dateOfEstablishment,
     averageAttendance: node.profile?.averageAttendance,
     averageIncome: node.profile?.averageIncome,
@@ -174,9 +173,6 @@ const calculateNodeCompliance = (node) => {
     requiredFields.propertyStatus !== undefined &&
     requiredFields.propertyStatus !== null &&
     requiredFields.propertyStatus !== '' &&
-    requiredFields.buildingType !== undefined &&
-    requiredFields.buildingType !== null &&
-    requiredFields.buildingType !== '' &&
     requiredFields.dateOfEstablishment !== undefined &&
     requiredFields.dateOfEstablishment !== null &&
     requiredFields.averageAttendance !== undefined &&

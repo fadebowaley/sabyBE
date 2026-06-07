@@ -322,6 +322,13 @@ const getNodeProfileSystemElements = () => [
     bindingPath: 'profile.estimatedValue',
   }),
   makeSystemElement({
+    id: 'profile_estimated_revenue',
+    type: 'currency',
+    label: 'Estimated Revenue',
+    placeholder: 'Enter estimated revenue',
+    bindingPath: 'profile.averageIncome',
+  }),
+  makeSystemElement({
     id: 'profile_building_type',
     type: 'text',
     label: 'Building Type',
@@ -334,6 +341,13 @@ const getNodeProfileSystemElements = () => [
     label: 'Facility Status',
     options: ['Completed', 'Not Started', 'Under Construction'],
     bindingPath: 'profile.facilityStatus',
+  }),
+  makeSystemElement({
+    id: 'profile_estimated_customers',
+    type: 'number',
+    label: 'Estimated Customers',
+    placeholder: 'Enter estimated customers',
+    bindingPath: 'profile.averageAttendance',
   }),
 ];
 
@@ -2131,7 +2145,7 @@ const buildSystemFormTemplate = (target) => {
       ui: {},
       metadata: {
         systemTarget: SYSTEM_TARGET_NODE_PROFILE,
-        systemVersion: '1.1.0',
+        systemVersion: '1.2.0',
         integrations: ['web', 'mobile'],
         schemaVersion: '2.0.0',
       },

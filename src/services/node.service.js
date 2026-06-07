@@ -363,26 +363,44 @@ const updateNodeById = async (nodeId, updateBody) => {
     await ensureNodeDimensionForNode(node);
   }
 
-  // Trigger compliance recalculation if profile was updated
-  // This runs asynchronously to avoid blocking the response
-  // Note: Compliance is automatically calculated based on profile completeness
-  // We just log that compliance will be recalculated when queried
   if (Object.keys(profileUpdate).length > 0) {
     setImmediate(async () => {
       try {
         const logger = require('../config/logger');
-        // Calculate node compliance directly (compliance service will recalculate when queried)
-        // We log here for visibility, but compliance is calculated on-demand
+        const { complianceService } = require('./');
+        const refreshedNode = await Nodes.findOne({
+          _id: node._id,
+          tenantId: node.tenantId,
+        });
+        if (!refreshedNode) {
+          throw new Error('Node not found for compliance refresh');
+        }
+        const nodeComplianceDetails =
+          complianceService.calculateNodeCompliance(refreshedNode);
+        await Nodes.updateOne(
+          { _id: node._id, tenantId: node.tenantId },
+          {
+            $set: {
+              profileUpdateCompliant: Boolean(
+                nodeComplianceDetails.profileUpdateCompliant
+              ),
+              profileUpdateCompliantAt:
+                nodeComplianceDetails.profileUpdateCompliantAt || null,
+              profileUpdateCompliantBy:
+                nodeComplianceDetails.profileUpdateCompliantBy || null,
+            },
+          }
+        );
         logger.info(
-          `✅ [NodeService.updateNodeById] Node profile updated for ${node.name} (${node.nodeId}) - compliance will be recalculated automatically on next query`
+          `✅ [NodeService.updateNodeById] Compliance recalculated for ${node.name} (${node.nodeId}): isCompliant=${nodeComplianceDetails.isCompliant}, hasProfileData=${nodeComplianceDetails.hasProfileData}`
         );
       } catch (error) {
         const logger = require('../config/logger');
         logger.error(
-          `❌ [NodeService.updateNodeById] Error logging compliance update for node ${node._id}:`,
+          `❌ [NodeService.updateNodeById] Error recalculating compliance for node ${node._id}:`,
           error
         );
-        // Don't throw - logging failure shouldn't break node update
+        // Don't throw - compliance recalculation failure shouldn't break node update
       }
     });
   }
