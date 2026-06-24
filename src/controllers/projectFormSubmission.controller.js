@@ -2,7 +2,11 @@ const httpStatus = require('http-status');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
-const { projectFormSubmissionService, projectFormService } = require('../services');
+const {
+  projectFormSubmissionService,
+  projectFormService,
+  projectFormPublicAccessService,
+} = require('../services');
 
 /**
  * Create a new form submission
@@ -72,6 +76,12 @@ const createSubmissionByReference = catchAsync(async (req, res) => {
       throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid form access token');
     }
   }
+
+  await projectFormPublicAccessService.validateSpecialFieldSubmission({
+    projectForm: resolved.projectForm,
+    submissionData,
+    metadata: metadata || {},
+  });
 
   const submission = await projectFormSubmissionService.createSubmission(
     {

@@ -1240,15 +1240,99 @@ const sanitizePublicForm = (projectForm) => {
   const source =
     typeof projectForm?.toObject === 'function' ? projectForm.toObject() : projectForm;
 
+  const inferSpecialFieldType = (element = {}) => {
+    const properties = element.properties || {};
+    const explicitFieldType = String(properties.fieldType || '').trim().toLowerCase();
+    if (explicitFieldType) return explicitFieldType;
+
+    const elementType = String(element.type || '').trim().toLowerCase();
+    const elementId = String(element.id || '').trim().toLowerCase();
+    const label = String(element.label || properties.label || '').trim().toLowerCase();
+    const fieldKey = String(properties.fieldKey || '').trim().toLowerCase();
+
+    if (
+      elementType === 'text' &&
+      (fieldKey.includes('membership') ||
+        typeof properties.prefix !== 'undefined' ||
+        typeof properties.length !== 'undefined' ||
+        typeof properties.separator !== 'undefined' ||
+        typeof properties.readonlyAfterGenerated !== 'undefined')
+    ) {
+      return 'generated_id';
+    }
+
+    if (
+      ['phone', 'phone_number'].includes(elementType) &&
+      (typeof properties.otpLength !== 'undefined' ||
+        typeof properties.otpExpiryMinutes !== 'undefined' ||
+        typeof properties.maxAttempts !== 'undefined' ||
+        label.includes('verify') ||
+        label.includes('secured') ||
+        elementId.includes('secured'))
+    ) {
+      return 'secured_phone';
+    }
+
+    if (
+      elementType === 'email' &&
+      (typeof properties.otpLength !== 'undefined' ||
+        typeof properties.otpExpiryMinutes !== 'undefined' ||
+        typeof properties.maxAttempts !== 'undefined' ||
+        label.includes('verify') ||
+        label.includes('secured') ||
+        elementId.includes('secured'))
+    ) {
+      return 'secured_email';
+    }
+
+    if (
+      elementType === 'fileupload' &&
+      (String(properties.acceptedFormats || '').trim() ||
+        label.includes('passport') ||
+        label.includes('profile image') ||
+        elementId.includes('image'))
+    ) {
+      return 'profile_image_upload';
+    }
+
+    if (
+      elementType === 'statement' &&
+      (typeof properties.allowEditBeforeSubmit !== 'undefined' ||
+        typeof properties.showBranding !== 'undefined' ||
+        String(properties.layout || '').trim() ||
+        label.includes('submission preview') ||
+        label.includes('preview your submission'))
+    ) {
+      return 'submission_preview_step';
+    }
+
+    return '';
+  };
+
   const safeElements = Array.isArray(source.elements)
-    ? source.elements.map((element = {}) => ({
-        id: element.id,
-        type: element.type,
-        properties: element.properties || {},
-      }))
+    ? source.elements.map((element = {}) => {
+        const properties = element.properties || {};
+        const inferredFieldType = inferSpecialFieldType(element);
+        return {
+          id: element.id,
+          type: element.type,
+          properties: {
+            ...properties,
+            ...(inferredFieldType ? { fieldType: inferredFieldType } : {}),
+            helpText:
+              properties.helpText ||
+              properties.validation?.helpText ||
+              undefined,
+          },
+        };
+      })
     : [];
 
   return {
+    _id: source._id || null,
+    formId: source.formId || source._id || null,
+    projectId: source.projectId || null,
+    tenantId: source.tenantId || null,
     shareRef: source.shareRef || null,
     shareCode: source.shareCode || null,
     publicRef: source.publicRef,

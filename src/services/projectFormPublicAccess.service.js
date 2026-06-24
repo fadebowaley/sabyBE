@@ -10,6 +10,7 @@ const {
   PublicFormAccess,
   User,
   Nodes,
+  Counter,
 } = require('../models');
 const projectFormService = require('./projectForm.service');
 const emailService = require('./email.service');
@@ -335,6 +336,168 @@ const buildOtpDelivery = async ({ channel, user, otpCode }) => {
   return delivery;
 };
 
+const buildOtpDeliveryToIdentifier = async ({ channel, identifier, otpCode }) => {
+  const delivery = {
+    email: { sent: false, error: null },
+    sms: { sent: false, error: null },
+  };
+
+  if (channel === 'email') {
+    try {
+      await emailService.sendOtpEmail(identifier, otpCode);
+      delivery.email.sent = true;
+    } catch (error) {
+      delivery.email.error = normalizeDeliveryError(
+        error?.response?.data || error,
+        'Email delivery failed'
+      );
+      throw new ApiError(httpStatus.BAD_GATEWAY, delivery.email.error);
+    }
+    return delivery;
+  }
+
+  if (!smsService.hasSmsConfig) {
+    throw new ApiError(httpStatus.SERVICE_UNAVAILABLE, 'SMS provider is not configured.');
+  }
+
+  try {
+    await smsService.sendOtpSms({
+      phoneNumber: identifier,
+      otp: otpCode,
+    });
+    delivery.sms.sent = true;
+  } catch (error) {
+    const providerError = normalizeDeliveryError(
+      error?.response?.data?.message || error?.response?.data || error,
+      'SMS delivery failed'
+    );
+    delivery.sms.error = providerError;
+    throw new ApiError(httpStatus.BAD_GATEWAY, providerError);
+  }
+
+  return delivery;
+};
+
+const buildFieldVerificationDestination = ({ channel, identifier }) => ({
+  email: channel === 'email' ? maskEmail(identifier) : null,
+  phone: channel === 'phone' ? maskPhone(identifier) : null,
+});
+
+const ensureProjectFormAccess = async ({ formId, tenantId, projectId = null }) => {
+  const filter = {
+    deletedAt: null,
+  };
+
+  if (/^[0-9a-fA-F]{24}$/.test(String(formId || ''))) {
+    filter._id = formId;
+  } else {
+    filter.formId = String(formId || '').trim();
+  }
+
+  if (tenantId) filter.tenantId = String(tenantId);
+  if (projectId) filter.projectId = String(projectId);
+
+  const projectForm = await ProjectForm.findOne(filter).lean();
+  if (!projectForm) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found.');
+  }
+
+  return projectForm;
+};
+
+const createFieldVerificationChallenge = async ({
+  projectForm,
+  fieldKey,
+  channel,
+  identifier,
+  submissionId = null,
+  accessToken = null,
+}) => {
+  await PublicFormAccess.updateMany(
+    {
+      tokenType: OTP_CHALLENGE_TOKEN_TYPE,
+      tenantId: projectForm.tenantId,
+      projectId: projectForm.projectId,
+      projectFormId: projectForm._id,
+      challengeChannel: channel,
+      identifier,
+      status: 'issued',
+      'metadata.kind': 'field_verification',
+      'metadata.fieldKey': fieldKey,
+    },
+    {
+      $set: {
+        status: 'expired',
+        expiredAt: new Date(),
+      },
+    }
+  );
+
+  const otpCode = generateOtpCode();
+  const challengeId = randomUUID();
+  const issuedAt = new Date();
+  const expiresAt = new Date(issuedAt.getTime() + OTP_TTL_SECONDS * 1000);
+  const resendAvailableAt = new Date(
+    issuedAt.getTime() + OTP_RESEND_COOLDOWN_SECONDS * 1000
+  );
+  const delivery = await buildOtpDeliveryToIdentifier({
+    channel,
+    identifier,
+    otpCode,
+  });
+
+  await PublicFormAccess.create({
+    jti: challengeId,
+    tokenType: OTP_CHALLENGE_TOKEN_TYPE,
+    challengeChannel: channel,
+    tenantId: projectForm.tenantId,
+    projectId: projectForm.projectId,
+    projectFormId: projectForm._id,
+    publicRef: projectForm.publicRef || null,
+    shareRef: projectForm.shareRef || null,
+    shareCode: projectForm.shareCode || null,
+    userId: null,
+    identifierType: channel,
+    identifier,
+    email: channel === 'email' ? identifier : null,
+    phoneNumber: channel === 'phone' ? identifier : null,
+    secureMode: 'off',
+    pipelineTarget: projectForm.capabilities?.experience?.security?.publicSecureMode || 'public',
+    schemaVersion: projectForm.schemaVersion || '2.0.0',
+    schemaHash: null,
+    qrVersion: 'v2',
+    status: 'issued',
+    issuedAt,
+    expiresAt,
+    otpHash: buildOtpHash({ challengeId, otp: otpCode }),
+    otpAttempts: 0,
+    otpMaxAttempts: OTP_MAX_ATTEMPTS,
+    otpResendCount: 0,
+    otpResendAvailableAt: resendAvailableAt,
+    otpLastSentAt: issuedAt,
+    delivery,
+    metadata: {
+      kind: 'field_verification',
+      fieldKey,
+      submissionId: submissionId || null,
+      accessToken: accessToken || null,
+      verified: false,
+    },
+  });
+
+  return {
+    success: true,
+    challengeId,
+    channel,
+    fieldKey,
+    expiresAt: expiresAt.toISOString(),
+    resendAfterSeconds: OTP_RESEND_COOLDOWN_SECONDS,
+    destination: buildFieldVerificationDestination({ channel, identifier }),
+    channels: delivery,
+    ...(config.env !== 'production' ? { debugOtp: otpCode } : {}),
+  };
+};
+
 const buildMagicLink = ({ canonicalRef, token }) => {
   const base =
     String(config.clientUrl || '').trim().replace(/\/+$/, '') ||
@@ -424,6 +587,15 @@ const issueAccessLink = async ({ reference, identifier, qrContextToken = null })
     resolvedIdentifier,
     metadata: { accessMethod: 'magic_link' },
   });
+
+  await PublicFormAccess.updateOne(
+    { jti, tokenType: ACCESS_TOKEN_TYPE },
+    {
+      $set: {
+        status: 'verified',
+      },
+    }
+  );
 
   const magicLink = buildMagicLink({ canonicalRef: secureForm.canonicalRef, token });
 
@@ -742,6 +914,24 @@ const verifyAccessCode = async ({ challengeId, otp }) => {
   };
   await challenge.save();
 
+  logger.info('[PublicFormAccess] otp verified', {
+    tenantId: challenge.tenantId,
+    projectId: challenge.projectId,
+    challengeId: challenge.jti,
+    accessJti: grant.jti,
+    identifierType: challenge.identifierType,
+  });
+
+  await PublicFormAccess.updateOne(
+    { jti: grant.jti, tokenType: ACCESS_TOKEN_TYPE },
+    {
+      $set: {
+        status: 'verified',
+        otpVerifiedAt: new Date(),
+      },
+    }
+  );
+
   const consumed = await consumeAccessLink({ accessToken: grant.token });
 
   return {
@@ -752,7 +942,8 @@ const verifyAccessCode = async ({ challengeId, otp }) => {
   };
 };
 
-const verifyAccessToken = async (accessToken) => {
+const verifyAccessToken = async (accessToken, options = {}) => {
+  const { allowSubmitted = false } = options;
   if (!accessToken) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Access token is required.');
   }
@@ -791,7 +982,23 @@ const verifyAccessToken = async (accessToken) => {
       lastReplayAt: new Date().toISOString(),
     };
     await accessDoc.save();
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'This access token has already been used.');
+    logger.warn('[PublicFormAccess] replay detected for submitted token', {
+      tenantId: accessDoc.tenantId,
+      projectId: accessDoc.projectId,
+      accessJti: accessDoc.jti,
+      replayFailures: Number(accessDoc.metadata?.replayFailures || 0),
+      submittedAt: accessDoc.submittedAt || null,
+      selectedNodeId: accessDoc.selectedNodeId || null,
+    });
+    if (!allowSubmitted) {
+      throw new ApiError(httpStatus.UNAUTHORIZED, 'This access token has already been used.');
+    }
+
+    return {
+      decoded,
+      accessDoc,
+      replayDetected: true,
+    };
   }
 
   const now = Date.now();
@@ -908,13 +1115,16 @@ const getProjectPublicAccessMetrics = async ({
     totalRequests: total,
     linkRequests: total,
     linksConsumed: consumedCount,
+    submissionClaims: consumedCount,
     submitSuccess: Number(statusCounts.submitted || 0),
     submitFailed:
       Number(statusCounts.expired || 0) + Number(statusCounts.revoked || 0),
     replayFailures,
     statusCounts: {
       issued: Number(statusCounts.issued || 0),
+      verified: Number(statusCounts.verified || 0),
       consumed: Number(statusCounts.consumed || 0),
+      submitting: Number(statusCounts.submitting || 0),
       submitted: Number(statusCounts.submitted || 0),
       expired: Number(statusCounts.expired || 0),
       revoked: Number(statusCounts.revoked || 0),
@@ -965,12 +1175,6 @@ const consumeAccessLink = async ({ accessToken }) => {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Account is not eligible for this module.');
   }
 
-  if (accessDoc.status === 'issued') {
-    accessDoc.status = 'consumed';
-    accessDoc.consumedAt = new Date();
-    await accessDoc.save();
-  }
-
   const nodes = await resolveUserAssignedNodes({
     tenantId: decoded.tenantId,
     userId: user._id,
@@ -995,6 +1199,7 @@ const consumeAccessLink = async ({ accessToken }) => {
       expiresAt: accessDoc.expiresAt,
       requiresNodeSelection: nodes.length > 1,
       autoNodeId: nodes.length === 1 ? nodes[0].id : null,
+      status: accessDoc.status,
     },
     user: {
       id: String(user._id),
@@ -1094,11 +1299,30 @@ const buildSystemPrefillData = ({ projectForm, source }) => {
 };
 
 const getSystemFormPrefillByAccess = async ({ accessToken, nodeId = null }) => {
-  const { decoded, accessDoc } = await verifyAccessToken(accessToken);
-  if (accessDoc.status !== 'consumed') {
+  const { decoded, accessDoc, replayDetected = false } = await verifyAccessToken(accessToken, {
+    allowSubmitted: true,
+  });
+  if (replayDetected) {
+    return {
+      success: true,
+      alreadySubmitted: true,
+      status: String(accessDoc.metadata?.submissionStatus || 'submitted'),
+      jobId: accessDoc.metadata?.submissionJobId || null,
+      projectId: decoded.projectId,
+      submittedAt: accessDoc.submittedAt || null,
+      node: accessDoc.selectedNodeId
+        ? {
+            id: String(accessDoc.selectedNodeId),
+            nodeId: null,
+            name: '',
+          }
+        : null,
+    };
+  }
+  if (!['verified', 'consumed', 'submitting'].includes(accessDoc.status)) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      'Access link must be consumed before loading form prefill.'
+      'Access link must be verified before loading form prefill.'
     );
   }
 
@@ -1204,11 +1428,47 @@ const submitWithAccess = async ({
     throw new ApiError(httpStatus.BAD_REQUEST, 'submissionData is required.');
   }
 
-  const { decoded, accessDoc } = await verifyAccessToken(accessToken);
-  if (accessDoc.status !== 'consumed') {
+  const { decoded, accessDoc, replayDetected = false } = await verifyAccessToken(accessToken, {
+    allowSubmitted: true,
+  });
+  if (replayDetected) {
+    return {
+      success: true,
+      alreadySubmitted: true,
+      status: String(accessDoc.metadata?.submissionStatus || 'submitted'),
+      jobId: accessDoc.metadata?.submissionJobId || null,
+      projectId: decoded.projectId,
+      submittedAt: accessDoc.submittedAt || null,
+      node: accessDoc.selectedNodeId
+        ? {
+            id: String(accessDoc.selectedNodeId),
+            nodeId: null,
+            name: '',
+          }
+        : null,
+    };
+  }
+  if (!['verified', 'consumed'].includes(accessDoc.status)) {
+    if (accessDoc.status === 'submitting') {
+      return {
+        success: true,
+        processing: true,
+        status: 'submitting',
+        jobId: accessDoc.metadata?.submissionJobId || null,
+        projectId: decoded.projectId,
+        submittedAt: accessDoc.submittedAt || null,
+        node: accessDoc.selectedNodeId
+          ? {
+              id: String(accessDoc.selectedNodeId),
+              nodeId: null,
+              name: '',
+            }
+          : null,
+      };
+    }
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      'Access link must be consumed before submission.'
+      'Access link must be verified before submission.'
     );
   }
 
@@ -1226,6 +1486,72 @@ const submitWithAccess = async ({
 
   if (!projectForm) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Module not found.');
+  }
+
+  await validateSpecialFieldSubmission({
+    projectForm,
+    submissionData,
+    metadata: metadata || {},
+    accessToken,
+  });
+
+  const claimTime = new Date();
+  const claimedAccessDoc = await PublicFormAccess.findOneAndUpdate(
+    {
+      _id: accessDoc._id,
+      status: { $in: ['verified', 'consumed'] },
+      submittedAt: null,
+    },
+    {
+      $set: {
+        status: 'submitting',
+        consumedAt: accessDoc.consumedAt || claimTime,
+        'metadata.submissionClaimedAt': claimTime.toISOString(),
+      },
+    },
+    { new: true }
+  );
+
+  if (!claimedAccessDoc) {
+    const latestAccessDoc = await PublicFormAccess.findById(accessDoc._id);
+    if (latestAccessDoc?.status === 'submitted') {
+      return {
+        success: true,
+        alreadySubmitted: true,
+        status: String(latestAccessDoc.metadata?.submissionStatus || 'submitted'),
+        jobId: latestAccessDoc.metadata?.submissionJobId || null,
+        projectId: decoded.projectId,
+        submittedAt: latestAccessDoc.submittedAt || null,
+        node: latestAccessDoc.selectedNodeId
+          ? {
+              id: String(latestAccessDoc.selectedNodeId),
+              nodeId: null,
+              name: '',
+            }
+          : null,
+      };
+    }
+    if (latestAccessDoc?.status === 'submitting') {
+      return {
+        success: true,
+        processing: true,
+        status: 'submitting',
+        jobId: latestAccessDoc.metadata?.submissionJobId || null,
+        projectId: decoded.projectId,
+        submittedAt: latestAccessDoc.submittedAt || null,
+        node: latestAccessDoc.selectedNodeId
+          ? {
+              id: String(latestAccessDoc.selectedNodeId),
+              nodeId: null,
+              name: '',
+            }
+          : null,
+      };
+    }
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Access link is no longer available for submission.'
+    );
   }
 
   const isSystemForm = projectForm?.metadata?.formCategory === 'system';
@@ -1253,12 +1579,24 @@ const submitWithAccess = async ({
       submissionData,
     });
 
-    accessDoc.status = 'submitted';
-    accessDoc.submittedAt = new Date();
+    claimedAccessDoc.status = 'submitted';
+    claimedAccessDoc.submittedAt = new Date();
     if (selectedNode?._id) {
-      accessDoc.selectedNodeId = selectedNode._id;
+      claimedAccessDoc.selectedNodeId = selectedNode._id;
     }
-    await accessDoc.save();
+    claimedAccessDoc.metadata = {
+      ...(claimedAccessDoc.metadata || {}),
+      submissionStatus: 'completed',
+    };
+    await claimedAccessDoc.save();
+    logger.info('[PublicFormAccess] system form submitted', {
+      tenantId: decoded.tenantId,
+      projectId: decoded.projectId,
+      accessJti: claimedAccessDoc.jti,
+      submittedAt: claimedAccessDoc.submittedAt,
+      selectedNodeId: selectedNode?._id ? String(selectedNode._id) : null,
+      systemTarget,
+    });
 
     return {
       success: true,
@@ -1301,10 +1639,10 @@ const submitWithAccess = async ({
     meta: {
       ...(metadata && typeof metadata === 'object' ? metadata : {}),
       publicAccess: {
-        mode: accessDoc.secureMode,
-        jti: accessDoc.jti,
-        shareRef: accessDoc.shareRef || null,
-        publicRef: accessDoc.publicRef || null,
+        mode: claimedAccessDoc.secureMode,
+        jti: claimedAccessDoc.jti,
+        shareRef: claimedAccessDoc.shareRef || null,
+        publicRef: claimedAccessDoc.publicRef || null,
       },
     },
   };
@@ -1341,10 +1679,25 @@ const submitWithAccess = async ({
 
   const queueResult = await queueSubmission(queuePayload);
 
-  accessDoc.status = 'submitted';
-  accessDoc.submittedAt = new Date();
-  accessDoc.selectedNodeId = node._id;
-  await accessDoc.save();
+  claimedAccessDoc.status = 'submitted';
+  claimedAccessDoc.submittedAt = new Date();
+  claimedAccessDoc.selectedNodeId = node._id;
+  claimedAccessDoc.metadata = {
+    ...(claimedAccessDoc.metadata || {}),
+    submissionJobId: queueResult.jobId,
+    submissionStatus: queueResult.status,
+  };
+  await claimedAccessDoc.save();
+  logger.info('[PublicFormAccess] submission accepted', {
+    tenantId: decoded.tenantId,
+    projectId: decoded.projectId,
+    accessJti: claimedAccessDoc.jti,
+    submittedAt: claimedAccessDoc.submittedAt,
+    selectedNodeId: String(node._id),
+    submissionJobId: queueResult.jobId,
+    submissionStatus: queueResult.status,
+    idempotencyKey: queuePayload.idempotency_key,
+  });
 
   try {
     await projectFormService.incrementProjectSubmissions(decoded.projectId);
@@ -1368,6 +1721,321 @@ const submitWithAccess = async ({
   };
 };
 
+const requestFieldVerificationCode = async ({
+  formId,
+  fieldKey,
+  channel,
+  identifier,
+  submissionId = null,
+  accessToken = null,
+}) => {
+  const selectedChannel = sanitizeChannel(channel);
+  const normalizedIdentifier = resolveIdentifier(identifier, selectedChannel);
+  const projectForm = await ensureProjectFormAccess({
+    formId,
+  });
+
+  return createFieldVerificationChallenge({
+    projectForm,
+    fieldKey: String(fieldKey || '').trim(),
+    channel: selectedChannel,
+    identifier: normalizedIdentifier.normalized,
+    submissionId,
+    accessToken,
+  });
+};
+
+const verifyFieldVerificationCode = async ({ challengeId, otp }) => {
+  const challenge = await getOtpChallengeById(challengeId);
+  await ensureOtpChallengeActive(challenge);
+
+  if (challenge?.metadata?.kind !== 'field_verification') {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'This challenge is not a field verification request.');
+  }
+
+  const normalizedOtp = String(otp || '')
+    .replace(/\D/g, '')
+    .slice(0, 6);
+  if (normalizedOtp.length < 4) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'A valid verification code is required.');
+  }
+
+  const maxAttempts = Number(challenge.otpMaxAttempts || OTP_MAX_ATTEMPTS);
+  const attempts = Number(challenge.otpAttempts || 0);
+  if (attempts >= maxAttempts) {
+    challenge.status = 'locked';
+    await challenge.save();
+    throw new ApiError(
+      httpStatus.TOO_MANY_REQUESTS,
+      'Too many invalid attempts. Request a new code.'
+    );
+  }
+
+  const expectedHash = buildOtpHash({ challengeId: challenge.jti, otp: normalizedOtp });
+  if (!challenge.otpHash || challenge.otpHash !== expectedHash) {
+    challenge.otpAttempts = attempts + 1;
+    if (challenge.otpAttempts >= maxAttempts) {
+      challenge.status = 'locked';
+    }
+    await challenge.save();
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid verification code.');
+  }
+
+  challenge.status = 'verified';
+  challenge.otpVerifiedAt = new Date();
+  challenge.metadata = {
+    ...(challenge.metadata || {}),
+    verified: true,
+    verifiedAt: new Date().toISOString(),
+  };
+  await challenge.save();
+
+  return {
+    success: true,
+    verified: true,
+    fieldKey: String(challenge.metadata?.fieldKey || ''),
+    challengeId: challenge.jti,
+    identifier: challenge.identifier,
+    channel: challenge.challengeChannel || challenge.identifierType,
+    verifiedAt: challenge.otpVerifiedAt,
+    submissionId: challenge.metadata?.submissionId || null,
+  };
+};
+
+const generateFormFieldId = async ({
+  formId,
+  tenantId,
+  projectId,
+  fieldKey,
+  prefix = 'MEM',
+  separator = '-',
+  length = 6,
+}) => {
+  const projectForm = await ensureProjectFormAccess({
+    formId,
+    tenantId,
+    projectId,
+  });
+
+  const normalizedFieldKey = String(fieldKey || '').trim();
+  if (!normalizedFieldKey) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'fieldKey is required.');
+  }
+
+  const counterName = [
+    'membership',
+    String(projectForm.tenantId),
+    String(projectForm.projectId),
+    String(projectForm._id),
+    normalizedFieldKey,
+  ].join(':');
+
+  const seq = await Counter.getNextSequence(counterName);
+  const digits = Math.max(1, Math.min(12, Number(length || 6)));
+  const paddedNumber = String(seq).padStart(digits, '0');
+  const trimmedPrefix = String(prefix || '').trim();
+  const trimmedSeparator = String(separator || '');
+  const value = trimmedPrefix
+    ? `${trimmedPrefix}${trimmedSeparator}${paddedNumber}`
+    : paddedNumber;
+
+  return {
+    success: true,
+    formId: String(projectForm._id),
+    fieldKey: normalizedFieldKey,
+    value,
+    sequence: seq,
+  };
+};
+
+const normalizeAcceptedImageTypes = (value) => {
+  const raw = String(value || '').trim();
+  const primaryParts = raw
+    ? raw.split(/[,\n|]+/).map((entry) => entry.trim()).filter(Boolean)
+    : [];
+  const tokens = primaryParts.flatMap((entry) => {
+    if (entry.toLowerCase().startsWith('image/')) {
+      return [entry.toLowerCase()];
+    }
+    return entry
+      .split('/')
+      .map((part) => part.trim().toLowerCase())
+      .filter(Boolean);
+  });
+
+  const mapped = tokens
+    .map((token) => {
+      if (token === 'jpg' || token === 'jpeg') return 'image/jpeg';
+      if (token === 'png') return 'image/png';
+      if (token === 'webp') return 'image/webp';
+      if (token.startsWith('image/')) return token;
+      return null;
+    })
+    .filter(Boolean);
+
+  return mapped.length > 0 ? Array.from(new Set(mapped)) : ['image/jpeg', 'image/png', 'image/webp'];
+};
+
+const validateSpecialFieldSubmission = async ({
+  projectForm,
+  submissionData,
+  metadata = {},
+  accessToken = null,
+}) => {
+  if (!projectForm || !submissionData || typeof submissionData !== 'object') {
+    return;
+  }
+
+  const elements = Array.isArray(projectForm.elements) ? projectForm.elements : [];
+  const verificationState =
+    metadata && typeof metadata === 'object' && metadata.verificationState
+      ? metadata.verificationState
+      : {};
+  const previewSubmissionConfig =
+    projectForm?.capabilities?.experience?.previewSubmission || {};
+
+  if (previewSubmissionConfig?.enabled && metadata?.previewSubmissionConfirmed !== true) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Submission preview must be acknowledged before final submission.'
+    );
+  }
+
+  for (const element of elements) {
+    const fieldId = String(element?.id || '').trim();
+    const fieldType = String(element?.properties?.fieldType || '')
+      .trim()
+      .toLowerCase();
+
+    if (!fieldId) {
+      continue;
+    }
+
+    if (fieldType === 'profile_image_upload') {
+      const required = Boolean(
+        element?.properties?.required || element?.properties?.validation?.required
+      );
+      const rawValue = submissionData[fieldId];
+
+      if (rawValue === undefined || rawValue === null || rawValue === '') {
+        if (required) {
+          throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            `${element?.properties?.label || fieldId} is required.`
+          );
+        }
+        continue;
+      }
+
+      if (!rawValue || typeof rawValue !== 'object' || Array.isArray(rawValue)) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          `${element?.properties?.label || fieldId} must be a valid image upload payload.`
+        );
+      }
+
+      const acceptedTypes = normalizeAcceptedImageTypes(element?.properties?.acceptedFormats);
+      const maxSizeMB = Math.max(1, Number(element?.properties?.maxSizeMB || 5));
+      const fileType = String(rawValue.type || '').trim().toLowerCase();
+      const fileName = String(rawValue.name || '').trim();
+      const fileUrl = String(rawValue.url || '').trim();
+      const fileKey = String(rawValue.key || '').trim();
+      const fileSize = Number(rawValue.size || 0);
+      const width = rawValue.width == null ? null : Number(rawValue.width);
+      const height = rawValue.height == null ? null : Number(rawValue.height);
+
+      if (!fileName || !fileType || !fileUrl || !fileKey) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          `${element?.properties?.label || fieldId} is missing uploaded image metadata.`
+        );
+      }
+
+      if (!acceptedTypes.includes(fileType)) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          `${element?.properties?.label || fieldId} must use one of the supported image formats.`
+        );
+      }
+
+      if (!Number.isFinite(fileSize) || fileSize <= 0 || fileSize > maxSizeMB * 1024 * 1024) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          `${element?.properties?.label || fieldId} exceeds the allowed image size.`
+        );
+      }
+
+      if ((width !== null && (!Number.isFinite(width) || width <= 0)) ||
+          (height !== null && (!Number.isFinite(height) || height <= 0))) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          `${element?.properties?.label || fieldId} has invalid image dimensions.`
+        );
+      }
+
+      continue;
+    }
+
+    if (!['secured_phone', 'secured_email'].includes(fieldType)) {
+      continue;
+    }
+
+    const required = Boolean(
+      element?.properties?.required || element?.properties?.validation?.required
+    );
+    const rawValue = submissionData[fieldId];
+    const submittedValue = String(rawValue || '').trim();
+
+    if (!submittedValue) {
+      if (required) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          `${element?.properties?.label || fieldId} is required.`
+        );
+      }
+      continue;
+    }
+
+    const state = verificationState?.[fieldId];
+    if (!state?.verified || !state?.challengeId) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        `${element?.properties?.label || fieldId} must be verified before submission.`
+      );
+    }
+
+    const expectedChannel = fieldType === 'secured_phone' ? 'phone' : 'email';
+    const normalizedIdentifier = resolveIdentifier(submittedValue, expectedChannel).normalized;
+    const challenge = await PublicFormAccess.findOne({
+      jti: String(state.challengeId).trim(),
+      tokenType: OTP_CHALLENGE_TOKEN_TYPE,
+      status: 'verified',
+      projectFormId: projectForm._id,
+      challengeChannel: expectedChannel,
+      identifier: normalizedIdentifier,
+      'metadata.kind': 'field_verification',
+      'metadata.fieldKey': String(element?.properties?.fieldKey || fieldId).trim() || fieldId,
+    }).lean();
+
+    if (!challenge) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        `${element?.properties?.label || fieldId} verification is invalid or expired.`
+      );
+    }
+
+    if (accessToken && challenge?.metadata?.accessToken) {
+      const expectedToken = String(challenge.metadata.accessToken || '').trim();
+      if (expectedToken && expectedToken !== String(accessToken).trim()) {
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          `${element?.properties?.label || fieldId} verification does not match this secure session.`
+        );
+      }
+    }
+  }
+};
+
 module.exports = {
   issueAccessLink,
   requestAccessCode,
@@ -1377,4 +2045,8 @@ module.exports = {
   getSystemFormPrefillByAccess,
   submitWithAccess,
   getProjectPublicAccessMetrics,
+  requestFieldVerificationCode,
+  verifyFieldVerificationCode,
+  generateFormFieldId,
+  validateSpecialFieldSubmission,
 };

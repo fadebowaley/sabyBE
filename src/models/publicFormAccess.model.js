@@ -58,7 +58,7 @@ const publicFormAccessSchema = mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false,
       index: true,
     },
     identifierType: {
@@ -108,6 +108,7 @@ const publicFormAccessSchema = mongoose.Schema(
       enum: [
         'issued',
         'consumed',
+        'submitting',
         'submitted',
         'verified',
         'locked',

@@ -421,6 +421,41 @@ router.post(
   projectFormController.submitPublicAccessForm
 );
 
+router.post(
+  '/verification/phone/send-otp',
+  publicFormReadLimiter,
+  validate(projectFormValidation.requestFieldVerificationCode),
+  projectFormController.requestFieldVerificationCode
+);
+
+router.post(
+  '/verification/phone/verify-otp',
+  publicFormSubmitLimiter,
+  validate(projectFormValidation.verifyFieldVerificationCode),
+  projectFormController.verifyFieldVerificationCode
+);
+
+router.post(
+  '/verification/email/send-otp',
+  publicFormReadLimiter,
+  validate(projectFormValidation.requestFieldVerificationCode),
+  projectFormController.requestFieldVerificationCode
+);
+
+router.post(
+  '/verification/email/verify-otp',
+  publicFormSubmitLimiter,
+  validate(projectFormValidation.verifyFieldVerificationCode),
+  projectFormController.verifyFieldVerificationCode
+);
+
+router.post(
+  '/:formId/generate-id',
+  publicFormReadLimiter,
+  validate(projectFormValidation.generateFormFieldId),
+  projectFormController.generateFormFieldId
+);
+
 // Short-code public alias (strict-gated and sanitized)
 router.get(
   '/public/short/:shortCode',

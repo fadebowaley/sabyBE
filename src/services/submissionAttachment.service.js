@@ -1,3 +1,4 @@
+const path = require('path');
 const { postgresPool } = require('../config/postgres');
 const { Storage, ProjectForm } = require('../models');
 const {
@@ -22,6 +23,23 @@ const collectAttachmentCandidates = (payload, fieldKey = null, acc = []) => {
       mimeType: payload.mimeType,
       sizeBytes: payload.size || payload.fileSize,
       storageUrl: payload.url,
+      storagePath: payload.storagePath || payload.key || null,
+      storageProvider: payload.storageProvider || null,
+    });
+    return acc;
+  }
+
+  if (payload.url && payload.key && (payload.name || payload.filename) && payload.type) {
+    acc.push({
+      fieldId: fieldKey || payload.fieldId || 'attachment',
+      storageFileId: null,
+      originalName: payload.originalName || payload.name || payload.filename,
+      filename: payload.filename || payload.name || path.basename(String(payload.key || 'upload.bin')),
+      mimeType: payload.mimeType || payload.type,
+      sizeBytes: payload.size || payload.fileSize,
+      storageUrl: payload.url,
+      storagePath: payload.storagePath || payload.key || null,
+      storageProvider: payload.storageProvider || 'aws-s3',
     });
     return acc;
   }
@@ -170,13 +188,16 @@ const createAttachmentsFromSubmission = async ({
 
   const attachments = [];
   for (const candidate of candidates) {
-    const storageFile = await Storage.findOne({
-      _id: candidate.storageFileId,
-      tenantId,
-      status: 'active',
-    }).lean();
+    let storageFile = null;
+    if (candidate.storageFileId) {
+      storageFile = await Storage.findOne({
+        _id: candidate.storageFileId,
+        tenantId,
+        status: 'active',
+      }).lean();
+    }
 
-    if (!storageFile) {
+    if (!storageFile && !candidate.storageUrl) {
       continue;
     }
 
@@ -186,19 +207,31 @@ const createAttachmentsFromSubmission = async ({
       projectFormId: projectForm?._id ? String(projectForm._id) : null,
       submissionId: submission.id,
       fieldId: candidate.fieldId,
-      storageFileId: String(storageFile._id),
+      storageFileId: storageFile?._id ? String(storageFile._id) : null,
       nodeId,
       uploadedBy: userId,
-      filename: storageFile.fileName,
-      originalName: storageFile.originalName || candidate.originalName || storageFile.fileName,
-      mimeType: storageFile.mimeType || candidate.mimeType,
-      sizeBytes: storageFile.fileSize || candidate.sizeBytes,
-      storageProvider: storageFile.storageProvider,
-      storagePath: storageFile.storagePath,
-      storageUrl: storageFile.storageUrl || candidate.storageUrl,
-      ingestionMode: storageFile.ingestionMode || 'off',
-      ingestionStatus: storageFile.ingestionStatus || 'pending',
-      ingestionReason: storageFile.ingestionReason || null,
+      filename:
+        storageFile?.fileName ||
+        candidate.filename ||
+        candidate.originalName ||
+        path.basename(String(candidate.storagePath || 'upload.bin')),
+      originalName:
+        storageFile?.originalName ||
+        candidate.originalName ||
+        candidate.filename ||
+        path.basename(String(candidate.storagePath || 'upload.bin')),
+      mimeType: storageFile?.mimeType || candidate.mimeType,
+      sizeBytes: storageFile?.fileSize || candidate.sizeBytes,
+      storageProvider: storageFile?.storageProvider || candidate.storageProvider || 'aws-s3',
+      storagePath: storageFile?.storagePath || candidate.storagePath || null,
+      storageUrl: storageFile?.storageUrl || candidate.storageUrl,
+      ingestionMode: storageFile?.ingestionMode || 'off',
+      ingestionStatus: storageFile?.ingestionStatus || 'skipped',
+      ingestionReason:
+        storageFile?.ingestionReason ||
+        (candidate.storageFileId
+          ? 'storage_record_missing_for_submission_attachment'
+          : 'public_upload_attachment_without_storage_record'),
     });
 
     attachments.push(attachment);

@@ -6,6 +6,7 @@ module.exports.BaselineAnalysisConfig = require('./baselineAnalysisConfig.model'
 module.exports.Capture = require('./capture.model');
 module.exports.Collection = require('./collections.model');
 module.exports.CollectionTag = require('./collectionsTag.model');
+module.exports.Counter = require('./counter.model');
 module.exports.DataPoint = require('./data.model');
 module.exports.Datature = require('./datature.model');
 module.exports.DatatureConfig = require('./datatureConfig.model');

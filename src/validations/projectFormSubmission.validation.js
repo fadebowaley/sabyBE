@@ -7,16 +7,19 @@ const createSubmission = {
     source: Joi.string().optional(),
     submissionData: Joi.object().required(),
     submittedAt: Joi.date().iso(),
-    metadata: Joi.object().keys({
-      submissionId: Joi.string(),
-      source: Joi.string(),
-      userAgent: Joi.string(),
-      ipAddress: Joi.string(),
-      referrer: Joi.string(),
-      timestamp: Joi.number(),
-      deviceInfo: Joi.object(),
-      geolocation: Joi.object(),
-    }),
+    metadata: Joi.object()
+      .keys({
+        submissionId: Joi.string(),
+        source: Joi.string(),
+        userAgent: Joi.string(),
+        ipAddress: Joi.string(),
+        referrer: Joi.string(),
+        timestamp: Joi.number(),
+        deviceInfo: Joi.object(),
+        geolocation: Joi.object(),
+        verificationState: Joi.object().unknown(true),
+      })
+      .unknown(true),
   }),
 };
 
@@ -28,16 +31,19 @@ const createSubmissionByReference = {
     source: Joi.string().optional(),
     submissionData: Joi.object().required(),
     submittedAt: Joi.date().iso(),
-    metadata: Joi.object().keys({
-      submissionId: Joi.string(),
-      source: Joi.string(),
-      userAgent: Joi.string(),
-      ipAddress: Joi.string(),
-      referrer: Joi.string(),
-      timestamp: Joi.number(),
-      deviceInfo: Joi.object(),
-      geolocation: Joi.object(),
-    }),
+    metadata: Joi.object()
+      .keys({
+        submissionId: Joi.string(),
+        source: Joi.string(),
+        userAgent: Joi.string(),
+        ipAddress: Joi.string(),
+        referrer: Joi.string(),
+        timestamp: Joi.number(),
+        deviceInfo: Joi.object(),
+        geolocation: Joi.object(),
+        verificationState: Joi.object().unknown(true),
+      })
+      .unknown(true),
   }),
   query: Joi.object().keys({
     accessToken: Joi.string().optional(),

@@ -18,6 +18,9 @@ const mockPublicAccessService = {
   consumeAccessLink: jest.fn(),
   submitWithAccess: jest.fn(),
   getProjectPublicAccessMetrics: jest.fn(),
+  requestFieldVerificationCode: jest.fn(),
+  verifyFieldVerificationCode: jest.fn(),
+  generateFormFieldId: jest.fn(),
 };
 
 jest.mock('../middlewares/auth', () => () => (req, res, next) => {
@@ -193,6 +196,214 @@ describe('project form public secure routes', () => {
       submissionData: body.submissionData,
       submittedAt: null,
       metadata: body.metadata,
+    });
+  });
+
+  test('POST /v1/project-forms/public/access/submit accepts optional reference in body', async () => {
+    mockPublicAccessService.submitWithAccess.mockResolvedValue({
+      success: true,
+      status: 'completed',
+      mode: 'system_direct_update',
+      projectId: 'proj_user-profile-uknebs',
+      systemTarget: 'user_profile',
+      node: null,
+      result: { updated: true },
+    });
+
+    const body = {
+      accessToken: 'test-access-token',
+      reference: 'frm_user-profile-iezfk6pa',
+      submissionData: {
+        firstname: 'Ada',
+        lastname: 'Lovelace',
+      },
+      metadata: {
+        source: 'public_secure_qr',
+      },
+    };
+
+    const res = await request(app)
+      .post('/v1/project-forms/public/access/submit')
+      .send(body);
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        mode: 'system_direct_update',
+      })
+    );
+    expect(mockPublicAccessService.submitWithAccess).toHaveBeenCalledWith({
+      accessToken: body.accessToken,
+      nodeId: undefined,
+      submissionData: body.submissionData,
+      submittedAt: null,
+      metadata: body.metadata,
+    });
+  });
+
+  test('POST /v1/project-forms/public/access/submit returns replay-safe prior receipt', async () => {
+    mockPublicAccessService.submitWithAccess.mockResolvedValue({
+      success: true,
+      alreadySubmitted: true,
+      status: 'queued',
+      jobId: 'job-001',
+      projectId: 'proj_medical-consultation-form-oez66l',
+      submittedAt: '2026-06-07T19:42:42.497Z',
+      node: {
+        id: 'node-1',
+        nodeId: null,
+        name: '',
+      },
+    });
+
+    const res = await request(app)
+      .post('/v1/project-forms/public/access/submit')
+      .send({
+        accessToken: 'test-access-token',
+        nodeId: 'HLN-000EP',
+        submissionData: {
+          serviceType: 'consultation',
+        },
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        alreadySubmitted: true,
+        jobId: 'job-001',
+      })
+    );
+  });
+
+  test('POST /v1/project-forms/public/access/submit returns processing state for concurrent duplicate', async () => {
+    mockPublicAccessService.submitWithAccess.mockResolvedValue({
+      success: true,
+      processing: true,
+      status: 'submitting',
+      jobId: 'job-001',
+      projectId: 'proj_medical-consultation-form-oez66l',
+      submittedAt: null,
+      node: null,
+    });
+
+    const res = await request(app)
+      .post('/v1/project-forms/public/access/submit')
+      .send({
+        accessToken: 'test-access-token',
+        submissionData: {
+          serviceType: 'consultation',
+        },
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        processing: true,
+        status: 'submitting',
+      })
+    );
+  });
+
+  test('POST /v1/project-forms/verification/phone/send-otp uses shared field verification service', async () => {
+    mockPublicAccessService.requestFieldVerificationCode.mockResolvedValue({
+      success: true,
+      challengeId: 'challenge-1',
+      channel: 'phone',
+      fieldKey: 'membership_phone',
+    });
+
+    const res = await request(app)
+      .post('/v1/project-forms/verification/phone/send-otp')
+      .send({
+        formId: 'form-001',
+        fieldKey: 'membership_phone',
+        channel: 'phone',
+        identifier: '+2348012345678',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        challengeId: 'challenge-1',
+      })
+    );
+    expect(mockPublicAccessService.requestFieldVerificationCode).toHaveBeenCalledWith({
+      formId: 'form-001',
+      fieldKey: 'membership_phone',
+      channel: 'phone',
+      identifier: '+2348012345678',
+      submissionId: undefined,
+      accessToken: undefined,
+    });
+  });
+
+  test('POST /v1/project-forms/verification/email/verify-otp verifies field OTP', async () => {
+    mockPublicAccessService.verifyFieldVerificationCode.mockResolvedValue({
+      success: true,
+      verified: true,
+      fieldKey: 'membership_email',
+      challengeId: 'challenge-1',
+    });
+
+    const res = await request(app)
+      .post('/v1/project-forms/verification/email/verify-otp')
+      .send({
+        challengeId: 'challenge-1',
+        otp: '123456',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        verified: true,
+      })
+    );
+    expect(mockPublicAccessService.verifyFieldVerificationCode).toHaveBeenCalledWith({
+      challengeId: 'challenge-1',
+      otp: '123456',
+    });
+  });
+
+  test('POST /v1/project-forms/:formId/generate-id returns backend-generated membership IDs', async () => {
+    mockPublicAccessService.generateFormFieldId.mockResolvedValue({
+      success: true,
+      formId: 'form-001',
+      fieldKey: 'membership_id',
+      value: 'MEM-000042',
+      sequence: 42,
+    });
+
+    const res = await request(app)
+      .post('/v1/project-forms/form-001/generate-id')
+      .send({
+        tenantId: 'tenant-1',
+        projectId: 'project-1',
+        fieldKey: 'membership_id',
+        prefix: 'MEM',
+        separator: '-',
+        length: 6,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        value: 'MEM-000042',
+      })
+    );
+    expect(mockPublicAccessService.generateFormFieldId).toHaveBeenCalledWith({
+      formId: 'form-001',
+      tenantId: 'tenant-1',
+      projectId: 'project-1',
+      fieldKey: 'membership_id',
+      prefix: 'MEM',
+      separator: '-',
+      length: 6,
     });
   });
 

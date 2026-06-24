@@ -722,6 +722,14 @@ const v2CapabilitiesSchema = Joi.object({
       .required()
       .unknown(true),
     behavior: Joi.object().unknown(true).default({}),
+    previewSubmission: Joi.object({
+      enabled: Joi.boolean().default(false),
+      layout: Joi.string().default('biodata_document'),
+      allowEditBeforeSubmit: Joi.boolean().default(true),
+      showBranding: Joi.boolean().default(true),
+    })
+      .unknown(true)
+      .default({}),
     distribution: Joi.object().unknown(true).default({}),
     notifications: Joi.object().unknown(true).default({}),
     compliance: permSettingsSchema.default({}),
@@ -1039,6 +1047,7 @@ const getPublicAccessPrefill = {
 const submitPublicAccessForm = {
   body: Joi.object().keys({
     accessToken: Joi.string().required(),
+    reference: Joi.string().optional(),
     nodeId: Joi.string().optional().allow('', null),
     source: Joi.string().optional(),
     submissionData: Joi.alternatives()
@@ -1046,6 +1055,39 @@ const submitPublicAccessForm = {
       .required(),
     submittedAt: Joi.string().isoDate().optional(),
     metadata: Joi.object().unknown(true).optional(),
+  }),
+};
+
+const requestFieldVerificationCode = {
+  body: Joi.object().keys({
+    formId: Joi.string().required(),
+    fieldKey: Joi.string().required(),
+    channel: Joi.string().valid('email', 'phone').required(),
+    identifier: Joi.string().required(),
+    submissionId: Joi.string().optional().allow('', null),
+    accessToken: Joi.string().optional().allow('', null),
+  }),
+};
+
+const verifyFieldVerificationCode = {
+  body: Joi.object().keys({
+    challengeId: Joi.string().required(),
+    otp: Joi.string().pattern(/^\d{4,6}$/).required(),
+  }),
+};
+
+const generateFormFieldId = {
+  params: Joi.object().keys({
+    formId: Joi.string().required(),
+  }),
+  body: Joi.object().keys({
+    tenantId: Joi.string().optional().allow('', null),
+    projectId: Joi.string().optional().allow('', null),
+    formId: Joi.string().optional().allow('', null),
+    fieldKey: Joi.string().required(),
+    prefix: Joi.string().optional().allow(''),
+    separator: Joi.string().optional().allow(''),
+    length: Joi.number().integer().min(1).max(12).optional(),
   }),
 };
 
@@ -1306,6 +1348,9 @@ module.exports = {
   consumePublicAccessLink,
   getPublicAccessPrefill,
   submitPublicAccessForm,
+  requestFieldVerificationCode,
+  verifyFieldVerificationCode,
+  generateFormFieldId,
   bootstrapSystemForms,
   getSystemProjectForm,
   submitSystemForm,

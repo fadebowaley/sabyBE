@@ -821,6 +821,42 @@ const submitPublicAccessForm = catchAsync(async (req, res) => {
   res.status(httpStatus.CREATED).send(result);
 });
 
+const requestFieldVerificationCode = catchAsync(async (req, res) => {
+  const result = await projectFormPublicAccessService.requestFieldVerificationCode({
+    formId: req.body.formId,
+    fieldKey: req.body.fieldKey,
+    channel: req.body.channel,
+    identifier: req.body.identifier,
+    submissionId: req.body.submissionId || null,
+    accessToken: req.body.accessToken || null,
+  });
+
+  res.status(httpStatus.OK).send(result);
+});
+
+const verifyFieldVerificationCode = catchAsync(async (req, res) => {
+  const result = await projectFormPublicAccessService.verifyFieldVerificationCode({
+    challengeId: req.body.challengeId,
+    otp: req.body.otp,
+  });
+
+  res.status(httpStatus.OK).send(result);
+});
+
+const generateFormFieldId = catchAsync(async (req, res) => {
+  const result = await projectFormPublicAccessService.generateFormFieldId({
+    formId: req.params.formId,
+    tenantId: req.body.tenantId,
+    projectId: req.body.projectId,
+    fieldKey: req.body.fieldKey,
+    prefix: req.body.prefix,
+    separator: req.body.separator,
+    length: req.body.length,
+  });
+
+  res.status(httpStatus.OK).send(result);
+});
+
 /**
  * Get secure public-access metrics for one module.
  */
@@ -1284,6 +1320,9 @@ module.exports = {
   consumePublicAccessLink,
   getPublicAccessPrefill,
   submitPublicAccessForm,
+  requestFieldVerificationCode,
+  verifyFieldVerificationCode,
+  generateFormFieldId,
   getProjectPublicAccessMetrics,
   getProjectStorageFolder,
   updateProjectForm,
