@@ -5,8 +5,14 @@ const catchAsync = require('../utils/catchAsync');
 const {
   projectFormService,
   projectFormWorkspaceService,
+  projectFormPaymentIntentService,
+  workspaceInvitationService,
+  subscriptionService,
 } = require('../services');
 const projectFormPublicAccessService = require('../services/projectFormPublicAccess.service');
+const publicFormUploadService = require('../services/publicFormUpload.service');
+const projectFormInvoiceService = require('../services/projectFormInvoice.service');
+const paymentWebhookService = require('../services/paymentWebhook.service');
 const {
   invalidateTenantEntityCaches,
 } = require('../services/copilotEntityResolver.service');
@@ -21,6 +27,17 @@ const invalidateProjectResolverCache = async (tenantId) => {
   } catch (_) {
     // non-blocking cache invalidation
   }
+};
+
+const assertWorkspaceTeamAdmin = (user) => {
+  if (user?.isOwner || user?.isAdmin || user?.isSuper || user?.isSaby) {
+    return;
+  }
+
+  throw new ApiError(
+    httpStatus.FORBIDDEN,
+    'Only tenant owners and administrators can manage workspace team access'
+  );
 };
 
 const resolveWorkspaceReadFilter = async ({
@@ -130,12 +147,140 @@ const assertWorkspaceReadAccessForProjectForm = async ({
   });
 };
 
+const asPlainObject = (value) =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? value.toObject
+      ? value.toObject()
+      : value
+    : {};
+
+const hasOwn = (object, key) =>
+  !!object && Object.prototype.hasOwnProperty.call(object, key);
+
+const capabilityEnabled = (value) => value === true;
+
+const serializeComparable = (value) => JSON.stringify(asPlainObject(value));
+
+const buildMergedTransactionCapabilities = ({
+  payload,
+  existingProjectForm = null,
+}) => {
+  const payloadCapabilities = asPlainObject(payload?.capabilities);
+  const payloadTransaction = asPlainObject(payloadCapabilities.transaction);
+  const existingCapabilities = asPlainObject(existingProjectForm?.capabilities);
+  const existingTransaction = asPlainObject(existingCapabilities.transaction);
+
+  const payment = hasOwn(payloadTransaction, 'payment')
+    ? {
+        ...asPlainObject(existingTransaction.payment),
+        ...asPlainObject(payloadTransaction.payment),
+      }
+    : asPlainObject(existingTransaction.payment);
+
+  const remittance = hasOwn(payloadTransaction, 'remittance')
+    ? {
+        ...asPlainObject(existingTransaction.remittance),
+        ...asPlainObject(payloadTransaction.remittance),
+      }
+    : asPlainObject(existingTransaction.remittance);
+
+  return {
+    payloadTransaction,
+    existingTransaction,
+    payment,
+    remittance,
+  };
+};
+
+const assertProjectFormTransactionCapabilityAccess = async ({
+  tenantId,
+  payload,
+  existingProjectForm = null,
+}) => {
+  const {
+    payloadTransaction,
+    existingTransaction,
+    payment,
+    remittance,
+  } = buildMergedTransactionCapabilities({
+    payload,
+    existingProjectForm,
+  });
+
+  const touchesPayment = hasOwn(payloadTransaction, 'payment');
+  const touchesRemittance = hasOwn(payloadTransaction, 'remittance');
+  if (!touchesPayment && !touchesRemittance) {
+    return;
+  }
+
+  const existingPayment = asPlainObject(existingTransaction.payment);
+  const existingRemittance = asPlainObject(existingTransaction.remittance);
+  const paymentChanged =
+    touchesPayment &&
+    serializeComparable(existingPayment) !== serializeComparable(payment);
+  const remittanceChanged =
+    touchesRemittance &&
+    serializeComparable(existingRemittance) !== serializeComparable(remittance);
+
+  if (!paymentChanged && !remittanceChanged) {
+    return;
+  }
+
+  const subscription = await subscriptionService.getCurrentSubscription(tenantId, {
+    refreshUsage: false,
+  });
+  const status = String(subscription?.status || '').trim().toLowerCase();
+  const capabilities = subscription?.entitlements?.capabilities || {};
+
+  const assertCapability = (capabilityKey, message) => {
+    if (status !== 'active') {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        'An active workspace subscription is required to update this transaction capability.'
+      );
+    }
+
+    if (!capabilities?.[capabilityKey]) {
+      throw new ApiError(httpStatus.FORBIDDEN, message);
+    }
+  };
+
+  if (paymentChanged && capabilityEnabled(payment.enabled)) {
+    assertCapability(
+      'paymentsCollection',
+      'Payment collection is not available on the current workspace subscription.'
+    );
+  }
+
+  if (remittanceChanged && capabilityEnabled(remittance.enabled)) {
+    assertCapability(
+      'settlement',
+      'Settlement is not available on the current workspace subscription.'
+    );
+  }
+};
+
+const assertFormCreationHeadroom = async (tenantId) =>
+  subscriptionService.assertSubscriptionLimit({
+    tenantId,
+    limitKey: 'forms',
+    delta: 1,
+    message:
+      'Your current workspace subscription has reached its form limit. Upgrade billing to create another module.',
+  });
+
 /**
  * Create a project form
  */
 const createProjectForm = catchAsync(async (req, res) => {
   const { tenantId } = req.user;
   const createdBy = req.user._id;
+
+  await assertFormCreationHeadroom(tenantId);
+  await assertProjectFormTransactionCapabilityAccess({
+    tenantId,
+    payload: req.body,
+  });
 
   const projectForm = await projectFormService.createProjectForm(
     req.body,
@@ -278,9 +423,14 @@ const getProjectForms = catchAsync(async (req, res) => {
  */
 const listProjectWorkspaces = catchAsync(async (req, res) => {
   const { tenantId, _id: userId } = req.user;
+  const includeAll = String(req.query?.includeAll || '').trim() === 'true';
+  if (includeAll) {
+    assertWorkspaceTeamAdmin(req.user);
+  }
   const result = await projectFormWorkspaceService.listWorkspaces({
     tenantId,
     userId,
+    includeAll,
   });
   console.log(
     '[ProjectForms][listWorkspaces]',
@@ -310,6 +460,7 @@ const listProjectWorkspaces = catchAsync(async (req, res) => {
  * Create workspace
  */
 const createProjectWorkspace = catchAsync(async (req, res) => {
+  assertWorkspaceTeamAdmin(req.user);
   const { tenantId, _id: userId } = req.user;
   const workspace = await projectFormWorkspaceService.createWorkspace({
     tenantId,
@@ -342,10 +493,23 @@ const renameProjectWorkspace = catchAsync(async (req, res) => {
   });
 });
 
+const listProjectWorkspaceMembers = catchAsync(async (req, res) => {
+  assertWorkspaceTeamAdmin(req.user);
+  const { tenantId, _id: userId } = req.user;
+  const includeAll = String(req.query?.includeAll || '').trim() === 'true';
+  const result = await projectFormWorkspaceService.listWorkspaceMembers({
+    tenantId,
+    userId,
+    includeAll,
+  });
+  res.send(result);
+});
+
 /**
  * Add workspace member
  */
 const addProjectWorkspaceMember = catchAsync(async (req, res) => {
+  assertWorkspaceTeamAdmin(req.user);
   const { tenantId, _id: userId } = req.user;
   const { workspaceId } = req.params;
   const result = await projectFormWorkspaceService.addWorkspaceMember({
@@ -353,9 +517,29 @@ const addProjectWorkspaceMember = catchAsync(async (req, res) => {
     actorUserId: userId,
     workspaceId,
     role: req.body?.role,
+    accessProfileId: req.body?.accessProfileId,
     userId: req.body?.userId,
     email: req.body?.email,
   });
+
+  try {
+    if (req.body?.accessProfileId) {
+      await workspaceInvitationService.syncWorkspaceAccessProfilesForUser({
+        tenantId,
+        actorUserId: userId,
+        targetUserId: result?.member?.userId,
+      });
+    }
+  } catch (error) {
+    await projectFormWorkspaceService.removeWorkspaceMember({
+      tenantId,
+      actorUserId: userId,
+      workspaceId,
+      userId: result?.member?.userId,
+    });
+    throw error;
+  }
+
   res.send({
     message: 'Workspace member updated successfully',
     ...result,
@@ -366,6 +550,7 @@ const addProjectWorkspaceMember = catchAsync(async (req, res) => {
  * Remove workspace member
  */
 const removeProjectWorkspaceMember = catchAsync(async (req, res) => {
+  assertWorkspaceTeamAdmin(req.user);
   const { tenantId, _id: actorUserId } = req.user;
   const { workspaceId, userId } = req.params;
   const workspace = await projectFormWorkspaceService.removeWorkspaceMember({
@@ -374,9 +559,104 @@ const removeProjectWorkspaceMember = catchAsync(async (req, res) => {
     workspaceId,
     userId,
   });
+  await workspaceInvitationService.syncWorkspaceAccessProfilesForUser({
+    tenantId,
+    actorUserId,
+    targetUserId: userId,
+  });
   res.send({
     message: 'Workspace member removed successfully',
     workspace,
+  });
+});
+
+const listWorkspaceInvitations = catchAsync(async (req, res) => {
+  assertWorkspaceTeamAdmin(req.user);
+  const { tenantId, _id: actorUserId } = req.user;
+  const { workspaceId } = req.params;
+  const invitations = await workspaceInvitationService.listWorkspaceInvitations({
+    tenantId,
+    actorUserId,
+    workspaceId,
+  });
+  res.send({
+    invitations,
+  });
+});
+
+const createWorkspaceInvitation = catchAsync(async (req, res) => {
+  assertWorkspaceTeamAdmin(req.user);
+  const { tenantId, _id: actorUserId } = req.user;
+  const { workspaceId } = req.params;
+  const invitation = await workspaceInvitationService.createWorkspaceInvitation({
+    tenantId,
+    actorUserId,
+    workspaceId,
+    email: req.body?.email,
+    firstname: req.body?.firstname,
+    lastname: req.body?.lastname,
+    phoneNumber: req.body?.phoneNumber,
+    accessProfileId: req.body?.accessProfileId,
+    redirectPath: req.body?.redirectPath,
+  });
+  res.status(httpStatus.CREATED).send({
+    message: 'Workspace invitation created successfully',
+    invitation,
+  });
+});
+
+const resendWorkspaceInvitation = catchAsync(async (req, res) => {
+  assertWorkspaceTeamAdmin(req.user);
+  const { tenantId, _id: actorUserId } = req.user;
+  const { workspaceId, invitationId } = req.params;
+  const invitation = await workspaceInvitationService.resendWorkspaceInvitation({
+    tenantId,
+    actorUserId,
+    workspaceId,
+    invitationId,
+  });
+  res.send({
+    message: 'Workspace invitation resent successfully',
+    invitation,
+  });
+});
+
+const revokeWorkspaceInvitation = catchAsync(async (req, res) => {
+  assertWorkspaceTeamAdmin(req.user);
+  const { tenantId, _id: actorUserId } = req.user;
+  const { workspaceId, invitationId } = req.params;
+  const invitation = await workspaceInvitationService.revokeWorkspaceInvitation({
+    tenantId,
+    actorUserId,
+    workspaceId,
+    invitationId,
+  });
+  res.send({
+    message: 'Workspace invitation revoked successfully',
+    invitation,
+  });
+});
+
+const getWorkspaceInvitation = catchAsync(async (req, res) => {
+  const invitation = await workspaceInvitationService.getWorkspaceInvitationByToken(
+    req.params.token
+  );
+  res.send({
+    invitation,
+  });
+});
+
+const acceptWorkspaceInvitation = catchAsync(async (req, res) => {
+  const result = await workspaceInvitationService.acceptWorkspaceInvitation({
+    token: req.params.token,
+    firstname: req.body?.firstname,
+    lastname: req.body?.lastname,
+    password: req.body?.password,
+    phoneNumber: req.body?.phoneNumber,
+  });
+  res.send({
+    message: 'Workspace invitation accepted successfully',
+    ...result,
   });
 });
 
@@ -421,6 +701,7 @@ const deleteProjectWorkspace = catchAsync(async (req, res) => {
 const duplicateProjectForm = catchAsync(async (req, res) => {
   const { tenantId, _id: actorUserId } = req.user;
   const { projectId } = req.params;
+  await assertFormCreationHeadroom(tenantId);
   const duplicated = await projectFormService.duplicateProjectFormByProjectId({
     projectId,
     tenantId,
@@ -754,6 +1035,24 @@ const verifyPublicAccessCode = catchAsync(async (req, res) => {
 });
 
 /**
+ * Verify public access code and return secure access token/context.
+ */
+const verifyPublicAccessGateCode = catchAsync(async (req, res) => {
+  const { reference, accessCode, qrContextToken } = req.body;
+  const result = await projectFormPublicAccessService.verifyAccessGateCode({
+    reference,
+    accessCode,
+    qrContextToken: qrContextToken || null,
+    requestContext: {
+      ip: req.ip || req.headers['x-forwarded-for'] || null,
+      userAgent: req.get('user-agent') || null,
+    },
+  });
+
+  res.status(httpStatus.OK).send(result);
+});
+
+/**
  * Resend OTP challenge code for secure public form access.
  */
 const resendPublicAccessCode = catchAsync(async (req, res) => {
@@ -815,7 +1114,15 @@ const submitPublicAccessForm = catchAsync(async (req, res) => {
     nodeId: req.body?.nodeId,
     submissionData: req.body?.submissionData,
     submittedAt: req.body?.submittedAt || null,
+    eventDate: req.body?.event_date || null,
+    submissionDate: req.body?.submission_date || null,
+    month: req.body?.month || null,
+    year: req.body?.year || null,
     metadata: req.body?.metadata || {},
+    requestContext: {
+      ip: req.ip || req.headers['x-forwarded-for'] || null,
+      userAgent: req.get('user-agent') || null,
+    },
   });
 
   res.status(httpStatus.CREATED).send(result);
@@ -843,6 +1150,42 @@ const verifyFieldVerificationCode = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).send(result);
 });
 
+const initiatePublicUpload = catchAsync(async (req, res) => {
+  const result = await publicFormUploadService.initiatePublicUpload({
+    formId: req.params.formId,
+    tenantId: req.body.tenantId || null,
+    projectId: req.body.projectId || null,
+    fieldId: req.body.fieldId,
+    fileName: req.body.fileName,
+    mimeType: req.body.mimeType,
+    sizeBytes: req.body.sizeBytes,
+    reference: req.body.reference || null,
+    accessToken: req.body.accessToken || null,
+    sessionKey: req.body.sessionKey || null,
+  });
+
+  res.status(httpStatus.CREATED).send({
+    success: true,
+    ...result,
+  });
+});
+
+const completePublicUpload = catchAsync(async (req, res) => {
+  const result = await publicFormUploadService.completePublicUpload({
+    uploadId: req.body.uploadId,
+    reference: req.body.reference || null,
+    accessToken: req.body.accessToken || null,
+    sessionKey: req.body.sessionKey || null,
+    width: req.body.width ?? null,
+    height: req.body.height ?? null,
+  });
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    upload: result,
+  });
+});
+
 const generateFormFieldId = catchAsync(async (req, res) => {
   const result = await projectFormPublicAccessService.generateFormFieldId({
     formId: req.params.formId,
@@ -855,6 +1198,90 @@ const generateFormFieldId = catchAsync(async (req, res) => {
   });
 
   res.status(httpStatus.OK).send(result);
+});
+
+const evaluatePublicInvoice = catchAsync(async (req, res) => {
+  const projectForm = await projectFormPublicAccessService.ensureProjectFormAccess({
+    formId: req.params.formId,
+    tenantId: req.body.tenantId,
+    projectId: req.body.projectId,
+  });
+
+  const invoice = await projectFormInvoiceService.evaluateInvoiceSnapshot({
+    projectForm,
+    submissionData: req.body.submissionData || {},
+  });
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    invoice,
+  });
+});
+
+const createPublicPaymentIntent = catchAsync(async (req, res) => {
+  const projectForm = await projectFormPublicAccessService.ensureProjectFormAccess({
+    formId: req.params.formId,
+    tenantId: req.body.tenantId,
+    projectId: req.body.projectId,
+  });
+
+  const result =
+    await projectFormPaymentIntentService.createProjectFormPaymentIntent({
+      projectForm,
+      submissionData: req.body.submissionData || {},
+      requestedChannel: req.body.requestedChannel || null,
+      triggerStage: req.body.triggerStage || 'submission',
+      submissionId: req.body.submissionId || null,
+      respondentContext:
+        req.body.respondentContext && typeof req.body.respondentContext === 'object'
+          ? req.body.respondentContext
+          : {},
+    });
+
+  res.status(result.created ? httpStatus.CREATED : httpStatus.OK).send({
+    success: true,
+    ...result,
+  });
+});
+
+const getPublicPaymentStatus = catchAsync(async (req, res) => {
+  const projectForm = await projectFormPublicAccessService.ensureProjectFormAccess({
+    formId: req.params.formId,
+    tenantId: req.query.tenantId,
+    projectId: req.query.projectId,
+  });
+
+  const returnProvider = String(req.query.provider || '').trim().toLowerCase();
+  const transactionId = String(
+    req.query.transaction_id || req.query.transactionId || ''
+  ).trim();
+  const txRef = String(req.query.tx_ref || '').trim();
+  if (txRef && txRef !== req.params.reference) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Payment return reference does not match requested payment.'
+    );
+  }
+  if (returnProvider === 'flutterwave' || transactionId || txRef) {
+    await paymentWebhookService.verifyAndCompleteProviderPayment({
+      provider: returnProvider || 'flutterwave',
+      paymentReference: req.params.reference,
+      transactionId: transactionId || null,
+      source: 'project-form-payment-return',
+      sourceRef: String(projectForm._id || projectForm.formId || req.params.formId),
+    });
+  }
+
+  const payment =
+    await projectFormPaymentIntentService.getProjectFormPaymentStatus({
+      projectForm,
+      paymentReference: req.params.reference,
+    });
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    payment,
+  });
 });
 
 /**
@@ -904,6 +1331,11 @@ const updateProjectForm = catchAsync(async (req, res) => {
     projectForm: existingProjectForm,
     userId: req.user._id,
   });
+  await assertProjectFormTransactionCapabilityAccess({
+    tenantId: req.user.tenantId,
+    payload: req.body,
+    existingProjectForm,
+  });
 
   const projectForm = await projectFormService.updateProjectFormById(
     projectFormId,
@@ -933,6 +1365,11 @@ const updateProjectFormByProjectId = catchAsync(async (req, res) => {
   await assertWorkspaceWriteAccessForProjectForm({
     projectForm: existingProjectForm,
     userId: req.user._id,
+  });
+  await assertProjectFormTransactionCapabilityAccess({
+    tenantId: req.user.tenantId,
+    payload: req.body,
+    existingProjectForm,
   });
 
   const projectForm = await projectFormService.updateProjectFormByProjectId(
@@ -1150,13 +1587,30 @@ const updatePaymentConfig = catchAsync(async (req, res) => {
     );
   }
 
+  await assertProjectFormTransactionCapabilityAccess({
+    tenantId: req.user.tenantId,
+    payload: {
+      capabilities: {
+        transaction: {
+          payment: {
+            enabled: true,
+            enabledChannels,
+            channelConfigs,
+            defaultChannel: enabledChannels?.[0] || 'sabypay',
+          },
+        },
+      },
+    },
+    existingProjectForm: projectForm,
+  });
+
   projectForm.capabilities = projectForm.capabilities || {};
   projectForm.capabilities.transaction = projectForm.capabilities.transaction || {};
   projectForm.capabilities.transaction.payment = {
     enabled: true,
     enabledChannels,
     channelConfigs,
-    defaultChannel: enabledChannels[0] || 'sabypipe',
+    defaultChannel: enabledChannels[0] || 'sabypay',
   };
 
   await projectForm.save();
@@ -1304,8 +1758,15 @@ module.exports = {
   renameProjectWorkspace,
   addProjectWorkspaceMember,
   removeProjectWorkspaceMember,
+  listWorkspaceInvitations,
+  createWorkspaceInvitation,
+  resendWorkspaceInvitation,
+  revokeWorkspaceInvitation,
+  getWorkspaceInvitation,
+  acceptWorkspaceInvitation,
   leaveProjectWorkspace,
   deleteProjectWorkspace,
+  listProjectWorkspaceMembers,
   getProjectFormsByTenant,
   getProjectFormsByUser,
   getProjectForm,
@@ -1316,13 +1777,19 @@ module.exports = {
   requestPublicAccessLink,
   requestPublicAccessCode,
   verifyPublicAccessCode,
+  verifyPublicAccessGateCode,
   resendPublicAccessCode,
   consumePublicAccessLink,
   getPublicAccessPrefill,
   submitPublicAccessForm,
   requestFieldVerificationCode,
   verifyFieldVerificationCode,
+  initiatePublicUpload,
+  completePublicUpload,
   generateFormFieldId,
+  evaluatePublicInvoice,
+  createPublicPaymentIntent,
+  getPublicPaymentStatus,
   getProjectPublicAccessMetrics,
   getProjectStorageFolder,
   updateProjectForm,

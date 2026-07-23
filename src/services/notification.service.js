@@ -1,5 +1,4 @@
-const { sendEmail } = require('./email.service');
-const config = require('../config/config');
+const { sendSabyEmail } = require('./email.service');
 const logger = require('../config/logger');
 
 class NotificationService {
@@ -12,13 +11,30 @@ class NotificationService {
    */
   async sendSubmissionConfirmation(submission, user, projectForm) {
     try {
-      const emailTemplate = this.createConfirmationTemplate(
-        submission,
-        user,
-        projectForm
-      );
+      const submissionDate = new Date(submission.createdAt).toLocaleString();
+      const projectName = projectForm?.identity?.name || 'Project';
+      const userName = [user.firstname, user.lastname].filter(Boolean).join(' ') || 'User';
 
-      await sendEmail(user.email, emailTemplate.subject, emailTemplate.text);
+      await sendSabyEmail({
+        to: user.email,
+        subject: `Submission received - ${projectName}`,
+        preheader: `Your submission to ${projectName} has been received.`,
+        layout: 'submissionStatus',
+        label: 'Submission received',
+        icon: 'IN',
+        headline: 'Your submission is in Saby.',
+        body: [
+          `Hello ${userName},`,
+          `We have received your submission to ${projectName} and placed it in the processing queue.`,
+          'Saby will review the data, run validation checks, and notify you when the next update is available.',
+        ],
+        detailsRows: [
+          ['Project', projectName],
+          ['Submission ID', submission._id],
+          ['Submitted', submissionDate],
+          ['Status', 'Received and queued'],
+        ],
+      });
 
       logger.info(
         `✅ Confirmation email sent to ${user.email} for submission ${submission._id}`
@@ -58,14 +74,51 @@ class NotificationService {
     status = 'processing'
   ) {
     try {
-      const emailTemplate = this.createProcessingTemplate(
-        submission,
-        user,
-        projectForm,
-        status
-      );
+      const submissionDate = new Date(submission.createdAt).toLocaleString();
+      const projectName = projectForm?.identity?.name || 'Project';
+      const userName = [user.firstname, user.lastname].filter(Boolean).join(' ') || 'User';
+      const statusText =
+        status === 'completed'
+          ? 'Completed successfully'
+          : status === 'failed'
+            ? 'Processing failed'
+            : 'Processing';
+      const statusMessage =
+        status === 'completed'
+          ? 'Your submission has been processed successfully and is now available in Saby.'
+          : status === 'failed'
+            ? 'There was an issue processing your submission. Please contact support for assistance.'
+            : 'Your submission is currently being processed. We will notify you when it is complete.';
 
-      await sendEmail(user.email, emailTemplate.subject, emailTemplate.text);
+      await sendSabyEmail({
+        to: user.email,
+        subject: `Submission ${statusText.toLowerCase()} - ${projectName}`,
+        preheader: statusMessage,
+        layout: status === 'failed' ? 'validationIssue' : 'submissionStatus',
+        label: status === 'failed' ? 'Submission issue' : 'Submission processing',
+        icon: status === 'failed' ? 'FIX' : 'RUN',
+        headline:
+          status === 'completed'
+            ? 'Submission processed.'
+            : status === 'failed'
+              ? 'Processing failed.'
+              : 'Saby is processing your submission.',
+        body: [
+          `Hello ${userName},`,
+          status === 'processing'
+            ? `Your submission to ${projectName} is now being processed. We are checking the data and preparing the result.`
+            : statusMessage,
+          status === 'processing'
+            ? 'You will receive another update if action is required or once processing is complete.'
+            : 'You can review the latest status in Saby.',
+        ],
+        detailsRows: [
+          ['Project', projectName],
+          ['Submission ID', submission._id],
+          ['Submitted', submissionDate],
+          ['Status', statusText],
+        ],
+      });
 
       logger.info(
         `✅ Processing notification sent to ${user.email} for submission ${submission._id}`

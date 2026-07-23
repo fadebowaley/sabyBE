@@ -7,6 +7,7 @@
 const express = require('express');
 const auth = require('../../middlewares/auth');
 const workflowController = require('../../controllers/workflow.controller');
+const requireSubscriptionCapability = require('../../middlewares/requireSubscriptionCapability');
 
 const router = express.Router();
 
@@ -18,6 +19,11 @@ const router = express.Router();
  */
 
 // ── Approval inbox — steps waiting for the caller's role ──────────────────
-router.get('/inbox', auth(), workflowController.getInbox);
+router.get(
+  '/inbox',
+  auth(),
+  requireSubscriptionCapability('workflowsApprovals'),
+  workflowController.getInbox
+);
 
 module.exports = router;

@@ -9,6 +9,7 @@ const { sendOtpEmail } = require('./email.service');
 const smsService = require('./sms.service');
 const { User } = require('../models');
 const logger = require('../config/logger');
+const appAccessService = require('./appAccess.service');
 
 const loginUserWithEmailAndPassword = async (
   email,
@@ -28,9 +29,10 @@ const loginUserWithEmailAndPassword = async (
     throw error;
   }
 
-  // Allow all users (including ordinary users) to access web portal
-  // API key is optional for enhanced security but not required
-  // Removed: Channel-aware access control restriction for ordinary users
+  if (channel === 'web') {
+    await appAccessService.assertMainAppAccess(user);
+  }
+
   return user;
 };
 
@@ -269,6 +271,7 @@ const updateUserPassword = async (userId, newPassword) => {
 
 module.exports = {
   loginUserWithEmailAndPassword,
+  assertMainAppAccess: appAccessService.assertMainAppAccess,
   logout,
   refreshAuth,
   resetPassword,

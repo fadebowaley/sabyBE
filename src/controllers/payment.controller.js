@@ -3,12 +3,45 @@ const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { paymentService } = require('../services');
+const subscriptionCheckoutService = require('../services/subscriptionCheckout.service');
 const copilotActionService = require('../services/copilotAction.service');
 const paymentWebhookService = require('../services/paymentWebhook.service');
 
 const getRequestTenantId = (req) => req.user?.tenantId || req.query.tenantId;
 const getActorUserId = (req) =>
   req.user?._id || req.user?.id || req.user?.userId || null;
+
+const sendPaymentPdf = (res, document, fallbackName) => {
+  res.setHeader('Content-Type', document.contentType || 'application/pdf');
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${document.fileName || fallbackName}"`
+  );
+  res.send(document.content || '');
+};
+
+const initializeSubscriptionCheckout = catchAsync(async (req, res) => {
+  const result = await subscriptionCheckoutService.initializeSubscriptionCheckout({
+    user: req.user,
+    payload: req.body,
+  });
+
+  res.status(httpStatus.CREATED).send({
+    plan: result.plan,
+    pricing: result.pricing,
+    addOns: result.addOns,
+    payment: {
+      id: result.payment.id || result.payment._id,
+      reference: result.payment.reference,
+      status: result.payment.status,
+      amount: result.payment.amount,
+      total: result.payment.total,
+      currency: result.payment.currency,
+      paymentMethod: result.payment.paymentMethod,
+    },
+    checkout: result.checkout,
+  });
+});
 
 // Create a new payment
 const createPayment = catchAsync(async (req, res) => {
@@ -271,7 +304,47 @@ const generatePaymentReceipt = catchAsync(async (req, res) => {
     req.params.paymentId,
     getRequestTenantId(req)
   );
-  res.send(receipt);
+  sendPaymentPdf(res, receipt, `saby-receipt-${req.params.paymentId}.pdf`);
+});
+
+const generatePaymentInvoice = catchAsync(async (req, res) => {
+  const invoice = await paymentService.generatePaymentInvoice(
+    req.params.paymentId,
+    getRequestTenantId(req)
+  );
+  sendPaymentPdf(res, invoice, `saby-invoice-${req.params.paymentId}.pdf`);
+});
+
+const generatePaymentBillingDocument = catchAsync(async (req, res) => {
+  const document = await paymentService.generatePaymentBillingDocument(
+    req.params.paymentId,
+    getRequestTenantId(req)
+  );
+  sendPaymentPdf(res, document, `saby-${document.type || 'billing-document'}-${req.params.paymentId}.pdf`);
+});
+
+const generatePaymentReceiptByReference = catchAsync(async (req, res) => {
+  const receipt = await paymentService.generatePaymentReceiptByReference(
+    req.params.reference,
+    getRequestTenantId(req)
+  );
+  sendPaymentPdf(res, receipt, `saby-receipt-${req.params.reference}.pdf`);
+});
+
+const generatePaymentInvoiceByReference = catchAsync(async (req, res) => {
+  const invoice = await paymentService.generatePaymentInvoiceByReference(
+    req.params.reference,
+    getRequestTenantId(req)
+  );
+  sendPaymentPdf(res, invoice, `saby-invoice-${req.params.reference}.pdf`);
+});
+
+const generatePaymentBillingDocumentByReference = catchAsync(async (req, res) => {
+  const document = await paymentService.generatePaymentBillingDocumentByReference(
+    req.params.reference,
+    getRequestTenantId(req)
+  );
+  sendPaymentPdf(res, document, `saby-${document.type || 'billing-document'}-${req.params.reference}.pdf`);
 });
 
 // Payment provider webhook (signature-verified, replay-safe)
@@ -314,7 +387,35 @@ const paymentWebhook = catchAsync(async (req, res) => {
   });
 });
 
+const verifyPaymentReturn = catchAsync(async (req, res) => {
+  const { provider, paymentReference, transactionId } = req.body;
+  const tenantId = getRequestTenantId(req);
+  const actorUserId = getActorUserId(req);
+
+  await paymentService.getPaymentByReference(paymentReference, tenantId);
+
+  const result = await paymentWebhookService.verifyAndCompleteProviderPayment({
+    provider,
+    paymentReference,
+    transactionId,
+    source: 'provider-return',
+    sourceRef: `${actorUserId || 'user'}:${tenantId}`,
+  });
+
+  res.send({
+    payment: {
+      id: result._id || result.id,
+      reference: result.reference,
+      status: result.status,
+      amount: result.amount,
+      total: result.total,
+      currency: result.currency,
+    },
+  });
+});
+
 module.exports = {
+  initializeSubscriptionCheckout,
   createPayment,
   getPayment,
   getPaymentByReference,
@@ -327,6 +428,12 @@ module.exports = {
   completePayment,
   cancelPayment,
   refundPayment,
+  generatePaymentInvoice,
   generatePaymentReceipt,
+  generatePaymentBillingDocument,
+  generatePaymentInvoiceByReference,
+  generatePaymentReceiptByReference,
+  generatePaymentBillingDocumentByReference,
   paymentWebhook,
+  verifyPaymentReturn,
 };

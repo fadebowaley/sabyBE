@@ -1,8 +1,12 @@
 const config = require('../config/config');
 const logger = require('../config/logger');
-const { Payment } = require('../models');
+const { Payment, PaymentSettlement } = require('../models');
 const paymentEventService = require('./paymentEvent.service');
 const paymentRemittanceService = require('./paymentRemittance.service');
+const paymentSettlementService = require('./paymentSettlement.service');
+const flutterwaveSettlementService = require('./flutterwaveSettlement.service');
+
+const toIsoDate = (date) => new Date(date).toISOString().slice(0, 10);
 
 const runReconciliationSweep = async () => {
   const stuckMinutes = Number(config.payment?.reconciliation?.stuckMinutes) || 45;
@@ -61,6 +65,7 @@ const runReconciliationSweep = async () => {
     .limit(batchSize);
 
   let remittanceQueued = 0;
+  let providerSettled = 0;
   for (const payment of remittanceCandidates) {
     const result = await paymentRemittanceService.enqueueIfEligible(payment, {
       trigger: 'payment.reconciliation.sweep',
@@ -70,13 +75,86 @@ const runReconciliationSweep = async () => {
     }
   }
 
+  const settlementLookbackDays =
+    Number(config.payment?.settlementGuardrails?.lookbackDays) || 7;
+  const settlementMaxPages =
+    Number(config.payment?.settlementGuardrails?.maxPages) || 5;
+  const pendingSettlements = await PaymentSettlement.find({
+    provider: 'flutterwave',
+    fundingStatus: { $in: ['provider_verified', 'unconfirmed', 'blocked_guardrail'] },
+    status: { $in: ['pending', 'queued'] },
+  })
+    .sort({ createdAt: -1 })
+    .limit(batchSize);
+
+  for (const settlement of pendingSettlements) {
+    const payment = await Payment.findById(settlement.paymentId);
+    if (!payment || payment.status !== 'completed') {
+      continue;
+    }
+
+    const baseDate = payment.completedAt || payment.createdAt || settlement.createdAt;
+    const from = toIsoDate(
+      new Date(new Date(baseDate).getTime() - settlementLookbackDays * 86400000)
+    );
+    const to = toIsoDate(new Date());
+    const match = await flutterwaveSettlementService.findSettledTransaction({
+      payment,
+      settlement,
+      from,
+      to,
+      maxPages: settlementMaxPages,
+    });
+
+    if (!match?.matched) {
+      continue;
+    }
+
+    await paymentSettlementService.markSettlementProviderSettled({
+      settlement,
+      providerSettlementId: match.providerSettlementId,
+      providerSettledAt: match.providerSettledAt || new Date(),
+      metadata: {
+        transaction: match.transaction,
+        settlementBatch: match.settlementBatch,
+      },
+    });
+
+    await paymentEventService.appendPaymentEvent({
+      tenantId: payment.tenantId,
+      payment,
+      eventType: 'provider_settlement_confirmed',
+      fromStatus: payment.status,
+      toStatus: payment.status,
+      userId: payment.userId,
+      source: 'payment.reconciliation.sweep',
+      sourceRef: String(settlement._id || settlement.id),
+      dedupeKey: `provider-settlement-confirmed:${settlement.id}:${match.providerSettlementId}`,
+      metadata: {
+        settlementId: String(settlement._id || settlement.id),
+        providerSettlementId: match.providerSettlementId,
+        providerSettledAt: match.providerSettledAt,
+        paymentReference: payment.reference,
+      },
+    });
+
+    const result = await paymentRemittanceService.enqueueIfEligible(payment, {
+      trigger: 'payment.reconciliation.provider-settled',
+    });
+    if (result?.queued) {
+      remittanceQueued += 1;
+    }
+    providerSettled += 1;
+  }
+
   logger.info(
-    `[Payment Reconciliation] Sweep done. failed=${failedCount}, remittanceQueued=${remittanceQueued}, scanned=${stuckPayments.length}`
+    `[Payment Reconciliation] Sweep done. failed=${failedCount}, remittanceQueued=${remittanceQueued}, providerSettled=${providerSettled}, scanned=${stuckPayments.length}`
   );
 
   return {
     failedCount,
     remittanceQueued,
+    providerSettled,
     scannedStuck: stuckPayments.length,
     cutoff: cutoff.toISOString(),
   };

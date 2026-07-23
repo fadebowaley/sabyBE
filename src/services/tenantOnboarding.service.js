@@ -11,6 +11,7 @@ const {
 } = require('../models');
 const ApiError = require('../utils/ApiError');
 const { upsertNodeDimension } = require('./nodeSync.service');
+const { invalidateStudioAccessState } = require('./studioAccess.service');
 
 const sanitizeText = (value, fallback = '') =>
   String(value == null ? fallback : value).trim();
@@ -668,6 +669,7 @@ const saveOnboardingDraft = async ({ userId, payload }) => {
     requiresOnboarding: true,
     onboardingCompletedAt: null,
   });
+  await invalidateStudioAccessState({ tenantId, userId: user._id });
 
   return {
     ok: true,
@@ -921,6 +923,7 @@ const completeOnboarding = async ({ userId, payload }) => {
     requiresOnboarding: false,
     onboardingCompletedAt: new Date(),
   });
+  await invalidateStudioAccessState({ tenantId, userId: user._id });
 
   return {
     tenantId,

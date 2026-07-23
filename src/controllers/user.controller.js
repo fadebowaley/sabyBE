@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
-const { userService } = require('../services');
+const { userService, subscriptionService } = require('../services');
 const copilotActionService = require('../services/copilotAction.service');
 const {
   invalidateTenantEntityCaches,
@@ -22,9 +22,21 @@ const invalidateUserResolverCache = async (tenantId) => {
   }
 };
 
+const assertSeatHeadroom = async (tenantId, seatCount = 1) =>
+  subscriptionService.assertSubscriptionLimit({
+    tenantId,
+    limitKey: 'seats',
+    delta: seatCount,
+    message:
+      seatCount > 1
+        ? 'Your current workspace subscription does not have enough seat capacity for this bulk invite. Upgrade billing to add more team members.'
+        : 'Your current workspace subscription has reached its seat limit. Upgrade billing to add another team member.',
+  });
+
 // Function to create users by owner Profile
 const ownerCreate = catchAsync(async (req, res) => {
   req.body.createdBy = req.user._id; // 🔐 enforce ownership context
+  await assertSeatHeadroom(req.user.tenantId, 1);
   const user = await userService.ownerCreate(req.body);
   await invalidateUserResolverCache(req.user?.tenantId || user?.tenantId);
   await copilotActionService.recordExistingAction({
@@ -69,6 +81,7 @@ const createSabyUser = catchAsync(async (req, res) => {
 const bulkCreate = catchAsync(async (req, res) => {
   const createdBy = req.user.id;
   const { tenantId } = req.user;
+  await assertSeatHeadroom(tenantId, Array.isArray(req.body) ? req.body.length : 0);
   // Validate that createdBy is a valid ObjectId if required
 
   // Call the bulkCreate method from the user service

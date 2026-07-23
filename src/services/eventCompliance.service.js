@@ -403,6 +403,9 @@ const calculateCompliance = async (submissionData, calendar) => {
     case 'weekly':
       return calculateWeeklyCompliance(submissionData, calendar);
 
+    case 'monthly':
+      return calculateMonthlyCompliance(submissionData, calendar);
+
     default:
       throw new Error(`Unknown tracking mode: ${trackingMode}`);
   }
@@ -413,8 +416,12 @@ const calculateCompliance = async (submissionData, calendar) => {
  * Simple binary: Did they submit for the month? (0% or 100%)
  */
 const calculateMonthOnlyCompliance = (submissionData, calendar) => {
-  const submitted = submissionData ? 1 : 0;
-  const required = 1;
+  const required = Number(calendar?.total_events || 1);
+  const submitted = Array.isArray(submissionData)
+    ? Math.min(submissionData.length, required)
+    : submissionData
+      ? 1
+      : 0;
   const percentage = (submitted / required) * 100;
 
   return {
@@ -473,7 +480,7 @@ const calculateWeeklyCompliance = (submissionData, calendar) => {
   // Count submissions for each configured day
   for (const dayConfig of config.days) {
     const submitted = countWeeklySubmissions(submissionData, dayConfig);
-    const required = dayConfig.count;
+    const required = dayConfig.total_expected || dayConfig.count || 0;
     const percentage = (submitted / required) * 100;
 
     breakdown[dayConfig.name] = {
@@ -494,6 +501,29 @@ const calculateWeeklyCompliance = (submissionData, calendar) => {
     completeness_percentage: percentage,
     compliance_status: getComplianceStatus(percentage),
     events_breakdown: breakdown,
+  };
+};
+
+const calculateMonthlyCompliance = (submissionData, calendar) => {
+  const config = calendar.monthly_config || {};
+  const totalExpected = Number(config.total_expected || calendar.total_events || 0);
+  const submittedCount = countMonthlySubmissions(submissionData, config);
+  const percentage = totalExpected > 0 ? (submittedCount / totalExpected) * 100 : 0;
+
+  return {
+    total_events_required: totalExpected,
+    total_events_submitted: submittedCount,
+    completeness_percentage: percentage,
+    compliance_status: getComplianceStatus(percentage),
+    events_breakdown: {
+      monthly_tracking: {
+        dates: config.dates || [],
+        submission_limit_per_date: config.submission_limit_per_date || 1,
+        required: totalExpected,
+        submitted: submittedCount,
+        percentage,
+      },
+    },
   };
 };
 
@@ -553,6 +583,30 @@ const countWeeklySubmissions = (submissionData, dayConfig) => {
       if (expectedDates.includes(dateStr)) {
         count++;
       }
+    }
+  }
+
+  return count;
+};
+
+const countMonthlySubmissions = (submissionData, config) => {
+  if (!submissionData || !Array.isArray(submissionData)) {
+    return 0;
+  }
+
+  const expectedDates = Array.isArray(config?.dates) ? config.dates : [];
+  let count = 0;
+
+  for (const submission of submissionData) {
+    const submissionDate = submission.date || submission.created_at;
+    if (!submissionDate) continue;
+    const dateString =
+      submissionDate instanceof Date
+        ? submissionDate.toISOString()
+        : submissionDate;
+    const dateStr = dateString.split('T')[0];
+    if (expectedDates.includes(dateStr)) {
+      count++;
     }
   }
 

@@ -10,6 +10,45 @@ const PAYMENT_STATUSES = [
   'refunded',
 ];
 
+const PAYMENT_CURRENCIES = [
+  'NGN',
+  'USD',
+  'EUR',
+  'GBP',
+  'INR',
+  'AUD',
+  'CAD',
+  'SGD',
+  'CHF',
+  'MYR',
+  'JPY',
+  'CNY',
+  'GHS',
+  'KES',
+  'ZAR',
+  'AED',
+  'SAR',
+  'XOF',
+  'XAF',
+  'BRL',
+  'MXN',
+  'TRY',
+];
+
+const PAYMENT_METHODS = [
+  'paystack',
+  'flutterwave',
+  '9psb',
+  'premium',
+  'sabypay',
+  'trialling',
+  'credit_card',
+  'debit_card',
+  'paypal',
+  'bank_transfer',
+  'crypto',
+];
+
 const paymentSchema = mongoose.Schema(
   {
     tenantId: {
@@ -29,19 +68,7 @@ const paymentSchema = mongoose.Schema(
     currency: {
       type: String,
       required: true,
-      enum: [
-        'USD',
-        'EUR',
-        'GBP',
-        'INR',
-        'AUD',
-        'CAD',
-        'SGD',
-        'CHF',
-        'MYR',
-        'JPY',
-        'CNY',
-      ],
+      enum: PAYMENT_CURRENCIES,
     },
     status: {
       type: String,
@@ -51,7 +78,7 @@ const paymentSchema = mongoose.Schema(
     },
     purpose: {
       type: String,
-      enum: ['subscription', 'collection'],
+      enum: ['subscription', 'collection'], //subscription for saby
       required: true,
       index: true,
     },
@@ -88,7 +115,7 @@ const paymentSchema = mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ['credit_card', 'debit_card', 'paypal', 'bank_transfer', 'crypto'],
+      enum: PAYMENT_METHODS,
       required: true,
     },
     paymentDate: {
@@ -198,5 +225,6 @@ paymentSchema.statics.updatePaymentStatus = async function (reference, status) {
  */
 const Payment = mongoose.model('Payment', paymentSchema);
 Payment.PAYMENT_STATUSES = PAYMENT_STATUSES;
+Payment.PAYMENT_METHODS = PAYMENT_METHODS;
 
 module.exports = Payment;

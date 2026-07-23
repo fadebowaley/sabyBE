@@ -1,6 +1,8 @@
 // 📁 models/submission.model.js
 const { postgresPool } = require('../config/postgres');
 
+const RESERVED_SUBMISSION_DATA_KEYS = new Set(['__payment', '__invoice']);
+
 const SubmissionModel = {
   /**
    * Save new form submission to PostgreSQL
@@ -136,6 +138,10 @@ const SubmissionModel = {
     const catalogValues = Object.values(catalogEntries);
 
     Object.keys(fields).forEach((fieldKey) => {
+      if (RESERVED_SUBMISSION_DATA_KEYS.has(fieldKey)) {
+        return;
+      }
+
       const rawValue = fields[fieldKey];
       const lowercaseKey = fieldKey?.toLowerCase?.();
 
@@ -321,6 +327,7 @@ const SubmissionModel = {
     const {
       tenant_id,
       project_id,
+      project_ids,
       form_id,
       node_id,
       nodeId,
@@ -344,7 +351,14 @@ const SubmissionModel = {
     if (tenant_id)
       clauses.push(`tenant_id = $${values.length + 1}`) &&
         values.push(tenant_id);
-    if (project_id)
+    if (Array.isArray(project_ids)) {
+      if (project_ids.length === 0) {
+        clauses.push('1 = 0');
+      } else {
+        clauses.push(`project_id = ANY($${values.length + 1}::text[])`);
+        values.push(project_ids);
+      }
+    } else if (project_id)
       clauses.push(`project_id = $${values.length + 1}`) &&
         values.push(project_id);
     if (form_id)
@@ -410,6 +424,65 @@ const SubmissionModel = {
       console.error('❌ Error fetching submission by id:', err.message);
       throw err;
     }
+  },
+
+  async countSubmissions(filters = {}) {
+    const {
+      tenant_id,
+      project_id,
+      project_ids,
+      form_id,
+      month,
+      year,
+      status,
+    } = filters;
+
+    const clauses = [];
+    const values = [];
+
+    if (tenant_id) {
+      clauses.push(`tenant_id = $${values.length + 1}`);
+      values.push(tenant_id);
+    }
+
+    if (Array.isArray(project_ids)) {
+      if (project_ids.length === 0) {
+        clauses.push('1 = 0');
+      } else {
+        clauses.push(`project_id = ANY($${values.length + 1}::text[])`);
+        values.push(project_ids);
+      }
+    } else if (project_id) {
+      clauses.push(`project_id = $${values.length + 1}`);
+      values.push(project_id);
+    }
+
+    if (form_id) {
+      clauses.push(`form_id = $${values.length + 1}`);
+      values.push(form_id);
+    }
+
+    if (month) {
+      clauses.push(`month = $${values.length + 1}`);
+      values.push(month);
+    }
+
+    if (year) {
+      clauses.push(`EXTRACT(YEAR FROM month) = $${values.length + 1}`);
+      values.push(year);
+    }
+
+    if (status) {
+      clauses.push(`status = $${values.length + 1}`);
+      values.push(status);
+    }
+
+    const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+    const result = await postgresPool.query(
+      `SELECT COUNT(*)::int AS total FROM form_submissions ${whereClause}`,
+      values
+    );
+    return Number(result.rows[0]?.total || 0);
   },
 
   /**

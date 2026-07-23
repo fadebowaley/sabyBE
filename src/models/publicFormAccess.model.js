@@ -63,7 +63,7 @@ const publicFormAccessSchema = mongoose.Schema(
     },
     identifierType: {
       type: String,
-      enum: ['email', 'phone'],
+      enum: ['email', 'phone', 'access_code'],
       required: true,
     },
     identifier: {
@@ -84,8 +84,8 @@ const publicFormAccessSchema = mongoose.Schema(
     },
     secureMode: {
       type: String,
-      enum: ['off', 'single_qr_passwordless', 'otp'],
-      default: 'single_qr_passwordless',
+      enum: ['off', 'link_only', 'otp', 'access_code'],
+      default: 'link_only',
     },
     pipelineTarget: {
       type: String,

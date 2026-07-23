@@ -38,13 +38,22 @@ const generateToken = (userId, expires, type, secret = config.jwt.secret) => {
  * @example
  * const tokenDoc = await saveToken('someTokenString', '60d5ec49f1b2c8b1f8e4e1a1', moment().add(1, 'day'), tokenTypes.REFRESH);
  */
-const saveToken = async (token, userId, expires, type, blacklisted = false) => {
+const saveToken = async (
+  token,
+  userId,
+  expires,
+  type,
+  blacklisted = false,
+  metadata = {}
+) => {
   const tokenDoc = await Token.create({
     token,
     user: userId,
     expires: expires.toDate(),
     type,
     blacklisted,
+    ...(metadata.device ? { device: metadata.device } : {}),
+    ...(metadata.lastUsedAt ? { lastUsedAt: metadata.lastUsedAt } : {}),
   });
   return tokenDoc;
 };
@@ -78,7 +87,7 @@ const verifyToken = async (token, type) => {
  * @example
  * const tokens = await generateAuthTokens(user);
  */
-const generateAuthTokens = async (user) => {
+const generateAuthTokens = async (user, metadata = {}) => {
   const accessTokenExpires = moment().add(
     config.jwt.accessExpirationMinutes,
     'minutes'
@@ -102,7 +111,12 @@ const generateAuthTokens = async (user) => {
     refreshToken,
     user.id,
     refreshTokenExpires,
-    tokenTypes.REFRESH
+    tokenTypes.REFRESH,
+    false,
+    {
+      device: metadata.device,
+      lastUsedAt: new Date(),
+    }
   );
 
   console.log(

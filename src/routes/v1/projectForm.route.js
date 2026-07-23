@@ -229,16 +229,51 @@ router.patch(
   projectFormController.renameProjectWorkspace
 );
 
+router.get(
+  '/workspace-members',
+  auth('user:read'),
+  validate(projectFormValidation.listProjectWorkspaceMembers),
+  projectFormController.listProjectWorkspaceMembers
+);
+
 router.post(
   '/workspaces/:workspaceId/members',
-  auth('update:project-form'),
+  auth('user:update'),
   validate(projectFormValidation.addProjectWorkspaceMember),
   projectFormController.addProjectWorkspaceMember
 );
 
+router.get(
+  '/workspaces/:workspaceId/invitations',
+  auth('user:read'),
+  validate(projectFormValidation.listWorkspaceInvitations),
+  projectFormController.listWorkspaceInvitations
+);
+
+router.post(
+  '/workspaces/:workspaceId/invitations',
+  auth('user:update'),
+  validate(projectFormValidation.createWorkspaceInvitation),
+  projectFormController.createWorkspaceInvitation
+);
+
+router.post(
+  '/workspaces/:workspaceId/invitations/:invitationId/resend',
+  auth('user:update'),
+  validate(projectFormValidation.resendWorkspaceInvitation),
+  projectFormController.resendWorkspaceInvitation
+);
+
+router.post(
+  '/workspaces/:workspaceId/invitations/:invitationId/revoke',
+  auth('user:update'),
+  validate(projectFormValidation.revokeWorkspaceInvitation),
+  projectFormController.revokeWorkspaceInvitation
+);
+
 router.delete(
   '/workspaces/:workspaceId/members/:userId',
-  auth('update:project-form'),
+  auth('user:update'),
   validate(projectFormValidation.removeProjectWorkspaceMember),
   projectFormController.removeProjectWorkspaceMember
 );
@@ -255,6 +290,18 @@ router.delete(
   auth('delete:project-form'),
   validate(projectFormValidation.deleteProjectWorkspace),
   projectFormController.deleteProjectWorkspace
+);
+
+router.get(
+  '/workspace-invitations/:token',
+  validate(projectFormValidation.getWorkspaceInvitation),
+  projectFormController.getWorkspaceInvitation
+);
+
+router.post(
+  '/workspace-invitations/:token/accept',
+  validate(projectFormValidation.acceptWorkspaceInvitation),
+  projectFormController.acceptWorkspaceInvitation
 );
 
 /**
@@ -394,6 +441,13 @@ router.post(
 );
 
 router.post(
+  '/public/access/verify-access-code',
+  publicFormSubmitLimiter,
+  validate(projectFormValidation.verifyPublicAccessGateCode),
+  projectFormController.verifyPublicAccessGateCode
+);
+
+router.post(
   '/public/access/resend-code',
   publicFormReadLimiter,
   validate(projectFormValidation.resendPublicAccessCode),
@@ -450,10 +504,45 @@ router.post(
 );
 
 router.post(
+  '/:formId/uploads/initiate',
+  publicFormReadLimiter,
+  validate(projectFormValidation.initiatePublicUpload),
+  projectFormController.initiatePublicUpload
+);
+
+router.post(
+  '/:formId/uploads/complete',
+  publicFormSubmitLimiter,
+  validate(projectFormValidation.completePublicUpload),
+  projectFormController.completePublicUpload
+);
+
+router.post(
   '/:formId/generate-id',
   publicFormReadLimiter,
   validate(projectFormValidation.generateFormFieldId),
   projectFormController.generateFormFieldId
+);
+
+router.post(
+  '/:formId/evaluate-invoice',
+  publicFormReadLimiter,
+  validate(projectFormValidation.evaluatePublicInvoice),
+  projectFormController.evaluatePublicInvoice
+);
+
+router.post(
+  '/:formId/create-payment-intent',
+  publicFormReadLimiter,
+  validate(projectFormValidation.createPublicPaymentIntent),
+  projectFormController.createPublicPaymentIntent
+);
+
+router.get(
+  '/:formId/payment-status/:reference',
+  publicFormReadLimiter,
+  validate(projectFormValidation.getPublicPaymentStatus),
+  projectFormController.getPublicPaymentStatus
 );
 
 // Short-code public alias (strict-gated and sanitized)

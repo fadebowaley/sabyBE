@@ -66,6 +66,7 @@ const actionWorkflowStep = catchAsync(async (req, res) => {
     userId: req.user?.id || req.user?._id || req.user?.userId,
     userName: req.user?.name || [req.user?.firstname, req.user?.lastname].filter(Boolean).join(' '),
     userEmail: req.user?.email,
+    role: req.user?.role || null,
   };
 
   const result = await workflowService.actionStep(
@@ -107,16 +108,21 @@ const actionWorkflowStep = catchAsync(async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /v1/workflows/inbox  — steps waiting for the current user's role
+// GET /v1/workflows/inbox  — steps waiting for the current user's role or user assignment
 // ---------------------------------------------------------------------------
 const getInbox = catchAsync(async (req, res) => {
   const tenantId = req.user?.tenantId;
-  // Resolve the caller's primary role for the inbox query
+  const userId = req.user?.id || req.user?._id || req.user?.userId || null;
   const role = req.query.role || req.user?.role || 'manager';
   const limit = Math.min(parseInt(req.query.limit) || 50, 200);
 
-  const steps = await workflowService.getPendingStepsForRole(tenantId, role, limit);
-  res.status(httpStatus.OK).json({ role, total: steps.length, steps });
+  const steps = await workflowService.getPendingStepsForActor({
+    tenantId,
+    role,
+    userId,
+    limit,
+  });
+  res.status(httpStatus.OK).json({ role, userId, total: steps.length, steps });
 });
 
 // ---------------------------------------------------------------------------

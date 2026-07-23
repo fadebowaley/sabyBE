@@ -3,6 +3,7 @@ const auth = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
 const projectFormSubmissionValidation = require('../../validations/projectFormSubmission.validation');
 const projectFormSubmissionController = require('../../controllers/projectFormSubmission.controller');
+const requireSubscriptionCapability = require('../../middlewares/requireSubscriptionCapability');
 const {
   publicFormSubmitLimiter,
 } = require('../../middlewares/publicFormRateLimiter');
@@ -240,6 +241,7 @@ router.get(
   '/project/:projectId/export',
   auth('view:form-submission'),
   requireProjectFormTenantAccess('projectId'),
+  requireSubscriptionCapability('advancedExports'),
   validate(projectFormSubmissionValidation.exportSubmissions),
   projectFormSubmissionController.exportSubmissions
 );

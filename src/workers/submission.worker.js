@@ -26,10 +26,10 @@ const emailService = require('../services/email.service');
 const User = require('../models/user.model');
 const Node = require('../models/node.model');
 const incrementalSubmissionRollupService = require('../services/incrementalSubmissionRollup.service');
-const workflowService = require('../services/workflow.service');
-const ProjectForm = require('../models/projectForm.model');
+const approvalOrchestratorService = require('../services/approvalOrchestrator.service');
 const ApiError = require('../utils/ApiError');
 const submissionAttachmentService = require('../services/submissionAttachment.service');
+const publicFormUploadService = require('../services/publicFormUpload.service');
 
 const SUBMISSION_QUEUE_NAME = 'submissionQueue';
 let factsTableEnsured = false;
@@ -48,9 +48,16 @@ const resolveSlotCapacityForDate = (calendarRow, targetDate) => {
   if (Array.isArray(weekly.days)) {
     for (const day of weekly.days) {
       if (Array.isArray(day.dates) && day.dates.includes(targetDate)) {
-        return day.count || day.frequency_per_day || 1;
+        return (
+          day.submission_limit_per_date || day.frequency_per_day || day.count || 1
+        );
       }
     }
+  }
+
+  const monthly = calendarRow.monthly_config || {};
+  if (Array.isArray(monthly.dates) && monthly.dates.includes(targetDate)) {
+    return monthly.submission_limit_per_date || monthly.frequency_per_day || 1;
   }
 
   return null;
@@ -429,6 +436,10 @@ const createSubmissionWorker = () => {
 
       if (result) {
         try {
+          await publicFormUploadService.bindUploadsToSubmission({
+            submissionId: result.id,
+            submissionData: result.data || {},
+          });
           await submissionAttachmentService.createAttachmentsFromSubmission({
             submission: result,
             tenantId: submissionPayload.tenant_id,
@@ -464,35 +475,22 @@ const createSubmissionWorker = () => {
           );
         }
 
-        // ── Workflow init — fire-and-forget ───────────────────────────────
+        // ── Approval/workflow init — fire-and-forget ──────────────────────
         try {
-          const form = await ProjectForm.findOne({ projectId })
-            .select('capabilities.experience.workflow.workflows')
-            .lean();
-          const activeWorkflows = (
-            form?.capabilities?.experience?.workflow?.workflows || []
-          ).filter(
-            (wf) => wf.enabled !== false && wf.triggerOn !== 'manual'
-          );
-          if (activeWorkflows.length > 0) {
-            const submitter = {
-              userId: userId || null,
-              userName: user_name || null,
-              userEmail: user_email || null,
-            };
-            await workflowService.initWorkflows(
-              result,
-              activeWorkflows,
-              submitter
-            );
-            logger.info(
-              `[Worker] Initialised ${activeWorkflows.length} workflow(s) for submission ${result.id}`
-            );
-          }
+          const submitter = {
+            userId: userId || null,
+            userName: user_name || null,
+            userEmail: user_email || null,
+          };
+          await approvalOrchestratorService.initializeSubmissionApprovals({
+            submission: result,
+            projectId,
+            submitter,
+          });
         } catch (wfError) {
-          // Workflow init must never block or fail a submission
+          // Approval init must never block or fail a submission
           logger.error(
-            `[Worker] Workflow init failed for submission ${result.id}: ${wfError.message}`
+            `[Worker] Approval init failed for submission ${result.id}: ${wfError.message}`
           );
         }
       }

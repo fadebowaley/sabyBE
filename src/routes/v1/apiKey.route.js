@@ -3,6 +3,7 @@ const validate = require('../../middlewares/validate');
 const apiKeyValidation = require('../../validations/apiKey.validation');
 const apiKeyController = require('../../controllers/apiKey.controller');
 const requireAccess = require('../../middlewares/requireAccess');
+const requireSubscriptionCapability = require('../../middlewares/requireSubscriptionCapability');
 
 const router = express.Router();
 
@@ -10,6 +11,7 @@ const router = express.Router();
 router.get(
   '/',
   requireAccess({ permissions: ['apikey:read'], jwtOnly: true }),
+  requireSubscriptionCapability('apiAccess'),
   validate(apiKeyValidation.getApiKeys),
   apiKeyController.getApiKeys
 );
@@ -88,6 +90,7 @@ router.get(
 router.post(
   '/',
   requireAccess({ permissions: ['apikey:create'], jwtOnly: true }),
+  requireSubscriptionCapability('apiAccess'),
   validate(apiKeyValidation.createApiKey),
   apiKeyController.createApiKey
 );
@@ -164,6 +167,7 @@ router.post(
 router.get(
   '/:keyId',
   requireAccess({ permissions: ['apikey:read'], jwtOnly: true }),
+  requireSubscriptionCapability('apiAccess'),
   validate(apiKeyValidation.getApiKey),
   apiKeyController.getApiKey
 );
@@ -204,6 +208,7 @@ router.get(
 router.patch(
   '/:keyId',
   requireAccess({ permissions: ['apikey:update'], jwtOnly: true }),
+  requireSubscriptionCapability('apiAccess'),
   validate(apiKeyValidation.updateApiKey),
   apiKeyController.updateApiKey
 );
@@ -275,6 +280,7 @@ router.patch(
 router.delete(
   '/:keyId',
   requireAccess({ permissions: ['apikey:delete'], jwtOnly: true }),
+  requireSubscriptionCapability('apiAccess'),
   validate(apiKeyValidation.deleteApiKey),
   apiKeyController.deleteApiKey
 );
@@ -311,6 +317,7 @@ router.delete(
 router.get(
   '/:keyId/analytics',
   requireAccess({ permissions: ['apikey:read'], jwtOnly: true }),
+  requireSubscriptionCapability('apiAccess'),
   validate(apiKeyValidation.getApiKeyAnalytics),
   apiKeyController.getApiKeyAnalytics
 );
@@ -401,6 +408,7 @@ router.get(
 router.post(
   '/:keyId/regenerate',
   requireAccess({ permissions: ['apikey:regenerate'], jwtOnly: true }),
+  requireSubscriptionCapability('apiAccess'),
   validate(apiKeyValidation.regenerateApiKey),
   apiKeyController.regenerateApiKey
 );

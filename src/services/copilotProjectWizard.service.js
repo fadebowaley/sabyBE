@@ -156,7 +156,6 @@ const buildDefaultPermSettings = (enabled = false) => ({
   requireMonth: true,
   trackCompliance: true,
   autoGenerateCalendar: true,
-  autoLockMonthEnd: false,
   calendarRequired: false,
 });
 

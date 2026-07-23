@@ -73,9 +73,16 @@ const resolveSlotCapacityForDate = (calendarRow, targetDate) => {
   if (Array.isArray(weekly.days)) {
     for (const day of weekly.days) {
       if (Array.isArray(day.dates) && day.dates.includes(targetDate)) {
-        return day.count || day.frequency_per_day || 1;
+        return (
+          day.submission_limit_per_date || day.frequency_per_day || day.count || 1
+        );
       }
     }
+  }
+
+  const monthly = calendarRow.monthly_config || {};
+  if (Array.isArray(monthly.dates) && monthly.dates.includes(targetDate)) {
+    return monthly.submission_limit_per_date || monthly.frequency_per_day || 1;
   }
 
   return 1;

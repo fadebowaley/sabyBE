@@ -12,18 +12,21 @@ const router = express.Router();
 const exportReportController = require('../../controllers/exportReport.controller');
 const { hybridAuth } = require('../../middlewares/apiKeyAuth');
 const requireAccess = require('../../middlewares/requireAccess');
+const requireSubscriptionCapability = require('../../middlewares/requireSubscriptionCapability');
 
 // Submissions Export Routes
 router.get(
   '/submissions/csv',
   hybridAuth(),
   requireAccess('export:read'),
+  requireSubscriptionCapability('advancedExports'),
   exportReportController.exportSubmissionsCSV
 );
 router.get(
   '/submissions/json',
   hybridAuth(),
   requireAccess('export:read'),
+  requireSubscriptionCapability('advancedExports'),
   exportReportController.exportSubmissionsJSON
 );
 
@@ -32,12 +35,14 @@ router.get(
   '/compliance/csv',
   hybridAuth(),
   requireAccess('export:read'),
+  requireSubscriptionCapability('advancedExports'),
   exportReportController.exportComplianceCSV
 );
 router.get(
   '/compliance/json',
   hybridAuth(),
   requireAccess('export:read'),
+  requireSubscriptionCapability('advancedExports'),
   exportReportController.exportComplianceJSON
 );
 
@@ -46,12 +51,14 @@ router.get(
   '/validations/csv',
   hybridAuth(),
   requireAccess('export:read'),
+  requireSubscriptionCapability('advancedExports'),
   exportReportController.exportValidationsCSV
 );
 router.get(
   '/validations/json',
   hybridAuth(),
   requireAccess('export:read'),
+  requireSubscriptionCapability('advancedExports'),
   exportReportController.exportValidationsJSON
 );
 
@@ -60,12 +67,14 @@ router.get(
   '/notifications/csv',
   hybridAuth(),
   requireAccess('export:read'),
+  requireSubscriptionCapability('advancedExports'),
   exportReportController.exportNotificationsCSV
 );
 router.get(
   '/notifications/json',
   hybridAuth(),
   requireAccess('export:read'),
+  requireSubscriptionCapability('advancedExports'),
   exportReportController.exportNotificationsJSON
 );
 
@@ -74,12 +83,14 @@ router.get(
   '/activity-logs/csv',
   hybridAuth(),
   requireAccess('export:read'),
+  requireSubscriptionCapability('advancedExports'),
   exportReportController.exportActivityLogsCSV
 );
 router.get(
   '/activity-logs/json',
   hybridAuth(),
   requireAccess('export:read'),
+  requireSubscriptionCapability('advancedExports'),
   exportReportController.exportActivityLogsJSON
 );
 
@@ -88,12 +99,14 @@ router.get(
   '/combined/csv',
   hybridAuth(),
   requireAccess('export:read'),
+  requireSubscriptionCapability('advancedExports'),
   exportReportController.exportCombinedCSV
 );
 router.get(
   '/combined/json',
   hybridAuth(),
   requireAccess('export:read'),
+  requireSubscriptionCapability('advancedExports'),
   exportReportController.exportCombinedJSON
 );
 
@@ -102,6 +115,7 @@ router.get(
   '/stats',
   hybridAuth(),
   requireAccess('export:read'),
+  requireSubscriptionCapability('advancedExports'),
   exportReportController.getExportStats
 );
 

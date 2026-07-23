@@ -1,6 +1,9 @@
 const logger = require('../config/logger');
 const { postgresPool } = require('../config/postgres');
 const SubmissionCatalogService = require('./submissionCatalog.service');
+const {
+  getFinancialCatalogDefinitionsForForm,
+} = require('./submissionFinancialFields.service');
 
 const BLOCK_TYPES = new Set([
   'header',
@@ -38,6 +41,8 @@ const DEFAULT_TRANSFORMATIONS = {
   checkbox: ['raw', 'categorical'],
   multiselect: ['raw', 'categorical'],
   tags: ['raw', 'categorical'],
+  file: ['raw'],
+  image: ['raw'],
 };
 
 const buildAliases = (element, label) => {
@@ -104,7 +109,16 @@ const normaliseOptions = (element) => {
 
 const mapElementToRecord = (formDoc, element) => {
   const label = element?.properties?.label?.trim?.() || element?.id;
-  const type = element?.type || 'text';
+  const rawType = String(element?.type || 'text').trim().toLowerCase();
+  const specialFieldType = String(element?.properties?.fieldType || '')
+    .trim()
+    .toLowerCase();
+  const type =
+    specialFieldType === 'profile_image_upload'
+      ? 'image'
+      : rawType === 'fileupload' || rawType === 'file'
+        ? 'file'
+        : element?.type || 'text';
   const elementOrder = Array.isArray(formDoc?.elements)
     ? formDoc.elements.findIndex((entry) => entry?.id === element?.id)
     : -1;
@@ -145,9 +159,16 @@ const syncCatalogFromForm = async (formDoc) => {
     return;
   }
 
-  const records = elements.filter(isCatalogCandidate).map((element) => ({
+  const elementRecords = elements.filter(isCatalogCandidate).map((element) => ({
     ...mapElementToRecord(plainForm, element),
   }));
+  const records = [
+    ...elementRecords,
+    ...getFinancialCatalogDefinitionsForForm(
+      plainForm,
+      elementRecords.length + 1000
+    ),
+  ];
 
   const client = await postgresPool.connect();
   try {

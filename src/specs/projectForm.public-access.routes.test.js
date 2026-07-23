@@ -17,6 +17,7 @@ const mockPublicAccessService = {
   issueAccessLink: jest.fn(),
   consumeAccessLink: jest.fn(),
   submitWithAccess: jest.fn(),
+  verifyAccessGateCode: jest.fn(),
   getProjectPublicAccessMetrics: jest.fn(),
   requestFieldVerificationCode: jest.fn(),
   verifyFieldVerificationCode: jest.fn(),
@@ -161,6 +162,42 @@ describe('project form public secure routes', () => {
     });
   });
 
+  test('POST /v1/project-forms/public/access/verify-access-code forwards access gate verification', async () => {
+    mockPublicAccessService.verifyAccessGateCode.mockResolvedValue({
+      success: true,
+      accessToken: 'secure-token',
+      nodes: [],
+      user: null,
+    });
+
+    const body = {
+      reference: '471fc434-5ebe-4adb-ac8d-367a91eaebd0',
+      accessCode: 'MEMBER24',
+      qrContextToken: 'signed-qr-token',
+    };
+
+    const res = await request(app)
+      .post('/v1/project-forms/public/access/verify-access-code')
+      .send(body);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        accessToken: 'secure-token',
+      })
+    );
+    expect(mockPublicAccessService.verifyAccessGateCode).toHaveBeenCalledWith({
+      reference: body.reference,
+      accessCode: body.accessCode,
+      qrContextToken: body.qrContextToken,
+      requestContext: {
+        ip: expect.any(String),
+        userAgent: null,
+      },
+    });
+  });
+
   test('POST /v1/project-forms/public/access/submit forwards secure submit', async () => {
     mockPublicAccessService.submitWithAccess.mockResolvedValue({
       success: true,
@@ -195,7 +232,15 @@ describe('project form public secure routes', () => {
       nodeId: body.nodeId,
       submissionData: body.submissionData,
       submittedAt: null,
+      eventDate: null,
+      submissionDate: null,
+      month: null,
+      year: null,
       metadata: body.metadata,
+      requestContext: {
+        ip: expect.any(String),
+        userAgent: null,
+      },
     });
   });
 
@@ -238,7 +283,15 @@ describe('project form public secure routes', () => {
       nodeId: undefined,
       submissionData: body.submissionData,
       submittedAt: null,
+      eventDate: null,
+      submissionDate: null,
+      month: null,
+      year: null,
       metadata: body.metadata,
+      requestContext: {
+        ip: expect.any(String),
+        userAgent: null,
+      },
     });
   });
 
@@ -336,8 +389,8 @@ describe('project form public secure routes', () => {
       fieldKey: 'membership_phone',
       channel: 'phone',
       identifier: '+2348012345678',
-      submissionId: undefined,
-      accessToken: undefined,
+      submissionId: null,
+      accessToken: null,
     });
   });
 

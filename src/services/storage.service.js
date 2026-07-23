@@ -9,6 +9,7 @@ const {
 } = require('../models');
 const ApiError = require('../utils/ApiError');
 const { StorageProviderFactory } = require('./providers/storageProvider');
+const subscriptionService = require('./subscription.service');
 const {
   buildAccessibleStorageQuery,
   canReadStorageEntity,
@@ -20,6 +21,9 @@ const { resolveIngestionDecision } = require('./storageIngestionPolicy.service')
 const mergeWithAccessQuery = (accessQuery, extra = {}) => ({
   $and: [accessQuery, extra],
 });
+
+const bytesToMegabytes = (bytes) =>
+  Math.max(0, Number(bytes || 0)) / (1024 * 1024);
 
 const uploadFile = async (fileData, userInfo) => {
   const { tenantId, userId } = userInfo;
@@ -256,6 +260,14 @@ const searchFiles = async (query, userInfo) => {
 };
 
 const checkStorageQuota = async (tenantId, fileSize) => {
+  await subscriptionService.assertSubscriptionLimit({
+    tenantId,
+    limitKey: 'storageMb',
+    delta: bytesToMegabytes(fileSize),
+    message:
+      'Your current workspace subscription has reached its storage limit. Upgrade billing to upload more files.',
+  });
+
   const settings = await StorageSettings.findOne({ tenantId });
   if (!settings) return;
 
@@ -376,6 +388,8 @@ const copyFile = async (fileId, payload, userInfo) => {
   if (!canReadStorageEntity(userInfo, originalFile)) {
     throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to copy this file');
   }
+
+  await checkStorageQuota(userInfo.tenantId, originalFile.fileSize);
 
   const fileExtension = path.extname(originalFile.originalName);
   const uniqueFileName = `${nanoid(16)}${fileExtension}`;

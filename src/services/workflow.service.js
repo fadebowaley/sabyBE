@@ -45,6 +45,45 @@ function nextStepDef(workflowDef, currentStepDefId) {
   return sorted[idx + 1];
 }
 
+const findStepDef = (workflowDef, currentStepDefId) => {
+  if (!workflowDef || !Array.isArray(workflowDef.steps)) return null;
+  return (
+    workflowDef.steps.find((step) => step.id === currentStepDefId) || null
+  );
+};
+
+const syncSubmissionApprovalStatus = async (submissionId, status) => {
+  if (!submissionId || !status) return;
+  await postgresPool.query(
+    `UPDATE form_submissions
+     SET status = $1, updated_at = NOW()
+     WHERE id = $2`,
+    [status, submissionId]
+  );
+};
+
+const canActorActionStep = (step, actor = {}) => {
+  const actorRole = String(actor.role || '').trim();
+  const actorUserId = String(actor.userId || '').trim();
+  const assigneeType = String(step.assignee_type || '').trim().toLowerCase();
+  const assigneeRole = String(step.assignee_role || '').trim();
+  const assigneeRoles = Array.isArray(step.assignee_roles) ? step.assignee_roles : [];
+  const assigneeUsers = Array.isArray(step.assignee_users) ? step.assignee_users : [];
+
+  if (assigneeType === 'user') {
+    if (!actorUserId) return false;
+    return assigneeUsers.map((entry) => String(entry || '').trim()).includes(actorUserId);
+  }
+
+  if (assigneeType === 'role' || !assigneeType) {
+    if (!actorRole) return false;
+    if (assigneeRole && assigneeRole === actorRole) return true;
+    return assigneeRoles.map((entry) => String(entry || '').trim()).includes(actorRole);
+  }
+
+  return true;
+};
+
 // ---------------------------------------------------------------------------
 // autoAdvanceNotifySteps
 // ---------------------------------------------------------------------------
@@ -144,9 +183,32 @@ const initWorkflows = async (submission, workflows = [], submitter = {}) => {
   if (active.length === 0) return [];
 
   const instances = [];
+  let hasActiveApproval = false;
 
   for (const wf of active) {
     try {
+      const existingResult = await postgresPool.query(
+        `SELECT id, workflow_def_id, workflow_name, status
+         FROM submission_workflows
+         WHERE submission_id = $1 AND tenant_id = $2 AND workflow_def_id = $3
+         LIMIT 1`,
+        [submission.id, submission.tenant_id, wf.id]
+      );
+      if (existingResult.rows.length > 0) {
+        const existing = existingResult.rows[0];
+        instances.push({
+          workflowId: existing.id,
+          workflowDefId: existing.workflow_def_id,
+          name: existing.workflow_name || wf.name,
+          existing: true,
+          status: existing.status || null,
+        });
+        if (['pending', 'in_progress'].includes(String(existing.status || '').trim().toLowerCase())) {
+          hasActiveApproval = true;
+        }
+        continue;
+      }
+
       // ------------------------------------------------------------------
       // 1. Create the workflow instance row
       // ------------------------------------------------------------------
@@ -236,6 +298,9 @@ const initWorkflows = async (submission, workflows = [], submitter = {}) => {
       }
 
       instances.push({ workflowId: wfId, workflowDefId: wf.id, name: wf.name });
+      if (first) {
+        hasActiveApproval = true;
+      }
       logger.info(`[Workflow] Initiated workflow "${wf.name}" (${wfId}) for submission ${submission.id}`);
 
       // Auto-advance the first step if it is a NOTIFY or SUBMIT type
@@ -249,6 +314,10 @@ const initWorkflows = async (submission, workflows = [], submitter = {}) => {
       // Never block the submission because of a workflow init failure
       logger.error(`[Workflow] Failed to init workflow "${wf.name}" for submission ${submission.id}: ${err.message}`);
     }
+  }
+
+  if (hasActiveApproval) {
+    await syncSubmissionApprovalStatus(submission.id, 'pending_approval');
   }
 
   return instances;
@@ -286,18 +355,26 @@ const getWorkflows = async (submissionId, tenantId) => {
 // actionStep
 // ---------------------------------------------------------------------------
 /**
- * Record an action (approve / reject / review / skip) on a workflow step.
+ * Record an action (approve / reject / review / skip / request changes / escalate)
+ * on a workflow step.
  * Automatically advances or completes the parent workflow.
  *
  * @param {string} workflowId - submission_workflows.id (UUID)
  * @param {string} stepDefId  - step_def_id to act on
- * @param {string} action     - 'approved' | 'rejected' | 'reviewed' | 'skipped'
+ * @param {string} action     - 'approved' | 'rejected' | 'reviewed' | 'skipped' | 'changes_requested' | 'escalated'
  * @param {object} actor      - { userId, userName, userEmail }
  * @param {string} [comments]
  * @param {Array}  [workflowDef] - full workflow definition steps (optional, for auto-advance)
  */
 const actionStep = async (workflowId, stepDefId, action, actor, comments, workflowDef) => {
-  const validActions = ['approved', 'rejected', 'reviewed', 'skipped'];
+  const validActions = [
+    'approved',
+    'rejected',
+    'reviewed',
+    'skipped',
+    'changes_requested',
+    'escalated',
+  ];
   if (!validActions.includes(action)) {
     throw new ApiError(httpStatus.BAD_REQUEST, `Invalid action "${action}". Must be one of: ${validActions.join(', ')}`);
   }
@@ -322,8 +399,95 @@ const actionStep = async (workflowId, stepDefId, action, actor, comments, workfl
   }
   const step = stepResult.rows[0];
 
-  if (!['pending', 'in_progress'].includes(step.status)) {
+  if (step.status !== 'in_progress') {
     throw new ApiError(httpStatus.CONFLICT, `Step is already in status "${step.status}" and cannot be actioned`);
+  }
+
+  if (!canActorActionStep(step, actor)) {
+    throw new ApiError(httpStatus.FORBIDDEN, 'You are not allowed to action this approval step');
+  }
+
+  const currentStepDef = findStepDef(workflowDef, stepDefId);
+
+  if (action === 'escalated') {
+    const escalationRoles = Array.isArray(currentStepDef?.escalationRoles)
+      ? currentStepDef.escalationRoles.map((entry) => String(entry || '').trim()).filter(Boolean)
+      : [];
+    const escalationUsers = Array.isArray(currentStepDef?.escalationUsers)
+      ? currentStepDef.escalationUsers.map((entry) => String(entry || '').trim()).filter(Boolean)
+      : [];
+    const escalationType = String(currentStepDef?.escalationType || '').trim().toLowerCase();
+    const fallbackEscalateTo = String(currentStepDef?.sla?.escalateTo || '').trim();
+
+    let nextAssigneeType = null;
+    let nextAssigneeRole = null;
+    let nextAssigneeRoles = [];
+    let nextAssigneeUsers = [];
+
+    if (escalationType === 'role' && escalationRoles.length > 0) {
+      nextAssigneeType = 'role';
+      nextAssigneeRoles = escalationRoles;
+      nextAssigneeRole = escalationRoles[0];
+    } else if (escalationType === 'user' && escalationUsers.length > 0) {
+      nextAssigneeType = 'user';
+      nextAssigneeUsers = escalationUsers;
+    } else if (fallbackEscalateTo) {
+      nextAssigneeType = 'role';
+      nextAssigneeRole = fallbackEscalateTo;
+      nextAssigneeRoles = [fallbackEscalateTo];
+    }
+
+    if (!nextAssigneeType) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'This approval level does not have an escalation target configured'
+      );
+    }
+
+    await postgresPool.query(
+      `UPDATE submission_workflow_steps
+       SET assignee_type = $1,
+           assignee_role = $2,
+           assignee_roles = $3::jsonb,
+           assignee_users = $4::jsonb,
+           action = 'escalated',
+           action_by_user_id = $5,
+           action_by_user_name = $6,
+           action_by_user_email = $7,
+           comments = $8,
+           actioned_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $9`,
+      [
+        nextAssigneeType,
+        nextAssigneeRole,
+        JSON.stringify(nextAssigneeRoles),
+        JSON.stringify(nextAssigneeUsers),
+        actor.userId || null,
+        actor.userName || null,
+        actor.userEmail || null,
+        comments || null,
+        step.id,
+      ]
+    );
+
+    await postgresPool.query(
+      `UPDATE submission_workflows
+       SET status = 'escalated', updated_at = NOW()
+       WHERE id = $1`,
+      [workflowId]
+    );
+    await syncSubmissionApprovalStatus(wf.submission_id, 'pending_approval');
+    return {
+      workflowStatus: 'escalated',
+      stepStatus: 'in_progress',
+      reassignedTo: {
+        type: nextAssigneeType,
+        role: nextAssigneeRole,
+        roles: nextAssigneeRoles,
+        users: nextAssigneeUsers,
+      },
+    };
   }
 
   // Record the action on the step
@@ -336,6 +500,7 @@ const actionStep = async (workflowId, stepDefId, action, actor, comments, workfl
     [
       action === 'approved' ? 'approved'
         : action === 'rejected' ? 'rejected'
+        : action === 'changes_requested' ? 'changes_requested'
         : action === 'reviewed' ? 'completed'
         : 'skipped',
       action,
@@ -363,7 +528,28 @@ const actionStep = async (workflowId, stepDefId, action, actor, comments, workfl
        WHERE id = $1`,
       [workflowId]
     );
+    await syncSubmissionApprovalStatus(wf.submission_id, 'rejected');
     return { workflowStatus: 'rejected', stepStatus: 'rejected' };
+  }
+
+  if (action === 'changes_requested') {
+    await postgresPool.query(
+      `UPDATE submission_workflow_steps
+       SET status = 'skipped', updated_at = NOW()
+       WHERE workflow_id = $1 AND status IN ('pending','in_progress') AND id != $2`,
+      [workflowId, step.id]
+    );
+    await postgresPool.query(
+      `UPDATE submission_workflows
+       SET status = 'changes_requested', completed_at = NOW(), updated_at = NOW()
+       WHERE id = $1`,
+      [workflowId]
+    );
+    await syncSubmissionApprovalStatus(wf.submission_id, 'changes_requested');
+    return {
+      workflowStatus: 'changes_requested',
+      stepStatus: 'changes_requested',
+    };
   }
 
   // Approved/reviewed/skipped — try to advance to the next step
@@ -383,6 +569,7 @@ const actionStep = async (workflowId, stepDefId, action, actor, comments, workfl
          WHERE id = $2`,
         [next.id, workflowId]
       );
+      await syncSubmissionApprovalStatus(wf.submission_id, 'pending_approval');
 
       // If the newly activated step is a NOTIFY/SUBMIT type, auto-advance it
       await autoAdvanceNotifySteps(workflowId, workflowDef);
@@ -408,6 +595,10 @@ const actionStep = async (workflowId, stepDefId, action, actor, comments, workfl
      WHERE id = $2`,
     [terminalStatus, workflowId]
   );
+  await syncSubmissionApprovalStatus(
+    wf.submission_id,
+    terminalStatus === 'approved' ? 'approved' : 'submitted'
+  );
   return { workflowStatus: terminalStatus };
 };
 
@@ -415,24 +606,39 @@ const actionStep = async (workflowId, stepDefId, action, actor, comments, workfl
 // getWorkflowsByTenant  (for dashboard / approval inbox)
 // ---------------------------------------------------------------------------
 /**
- * Fetch all in-progress workflow steps assigned to a given role or user.
- * Used to build an "Approvals Inbox" view.
+ * Fetch all in-progress workflow steps assigned to a given role and/or user.
+ * Used to build an approval inbox view.
  */
-const getPendingStepsForRole = async (tenantId, role, limit = 50) => {
+const getPendingStepsForActor = async ({
+  tenantId,
+  role = null,
+  userId = null,
+  limit = 50,
+}) => {
   const result = await postgresPool.query(
     `SELECT sws.*, sw.workflow_name, sw.workflow_type, sw.submission_id,
             sw.submitted_by_user_name, sw.submitted_by_user_email
      FROM submission_workflow_steps sws
      JOIN submission_workflows sw ON sws.workflow_id = sw.id
      WHERE sws.tenant_id = $1
-       AND (sws.assignee_role = $2 OR sws.assignee_roles @> $3::jsonb)
+       AND (
+         ($2::varchar IS NOT NULL AND (
+           sws.assignee_role = $2
+           OR COALESCE(sws.assignee_roles, '[]'::jsonb) @> jsonb_build_array($2::varchar)
+         ))
+         OR
+         ($3::varchar IS NOT NULL AND COALESCE(sws.assignee_users, '[]'::jsonb) @> jsonb_build_array($3::varchar))
+       )
        AND sws.status = 'in_progress'
      ORDER BY sws.due_at ASC NULLS LAST
      LIMIT $4`,
-    [tenantId, role, JSON.stringify([role]), limit]
+    [tenantId, role || null, userId || null, limit]
   );
   return result.rows;
 };
+
+const getPendingStepsForRole = async (tenantId, role, limit = 50) =>
+  getPendingStepsForActor({ tenantId, role, limit });
 
 /**
  * Cancel all workflow instances for a submission (e.g. when submission is deleted).
@@ -456,6 +662,7 @@ module.exports = {
   initWorkflows,
   getWorkflows,
   actionStep,
+  getPendingStepsForActor,
   getPendingStepsForRole,
   cancelWorkflows,
   autoAdvanceNotifySteps,

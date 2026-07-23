@@ -13,6 +13,7 @@ const {
   Counter,
 } = require('../models');
 const projectFormService = require('./projectForm.service');
+const publicSubmissionValidationService = require('./publicSubmissionValidation.service');
 const emailService = require('./email.service');
 const smsService = require('./sms.service');
 const { queueSubmission } = require('./submission.service');
@@ -21,13 +22,22 @@ const {
   normalizePhoneToE164,
   buildPhoneLookupCandidates,
 } = require('../utils/phoneNumber');
+const projectFormInvoiceService = require('./projectFormInvoice.service');
+const {
+  buildFinancialSubmissionData,
+  buildTransactionMeta,
+} = require('./submissionFinancialFields.service');
 
 const ACCESS_TOKEN_TYPE = 'public_form_access';
 const OTP_CHALLENGE_TOKEN_TYPE = 'public_form_otp';
+const ACCESS_CODE_GATE_TOKEN_TYPE = 'public_form_access_code_gate';
 const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 const OTP_TTL_SECONDS = 10 * 60;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_RESEND_COOLDOWN_SECONDS = 30;
+
+const asObject = (value) =>
+  value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 
 const isUserActive = (userDoc) =>
   Boolean(userDoc) && userDoc.deletedAt == null && userDoc.status !== false;
@@ -43,6 +53,73 @@ const maskPhone = (phone) => {
   const digits = String(phone || '').replace(/\D/g, '');
   if (digits.length < 4) return null;
   return `${'*'.repeat(Math.max(0, digits.length - 4))}${digits.slice(-4)}`;
+};
+
+const normalizeUserIdentitySet = (user) => {
+  const values = new Set();
+  const push = (value) => {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized) values.add(normalized);
+  };
+
+  push(user?._id);
+  push(user?.userId);
+  push(user?.email);
+  push(user?.phoneNumber);
+
+  return values;
+};
+
+const assertSecureUserEligible = async ({ projectForm, user }) => {
+  const { access = {}, authentication = {} } =
+    publicSubmissionValidationService.getNormalizedSecurityConfig(projectForm);
+  const whoCanAccess = String(access?.whoCanAccess || 'authenticated_users')
+    .trim()
+    .toLowerCase();
+  const allowedUsers = Array.isArray(access?.allowedUsers)
+    ? access.allowedUsers
+        .map((entry) => String(entry || '').trim().toLowerCase())
+        .filter(Boolean)
+    : [];
+  const allowedRoles = Array.isArray(access?.allowedRoles)
+    ? access.allowedRoles.map((entry) => String(entry || '').trim()).filter(Boolean)
+    : [];
+
+  if (authentication?.requireLogin === false && authentication?.allowAnonymous === true) {
+    return;
+  }
+
+  const userIdentitySet = normalizeUserIdentitySet(user);
+
+  if (whoCanAccess === 'selected_users') {
+    const isAllowedUser = allowedUsers.some((entry) => userIdentitySet.has(entry));
+    if (!isAllowedUser) {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        'This account is not permitted to access this secure form.'
+      );
+    }
+  }
+
+  if (whoCanAccess === 'selected_roles') {
+    const userRoles = Array.isArray(user?.roles)
+      ? user.roles.map((entry) => String(entry))
+      : [];
+    const hasAllowedRole = allowedRoles.some((entry) => userRoles.includes(entry));
+    if (!hasAllowedRole) {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        'This account does not have the required role for this secure form.'
+      );
+    }
+  }
+
+  if (access?.restrictByLocation === true) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Location-restricted secure access is not supported in this runtime yet.'
+    );
+  }
 };
 
 const normalizeDeliveryError = (value, fallback = 'Delivery failed') => {
@@ -82,6 +159,12 @@ const buildOtpHash = ({ challengeId, otp }) =>
     .digest('hex');
 
 const generateOtpCode = () => String(randomInt(100000, 1000000));
+
+const normalizeAccessCodeInput = (value) =>
+  String(value || '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .toUpperCase();
 
 const sanitizeChannel = (value) => {
   const normalized = String(value || '')
@@ -175,10 +258,10 @@ const resolveSecureForm = async ({ reference, qrContextToken = null }) => {
     resolvedBy: resolved.resolvedBy,
   });
 
-  if (!['single_qr_passwordless', 'otp'].includes(qrContext.secureMode)) {
+  if (!publicSubmissionValidationService.isSecurePublicMode(qrContext.secureMode)) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      'This module is not in secure single-QR passwordless mode.'
+      'This form is not configured for secure public access.'
     );
   }
 
@@ -213,22 +296,30 @@ const findUserForForm = async ({ tenantId, identifier }) => {
   return user;
 };
 
-const buildAccessClaims = ({ jti, user, secureForm }) => ({
-  typ: ACCESS_TOKEN_TYPE,
-  jti,
-  sub: String(user._id),
-  tenantId: secureForm.projectForm.tenantId,
-  projectId: secureForm.projectForm.projectId,
-  projectFormId: String(secureForm.projectForm._id),
-  publicRef: secureForm.projectForm.publicRef || null,
-  shareRef: secureForm.projectForm.shareRef || null,
-  secureMode: secureForm.qrContext.secureMode,
-  pipelineTarget: secureForm.qrContext.pipelineTarget,
-});
+const buildAccessClaims = ({ jti, user = null, secureForm, accessContextType = 'identity' }) => {
+  const claims = {
+    typ: ACCESS_TOKEN_TYPE,
+    jti,
+    tenantId: secureForm.projectForm.tenantId,
+    projectId: secureForm.projectForm.projectId,
+    projectFormId: String(secureForm.projectForm._id),
+    publicRef: secureForm.projectForm.publicRef || null,
+    shareRef: secureForm.projectForm.shareRef || null,
+    secureMode: secureForm.qrContext.secureMode,
+    pipelineTarget: secureForm.qrContext.pipelineTarget,
+    accessContextType,
+  };
+
+  if (user?._id) {
+    claims.sub = String(user._id);
+  }
+
+  return claims;
+};
 
 const createAccessGrant = async ({
   secureForm,
-  user,
+  user = null,
   resolvedIdentifier,
   delivery = null,
   metadata = {},
@@ -236,8 +327,9 @@ const createAccessGrant = async ({
   const issuedAt = new Date();
   const expiresAt = new Date(issuedAt.getTime() + ACCESS_TOKEN_TTL_SECONDS * 1000);
   const jti = randomUUID();
+  const accessContextType = user?._id ? 'identity' : 'anonymous';
 
-  const claims = buildAccessClaims({ jti, user, secureForm });
+  const claims = buildAccessClaims({ jti, user, secureForm, accessContextType });
   const token = jwt.sign(claims, config.publicForm.qrContextSecret, {
     algorithm: 'HS256',
     issuer: 'saby-public-form',
@@ -254,11 +346,11 @@ const createAccessGrant = async ({
     publicRef: secureForm.projectForm.publicRef || null,
     shareRef: secureForm.projectForm.shareRef || null,
     shareCode: secureForm.projectForm.shareCode || null,
-    userId: user._id,
+    userId: user?._id || null,
     identifierType: resolvedIdentifier.type,
     identifier: resolvedIdentifier.normalized,
-    email: user.email || null,
-    phoneNumber: user.phoneNumber || null,
+    email: user?.email || null,
+    phoneNumber: user?.phoneNumber || null,
     secureMode: secureForm.qrContext.secureMode,
     pipelineTarget: secureForm.qrContext.pipelineTarget,
     schemaVersion: secureForm.qrContext.schemaVersion,
@@ -270,6 +362,7 @@ const createAccessGrant = async ({
     delivery: delivery || undefined,
     metadata: {
       resolvedBy: secureForm.resolvedBy,
+      accessContextType,
       ...(metadata && typeof metadata === 'object' ? metadata : {}),
     },
   });
@@ -515,11 +608,26 @@ const sendMagicLinkNotifications = async ({ user, link }) => {
   if (user.email) {
     emailJobs.push(
       emailService
-        .sendEmail(
-          user.email,
-          'Saby secure form access link',
-          `Use this secure one-time link to continue your submission: ${link}`
-        )
+        .sendSabyEmail({
+          to: user.email,
+          subject: 'Saby secure form access link',
+          preheader: 'Use this secure one-time link to continue your submission.',
+          layout: 'workspaceAccess',
+          label: 'Secure form access',
+          icon: 'LINK',
+          headline: 'Continue your submission securely.',
+          body: [
+            'Use this secure one-time link to continue your Saby submission. This link helps protect your form and keeps access limited to the intended recipient.',
+            'If you did not request this link, you can safely ignore this email.',
+          ],
+          detailsRows: [
+            ['Access type', 'Secure magic link'],
+            ['Use', 'Continue submission'],
+            ['Link type', 'One-time access'],
+          ],
+          ctaLabel: 'Continue submission',
+          ctaUrl: link,
+        })
         .then(() => {
           delivery.email.sent = true;
         })
@@ -571,6 +679,12 @@ const sendMagicLinkNotifications = async ({ user, link }) => {
 
 const issueAccessLink = async ({ reference, identifier, qrContextToken = null }) => {
   const secureForm = await resolveSecureForm({ reference, qrContextToken });
+  if (secureForm.qrContext.secureMode !== 'link_only') {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'This secure form uses verification codes instead of one-time access links.'
+    );
+  }
   const resolvedIdentifier = resolveIdentifier(identifier);
   const user = await findUserForForm({
     tenantId: secureForm.projectForm.tenantId,
@@ -580,6 +694,11 @@ const issueAccessLink = async ({ reference, identifier, qrContextToken = null })
   if (!user || !isUserActive(user)) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Account not found or inactive for this module.');
   }
+
+  await assertSecureUserEligible({
+    projectForm: secureForm.projectForm,
+    user,
+  });
 
   const { token, expiresAt, jti } = await createAccessGrant({
     secureForm,
@@ -664,6 +783,196 @@ const ensureOtpChallengeActive = async (challenge) => {
   }
 };
 
+const getAccessCodeConfig = (projectForm) => {
+  const { security = {}, access = {} } =
+    publicSubmissionValidationService.getNormalizedSecurityConfig(projectForm);
+  const configValue = security?.accessCode || {};
+  return {
+    whoCanAccess: String(access?.whoCanAccess || 'authenticated_users')
+      .trim()
+      .toLowerCase(),
+    code: normalizeAccessCodeInput(configValue?.code),
+    hint: configValue?.hint ? String(configValue.hint).trim() : null,
+    maxAttempts:
+      Number.isFinite(Number(configValue?.maxAttempts)) &&
+      Number(configValue.maxAttempts) > 0
+        ? Number(configValue.maxAttempts)
+        : 5,
+    lockoutMinutes:
+      Number.isFinite(Number(configValue?.lockoutMinutes)) &&
+      Number(configValue.lockoutMinutes) > 0
+        ? Number(configValue.lockoutMinutes)
+        : 15,
+  };
+};
+
+const buildAccessCodeAttemptIdentifier = ({ tenantId, projectId, reference, ip }) =>
+  createHash('sha256')
+    .update(
+      [
+        String(tenantId || ''),
+        String(projectId || ''),
+        String(reference || ''),
+        String(ip || 'unknown'),
+      ].join(':')
+    )
+    .digest('hex');
+
+const verifyAccessGateCode = async ({
+  reference,
+  accessCode,
+  qrContextToken = null,
+  requestContext = {},
+}) => {
+  const secureForm = await resolveSecureForm({ reference, qrContextToken });
+  if (secureForm.qrContext.secureMode !== 'access_code') {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'This secure form uses OTP verification instead of an access code.'
+    );
+  }
+
+  const accessCodeConfig = getAccessCodeConfig(secureForm.projectForm);
+  if (accessCodeConfig.whoCanAccess !== 'anyone') {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Access code entry is only supported for public forms configured for anyone.'
+    );
+  }
+  if (!accessCodeConfig.code) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'This form does not have a valid access code configured yet.'
+    );
+  }
+
+  const normalizedCode = normalizeAccessCodeInput(accessCode);
+  if (!normalizedCode) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Access code is required.');
+  }
+
+  const attemptIdentifier = buildAccessCodeAttemptIdentifier({
+    tenantId: secureForm.projectForm.tenantId,
+    projectId: secureForm.projectForm.projectId,
+    reference,
+    ip: requestContext?.ip || null,
+  });
+  const now = new Date();
+  const attemptDoc =
+    (await PublicFormAccess.findOne({
+      tokenType: ACCESS_CODE_GATE_TOKEN_TYPE,
+      tenantId: secureForm.projectForm.tenantId,
+      projectId: secureForm.projectForm.projectId,
+      projectFormId: secureForm.projectForm._id,
+      identifierType: 'access_code',
+      identifier: attemptIdentifier,
+    })) || null;
+
+  if (
+    attemptDoc?.status === 'locked' &&
+    attemptDoc.expiresAt &&
+    new Date(attemptDoc.expiresAt).getTime() > now.getTime()
+  ) {
+    throw new ApiError(
+      httpStatus.TOO_MANY_REQUESTS,
+      'Too many invalid access code attempts. Please try again later.'
+    );
+  }
+
+  if (normalizedCode !== accessCodeConfig.code) {
+    const attempts = Number(attemptDoc?.otpAttempts || 0) + 1;
+    const maxAttempts = Math.max(1, Number(accessCodeConfig.maxAttempts || 5));
+    const isLocked = attempts >= maxAttempts;
+    const lockExpiresAt = new Date(
+      now.getTime() + Math.max(1, Number(accessCodeConfig.lockoutMinutes || 15)) * 60 * 1000
+    );
+    if (attemptDoc) {
+      attemptDoc.otpAttempts = attempts;
+      attemptDoc.otpMaxAttempts = maxAttempts;
+      attemptDoc.status = isLocked ? 'locked' : 'issued';
+      attemptDoc.expiresAt = isLocked ? lockExpiresAt : attemptDoc.expiresAt || lockExpiresAt;
+      attemptDoc.metadata = {
+        ...(attemptDoc.metadata || {}),
+        lastFailedAt: now.toISOString(),
+      };
+      await attemptDoc.save();
+    } else {
+      await PublicFormAccess.create({
+        jti: randomUUID(),
+        tokenType: ACCESS_CODE_GATE_TOKEN_TYPE,
+        tenantId: secureForm.projectForm.tenantId,
+        projectId: secureForm.projectForm.projectId,
+        projectFormId: secureForm.projectForm._id,
+        publicRef: secureForm.projectForm.publicRef || null,
+        shareRef: secureForm.projectForm.shareRef || null,
+        shareCode: secureForm.projectForm.shareCode || null,
+        userId: null,
+        identifierType: 'access_code',
+        identifier: attemptIdentifier,
+        secureMode: secureForm.qrContext.secureMode,
+        pipelineTarget: secureForm.qrContext.pipelineTarget,
+        schemaVersion: secureForm.qrContext.schemaVersion,
+        schemaHash: secureForm.qrContext.schemaHash,
+        qrVersion: secureForm.qrContext.qrVersion,
+        status: isLocked ? 'locked' : 'issued',
+        issuedAt: now,
+        expiresAt: lockExpiresAt,
+        otpAttempts: attempts,
+        otpMaxAttempts: maxAttempts,
+        metadata: {
+          accessMethod: 'access_code_gate',
+          requestIp: requestContext?.ip || null,
+          lastFailedAt: now.toISOString(),
+        },
+      });
+    }
+
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid access code.');
+  }
+
+  if (attemptDoc) {
+    attemptDoc.status = 'verified';
+    attemptDoc.otpAttempts = 0;
+    attemptDoc.metadata = {
+      ...(attemptDoc.metadata || {}),
+      verifiedAt: now.toISOString(),
+      requestIp: requestContext?.ip || null,
+    };
+    await attemptDoc.save();
+  }
+
+  const grant = await createAccessGrant({
+    secureForm,
+    user: null,
+    resolvedIdentifier: {
+      type: 'access_code',
+      normalized: 'access_code',
+    },
+    metadata: {
+      accessMethod: 'access_code',
+      requestIp: requestContext?.ip || null,
+    },
+  });
+
+  await PublicFormAccess.updateOne(
+    { jti: grant.jti, tokenType: ACCESS_TOKEN_TYPE },
+    {
+      $set: {
+        status: 'verified',
+      },
+    }
+  );
+
+  const consumed = await consumeAccessLink({ accessToken: grant.token });
+
+  return {
+    success: true,
+    accessToken: grant.token,
+    expiresAt: grant.expiresAt.toISOString(),
+    ...consumed,
+  };
+};
+
 const requestAccessCode = async ({
   reference,
   channel,
@@ -671,6 +980,12 @@ const requestAccessCode = async ({
   qrContextToken = null,
 }) => {
   const secureForm = await resolveSecureForm({ reference, qrContextToken });
+  if (secureForm.qrContext.secureMode !== 'otp') {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'This secure form uses a different public access gate and cannot send OTP codes.'
+    );
+  }
   const selectedChannel = sanitizeChannel(channel);
   const resolvedIdentifier = resolveIdentifier(identifier, selectedChannel);
   const user = await findUserForForm({
@@ -681,6 +996,11 @@ const requestAccessCode = async ({
   if (!user || !isUserActive(user)) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Account not found or inactive for this module.');
   }
+
+  await assertSecureUserEligible({
+    projectForm: secureForm.projectForm,
+    user,
+  });
 
   // Invalidate older open OTP challenges for this user+form before issuing a fresh one.
   await PublicFormAccess.updateMany(
@@ -872,7 +1192,7 @@ const verifyAccessCode = async ({ challengeId, otp }) => {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Account is not eligible for this module.');
   }
 
-  const projectForm = await ProjectForm.findOne({
+  let projectForm = await ProjectForm.findOne({
     _id: challenge.projectFormId,
     tenantId: challenge.tenantId,
     projectId: challenge.projectId,
@@ -895,6 +1215,11 @@ const verifyAccessCode = async ({ challengeId, otp }) => {
     normalized: challenge.identifier,
     candidates: [challenge.identifier],
   };
+
+  await assertSecureUserEligible({
+    projectForm,
+    user,
+  });
 
   const grant = await createAccessGrant({
     secureForm,
@@ -1012,6 +1337,49 @@ const verifyAccessToken = async (accessToken, options = {}) => {
     decoded,
     accessDoc,
   };
+};
+
+const assertAccessSessionMatchesCurrentSecurity = async ({
+  decoded,
+  accessDoc,
+}) => {
+  const projectForm = await ProjectForm.findOne({
+    _id: decoded.projectFormId,
+    tenantId: decoded.tenantId,
+    projectId: decoded.projectId,
+    deletedAt: null,
+  }).lean();
+
+  if (!projectForm) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found.');
+  }
+
+  const currentSecureMode = String(
+    projectFormService.buildPublicQrContext(projectForm, {
+      resolvedBy: 'access-session-validation',
+    })?.secureMode || 'off'
+  ).trim().toLowerCase();
+  const issuedSecureMode = String(accessDoc?.secureMode || 'off')
+    .trim()
+    .toLowerCase();
+
+  if (currentSecureMode !== issuedSecureMode) {
+    accessDoc.status = 'revoked';
+    accessDoc.metadata = {
+      ...(accessDoc.metadata || {}),
+      revokedAt: new Date().toISOString(),
+      revokedReason: 'security_mode_changed',
+      currentSecureMode,
+      issuedSecureMode,
+    };
+    await accessDoc.save();
+    throw new ApiError(
+      httpStatus.UNAUTHORIZED,
+      'This secure session is no longer valid. Please authenticate again.'
+    );
+  }
+
+  return projectForm;
 };
 
 const getProjectPublicAccessMetrics = async ({
@@ -1169,6 +1537,35 @@ const resolveUserAssignedNodes = async ({ tenantId, userId }) => {
 
 const consumeAccessLink = async ({ accessToken }) => {
   const { decoded, accessDoc } = await verifyAccessToken(accessToken);
+  await assertAccessSessionMatchesCurrentSecurity({
+    decoded,
+    accessDoc,
+  });
+  const isAnonymousAccess =
+    decoded?.accessContextType === 'anonymous' ||
+    accessDoc?.identifierType === 'access_code' ||
+    accessDoc?.metadata?.accessMethod === 'access_code';
+
+  if (isAnonymousAccess) {
+    return {
+      success: true,
+      secureMode: accessDoc.secureMode || 'access_code',
+      accessContext: {
+        tenantId: decoded.tenantId,
+        projectId: decoded.projectId,
+        projectFormId: decoded.projectFormId,
+        publicRef: decoded.publicRef || null,
+        shareRef: decoded.shareRef || null,
+        expiresAt: accessDoc.expiresAt,
+        requiresNodeSelection: false,
+        autoNodeId: null,
+        status: accessDoc.status,
+      },
+      user: null,
+      nodes: [],
+    };
+  }
+
   const user = await User.findById(decoded.sub);
 
   if (!isUserActive(user) || user.tenantId !== decoded.tenantId) {
@@ -1189,7 +1586,7 @@ const consumeAccessLink = async ({ accessToken }) => {
 
   return {
     success: true,
-    secureMode: accessDoc.secureMode || 'single_qr_passwordless',
+    secureMode: accessDoc.secureMode || 'link_only',
     accessContext: {
       tenantId: decoded.tenantId,
       projectId: decoded.projectId,
@@ -1325,21 +1722,26 @@ const getSystemFormPrefillByAccess = async ({ accessToken, nodeId = null }) => {
       'Access link must be verified before loading form prefill.'
     );
   }
+  if (
+    decoded?.accessContextType === 'anonymous' ||
+    accessDoc?.identifierType === 'access_code' ||
+    accessDoc?.metadata?.accessMethod === 'access_code'
+  ) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Access-code sessions do not support secure prefill.'
+    );
+  }
 
   const user = await User.findById(decoded.sub);
   if (!isUserActive(user) || user.tenantId !== decoded.tenantId) {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Account is not eligible for this module.');
   }
 
-  const projectForm = await ProjectForm.findOne({
-    _id: decoded.projectFormId,
-    tenantId: decoded.tenantId,
-    projectId: decoded.projectId,
-    deletedAt: null,
-  }).lean();
-  if (!projectForm) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found.');
-  }
+  const projectForm = await assertAccessSessionMatchesCurrentSecurity({
+    decoded,
+    accessDoc,
+  });
 
   const isSystemForm = projectForm?.metadata?.formCategory === 'system';
   const systemTarget = projectForm?.metadata?.systemTarget || null;
@@ -1422,7 +1824,12 @@ const submitWithAccess = async ({
   nodeId,
   submissionData,
   submittedAt = null,
+  eventDate = null,
+  submissionDate = null,
+  month = null,
+  year = null,
   metadata = {},
+  requestContext = {},
 }) => {
   if (!submissionData || typeof submissionData !== 'object') {
     throw new ApiError(httpStatus.BAD_REQUEST, 'submissionData is required.');
@@ -1471,29 +1878,60 @@ const submitWithAccess = async ({
       'Access link must be verified before submission.'
     );
   }
-
-  const user = await User.findById(decoded.sub);
-  if (!isUserActive(user) || user.tenantId !== decoded.tenantId) {
+  const isAnonymousAccess =
+    decoded?.accessContextType === 'anonymous' ||
+    accessDoc?.identifierType === 'access_code' ||
+    accessDoc?.metadata?.accessMethod === 'access_code';
+  const user = isAnonymousAccess ? null : await User.findById(decoded.sub);
+  if (!isAnonymousAccess && (!isUserActive(user) || user.tenantId !== decoded.tenantId)) {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Account is not eligible for this module.');
   }
 
-  const projectForm = await ProjectForm.findOne({
-    _id: decoded.projectFormId,
-    tenantId: decoded.tenantId,
-    projectId: decoded.projectId,
-    deletedAt: null,
-  }).lean();
+  let projectForm = await assertAccessSessionMatchesCurrentSecurity({
+    decoded,
+    accessDoc,
+  });
 
-  if (!projectForm) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Module not found.');
-  }
-
-  await validateSpecialFieldSubmission({
+  const validationResult = await publicSubmissionValidationService.runPublicPreSubmitPipeline({
     projectForm,
     submissionData,
-    metadata: metadata || {},
+    metadata: {
+      ...(metadata || {}),
+      publicAccess: {
+        reference: accessDoc.shareRef || accessDoc.publicRef || null,
+      },
+      requestContext: {
+        ip: requestContext?.ip || null,
+        userAgent: requestContext?.userAgent || null,
+      },
+    },
     accessToken,
+    routeType: 'public_secure',
+    actorContext: {
+      userId: user?._id ? String(user._id) : null,
+      identifier:
+        accessDoc.identifier ||
+        user?.email ||
+        user?.phoneNumber ||
+        requestContext?.ip ||
+        null,
+      ip: requestContext?.ip || null,
+    },
   });
+  projectForm = validationResult.projectForm;
+  submissionData = validationResult.submissionData || submissionData;
+  const invoiceSnapshot = await projectFormInvoiceService.evaluateInvoiceSnapshot({
+    projectForm,
+    submissionData,
+    allocateNumber: true,
+  });
+
+  if (!isAnonymousAccess) {
+    await assertSecureUserEligible({
+      projectForm,
+      user,
+    });
+  }
 
   const claimTime = new Date();
   const claimedAccessDoc = await PublicFormAccess.findOneAndUpdate(
@@ -1556,6 +1994,114 @@ const submitWithAccess = async ({
 
   const isSystemForm = projectForm?.metadata?.formCategory === 'system';
   const systemTarget = projectForm?.metadata?.systemTarget || null;
+
+  if (isAnonymousAccess && isSystemForm) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Access-code sessions are not supported for system forms.'
+    );
+  }
+
+  if (isAnonymousAccess) {
+    const queuePayload = {
+      tenantId: decoded.tenantId,
+      projectId: decoded.projectId,
+      project_name: projectForm?.identity?.name || null,
+      project_category: Array.isArray(projectForm?.identity?.tags)
+        ? projectForm.identity.tags[0] || null
+        : null,
+      formId: projectForm.formId || projectForm.projectId,
+      nodeId: null,
+      payload: buildFinancialSubmissionData({
+        submissionData,
+        metadata,
+        invoiceSnapshot,
+      }),
+      source: 'public_secure_access_code',
+      meta: {
+        ...(metadata && typeof metadata === 'object' ? metadata : {}),
+        publicAccess: {
+          mode: claimedAccessDoc.secureMode,
+          jti: claimedAccessDoc.jti,
+          shareRef: claimedAccessDoc.shareRef || null,
+          publicRef: claimedAccessDoc.publicRef || null,
+          identifier: 'access_code',
+          accessMethod: 'access_code',
+        },
+        requestContext: {
+          ip: requestContext?.ip || null,
+          userAgent: requestContext?.userAgent || null,
+        },
+        transaction: buildTransactionMeta(metadata, invoiceSnapshot),
+        anonymous: true,
+      },
+    };
+
+    const effectiveEventDate = eventDate || submissionDate || submittedAt || null;
+    if (effectiveEventDate) {
+      queuePayload.event_date = effectiveEventDate;
+    }
+    if (submissionDate) {
+      queuePayload.submission_date = submissionDate;
+    }
+    if (projectForm.capabilities?.experience?.compliance?.enabled) {
+      queuePayload.perm_enabled = true;
+      const payloadMonth =
+        month ||
+        queuePayload.payload?.month ||
+        queuePayload.payload?.reportingMonth ||
+        queuePayload.meta?.month ||
+        (effectiveEventDate ? String(effectiveEventDate).slice(0, 7) : null) ||
+        null;
+      const payloadYear =
+        year ||
+        queuePayload.payload?.year ||
+        queuePayload.payload?.reportingYear ||
+        queuePayload.meta?.year ||
+        (payloadMonth ? String(payloadMonth).slice(0, 4) : null) ||
+        null;
+      if (payloadMonth) queuePayload.month = String(payloadMonth);
+      if (payloadYear) queuePayload.year = String(payloadYear);
+    }
+
+    queuePayload.idempotency_key = buildDeterministicIdempotencyKey({
+      tenant_id: queuePayload.tenantId,
+      project_id: queuePayload.projectId,
+      form_id: queuePayload.formId,
+      node_id: null,
+      event_date: queuePayload.event_date,
+      submitter_id: `access:${claimedAccessDoc.jti}`,
+      payload: queuePayload.payload,
+    });
+
+    const queueResult = await queueSubmission(queuePayload);
+
+    claimedAccessDoc.status = 'submitted';
+    claimedAccessDoc.submittedAt = new Date();
+    claimedAccessDoc.metadata = {
+      ...(claimedAccessDoc.metadata || {}),
+      submissionJobId: queueResult.jobId,
+      submissionStatus: queueResult.status,
+    };
+    await claimedAccessDoc.save();
+
+    try {
+      await projectFormService.incrementProjectSubmissions(decoded.projectId);
+    } catch (error) {
+      logger.warn('[PublicFormAccess] failed to increment submissions counter', {
+        projectId: decoded.projectId,
+        error: error?.message,
+      });
+    }
+
+    return {
+      success: true,
+      status: queueResult.status,
+      jobId: queueResult.jobId,
+      projectId: decoded.projectId,
+      node: null,
+    };
+  }
 
   if (isSystemForm) {
     let targetId = null;
@@ -1634,7 +2180,11 @@ const submitWithAccess = async ({
     node_reference: node.nodeId || null,
     form_reference: projectForm.formReference || null,
     userId: String(user._id),
-    payload: submissionData,
+    payload: buildFinancialSubmissionData({
+      submissionData,
+      metadata,
+      invoiceSnapshot,
+    }),
     source: 'public_secure_qr',
     meta: {
       ...(metadata && typeof metadata === 'object' ? metadata : {}),
@@ -1643,25 +2193,39 @@ const submitWithAccess = async ({
         jti: claimedAccessDoc.jti,
         shareRef: claimedAccessDoc.shareRef || null,
         publicRef: claimedAccessDoc.publicRef || null,
+        identifier: claimedAccessDoc.identifier || null,
       },
+      requestContext: {
+        ip: requestContext?.ip || null,
+        userAgent: requestContext?.userAgent || null,
+      },
+      transaction: buildTransactionMeta(metadata, invoiceSnapshot),
     },
   };
 
-  if (submittedAt) {
-    queuePayload.event_date = submittedAt;
+  const effectiveEventDate = eventDate || submissionDate || submittedAt || null;
+  if (effectiveEventDate) {
+    queuePayload.event_date = effectiveEventDate;
+  }
+  if (submissionDate) {
+    queuePayload.submission_date = submissionDate;
   }
 
   if (projectForm.capabilities?.experience?.compliance?.enabled) {
     queuePayload.perm_enabled = true;
     const payloadMonth =
+      month ||
       queuePayload.payload?.month ||
       queuePayload.payload?.reportingMonth ||
       queuePayload.meta?.month ||
+      (effectiveEventDate ? String(effectiveEventDate).slice(0, 7) : null) ||
       null;
     const payloadYear =
+      year ||
       queuePayload.payload?.year ||
       queuePayload.payload?.reportingYear ||
       queuePayload.meta?.year ||
+      (payloadMonth ? String(payloadMonth).slice(0, 4) : null) ||
       null;
     if (payloadMonth) queuePayload.month = String(payloadMonth);
     if (payloadYear) queuePayload.year = String(payloadYear);
@@ -1876,171 +2440,16 @@ const normalizeAcceptedImageTypes = (value) => {
   return mapped.length > 0 ? Array.from(new Set(mapped)) : ['image/jpeg', 'image/png', 'image/webp'];
 };
 
-const validateSpecialFieldSubmission = async ({
-  projectForm,
-  submissionData,
-  metadata = {},
-  accessToken = null,
-}) => {
-  if (!projectForm || !submissionData || typeof submissionData !== 'object') {
-    return;
-  }
-
-  const elements = Array.isArray(projectForm.elements) ? projectForm.elements : [];
-  const verificationState =
-    metadata && typeof metadata === 'object' && metadata.verificationState
-      ? metadata.verificationState
-      : {};
-  const previewSubmissionConfig =
-    projectForm?.capabilities?.experience?.previewSubmission || {};
-
-  if (previewSubmissionConfig?.enabled && metadata?.previewSubmissionConfirmed !== true) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'Submission preview must be acknowledged before final submission.'
-    );
-  }
-
-  for (const element of elements) {
-    const fieldId = String(element?.id || '').trim();
-    const fieldType = String(element?.properties?.fieldType || '')
-      .trim()
-      .toLowerCase();
-
-    if (!fieldId) {
-      continue;
-    }
-
-    if (fieldType === 'profile_image_upload') {
-      const required = Boolean(
-        element?.properties?.required || element?.properties?.validation?.required
-      );
-      const rawValue = submissionData[fieldId];
-
-      if (rawValue === undefined || rawValue === null || rawValue === '') {
-        if (required) {
-          throw new ApiError(
-            httpStatus.BAD_REQUEST,
-            `${element?.properties?.label || fieldId} is required.`
-          );
-        }
-        continue;
-      }
-
-      if (!rawValue || typeof rawValue !== 'object' || Array.isArray(rawValue)) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          `${element?.properties?.label || fieldId} must be a valid image upload payload.`
-        );
-      }
-
-      const acceptedTypes = normalizeAcceptedImageTypes(element?.properties?.acceptedFormats);
-      const maxSizeMB = Math.max(1, Number(element?.properties?.maxSizeMB || 5));
-      const fileType = String(rawValue.type || '').trim().toLowerCase();
-      const fileName = String(rawValue.name || '').trim();
-      const fileUrl = String(rawValue.url || '').trim();
-      const fileKey = String(rawValue.key || '').trim();
-      const fileSize = Number(rawValue.size || 0);
-      const width = rawValue.width == null ? null : Number(rawValue.width);
-      const height = rawValue.height == null ? null : Number(rawValue.height);
-
-      if (!fileName || !fileType || !fileUrl || !fileKey) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          `${element?.properties?.label || fieldId} is missing uploaded image metadata.`
-        );
-      }
-
-      if (!acceptedTypes.includes(fileType)) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          `${element?.properties?.label || fieldId} must use one of the supported image formats.`
-        );
-      }
-
-      if (!Number.isFinite(fileSize) || fileSize <= 0 || fileSize > maxSizeMB * 1024 * 1024) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          `${element?.properties?.label || fieldId} exceeds the allowed image size.`
-        );
-      }
-
-      if ((width !== null && (!Number.isFinite(width) || width <= 0)) ||
-          (height !== null && (!Number.isFinite(height) || height <= 0))) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          `${element?.properties?.label || fieldId} has invalid image dimensions.`
-        );
-      }
-
-      continue;
-    }
-
-    if (!['secured_phone', 'secured_email'].includes(fieldType)) {
-      continue;
-    }
-
-    const required = Boolean(
-      element?.properties?.required || element?.properties?.validation?.required
-    );
-    const rawValue = submissionData[fieldId];
-    const submittedValue = String(rawValue || '').trim();
-
-    if (!submittedValue) {
-      if (required) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          `${element?.properties?.label || fieldId} is required.`
-        );
-      }
-      continue;
-    }
-
-    const state = verificationState?.[fieldId];
-    if (!state?.verified || !state?.challengeId) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        `${element?.properties?.label || fieldId} must be verified before submission.`
-      );
-    }
-
-    const expectedChannel = fieldType === 'secured_phone' ? 'phone' : 'email';
-    const normalizedIdentifier = resolveIdentifier(submittedValue, expectedChannel).normalized;
-    const challenge = await PublicFormAccess.findOne({
-      jti: String(state.challengeId).trim(),
-      tokenType: OTP_CHALLENGE_TOKEN_TYPE,
-      status: 'verified',
-      projectFormId: projectForm._id,
-      challengeChannel: expectedChannel,
-      identifier: normalizedIdentifier,
-      'metadata.kind': 'field_verification',
-      'metadata.fieldKey': String(element?.properties?.fieldKey || fieldId).trim() || fieldId,
-    }).lean();
-
-    if (!challenge) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        `${element?.properties?.label || fieldId} verification is invalid or expired.`
-      );
-    }
-
-    if (accessToken && challenge?.metadata?.accessToken) {
-      const expectedToken = String(challenge.metadata.accessToken || '').trim();
-      if (expectedToken && expectedToken !== String(accessToken).trim()) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          `${element?.properties?.label || fieldId} verification does not match this secure session.`
-        );
-      }
-    }
-  }
-};
+const validateSpecialFieldSubmission = async (payload) =>
+  publicSubmissionValidationService.validateSpecialFieldSubmission(payload);
 
 module.exports = {
+  ensureProjectFormAccess,
   issueAccessLink,
   requestAccessCode,
   resendAccessCode,
   verifyAccessCode,
+  verifyAccessGateCode,
   consumeAccessLink,
   getSystemFormPrefillByAccess,
   submitWithAccess,

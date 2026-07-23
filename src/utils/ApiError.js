@@ -22,10 +22,11 @@
  * - stack: The error stack trace
  */
 class ApiError extends Error {
-  constructor(statusCode, message, isOperational = true, stack = '') {
+  constructor(statusCode, message, isOperational = true, stack = '', details = null) {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = isOperational;
+    this.details = details;
     if (stack) {
       this.stack = stack;
     } else {

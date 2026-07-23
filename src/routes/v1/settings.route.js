@@ -6,6 +6,16 @@ const settingsController = require('../../controllers/settings.controller');
 
 const router = express.Router();
 
+router
+  .route('/schedules')
+  .get(auth(), settingsController.listWorkspaceSchedules)
+  .post(auth(), settingsController.createWorkspaceSchedule);
+
+router
+  .route('/schedules/:scheduleId')
+  .patch(auth(), settingsController.updateWorkspaceScheduleStatus)
+  .delete(auth(), settingsController.deleteWorkspaceSchedule);
+
 /**
  * @swagger
  * tags:

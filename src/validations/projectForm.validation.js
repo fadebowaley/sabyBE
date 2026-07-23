@@ -288,6 +288,15 @@ const invoiceConfigSchema = Joi.object({
   })
   .default({});
 
+const TRANSACTION_COLLECTION_STAGE_VALUES = [
+  'submission',
+  'pre_approval',
+  'post_approval',
+  'before_submit',
+  'before_approval',
+  'after_approval',
+];
+
 const capabilitiesSchema = Joi.object({
   experience: Joi.object({
     security: Joi.object({
@@ -302,15 +311,49 @@ const capabilitiesSchema = Joi.object({
     }).default({}),
     compliance: Joi.object({
       enabled: Joi.boolean().default(false),
-      trackingMode: Joi.string().valid('none', 'daily', 'weekly').default('none'),
+      availability: Joi.object({
+        startDate: Joi.string().isoDate().allow(null, '').optional(),
+        endDate: Joi.string().isoDate().allow(null, '').optional(),
+      }).default({}),
+      reportingPeriod: Joi.object({
+        scope: Joi.string()
+          .valid('yearly', 'monthly', 'weekly', 'daily', 'custom_range')
+          .default('monthly'),
+        weekStartsOn: Joi.number().integer().valid(0, 1),
+        timezone: Joi.string().allow('', null),
+        defaultYear: Joi.number().integer().min(2000).max(2100).allow(null).default(null),
+        defaultMonth: Joi.string().pattern(/^\d{4}-\d{2}$/).allow(null, '').default(null),
+        customRange: Joi.object({
+          maxDays: Joi.number().integer().min(1).max(366).allow(null).default(null),
+        }).default({}),
+      }).default({}),
+      submissionPolicy: Joi.object({
+        maxSubmissionsPerPeriod: Joi.number().integer().min(1).max(20).default(1),
+        allowBackdating: Joi.boolean().default(false),
+        closeWindowAtPeriodEnd: Joi.boolean(),
+      }).default({}),
+      submissionFrequency: Joi.object({
+        mode: Joi.string()
+          .valid('once', 'multiple', 'daily', 'weekly', 'monthly', 'custom')
+          .default('monthly'),
+        count: Joi.number().integer().min(1).max(20).default(1),
+        weekdays: Joi.array().items(Joi.number().integer().min(0).max(6)).default([]),
+        monthDates: Joi.array().items(Joi.number().integer().min(1).max(31)).default([]),
+        intervalWeeks: Joi.number().integer().min(1).max(4).default(1),
+        custom: Joi.object({
+          interval: Joi.number().integer().min(1).max(365).allow(null).default(null),
+          unit: Joi.string().valid('day', 'week', 'month').optional(),
+        }).default({}),
+      }).default({}),
+      trackingMode: Joi.string().valid('none', 'daily', 'weekly', 'monthly').default('none'),
       frequency: Joi.string()
-        .valid('none', 'daily', 'weekly', 'biweekly', 'monthly')
-        .default('none'),
+        .valid('daily', 'weekly', 'monthly')
+        .default('monthly'),
       requireNodeId: Joi.boolean().default(true),
       requireMonth: Joi.boolean().default(true),
       trackCompliance: Joi.boolean().default(false),
       autoGenerateCalendar: Joi.boolean().default(false),
-      autoLockMonthEnd: Joi.boolean().default(false),
+      autoLockMonthEnd: Joi.boolean(),
       calendarRequired: Joi.boolean().default(false),
     }).default({}),
     workflow: Joi.object({
@@ -327,7 +370,9 @@ const capabilitiesSchema = Joi.object({
       currency: Joi.string().allow('', null).default(null),
       enabledChannels: Joi.array().items(Joi.string()).default([]),
       defaultChannel: Joi.string().allow(null).default(null),
-      collectionStage: Joi.string().default('submission'),
+      collectionStage: Joi.string()
+        .valid(...TRANSACTION_COLLECTION_STAGE_VALUES)
+        .default('submission'),
       settlementType: Joi.string().default('none'),
       receivingAccount: Joi.any().allow(null).default(null),
       channelConfigs: Joi.object().unknown(true).default({}),
@@ -422,9 +467,19 @@ const layoutSchema = Joi.object({
 }).required();
 
 const securityAuthenticationSchema = Joi.object({
-  requireLogin: Joi.boolean().default(true),
-  allowAnonymous: Joi.boolean().default(false),
+  method: Joi.string().valid('none', 'otp', 'access_code').default('none'),
+  requireLogin: Joi.boolean().default(false),
+  allowAnonymous: Joi.boolean().default(true),
   requireOtp: Joi.boolean().default(false),
+})
+  .unknown(true)
+  .default({});
+
+const securityAccessCodeSchema = Joi.object({
+  code: Joi.string().trim().min(4).max(64).allow('', null).default(null),
+  hint: Joi.string().trim().max(160).allow('', null).default(null),
+  maxAttempts: Joi.number().integer().min(1).max(20).default(5),
+  lockoutMinutes: Joi.number().integer().min(1).max(1440).default(15),
 })
   .unknown(true)
   .default({});
@@ -444,7 +499,9 @@ const paymentConfigSchema = Joi.object({
   currency: Joi.string().allow('', null).default(null),
   enabledChannels: Joi.array().items(Joi.string()).default([]),
   defaultChannel: Joi.string().allow('', null).default(null),
-  collectionStage: Joi.string().default('submission'),
+  collectionStage: Joi.string()
+    .valid(...TRANSACTION_COLLECTION_STAGE_VALUES)
+    .default('submission'),
   settlementType: Joi.string().default('none'),
   receivingAccount: Joi.any().allow(null).default(null),
   channelConfigs: Joi.object().unknown(true).default({}),
@@ -583,7 +640,41 @@ const automationOperationalVisibilitySchema = Joi.object({
 // PERM Settings Schema
 const permSettingsSchema = Joi.object({
   enabled: Joi.boolean().default(false),
-  trackingMode: Joi.string().valid('none', 'daily', 'weekly').default('none'),
+  availability: Joi.object({
+    startDate: Joi.string().isoDate().allow(null, '').optional(),
+    endDate: Joi.string().isoDate().allow(null, '').optional(),
+  }).default({}),
+  reportingPeriod: Joi.object({
+    scope: Joi.string()
+      .valid('yearly', 'monthly', 'weekly', 'daily', 'custom_range')
+      .default('monthly'),
+    weekStartsOn: Joi.number().integer().valid(0, 1),
+    timezone: Joi.string().allow('', null),
+    defaultYear: Joi.number().integer().min(2000).max(2100).allow(null).default(null),
+    defaultMonth: Joi.string().pattern(/^\d{4}-\d{2}$/).allow(null, '').default(null),
+    customRange: Joi.object({
+      maxDays: Joi.number().integer().min(1).max(366).allow(null).default(null),
+    }).default({}),
+  }).default({}),
+  submissionPolicy: Joi.object({
+    maxSubmissionsPerPeriod: Joi.number().integer().min(1).max(20).default(1),
+    allowBackdating: Joi.boolean().default(false),
+    closeWindowAtPeriodEnd: Joi.boolean(),
+  }).default({}),
+  submissionFrequency: Joi.object({
+    mode: Joi.string()
+      .valid('once', 'multiple', 'daily', 'weekly', 'monthly', 'custom')
+      .default('monthly'),
+    count: Joi.number().integer().min(1).max(20).default(1),
+    weekdays: Joi.array().items(Joi.number().integer().min(0).max(6)).default([]),
+    monthDates: Joi.array().items(Joi.number().integer().min(1).max(31)).default([]),
+    intervalWeeks: Joi.number().integer().min(1).max(4).default(1),
+    custom: Joi.object({
+      interval: Joi.number().integer().min(1).max(365).allow(null).default(null),
+      unit: Joi.string().valid('day', 'week', 'month').optional(),
+    }).default({}),
+  }).default({}),
+  trackingMode: Joi.string().valid('none', 'daily', 'weekly', 'monthly').default('none'),
   dailyConfig: Joi.object({
     activeDays: Joi.array().items(Joi.number().min(0).max(6)).default([]),
     frequencyPerDay: Joi.number().integer().min(1).max(10).default(1),
@@ -605,11 +696,39 @@ const permSettingsSchema = Joi.object({
       )
       .default([]),
   }).default({}),
+  monthlyConfig: Joi.object({
+    dates: Joi.array().items(Joi.number().integer().min(1).max(31)).default([]),
+    submissionLimitPerDate: Joi.number().integer().min(1).max(20).default(1),
+  }).default({}),
+  schedule: Joi.object({
+    frequency: Joi.string().valid('daily', 'weekly', 'monthly').default('monthly'),
+    startDate: Joi.string().isoDate().allow(null, '').optional(),
+    endDate: Joi.string().isoDate().allow(null, '').optional(),
+    daily: Joi.object({
+      weekdays: Joi.array().items(Joi.number().integer().min(0).max(6)).default([]),
+    }).default({}),
+    weekly: Joi.object({
+      intervalWeeks: Joi.number().integer().min(1).max(4).default(1),
+      weekdays: Joi.array().items(Joi.number().integer().min(0).max(6)).default([]),
+      anchorDate: Joi.string().isoDate().allow(null, '').optional(),
+    }).default({}),
+    monthly: Joi.object({
+      dates: Joi.array().items(Joi.number().integer().min(1).max(31)).default([]),
+    }).default({}),
+  }).default({}),
+  submissionLimit: Joi.object({
+    count: Joi.number().integer().min(1).max(20).default(1),
+    scope: Joi.string().valid('occurrence').default('occurrence'),
+  }).default({}),
+  enforcement: Joi.object({
+    allowBackdating: Joi.boolean().default(false),
+    closeWindowAtPeriodEnd: Joi.boolean(),
+  }).default({}),
   requireNodeId: Joi.boolean().default(true),
   requireMonth: Joi.boolean().default(true),
   trackCompliance: Joi.boolean().default(true),
   autoGenerateCalendar: Joi.boolean().default(true),
-  autoLockMonthEnd: Joi.boolean().default(false),
+  autoLockMonthEnd: Joi.boolean(),
   calendarRequired: Joi.boolean().default(false),
   eventTypes: Joi.array().items(Joi.string()).default([]),
   calendarGeneration: Joi.object({
@@ -620,12 +739,46 @@ const permSettingsSchema = Joi.object({
   }).optional(),
 }).unknown(true).default({
   enabled: false,
+  availability: {
+    startDate: null,
+    endDate: null,
+  },
+  reportingPeriod: {
+    scope: 'monthly',
+    customRange: {
+      maxDays: null,
+    },
+  },
+  submissionPolicy: {
+    maxSubmissionsPerPeriod: 1,
+    allowBackdating: false,
+  },
+  submissionFrequency: {
+    mode: 'daily',
+    count: 1,
+    weekdays: [],
+    monthDates: [],
+    intervalWeeks: 1,
+    custom: {
+      interval: null,
+    },
+  },
   trackingMode: 'none',
+  frequency: 'daily',
+  schedule: {
+    frequency: 'daily',
+  },
+  submissionLimit: {
+    count: 1,
+    scope: 'occurrence',
+  },
+  enforcement: {
+    allowBackdating: false,
+  },
   requireNodeId: true,
   requireMonth: true,
   trackCompliance: true,
   autoGenerateCalendar: true,
-  autoLockMonthEnd: false,
 });
 
 // ── Workflow Schemas ─────────────────────────────────────────────────────────
@@ -642,6 +795,9 @@ const workflowStepSchema = Joi.object({
   assigneeRole: Joi.string().allow('', null).optional(),
   assigneeType: Joi.string().valid('role', 'user', 'dynamic_field').default('role'),
   assigneeUsers: Joi.array().items(Joi.string()).default([]),
+  escalationType: Joi.string().valid('none', 'role', 'user').default('none'),
+  escalationRoles: Joi.array().items(Joi.string()).default([]),
+  escalationUsers: Joi.array().items(Joi.string()).default([]),
   sla: Joi.object({
     hours: Joi.number().integer().min(1).default(48),
     escalateTo: Joi.string().allow('', null).optional(),
@@ -672,6 +828,10 @@ const workflowSchema = Joi.object({
 const v2CapabilitiesSchema = Joi.object({
   experience: Joi.object({
     security: Joi.object({
+      enabled: Joi.boolean().default(false),
+      audience: Joi.string()
+        .valid('public', 'authenticated', 'selected_roles', 'selected_users')
+        .default('public'),
       profile: Joi.string()
         .valid(
           'open_public',
@@ -680,10 +840,10 @@ const v2CapabilitiesSchema = Joi.object({
           'internal_staff',
           'high_security'
         )
-        .default('private_safe'),
+        .default('open_public'),
       mode: Joi.string()
         .valid('public', 'private', 'restricted', 'internal')
-        .default('private'),
+        .default('public'),
       publicSecureMode: Joi.string()
         .valid('off', 'link_only', 'otp', 'access_code')
         .default('off'),
@@ -695,7 +855,7 @@ const v2CapabilitiesSchema = Joi.object({
             'selected_roles',
             'selected_users'
           )
-          .default('authenticated_users'),
+          .default('anyone'),
         allowedRoles: Joi.array().items(Joi.string()).default([]),
         allowedUsers: Joi.array().items(Joi.string()).default([]),
         restrictByLocation: Joi.boolean().default(false),
@@ -704,6 +864,7 @@ const v2CapabilitiesSchema = Joi.object({
         .unknown(true)
         .default({}),
       authentication: securityAuthenticationSchema,
+      accessCode: securityAccessCodeSchema,
       submissionProtection: securitySubmissionProtectionSchema,
       channels: Joi.array()
         .items(
@@ -717,7 +878,7 @@ const v2CapabilitiesSchema = Joi.object({
             'telegram'
           )
         )
-        .default([]),
+        .default(['web']),
     })
       .required()
       .unknown(true),
@@ -1025,6 +1186,14 @@ const verifyPublicAccessCode = {
   }),
 };
 
+const verifyPublicAccessGateCode = {
+  body: Joi.object().keys({
+    reference: Joi.string().required(),
+    accessCode: Joi.string().trim().min(4).max(64).required(),
+    qrContextToken: Joi.string().optional(),
+  }),
+};
+
 const resendPublicAccessCode = {
   body: Joi.object().keys({
     challengeId: Joi.string().required(),
@@ -1054,6 +1223,10 @@ const submitPublicAccessForm = {
       .try(Joi.object().unknown(true), Joi.array().items(Joi.any()))
       .required(),
     submittedAt: Joi.string().isoDate().optional(),
+    event_date: Joi.string().isoDate().optional(),
+    submission_date: Joi.string().isoDate().optional(),
+    month: Joi.string().optional().allow('', null),
+    year: Joi.alternatives().try(Joi.number(), Joi.string()).optional().allow('', null),
     metadata: Joi.object().unknown(true).optional(),
   }),
 };
@@ -1076,6 +1249,37 @@ const verifyFieldVerificationCode = {
   }),
 };
 
+const initiatePublicUpload = {
+  params: Joi.object().keys({
+    formId: Joi.string().required(),
+  }),
+  body: Joi.object().keys({
+    tenantId: Joi.string().optional().allow('', null),
+    projectId: Joi.string().optional().allow('', null),
+    fieldId: Joi.string().required(),
+    fileName: Joi.string().required(),
+    mimeType: Joi.string().required(),
+    sizeBytes: Joi.number().integer().positive().required(),
+    reference: Joi.string().optional().allow('', null),
+    accessToken: Joi.string().optional().allow('', null),
+    sessionKey: Joi.string().optional().allow('', null),
+  }),
+};
+
+const completePublicUpload = {
+  params: Joi.object().keys({
+    formId: Joi.string().required(),
+  }),
+  body: Joi.object().keys({
+    uploadId: Joi.string().guid({ version: ['uuidv4', 'uuidv5'] }).required(),
+    reference: Joi.string().optional().allow('', null),
+    accessToken: Joi.string().optional().allow('', null),
+    sessionKey: Joi.string().optional().allow('', null),
+    width: Joi.number().integer().min(1).optional().allow(null),
+    height: Joi.number().integer().min(1).optional().allow(null),
+  }),
+};
+
 const generateFormFieldId = {
   params: Joi.object().keys({
     formId: Joi.string().required(),
@@ -1088,6 +1292,50 @@ const generateFormFieldId = {
     prefix: Joi.string().optional().allow(''),
     separator: Joi.string().optional().allow(''),
     length: Joi.number().integer().min(1).max(12).optional(),
+  }),
+};
+
+const evaluatePublicInvoice = {
+  params: Joi.object().keys({
+    formId: Joi.string().required(),
+  }),
+  body: Joi.object().keys({
+    tenantId: Joi.string().optional().allow('', null),
+    projectId: Joi.string().optional().allow('', null),
+    submissionData: Joi.object().unknown(true).required(),
+  }),
+};
+
+const createPublicPaymentIntent = {
+  params: Joi.object().keys({
+    formId: Joi.string().required(),
+  }),
+  body: Joi.object().keys({
+    tenantId: Joi.string().optional().allow('', null),
+    projectId: Joi.string().optional().allow('', null),
+    submissionId: Joi.string().optional().allow('', null),
+    requestedChannel: Joi.string().optional().allow('', null),
+    triggerStage: Joi.string()
+      .valid('submission', 'pre_approval', 'post_approval')
+      .default('submission'),
+    respondentContext: Joi.object().unknown(true).optional(),
+    submissionData: Joi.object().unknown(true).required(),
+  }),
+};
+
+const getPublicPaymentStatus = {
+  params: Joi.object().keys({
+    formId: Joi.string().required(),
+    reference: Joi.string().required(),
+  }),
+  query: Joi.object().keys({
+    tenantId: Joi.string().optional().allow('', null),
+    projectId: Joi.string().optional().allow('', null),
+    provider: Joi.string().optional().allow('', null),
+    transaction_id: Joi.string().optional().allow('', null),
+    transactionId: Joi.string().optional().allow('', null),
+    tx_ref: Joi.string().optional().allow('', null),
+    status: Joi.string().optional().allow('', null),
   }),
 };
 
@@ -1169,7 +1417,9 @@ const submitSystemForm = {
 };
 
 const listProjectWorkspaces = {
-  query: Joi.object().keys({}),
+  query: Joi.object().keys({
+    includeAll: Joi.boolean().truthy('true').falsy('false').optional(),
+  }),
 };
 
 const createProjectWorkspace = {
@@ -1189,6 +1439,12 @@ const renameProjectWorkspace = {
   }),
 };
 
+const listProjectWorkspaceMembers = {
+  query: Joi.object().keys({
+    includeAll: Joi.boolean().truthy('true').falsy('false').optional(),
+  }),
+};
+
 const addProjectWorkspaceMember = {
   params: Joi.object().keys({
     workspaceId: Joi.string().trim().required(),
@@ -1198,8 +1454,65 @@ const addProjectWorkspaceMember = {
       userId: Joi.string().custom(objectId).optional(),
       email: Joi.string().email().optional(),
       role: Joi.string().valid('owner', 'editor', 'viewer').required(),
+      accessProfileId: Joi.string()
+        .valid('workspace_owner', 'data_administrator', 'editor', 'viewer')
+        .optional(),
     })
     .or('userId', 'email'),
+};
+
+const listWorkspaceInvitations = {
+  params: Joi.object().keys({
+    workspaceId: Joi.string().trim().required(),
+  }),
+};
+
+const createWorkspaceInvitation = {
+  params: Joi.object().keys({
+    workspaceId: Joi.string().trim().required(),
+  }),
+  body: Joi.object().keys({
+    email: Joi.string().email().required(),
+    firstname: Joi.string().trim().allow('').default(''),
+    lastname: Joi.string().trim().allow('').default(''),
+    phoneNumber: Joi.string().trim().allow('', null).default(null),
+    accessProfileId: Joi.string()
+      .valid('workspace_owner', 'data_administrator', 'editor', 'viewer')
+      .default('viewer'),
+    redirectPath: Joi.string().trim().allow('', null).default(null),
+  }),
+};
+
+const resendWorkspaceInvitation = {
+  params: Joi.object().keys({
+    workspaceId: Joi.string().trim().required(),
+    invitationId: Joi.string().custom(objectId).required(),
+  }),
+};
+
+const revokeWorkspaceInvitation = {
+  params: Joi.object().keys({
+    workspaceId: Joi.string().trim().required(),
+    invitationId: Joi.string().custom(objectId).required(),
+  }),
+};
+
+const getWorkspaceInvitation = {
+  params: Joi.object().keys({
+    token: Joi.string().trim().required(),
+  }),
+};
+
+const acceptWorkspaceInvitation = {
+  params: Joi.object().keys({
+    token: Joi.string().trim().required(),
+  }),
+  body: Joi.object().keys({
+    firstname: Joi.string().trim().allow('', null).default(''),
+    lastname: Joi.string().trim().allow('', null).default(''),
+    password: Joi.string().min(8).allow('', null).default(''),
+    phoneNumber: Joi.string().trim().allow('', null).default(null),
+  }),
 };
 
 const removeProjectWorkspaceMember = {
@@ -1344,20 +1657,33 @@ module.exports = {
   requestPublicAccessLink,
   requestPublicAccessCode,
   verifyPublicAccessCode,
+  verifyPublicAccessGateCode,
   resendPublicAccessCode,
   consumePublicAccessLink,
   getPublicAccessPrefill,
   submitPublicAccessForm,
   requestFieldVerificationCode,
   verifyFieldVerificationCode,
+  initiatePublicUpload,
+  completePublicUpload,
   generateFormFieldId,
+  evaluatePublicInvoice,
+  createPublicPaymentIntent,
+  getPublicPaymentStatus,
   bootstrapSystemForms,
   getSystemProjectForm,
   submitSystemForm,
   listProjectWorkspaces,
   createProjectWorkspace,
   renameProjectWorkspace,
+  listProjectWorkspaceMembers,
   addProjectWorkspaceMember,
+  listWorkspaceInvitations,
+  createWorkspaceInvitation,
+  resendWorkspaceInvitation,
+  revokeWorkspaceInvitation,
+  getWorkspaceInvitation,
+  acceptWorkspaceInvitation,
   removeProjectWorkspaceMember,
   leaveProjectWorkspace,
   deleteProjectWorkspace,

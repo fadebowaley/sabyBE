@@ -16,78 +16,246 @@ if (config.env !== 'test') {
     );
 }
 
+const stripHtml = (value) =>
+  String(value || '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+const normalizeEmailArgs = (toOrOptions, subject, text, html = null, options = {}) => {
+  if (toOrOptions && typeof toOrOptions === 'object' && !Array.isArray(toOrOptions)) {
+    return {
+      ...toOrOptions,
+      text: toOrOptions.text || toOrOptions.message || '',
+      html: toOrOptions.html || null,
+      attachments: Array.isArray(toOrOptions.attachments) ? toOrOptions.attachments : [],
+      branded: toOrOptions.branded,
+    };
+  }
+
+  return {
+    to: toOrOptions,
+    subject,
+    text: text || '',
+    html,
+    attachments: Array.isArray(options.attachments) ? options.attachments : [],
+    branded: options.branded,
+    from: options.from,
+    cc: options.cc,
+    bcc: options.bcc,
+    replyTo: options.replyTo,
+  };
+};
+
+const hasCidAttachment = (attachments = [], cid) =>
+  attachments.some((attachment) => attachment && attachment.cid === cid);
+
+const withBrandAttachments = (attachments = [], html = '') => {
+  const nextAttachments = Array.isArray(attachments) ? [...attachments] : [];
+  if (!emailTemplateService.isSabyEmail(html)) {
+    return nextAttachments;
+  }
+  emailTemplateService.getBrandAttachments().forEach((attachment) => {
+    if (attachment && !hasCidAttachment(nextAttachments, attachment.cid)) {
+      nextAttachments.push(attachment);
+    }
+  });
+  return nextAttachments;
+};
+
+const buildBrandedContent = ({ subject, text, html, branded }) => {
+  if (branded === false) {
+    return { html, text: text || stripHtml(html) };
+  }
+
+  if (html && emailTemplateService.isSabyEmail(html)) {
+    return { html, text: text || stripHtml(html) };
+  }
+
+  const bodyText = text || stripHtml(html) || 'You have a new Saby notification.';
+  const wrappedHtml = emailTemplateService.renderSabyEmail({
+    title: subject || 'Saby notification',
+    preheader: bodyText.slice(0, 140),
+    headline: subject || 'Saby notification',
+    body: html ? '' : bodyText,
+    bodyHtml: html || '',
+    layout: 'default',
+    label: 'Saby notification',
+  });
+
+  return {
+    html: wrappedHtml,
+    text: bodyText,
+  };
+};
+
 /**
- * Send an email
- * @param {string} to
- * @param {string} subject
- * @param {string} text
- * @param {string} html - Optional HTML content
+ * Send an email. Supports both positional and object-style calls.
  * @returns {Promise}
  */
-const sendEmail = async (to, subject, text, html = null) => {
+const sendEmail = async (toOrOptions, subject, text, html = null, options = {}) => {
+  const normalized = normalizeEmailArgs(toOrOptions, subject, text, html, options);
+  const content = buildBrandedContent(normalized);
+  const attachments = withBrandAttachments(normalized.attachments, content.html);
   const msg = {
-    from: config.email.from,
+    from: normalized.from || config.email.from,
+    to: normalized.to,
+    subject: normalized.subject,
+    text: content.text || stripHtml(content.html),
+    ...(content.html && { html: content.html }),
+    ...(attachments.length ? { attachments } : {}),
+    ...(normalized.cc && { cc: normalized.cc }),
+    ...(normalized.bcc && { bcc: normalized.bcc }),
+    ...(normalized.replyTo && { replyTo: normalized.replyTo }),
+  };
+
+  await transport.sendMail(msg);
+  logger.info(`Email sent to ${normalized.to}: ${normalized.subject}`);
+};
+
+const sendSabyEmail = async ({
+  to,
+  subject,
+  attachments = [],
+  from,
+  cc,
+  bcc,
+  replyTo,
+  ...templatePayload
+}) => {
+  const payload = {
+    title: subject,
+    ...templatePayload,
+  };
+  const html = emailTemplateService.renderSabyEmail(payload);
+  const text = emailTemplateService.renderSabyText(payload);
+  await sendEmail({
     to,
     subject,
     text,
-    ...(html && { html }),
-  };
-  await transport.sendMail(msg);
-  logger.info(`✅ Email sent to ${to}: ${subject}`);
+    html,
+    attachments,
+    from,
+    cc,
+    bcc,
+    replyTo,
+  });
 };
-
-/**
- * Send reset password email
- * @param {string} to
- * @param {string} token
- * @returns {Promise}
- *
- */
 
 const sendResetPasswordEmail = async (to, token) => {
-  const subject = 'Reset password';
-  // replace this url with the link to the reset password page of your front-end app
   const resetPasswordUrl = `${config.clientUrl}/reset-password?token=${token}`;
-  const text = `Dear user,
-To reset your password, click on this link: ${resetPasswordUrl}
-If you did not request any password resets, then ignore this email.`;
-  await sendEmail(to, subject, text);
+  await sendSabyEmail({
+    to,
+    subject: 'Reset your Saby password',
+    preheader: 'Use this secure link to reset your Saby password.',
+    layout: 'security',
+    label: 'Security notice',
+    icon: 'KEY',
+    headline: 'Reset your password securely.',
+    body: [
+      'We received a request to reset the password for your Saby account. Use the button below to create a new password.',
+      'If you did not request this, no action is required. Your current password will remain unchanged.',
+    ],
+    detailsRows: [
+      ['Request type', 'Password reset'],
+      ['Link expires', '10 minutes'],
+      ['Account', to],
+    ],
+    nextStepTitle: 'Security tip',
+    nextStepBody: 'Saby will never ask for your password by email.',
+    ctaLabel: 'Reset password',
+    ctaUrl: resetPasswordUrl,
+  });
 };
-
-/**
- * Send verification email
- * @param {string} to
- * @param {string} token
- * @returns {Promise}
- */
 
 const sendVerificationEmail = async (to, token) => {
-  const subject = 'Email Verification';
-  // replace this url with the link to the email verification page of your front-end app
-  const verificationEmailUrl = `http://link-to-app/verify-email?token=${token}`;
-  const text = `Dear user,
-To verify your email, click on this link: ${verificationEmailUrl}
-If you did not create an account, then ignore this email.`;
-  await sendEmail(to, subject, text);
+  const verificationEmailUrl = `${config.clientUrl}/verify-email?token=${token}`;
+  await sendSabyEmail({
+    to,
+    subject: 'Verify your Saby email',
+    preheader: 'Confirm your email address to secure your Saby account.',
+    layout: 'security',
+    label: 'Account verification',
+    icon: 'ID',
+    headline: 'Confirm your email address.',
+    body: [
+      'Welcome to Saby. Please verify this email address so we can secure your account and keep important workspace notifications connected to the right person.',
+      'If you did not create a Saby account, you can safely ignore this email.',
+    ],
+    detailsRows: [
+      ['Verification', 'Email address'],
+      ['Account', to],
+      ['Status', 'Pending confirmation'],
+    ],
+    ctaLabel: 'Verify email',
+    ctaUrl: verificationEmailUrl,
+  });
 };
 
-/**
- * Send OTP email
- * @param {string} to - Email of the user
- * @param {string} otp - The generated OTP
- */
 const sendOtpEmail = async (to, otp) => {
-  const subject = 'Your OTP Code';
-  const text = `Dear user,
-Your OTP code is: ${otp}
-It will expire in 10 minutes.
-If you did not initiate this request, please ignore this email.`;
-  await sendEmail(to, subject, text);
+  await sendSabyEmail({
+    to,
+    subject: 'Your Saby verification code',
+    preheader: 'Use this one-time code to continue in Saby.',
+    layout: 'securityCode',
+    label: 'Verification code',
+    icon: 'OTP',
+    headline: 'Use this code to continue.',
+    body: [
+      'Enter the verification code below to continue. This code is valid for a short time and can only be used once.',
+      'If you did not request this code, you can ignore this email.',
+    ],
+    code: otp,
+    detailsRows: [
+      ['Code expires', '10 minutes'],
+      ['Request type', 'One-time verification'],
+    ],
+  });
 };
 
-/**
- * Send submission confirmation email
- */
+const sendWorkspaceInvitationEmail = async ({
+  to,
+  token,
+  workspaceName,
+  inviterName = null,
+  accessProfileLabel = 'Viewer',
+}) => {
+  const inviteUrl = `${config.clientUrl}/workspace-invite/${token}`;
+  const inviterLine = inviterName ? `${inviterName} invited you` : 'You have been invited';
+  await sendSabyEmail({
+    to,
+    subject: `Workspace invitation: ${workspaceName}`,
+    preheader: `${inviterLine} to join ${workspaceName} on Saby.`,
+    layout: 'workspaceAccess',
+    label: 'Workspace access',
+    icon: 'TEAM',
+    headline: 'You have been invited to a Saby workspace.',
+    body: [
+      `${inviterLine} to join ${workspaceName} on Saby. Accept the invitation to access the workspace and begin working with your team.`,
+      'This invitation is tied to your email address.',
+    ],
+    detailsRows: [
+      ['Workspace', workspaceName],
+      ['Invited by', inviterName || 'Saby'],
+      ['Access profile', accessProfileLabel],
+      ['Expires', '7 days'],
+    ],
+    ctaLabel: 'Accept invitation',
+    ctaUrl: inviteUrl,
+  });
+};
+
 const sendSubmissionConfirmation = async (to, data) => {
   try {
     const html = await emailTemplateService.render('submission-confirmation', {
@@ -100,7 +268,7 @@ const sendSubmissionConfirmation = async (to, data) => {
 
     await sendEmail(
       to,
-      `✅ Submission Received - ${data.projectName}`,
+      `Submission received - ${data.projectName}`,
       `Your submission ${data.submissionId} has been received.`,
       html
     );
@@ -110,9 +278,6 @@ const sendSubmissionConfirmation = async (to, data) => {
   }
 };
 
-/**
- * Send PERM critical alert (< 40% compliance)
- */
 const sendPERMCriticalAlert = async (to, data) => {
   try {
     const html = await emailTemplateService.render('perm-critical-alert', {
@@ -128,8 +293,8 @@ const sendPERMCriticalAlert = async (to, data) => {
 
     await sendEmail(
       to,
-      `⚠️ URGENT: Low Compliance Alert - ${data.nodeName}`,
-      `Critical: Your compliance is at ${data.compliance}%. Immediate action required.`,
+      `Urgent compliance alert - ${data.nodeName}`,
+      `Critical: your compliance is at ${data.compliance}%. Immediate action required.`,
       html
     );
   } catch (error) {
@@ -138,9 +303,6 @@ const sendPERMCriticalAlert = async (to, data) => {
   }
 };
 
-/**
- * Send PERM warning (40-79% compliance)
- */
 const sendPERMWarning = async (to, data) => {
   try {
     const html = await emailTemplateService.render('perm-warning', {
@@ -156,7 +318,7 @@ const sendPERMWarning = async (to, data) => {
 
     await sendEmail(
       to,
-      `⚠️ Compliance Warning - ${data.nodeName}`,
+      `Compliance warning - ${data.nodeName}`,
       `Your compliance is at ${data.compliance}%. Please complete remaining events.`,
       html
     );
@@ -166,9 +328,6 @@ const sendPERMWarning = async (to, data) => {
   }
 };
 
-/**
- * Send PERM completion (100% compliance)
- */
 const sendPERMCompletion = async (to, data) => {
   try {
     const html = await emailTemplateService.render('perm-completion', {
@@ -181,8 +340,8 @@ const sendPERMCompletion = async (to, data) => {
 
     await sendEmail(
       to,
-      `✅ 100% Compliance Achieved - ${data.nodeName}`,
-      `Congratulations! You've achieved 100% compliance for ${data.month}.`,
+      `Compliance achieved - ${data.nodeName}`,
+      `You have achieved 100% compliance for ${data.month}.`,
       html
     );
   } catch (error) {
@@ -191,9 +350,6 @@ const sendPERMCompletion = async (to, data) => {
   }
 };
 
-/**
- * Send late submission warning
- */
 const sendLateSubmissionWarning = async (to, data) => {
   try {
     const html = await emailTemplateService.render('perm-late-submission', {
@@ -208,7 +364,7 @@ const sendLateSubmissionWarning = async (to, data) => {
 
     await sendEmail(
       to,
-      `🚨 Late Submission - ${data.nodeName} (${data.daysOverdue} days overdue)`,
+      `Late submission - ${data.nodeName} (${data.daysOverdue} days overdue)`,
       `Your submission for ${data.month} is ${data.daysOverdue} days overdue.`,
       html
     );
@@ -218,9 +374,6 @@ const sendLateSubmissionWarning = async (to, data) => {
   }
 };
 
-/**
- * Send weekly reminder
- */
 const sendWeeklyReminder = async (to, data) => {
   try {
     const html = await emailTemplateService.render('perm-weekly-reminder', {
@@ -236,7 +389,7 @@ const sendWeeklyReminder = async (to, data) => {
 
     await sendEmail(
       to,
-      `📅 Weekly Reminder: PERM Submission - ${data.nodeName}`,
+      `Weekly reminder: PERM submission - ${data.nodeName}`,
       `Weekly reminder for your PERM submission (${data.compliance}% complete).`,
       html
     );
@@ -246,9 +399,6 @@ const sendWeeklyReminder = async (to, data) => {
   }
 };
 
-/**
- * Send month-end summary
- */
 const sendMonthEndSummary = async (to, data) => {
   try {
     const html = await emailTemplateService.render('perm-month-end-summary', {
@@ -264,7 +414,7 @@ const sendMonthEndSummary = async (to, data) => {
 
     await sendEmail(
       to,
-      `📊 Monthly Compliance Summary - ${data.month}`,
+      `Monthly compliance summary - ${data.month}`,
       `Your organization's compliance summary for ${data.month}.`,
       html
     );
@@ -274,9 +424,6 @@ const sendMonthEndSummary = async (to, data) => {
   }
 };
 
-/**
- * Send submission failed notification
- */
 const sendSubmissionFailed = async (to, data) => {
   try {
     const html = await emailTemplateService.render('submission-failed', {
@@ -289,7 +436,7 @@ const sendSubmissionFailed = async (to, data) => {
 
     await sendEmail(
       to,
-      `❌ Submission Failed - ${data.submissionId}`,
+      `Submission failed - ${data.submissionId}`,
       `Your submission failed after ${data.attempts} attempts. Please try again.`,
       html
     );
@@ -302,10 +449,11 @@ const sendSubmissionFailed = async (to, data) => {
 module.exports = {
   transport,
   sendEmail,
+  sendSabyEmail,
   sendOtpEmail,
+  sendWorkspaceInvitationEmail,
   sendResetPasswordEmail,
   sendVerificationEmail,
-  // New submission notifications
   sendSubmissionConfirmation,
   sendPERMCriticalAlert,
   sendPERMWarning,
@@ -315,4 +463,3 @@ module.exports = {
   sendMonthEndSummary,
   sendSubmissionFailed,
 };
-

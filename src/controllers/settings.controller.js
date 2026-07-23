@@ -2,7 +2,7 @@ const httpStatus = require('http-status');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
-const { settingsService } = require('../services');
+const { settingsService, workspaceScheduleService } = require('../services');
 
 // Create a new setting
 const createSetting = catchAsync(async (req, res) => {
@@ -64,6 +64,38 @@ const assignDatapointsAndReports = catchAsync(async (req, res) => {
   res.send(result);
 });
 
+const listWorkspaceSchedules = catchAsync(async (req, res) => {
+  const schedules = await workspaceScheduleService.listWorkspaceSchedules({
+    user: req.user,
+  });
+  res.status(httpStatus.OK).send({ results: schedules });
+});
+
+const createWorkspaceSchedule = catchAsync(async (req, res) => {
+  const schedule = await workspaceScheduleService.createWorkspaceSchedule({
+    user: req.user,
+    body: req.body,
+  });
+  res.status(httpStatus.CREATED).send(schedule);
+});
+
+const updateWorkspaceScheduleStatus = catchAsync(async (req, res) => {
+  const schedule = await workspaceScheduleService.updateWorkspaceScheduleStatus({
+    user: req.user,
+    scheduleId: req.params.scheduleId,
+    active: req.body.active,
+  });
+  res.status(httpStatus.OK).send(schedule);
+});
+
+const deleteWorkspaceSchedule = catchAsync(async (req, res) => {
+  await workspaceScheduleService.deleteWorkspaceSchedule({
+    user: req.user,
+    scheduleId: req.params.scheduleId,
+  });
+  res.status(httpStatus.NO_CONTENT).send();
+});
+
 module.exports = {
   createSetting,
   getSettings,
@@ -72,4 +104,8 @@ module.exports = {
   deleteSetting,
   deleteAllSettingsForNode,
   assignDatapointsAndReports,
+  listWorkspaceSchedules,
+  createWorkspaceSchedule,
+  updateWorkspaceScheduleStatus,
+  deleteWorkspaceSchedule,
 };

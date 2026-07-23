@@ -42,6 +42,22 @@ const generatePresignedUrl = async (key, expiresIn = 3600) => {
   return s3.getSignedUrl('getObject', params);
 };
 
+const generatePresignedUploadUrl = async (
+  key,
+  contentType,
+  expiresIn = 600
+) => {
+  const params = {
+    Bucket: BUCKET_NAME,
+    Key: key,
+    Expires: expiresIn,
+    ContentType: contentType,
+    ServerSideEncryption: 'AES256',
+  };
+
+  return s3.getSignedUrlPromise('putObject', params);
+};
+
 const copyObject = async (sourceKey, destinationKey) => {
   const params = {
     Bucket: BUCKET_NAME,
@@ -65,6 +81,7 @@ module.exports = {
   uploadToS3,
   deleteFromS3,
   generatePresignedUrl,
+  generatePresignedUploadUrl,
   copyObject,
   getObjectMetadata,
 };

@@ -11,6 +11,16 @@ const PAYMENT_EVENT_TYPES = [
   'failed',
   'reconciliation_marked_failed',
   'remittance_queued',
+  'provider_checkout_initialized',
+  'provider_webhook_received',
+  'provider_verification_succeeded',
+  'provider_verification_failed',
+  'provider_settlement_confirmed',
+  'settlement_queued',
+  'settlement_awaiting_provider_settlement',
+  'settlement_processing',
+  'settlement_successful',
+  'settlement_failed',
 ];
 
 const paymentEventSchema = mongoose.Schema(

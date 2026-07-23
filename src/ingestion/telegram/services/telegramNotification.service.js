@@ -472,35 +472,37 @@ Are you sure you want to reset your current session?
 
       // Email to sender
       const senderEmail = user.email;
-      const senderSubject = `Form Submission Confirmation - ${submissionData.project_name}`;
-      const senderMessage = `Dear ${user.name || 'User'},
+      const senderSubject = `Telegram submission received - ${submissionData.project_name}`;
+      const senderMessage = `Hello ${user.name || 'User'},
 
-Thank you for your submission to ${submissionData.project_name}.
+We received your Telegram submission for ${submissionData.project_name}.
 
-We have successfully received your data and it has been queued for processing. You will receive another notification once processing is complete.
+Saby will process the submitted content and notify you if any action is required.
 
 Submission Details:
 - Project: ${submissionData.project_name}
+- Channel: Telegram
+- Sender: ${senderEmail}
 - Submission ID: ${submissionData.jobId || 'N/A'}
 - Received: ${new Date().toLocaleString()}
-- Status: Queued for processing
+- Status: Received
 
 Your submission data:
 ${Object.entries(submissionData.structuredData || {})
   .map(([key, value]) => `- ${key}: ${value}`)
   .join('\n')}
 
-If you have any questions, please contact our support team.
-
-Best regards,
-Halo Forms Team`;
+If you have any questions, contact hello@saby.ai.`;
 
       // Email to admin
       const adminEmail = 'fadebowaley@gmail.com';
-      const adminSubject = `New Form Submission - ${submissionData.project_name}`;
-      const adminMessage = `New form submission received:
+      const adminSubject = `New Telegram submission - ${submissionData.project_name}`;
+      const adminMessage = `A new Telegram submission has been received for ${submissionData.project_name}.
+
+Review the submission in Saby and follow the required workflow.
 
 Project: ${submissionData.project_name}
+Channel: Telegram
 User: ${user.name || 'Unknown'} (${user.email})
 Phone: ${user.phoneNumber || 'N/A'}
 Submission ID: ${submissionData.jobId || 'N/A'}
@@ -518,10 +520,7 @@ User Details:
 - Tenant: ${submissionData.tenantId}
 - User ID: ${user._id}
 
-This submission has been queued for processing.
-
-Best regards,
-Halo Forms System`;
+This submission has been queued for processing.`;
 
       console.log(`🔍 [DEBUG] Sending email to sender:`, {
         to: senderEmail,
@@ -537,8 +536,26 @@ Halo Forms System`;
 
       // Send both emails
       await Promise.all([
-        this.sendEmail(senderEmail, senderSubject, senderMessage),
-        this.sendEmail(adminEmail, adminSubject, adminMessage),
+        this.sendEmail(senderEmail, senderSubject, senderMessage, {
+          label: 'Telegram submission',
+          headline: 'Your Telegram submission is in Saby.',
+          detailsRows: [
+            ['Project', submissionData.project_name],
+            ['Channel', 'Telegram'],
+            ['Sender', senderEmail],
+            ['Status', 'Received'],
+          ],
+        }),
+        this.sendEmail(adminEmail, adminSubject, adminMessage, {
+          label: 'Admin notification',
+          headline: 'New Telegram submission received.',
+          detailsRows: [
+            ['Project', submissionData.project_name],
+            ['Channel', 'Telegram'],
+            ['Sender', senderEmail],
+            ['Tenant', submissionData.tenantId || 'N/A'],
+          ],
+        }),
       ]);
 
       console.log(`🔍 [DEBUG] Both emails sent successfully`);
@@ -555,7 +572,7 @@ Halo Forms System`;
   /**
    * Helper function to send email
    */
-  async sendEmail(to, subject, message) {
+  async sendEmail(to, subject, message, template = {}) {
     try {
       console.log(`🔍 [DEBUG] sendEmail called with:`, {
         to,
@@ -563,7 +580,17 @@ Halo Forms System`;
         messageLength: message.length,
       });
 
-      await emailService.sendEmail(to, subject, message);
+      await emailService.sendSabyEmail({
+        to,
+        subject,
+        preheader: template.preheader || String(message || '').slice(0, 140),
+        layout: 'channelSubmission',
+        label: template.label || 'Channel submission',
+        icon: 'CH',
+        headline: template.headline || subject,
+        body: [message],
+        detailsRows: template.detailsRows || [],
+      });
       console.log(`🔍 [DEBUG] Email service call successful for: ${to}`);
       logger.info(`✅ Email sent successfully to ${to}: ${subject}`);
     } catch (error) {

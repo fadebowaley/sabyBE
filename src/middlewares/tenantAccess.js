@@ -2,6 +2,7 @@ const httpStatus = require('http-status');
 const ApiError = require('../utils/ApiError');
 const ProjectForm = require('../models/projectForm.model');
 const ProjectFormSubmission = require('../models/projectFormSubmission.model');
+const projectFormWorkspaceService = require('../services/projectFormWorkspace.service');
 
 const getRequestTenantId = (req) => {
   const value =
@@ -15,6 +16,39 @@ const getRequestTenantId = (req) => {
 
 const canCrossTenant = (req) =>
   req.user?.isSuper === true || req.user?.isSaby === true;
+
+const hasExplicitWorkspaceScope = (workspaceId) => {
+  const normalizedWorkspaceId = String(workspaceId || '').trim();
+  return (
+    Boolean(normalizedWorkspaceId) &&
+    normalizedWorkspaceId !== projectFormWorkspaceService.DEFAULT_WORKSPACE_ID &&
+    normalizedWorkspaceId !== projectFormWorkspaceService.LEGACY_DEFAULT_WORKSPACE_ID
+  );
+};
+
+const assertProjectWorkspaceScope = async ({
+  req,
+  tenantId,
+  projectForm,
+}) => {
+  if (!projectForm || !hasExplicitWorkspaceScope(projectForm.workspaceId)) {
+    return;
+  }
+
+  const actorUserId = req.user?._id || req.user?.id || null;
+  if (!actorUserId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Workspace-scoped access requires an authenticated user context'
+    );
+  }
+
+  await projectFormWorkspaceService.assertWorkspaceAccess({
+    tenantId,
+    workspaceId: String(projectForm.workspaceId).trim(),
+    userId: actorUserId,
+  });
+};
 
 const requireTenantParamAccess =
   (paramName = 'tenantId') =>
@@ -59,7 +93,7 @@ const requireProjectFormTenantAccess =
         projectId,
         tenantId,
         deletedAt: null,
-      }).select('_id projectId tenantId');
+      }).select('_id projectId tenantId workspaceId');
 
       if (!projectForm) {
         throw new ApiError(
@@ -67,6 +101,12 @@ const requireProjectFormTenantAccess =
           'Cannot access project form submissions for another tenant'
         );
       }
+
+      await assertProjectWorkspaceScope({
+        req,
+        tenantId,
+        projectForm,
+      });
 
       req.projectForm = projectForm;
       return next();
@@ -101,7 +141,20 @@ const requireSubmissionTenantAccess =
         );
       }
 
+      const projectForm = await ProjectForm.findOne({
+        projectId: submission.projectId,
+        tenantId,
+        deletedAt: null,
+      }).select('_id projectId tenantId workspaceId');
+
+      await assertProjectWorkspaceScope({
+        req,
+        tenantId,
+        projectForm,
+      });
+
       req.formSubmission = submission;
+      req.projectForm = projectForm || null;
       return next();
     } catch (error) {
       return next(error);
@@ -134,7 +187,20 @@ const requireBusinessSubmissionTenantAccess =
         );
       }
 
+      const projectForm = await ProjectForm.findOne({
+        projectId: submission.projectId,
+        tenantId,
+        deletedAt: null,
+      }).select('_id projectId tenantId workspaceId');
+
+      await assertProjectWorkspaceScope({
+        req,
+        tenantId,
+        projectForm,
+      });
+
       req.formSubmission = submission;
+      req.projectForm = projectForm || null;
       return next();
     } catch (error) {
       return next(error);

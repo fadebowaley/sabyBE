@@ -27,6 +27,8 @@ router
     appController.bulkCreateApps
   );
 
+router.route('/catalog').get(auth('app:read'), appController.getAppCatalog);
+
 router
   .route('/:appId')
   .get(
@@ -78,4 +80,3 @@ router
   );
 
 module.exports = router;
-

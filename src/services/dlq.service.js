@@ -200,29 +200,34 @@ class DLQService {
       // Send email to admin (if configured)
       const adminEmail = config.alerts?.adminEmail || config.adminEmail || null;
       
-      if (adminEmail && emailService.sendEmail) {
+      if (adminEmail && emailService.sendSabyEmail) {
         try {
-          await emailService.sendEmail(
-            adminEmail,
-            `🚨 ${level} Alert: ${type}`,
-            `
-Alert Level: ${level}
-Type: ${type}
-Message: ${message}
-
-Details:
-- Tenant ID: ${tenantId || 'N/A'}
-- Project ID: ${projectId || 'N/A'}
-- Error: ${error || 'N/A'}
-- Timestamp: ${new Date().toISOString()}
-- Alert ID: ${alertId}
-
-Please investigate this issue immediately.
-
-Environment: ${config.env}
-View DLQ: ${config.clientUrl || 'http://localhost:4000'}/admin/dlq
-            `
-          );
+          await emailService.sendSabyEmail({
+            to: adminEmail,
+            subject: `${level} alert: ${type}`,
+            preheader: 'A Saby system alert requires attention.',
+            layout: 'adminIncident',
+            label: 'System alert',
+            icon: 'SYS',
+            headline: 'A system issue needs investigation.',
+            body: [
+              'Saby detected a system issue that requires administrator attention.',
+              'Review the details below and investigate the affected workflow.',
+              message,
+            ],
+            detailsRows: [
+              ['Alert level', level],
+              ['Type', type],
+              ['Tenant ID', tenantId || 'N/A'],
+              ['Project ID', projectId || 'N/A'],
+              ['Error', error || 'N/A'],
+              ['Timestamp', new Date().toISOString()],
+              ['Alert ID', alertId],
+              ['Environment', config.env],
+            ],
+            ctaLabel: 'View DLQ',
+            ctaUrl: `${config.clientUrl || 'http://localhost:4000'}/admin/dlq`,
+          });
           
           logger.info(`✅ Admin alert email sent for ${type}`);
         } catch (emailError) {
@@ -311,8 +316,5 @@ View DLQ: ${config.clientUrl || 'http://localhost:4000'}/admin/dlq
 }
 
 module.exports = new DLQService();
-
-
-
 
 

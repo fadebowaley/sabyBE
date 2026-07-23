@@ -1,4 +1,4 @@
-const { sendEmail } = require('./email.service');
+const { sendSabyEmail } = require('./email.service');
 const logger = require('../config/logger');
 
 class SimpleNotificationService {
@@ -11,17 +11,30 @@ class SimpleNotificationService {
    */
   async sendSubmissionConfirmation(submission, userData, projectData) {
     try {
-      const emailTemplate = this.createConfirmationTemplate(
-        submission,
-        userData,
-        projectData
-      );
+      const projectName =
+        (projectData && projectData.projectName) || 'Your Project';
+      const userName = (userData && userData.firstname) || 'User';
 
-      await sendEmail(
-        userData.email,
-        emailTemplate.subject,
-        emailTemplate.text
-      );
+      await sendSabyEmail({
+        to: userData.email,
+        subject: `Data received - ${projectName}`,
+        preheader: `Your submission to ${projectName} has been received.`,
+        layout: 'submissionStatus',
+        label: 'Submission received',
+        icon: 'IN',
+        headline: 'Your submission is in Saby.',
+        body: [
+          `Hello ${userName},`,
+          `We have received your submission to ${projectName} and placed it in the processing queue.`,
+          'Saby will review the data, run validation checks, and notify you when the next update is available.',
+        ],
+        detailsRows: [
+          ['Project', projectName],
+          ['Submission ID', submission._id || 'N/A'],
+          ['Received', new Date().toLocaleString()],
+          ['Status', 'Received and queued'],
+        ],
+      });
 
       logger.info(`✅ Submission confirmation sent to ${userData.email}`);
       return {
@@ -56,17 +69,42 @@ class SimpleNotificationService {
     projectData
   ) {
     try {
-      const emailTemplate = this.createValidationFailureTemplate(
-        validationData,
-        userData,
-        projectData
-      );
+      const projectName =
+        (projectData && projectData.projectName) || 'Your Project';
+      const userName = (userData && userData.firstname) || 'User';
+      const { errors, warnings, step } = validationData;
+      const stepDescription = this.getStepDescription(step);
+      const issueItems = [
+        ...(Array.isArray(errors)
+          ? errors.map((err) => `${err.field || err.step || 'Field'}: ${err.error}`)
+          : []),
+        ...(Array.isArray(warnings)
+          ? warnings.map((warn) => `${warn.field || 'Field'}: ${warn.warning}`)
+          : []),
+      ];
 
-      await sendEmail(
-        userData.email,
-        emailTemplate.subject,
-        emailTemplate.text
-      );
+      await sendSabyEmail({
+        to: userData.email,
+        subject: `Submission issue - ${projectName}`,
+        preheader: 'Your submission needs attention before it can be processed.',
+        layout: 'validationIssue',
+        label: 'Validation required',
+        icon: 'FIX',
+        headline: 'Your submission needs correction.',
+        body: [
+          `Hello ${userName},`,
+          `We received your submission to ${projectName}, but Saby found issues that must be corrected before processing can continue.`,
+          'Review the items below and submit the corrected information.',
+        ],
+        detailsRows: [
+          ['Project', projectName],
+          ['Problem area', stepDescription],
+          ['Submitted', new Date().toLocaleString()],
+        ],
+        issueTitle: 'Items to fix',
+        issueItems,
+        ctaLabel: 'Review submission',
+      });
 
       logger.info(
         `✅ Validation failure notification sent to ${userData.email}`
@@ -105,18 +143,45 @@ class SimpleNotificationService {
     status = 'processing'
   ) {
     try {
-      const emailTemplate = this.createProcessingTemplate(
-        submission,
-        userData,
-        projectData,
-        status
-      );
+      const projectName =
+        (projectData && projectData.projectName) || 'Your Project';
+      const userName = (userData && userData.firstname) || 'User';
+      const statusMessages = {
+        processing: 'Your submission is currently being processed.',
+        completed: 'Your submission has been successfully processed.',
+        failed: 'There was an issue processing your submission.',
+      };
+      const statusMessage = statusMessages[status] || statusMessages.processing;
 
-      await sendEmail(
-        userData.email,
-        emailTemplate.subject,
-        emailTemplate.text
-      );
+      await sendSabyEmail({
+        to: userData.email,
+        subject: `Processing update - ${projectName}`,
+        preheader: statusMessage,
+        layout: status === 'failed' ? 'validationIssue' : 'submissionStatus',
+        label: status === 'failed' ? 'Submission issue' : 'Submission processing',
+        icon: status === 'failed' ? 'FIX' : 'RUN',
+        headline:
+          status === 'completed'
+            ? 'Submission processed.'
+            : status === 'failed'
+              ? 'Processing issue found.'
+              : 'Saby is processing your submission.',
+        body: [
+          `Hello ${userName},`,
+          status === 'processing'
+            ? `Your submission to ${projectName} is now being processed. We are checking the data and preparing the result.`
+            : statusMessage,
+          status === 'processing'
+            ? 'You will receive another update if action is required or once processing is complete.'
+            : 'You can review the latest status in Saby.',
+        ],
+        detailsRows: [
+          ['Project', projectName],
+          ['Submission ID', submission._id || 'N/A'],
+          ['Status', status],
+          ['Updated', new Date().toLocaleString()],
+        ],
+      });
 
       logger.info(
         `✅ Processing notification sent to ${userData.email} (status: ${status})`

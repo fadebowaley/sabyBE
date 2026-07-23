@@ -33,11 +33,17 @@ const createPermNotificationWorker = () => {
 
       try {
         // Send email notification
-        if (recipient_email && emailService?.sendEmail) {
-          await emailService.sendEmail({
+        if (recipient_email && emailService?.sendSabyEmail) {
+          await emailService.sendSabyEmail({
             to: recipient_email,
             subject: `[PERM] ${subject}`,
-            html: message,
+            preheader: String(message || subject || '').replace(/<[^>]+>/g, '').slice(0, 140),
+            layout: 'complianceAlert',
+            label: 'Compliance notification',
+            icon: 'PERM',
+            headline: subject || 'PERM notification',
+            bodyHtml: message,
+            showManageNotifications: true,
           });
 
           // Update notification status

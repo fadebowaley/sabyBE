@@ -4,6 +4,8 @@ const validate = require('../../middlewares/validate');
 const submissionValidation = require('../../validations/submission.validation');
 const unifiedSubmissionController = require('../../controllers/unifiedSubmission.controller');
 const workflowController = require('../../controllers/workflow.controller');
+const approvalController = require('../../controllers/approval.controller');
+const approvalValidation = require('../../validations/approval.validation');
 const {
   publicFormSubmitLimiter,
 } = require('../../middlewares/rateLimiter');
@@ -158,6 +160,14 @@ router
 
 // List all workflow instances for a submission
 router.get('/:id/workflows', auth(), workflowController.getSubmissionWorkflows);
+
+// Approval projection for a submission
+router.get(
+  '/:id/approval',
+  auth(),
+  validate(approvalValidation.getSubmissionApproval),
+  approvalController.getSubmissionApproval
+);
 
 // Act on a specific workflow step  (approve / reject / review)
 // POST /v1/submissions/:id/workflows/:wfId/action/:stepDefId

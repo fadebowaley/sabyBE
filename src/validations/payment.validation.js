@@ -1,5 +1,6 @@
 const Joi = require('joi');
 const { objectId } = require('./custom.validation');
+const subscriptionCatalogValidation = require('./subscriptionCatalog.validation');
 
 const PAYMENT_STATUSES = [
   'pending',
@@ -11,6 +12,55 @@ const PAYMENT_STATUSES = [
 ];
 const PURPOSES = ['subscription', 'collection'];
 const BENEFICIARY_TYPES = ['saby', 'tenant'];
+const PAYMENT_CURRENCIES = [
+  'NGN',
+  'USD',
+  'EUR',
+  'GBP',
+  'INR',
+  'AUD',
+  'CAD',
+  'SGD',
+  'CHF',
+  'MYR',
+  'JPY',
+  'CNY',
+  'GHS',
+  'KES',
+  'ZAR',
+  'AED',
+  'SAR',
+  'XOF',
+  'XAF',
+  'BRL',
+  'MXN',
+  'TRY',
+];
+const PAYMENT_METHODS = [
+  'paystack',
+  'flutterwave',
+  '9psb',
+  'premium',
+  'sabypay',
+  'credit_card',
+  'debit_card',
+  'paypal',
+  'bank_transfer',
+  'crypto',
+];
+
+const subscriptionCheckout = {
+  body: Joi.object().keys({
+    plan: subscriptionCatalogValidation.subscriptionPlanId.required(),
+    billingPeriod: subscriptionCatalogValidation.subscriptionBillingPeriod.default('monthly'),
+    period: subscriptionCatalogValidation.subscriptionBillingPeriod.optional(),
+    currency: subscriptionCatalogValidation.subscriptionCurrency.default('NGN'),
+    provider: subscriptionCatalogValidation.subscriptionProvider.default('paystack'),
+    addOns: subscriptionCatalogValidation.subscriptionAddonIds,
+    promoCode: Joi.string().trim().allow('', null).optional(),
+    returnUrl: Joi.string().uri().optional().allow('', null),
+  }),
+};
 
 // Validation schema for creating a new payment
 const createPayment = {
@@ -18,21 +68,7 @@ const createPayment = {
     tenantId: Joi.string().optional(),
     userId: Joi.string().optional(),
     amount: Joi.number().positive().required(),
-    currency: Joi.string()
-      .valid(
-        'USD',
-        'EUR',
-        'GBP',
-        'INR',
-        'AUD',
-        'CAD',
-        'SGD',
-        'CHF',
-        'MYR',
-        'JPY',
-        'CNY'
-      )
-      .required(),
+    currency: Joi.string().valid(...PAYMENT_CURRENCIES).required(),
     status: Joi.string()
       .valid(...PAYMENT_STATUSES)
       .default('pending'),
@@ -52,9 +88,7 @@ const createPayment = {
     providerRef: Joi.string().optional().allow('', null),
     idempotencyKey: Joi.string().max(120).optional(),
     reference: Joi.string().required(),
-    paymentMethod: Joi.string()
-      .valid('credit_card', 'debit_card', 'paypal', 'bank_transfer', 'crypto')
-      .required(),
+    paymentMethod: Joi.string().valid(...PAYMENT_METHODS).required(),
     paymentDate: Joi.date().default(Date.now),
     total: Joi.number().positive().required(),
     metadata: Joi.object().optional(),
@@ -76,26 +110,8 @@ const queryPayments = {
     remittanceConfigId: Joi.string(),
     providerRef: Joi.string(),
     idempotencyKey: Joi.string(),
-    paymentMethod: Joi.string().valid(
-      'credit_card',
-      'debit_card',
-      'paypal',
-      'bank_transfer',
-      'crypto'
-    ),
-    currency: Joi.string().valid(
-      'USD',
-      'EUR',
-      'GBP',
-      'INR',
-      'AUD',
-      'CAD',
-      'SGD',
-      'CHF',
-      'MYR',
-      'JPY',
-      'CNY'
-    ),
+    paymentMethod: Joi.string().valid(...PAYMENT_METHODS),
+    currency: Joi.string().valid(...PAYMENT_CURRENCIES),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),
     sortBy: Joi.string(),
@@ -124,19 +140,7 @@ const updatePayment = {
   body: Joi.object()
     .keys({
       amount: Joi.number(),
-      currency: Joi.string().valid(
-        'USD',
-        'EUR',
-        'GBP',
-        'INR',
-        'AUD',
-        'CAD',
-        'SGD',
-        'CHF',
-        'MYR',
-        'JPY',
-        'CNY'
-      ),
+      currency: Joi.string().valid(...PAYMENT_CURRENCIES),
       status: Joi.string().valid(...PAYMENT_STATUSES),
       purpose: Joi.string().valid(...PURPOSES),
       beneficiaryType: Joi.string().valid(...BENEFICIARY_TYPES),
@@ -145,13 +149,7 @@ const updatePayment = {
       remittanceConfigId: Joi.string().allow('', null),
       providerRef: Joi.string().allow('', null),
       reference: Joi.string(),
-      paymentMethod: Joi.string().valid(
-        'credit_card',
-        'debit_card',
-        'paypal',
-        'bank_transfer',
-        'crypto'
-      ),
+      paymentMethod: Joi.string().valid(...PAYMENT_METHODS),
       total: Joi.number(),
       metadata: Joi.object(),
     })
@@ -244,7 +242,16 @@ const generatePaymentReceipt = {
   }),
 };
 
+const verifyReturn = {
+  body: Joi.object().keys({
+    provider: Joi.string().valid('flutterwave', 'paystack').required(),
+    paymentReference: Joi.string().required(),
+    transactionId: Joi.string().optional().allow('', null),
+  }),
+};
+
 module.exports = {
+  subscriptionCheckout,
   createPayment,
   queryPayments,
   getPayment,
@@ -258,4 +265,5 @@ module.exports = {
   cancelPayment,
   refundPayment,
   generatePaymentReceipt,
+  verifyReturn,
 };

@@ -2,11 +2,16 @@ const httpStatus = require('http-status');
 const { nanoid } = require('nanoid');
 const { TenantOnboarding, User, ProjectForm } = require('../models');
 const ApiError = require('../utils/ApiError');
+const { invalidateStudioAccessState } = require('./studioAccess.service');
 
 const WORKSPACE_ROLE_OWNER = 'owner';
 const WORKSPACE_ROLE_EDITOR = 'editor';
 const WORKSPACE_ROLE_VIEWER = 'viewer';
 const WORKSPACE_STATUS_ACTIVE = 'active';
+const ACCESS_PROFILE_WORKSPACE_OWNER = 'workspace_owner';
+const ACCESS_PROFILE_DATA_ADMINISTRATOR = 'data_administrator';
+const ACCESS_PROFILE_EDITOR = 'editor';
+const ACCESS_PROFILE_VIEWER = 'viewer';
 const DEFAULT_WORKSPACE_NAME = 'My workspace';
 const DEFAULT_WORKSPACE_ID = 'ws_default';
 const LEGACY_DEFAULT_WORKSPACE_ID = 'default';
@@ -28,6 +33,32 @@ const normalizeString = (value, fallback = '') =>
   String(value == null ? fallback : value).trim();
 
 const asStringId = (value) => (value ? String(value) : '');
+
+const resolveAccessProfileIdFromMember = (member) => {
+  const normalizedRole = normalizeString(member?.role).toLowerCase();
+  const explicit = normalizeString(member?.accessProfileId).toLowerCase();
+
+  if (normalizedRole === WORKSPACE_ROLE_OWNER) {
+    return ACCESS_PROFILE_WORKSPACE_OWNER;
+  }
+
+  if (normalizedRole === WORKSPACE_ROLE_EDITOR) {
+    return ACCESS_PROFILE_EDITOR;
+  }
+
+  if (normalizedRole === WORKSPACE_ROLE_VIEWER) {
+    if (explicit === ACCESS_PROFILE_DATA_ADMINISTRATOR) {
+      return ACCESS_PROFILE_DATA_ADMINISTRATOR;
+    }
+    return ACCESS_PROFILE_VIEWER;
+  }
+
+  if (explicit === ACCESS_PROFILE_DATA_ADMINISTRATOR) {
+    return ACCESS_PROFILE_DATA_ADMINISTRATOR;
+  }
+
+  return ACCESS_PROFILE_VIEWER;
+};
 
 const isDuplicateKeyError = (error) =>
   Boolean(error && (error.code === 11000 || /duplicate key/i.test(error.message || '')));
@@ -85,6 +116,7 @@ const createDefaultWorkspace = ({ ownerUserId }) => ({
     {
       userId: ownerUserId,
       role: WORKSPACE_ROLE_OWNER,
+      accessProfileId: ACCESS_PROFILE_WORKSPACE_OWNER,
       status: WORKSPACE_STATUS_ACTIVE,
     },
   ],
@@ -320,7 +352,7 @@ const resolveWorkspaceForFormWrite = async ({ tenantId, actorUserId, workspaceId
   return requestedWorkspaceId;
 };
 
-const listWorkspaces = async ({ tenantId, userId }) => {
+const listWorkspaces = async ({ tenantId, userId, includeAll = false }) => {
   const { onboarding, defaultWorkspace } = await ensureTenantWorkspaces({
     tenantId,
     actorUserId: userId,
@@ -335,13 +367,21 @@ const listWorkspaces = async ({ tenantId, userId }) => {
     (workspace) => workspace.isDeleted !== true
   );
 
-  const accessible = workspaces
-    .map((workspace) => {
-      const member = findActiveMember(workspace, userId);
-      if (!member) return null;
-      return { workspace, member };
-    })
-    .filter(Boolean);
+  const accessible = includeAll
+    ? workspaces.map((workspace) => ({
+        workspace,
+        member:
+          findActiveMember(workspace, userId) || {
+            role: WORKSPACE_ROLE_OWNER,
+          },
+      }))
+    : workspaces
+        .map((workspace) => {
+          const member = findActiveMember(workspace, userId);
+          if (!member) return null;
+          return { workspace, member };
+        })
+        .filter(Boolean);
 
   const workspaceIds = accessible.map(({ workspace }) => workspace.workspaceId);
   const counts = workspaceIds.length
@@ -393,6 +433,96 @@ const listWorkspaces = async ({ tenantId, userId }) => {
   };
 };
 
+const listWorkspaceMembers = async ({ tenantId, userId, includeAll = false }) => {
+  const { onboarding, defaultWorkspace } = await ensureTenantWorkspaces({
+    tenantId,
+    actorUserId: userId,
+  });
+
+  await backfillFormsToDefaultWorkspace({
+    tenantId,
+    workspaceId: defaultWorkspace.workspaceId,
+  });
+
+  const workspaces = (onboarding.workspaces || []).filter(
+    (workspace) => workspace.isDeleted !== true
+  );
+
+  const accessible = includeAll
+    ? workspaces
+    : workspaces.filter((workspace) => Boolean(findActiveMember(workspace, userId)));
+
+  const memberAssignments = new Map();
+
+  accessible.forEach((workspace) => {
+    (workspace.members || [])
+      .filter((member) => member.status === WORKSPACE_STATUS_ACTIVE)
+      .forEach((member) => {
+        const memberUserId = asStringId(member.userId);
+        if (!memberUserId) return;
+
+        if (!memberAssignments.has(memberUserId)) {
+          memberAssignments.set(memberUserId, []);
+        }
+
+        memberAssignments.get(memberUserId).push({
+          workspaceId: workspace.workspaceId,
+          workspaceName: workspace.name,
+          visibility: workspace.visibility || WORKSPACE_VISIBILITY_PRIVATE,
+          role: member.role || WORKSPACE_ROLE_VIEWER,
+          accessProfileId: resolveAccessProfileIdFromMember(member),
+          isDefault: workspace.workspaceId === DEFAULT_WORKSPACE_ID,
+        });
+      });
+  });
+
+  const userIds = Array.from(memberAssignments.keys());
+  const users = userIds.length
+    ? await User.find({
+        _id: { $in: userIds },
+        tenantId: normalizeString(tenantId),
+        deletedAt: null,
+      })
+        .select('_id firstname lastname email phoneNumber')
+        .lean()
+        .exec()
+    : [];
+
+  const userMap = users.reduce((acc, entry) => {
+    acc[asStringId(entry._id)] = entry;
+    return acc;
+  }, {});
+
+  const members = userIds
+    .map((memberUserId) => {
+      const user = userMap[memberUserId];
+      if (!user) return null;
+
+      const assignments = (memberAssignments.get(memberUserId) || []).sort((a, b) => {
+        if (a.isDefault && !b.isDefault) return -1;
+        if (!a.isDefault && b.isDefault) return 1;
+        return String(a.workspaceName || '').localeCompare(String(b.workspaceName || ''));
+      });
+
+      return {
+        userId: memberUserId,
+        firstname: user.firstname || '',
+        lastname: user.lastname || '',
+        email: user.email || '',
+        phoneNumber: user.phoneNumber || '',
+        assignments,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const aName = `${a.firstname || ''} ${a.lastname || ''}`.trim() || a.email || '';
+      const bName = `${b.firstname || ''} ${b.lastname || ''}`.trim() || b.email || '';
+      return aName.localeCompare(bName);
+    });
+
+  return { members };
+};
+
 const createWorkspace = async ({ tenantId, actorUserId, name, visibility }) => {
   const { onboarding } = await ensureTenantWorkspaces({ tenantId, actorUserId });
   const trimmedName = normalizeString(name, 'Untitled workspace');
@@ -424,6 +554,7 @@ const createWorkspace = async ({ tenantId, actorUserId, name, visibility }) => {
       {
         userId: actorUserId,
         role: WORKSPACE_ROLE_OWNER,
+        accessProfileId: ACCESS_PROFILE_WORKSPACE_OWNER,
         status: WORKSPACE_STATUS_ACTIVE,
       },
     ],
@@ -432,6 +563,7 @@ const createWorkspace = async ({ tenantId, actorUserId, name, visibility }) => {
   onboarding.workspaces.push(workspace);
   onboarding.markModified('workspaces');
   await onboarding.save();
+  await invalidateStudioAccessState({ tenantId, userId: actorUserId });
 
   return workspace;
 };
@@ -475,6 +607,7 @@ const renameWorkspace = async ({
   }
   onboarding.markModified('workspaces');
   await onboarding.save();
+  await invalidateStudioAccessState({ tenantId, userId: actorUserId });
 
   return workspace;
 };
@@ -507,6 +640,7 @@ const addWorkspaceMember = async ({
   actorUserId,
   workspaceId,
   role,
+  accessProfileId = null,
   userId,
   email,
 }) => {
@@ -515,18 +649,29 @@ const addWorkspaceMember = async ({
     throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid workspace role');
   }
 
-  const { onboarding, workspace } = await assertWorkspaceAccess({
+  const { onboarding } = await ensureTenantWorkspaces({
     tenantId,
-    workspaceId,
-    userId: actorUserId,
-    allowedRoles: [WORKSPACE_ROLE_OWNER],
+    actorUserId,
   });
+  const workspace = findActiveWorkspace(onboarding, workspaceId);
+  if (!workspace) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Workspace not found');
+  }
 
   const targetUser = await resolveTenantUser({ tenantId, userId, email });
   const existingMember = findActiveMember(workspace, targetUser._id);
+  const normalizedAccessProfileId = normalizeString(
+    accessProfileId,
+    normalizedRole === WORKSPACE_ROLE_OWNER
+      ? ACCESS_PROFILE_WORKSPACE_OWNER
+      : normalizedRole === WORKSPACE_ROLE_EDITOR
+        ? ACCESS_PROFILE_EDITOR
+        : ACCESS_PROFILE_VIEWER
+  ).toLowerCase();
 
   if (existingMember) {
     existingMember.role = normalizedRole;
+    existingMember.accessProfileId = normalizedAccessProfileId;
     existingMember.status = WORKSPACE_STATUS_ACTIVE;
   } else {
     const inactiveMember = (workspace.members || []).find(
@@ -535,11 +680,13 @@ const addWorkspaceMember = async ({
 
     if (inactiveMember) {
       inactiveMember.role = normalizedRole;
+      inactiveMember.accessProfileId = normalizedAccessProfileId;
       inactiveMember.status = WORKSPACE_STATUS_ACTIVE;
     } else {
       workspace.members.push({
         userId: targetUser._id,
         role: normalizedRole,
+        accessProfileId: normalizedAccessProfileId,
         status: WORKSPACE_STATUS_ACTIVE,
       });
     }
@@ -547,6 +694,7 @@ const addWorkspaceMember = async ({
 
   onboarding.markModified('workspaces');
   await onboarding.save();
+  await invalidateStudioAccessState({ tenantId, userId: targetUser._id });
 
   return {
     workspace,
@@ -562,12 +710,14 @@ const addWorkspaceMember = async ({
 };
 
 const removeWorkspaceMember = async ({ tenantId, actorUserId, workspaceId, userId }) => {
-  const { onboarding, workspace } = await assertWorkspaceAccess({
+  const { onboarding } = await ensureTenantWorkspaces({
     tenantId,
-    workspaceId,
-    userId: actorUserId,
-    allowedRoles: [WORKSPACE_ROLE_OWNER],
+    actorUserId,
   });
+  const workspace = findActiveWorkspace(onboarding, workspaceId);
+  if (!workspace) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Workspace not found');
+  }
 
   const targetUserId = normalizeString(userId);
   if (!targetUserId) {
@@ -604,6 +754,7 @@ const removeWorkspaceMember = async ({ tenantId, actorUserId, workspaceId, userI
 
   onboarding.markModified('workspaces');
   await onboarding.save();
+  await invalidateStudioAccessState({ tenantId, userId: targetUserId });
 
   return workspace;
 };
@@ -656,6 +807,7 @@ const leaveWorkspace = async ({ tenantId, actorUserId, workspaceId }) => {
         workspace.members.push({
           userId: tenantOwner._id,
           role: WORKSPACE_ROLE_OWNER,
+          accessProfileId: ACCESS_PROFILE_WORKSPACE_OWNER,
           status: WORKSPACE_STATUS_ACTIVE,
         });
       }
@@ -668,6 +820,7 @@ const leaveWorkspace = async ({ tenantId, actorUserId, workspaceId }) => {
 
   onboarding.markModified('workspaces');
   await onboarding.save();
+  await invalidateStudioAccessState({ tenantId, userId: actorUserId });
 
   return workspace;
 };
@@ -692,6 +845,7 @@ const deleteWorkspace = async ({ tenantId, actorUserId, workspaceId }) => {
 
   onboarding.markModified('workspaces');
   await onboarding.save();
+  await invalidateStudioAccessState({ tenantId, userId: actorUserId });
 
   const now = new Date();
   const archiveResult = await ProjectForm.updateMany(
@@ -734,6 +888,7 @@ module.exports = {
   assertWorkspaceAccess,
   resolveWorkspaceForFormWrite,
   listWorkspaces,
+  listWorkspaceMembers,
   createWorkspace,
   renameWorkspace,
   addWorkspaceMember,
@@ -741,6 +896,7 @@ module.exports = {
   leaveWorkspace,
   deleteWorkspace,
   getAccessibleWorkspaceIds,
+  findActiveWorkspace,
 };
 const normalizeWorkspaceVisibility = (value, fallback = WORKSPACE_VISIBILITY_PRIVATE) => {
   const normalized = normalizeString(value, fallback).toLowerCase();

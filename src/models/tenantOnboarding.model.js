@@ -13,6 +13,11 @@ const workspaceMemberSchema = new mongoose.Schema(
       enum: ['owner', 'editor', 'viewer'],
       default: 'viewer',
     },
+    accessProfileId: {
+      type: String,
+      enum: ['workspace_owner', 'data_administrator', 'editor', 'viewer'],
+      default: 'viewer',
+    },
     status: {
       type: String,
       enum: ['active', 'inactive'],

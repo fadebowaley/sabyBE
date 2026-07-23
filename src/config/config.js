@@ -193,6 +193,36 @@ const envVarsSchema = Joi.object()
       .try(Joi.number(), Joi.string().pattern(/^\d+/))
       .default(200)
       .description('Max payments processed per reconciliation sweep'),
+    PAYMENT_SETTLEMENT_GUARDRAIL_NGN: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(1000000)
+      .description('NGN settlement amount requiring additional operational guardrails'),
+    PAYMENT_SETTLEMENT_LOOKBACK_DAYS: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(7)
+      .description('Days to look back when reconciling provider settlement batches'),
+    PAYMENT_SETTLEMENT_MAX_PAGES: Joi.alternatives()
+      .try(Joi.number(), Joi.string().pattern(/^\d+/))
+      .default(5)
+      .description('Max provider settlement pages scanned per reconciliation sweep'),
+    PAYSTACK_SECRET_KEY: Joi.string()
+      .allow('')
+      .description('Paystack secret key for hosted checkout initialization'),
+    PAYSTACK_PUBLIC_KEY: Joi.string()
+      .allow('')
+      .description('Paystack public key'),
+    FLUTTERWAVE_SECRET_KEY: Joi.string()
+      .allow('')
+      .description('Flutterwave secret key for hosted checkout initialization'),
+    FLUTTERWAVE_PUBLIC_KEY: Joi.string()
+      .allow('')
+      .description('Flutterwave public key'),
+    FLUTTERWAVE_WEBHOOK_SECRET: Joi.string()
+      .allow('')
+      .description('Flutterwave webhook verification hash configured in Flutterwave dashboard'),
+    PAYMENT_RETURN_BASE_URL: Joi.string()
+      .allow('')
+      .description('Base URL used for hosted payment return callbacks'),
     PUBLIC_QR_CONTEXT_SECRET: Joi.string()
       .allow('')
       .description('Secret used to sign public QR context tokens'),
@@ -396,10 +426,29 @@ module.exports = {
   payment: {
     webhookSecret: envVars.PAYMENT_WEBHOOK_SECRET,
     webhookToleranceSec: Number(envVars.PAYMENT_WEBHOOK_TOLERANCE_SEC),
+    returnBaseUrl: envVars.PAYMENT_RETURN_BASE_URL || envVars.SABYFE_URL || '',
+    providers: {
+      paystack: {
+        publicKey: envVars.PAYSTACK_PUBLIC_KEY,
+        secretKey: envVars.PAYSTACK_SECRET_KEY,
+      },
+      flutterwave: {
+        publicKey: envVars.FLUTTERWAVE_PUBLIC_KEY,
+        secretKey: envVars.FLUTTERWAVE_SECRET_KEY,
+        webhookSecret: envVars.FLUTTERWAVE_WEBHOOK_SECRET,
+      },
+    },
     reconciliation: {
       cron: envVars.PAYMENT_RECONCILIATION_CRON,
       stuckMinutes: Number(envVars.PAYMENT_RECON_STUCK_MINUTES),
       batchSize: Number(envVars.PAYMENT_RECON_BATCH_SIZE),
+    },
+    settlementGuardrails: {
+      thresholds: {
+        NGN: Number(envVars.PAYMENT_SETTLEMENT_GUARDRAIL_NGN) || 1000000,
+      },
+      lookbackDays: Number(envVars.PAYMENT_SETTLEMENT_LOOKBACK_DAYS) || 7,
+      maxPages: Number(envVars.PAYMENT_SETTLEMENT_MAX_PAGES) || 5,
     },
   },
   publicForm: {

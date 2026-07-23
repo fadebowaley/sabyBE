@@ -404,31 +404,40 @@ const normalizeSystemFormContract = ({
     ...defaultCapabilities().experience,
     ...(normalized.capabilities.experience || {}),
   };
-  normalized.capabilities.experience.security = {
-    profile: 'private_safe',
-    mode: 'private',
-    publicSecureMode: 'off',
-    access: {
-      whoCanAccess: 'authenticated_users',
-      allowedRoles: [],
-      allowedUsers: [],
-      restrictByLocation: false,
-      allowedCountries: [],
+  normalized.capabilities.experience.security = normalizeSecurityCapabilityMatrix(
+    {
+      profile: 'private_safe',
+      mode: 'private',
+      publicSecureMode: 'otp',
+      access: {
+        whoCanAccess: 'authenticated_users',
+        allowedRoles: [],
+        allowedUsers: [],
+        restrictByLocation: false,
+        allowedCountries: [],
+      },
+      authentication: {
+        requireLogin: true,
+        allowAnonymous: false,
+        requireOtp: true,
+      },
+      accessCode: {
+        code: null,
+        hint: null,
+        maxAttempts: 5,
+        lockoutMinutes: 15,
+      },
+      submissionProtection: {
+        preventDuplicateSubmission: false,
+        duplicateCheckField: null,
+        rateLimitEnabled: false,
+        maxSubmissionsPerUser: null,
+      },
+      channels: ['web'],
+      ...(normalized.capabilities.experience.security || {}),
     },
-    authentication: {
-      requireLogin: true,
-      allowAnonymous: false,
-      requireOtp: false,
-    },
-    submissionProtection: {
-      preventDuplicateSubmission: false,
-      duplicateCheckField: null,
-      rateLimitEnabled: false,
-      maxSubmissionsPerUser: null,
-    },
-    channels: ['web'],
-    ...(normalized.capabilities.experience.security || {}),
-  };
+    defaultCapabilities().experience.security
+  );
   normalized.identity.tags = Array.from(
     new Set([...(normalized.identity.tags || []), 'system', 'profile'])
   );
@@ -734,24 +743,570 @@ const SMART_MAPPING_TARGETS = {
   eventDate: ['event_date', 'service_date', 'meeting_date'],
 };
 
+const DAY_LABELS = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
+const VALID_COMPLIANCE_FREQUENCIES = new Set(['daily', 'weekly', 'monthly']);
+const VALID_COMPLIANCE_REPORTING_SCOPES = new Set([
+  'yearly',
+  'monthly',
+  'weekly',
+  'daily',
+  'custom_range',
+]);
+
+const clampComplianceInteger = (value, fallback, { min = 1, max = 31 } = {}) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, Math.trunc(numeric)));
+};
+
+const normalizeComplianceNumberList = (values, { min = 0, max = 31 } = {}) =>
+  Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [])
+        .map((entry) => Number(entry))
+        .filter((entry) => Number.isInteger(entry) && entry >= min && entry <= max)
+    )
+  ).sort((left, right) => left - right);
+
+const buildLegacyWeeklyDaysFromSchedule = ({
+  schedule,
+  fallbackDays = [],
+}) => {
+  const normalizedFrequency =
+    schedule?.frequency === 'weekly' ? 'weekly' : null;
+  if (!normalizedFrequency) {
+    return Array.isArray(fallbackDays) ? fallbackDays : [];
+  }
+
+  const weekdays = normalizeComplianceNumberList(schedule?.weekly?.weekdays, {
+    min: 0,
+    max: 6,
+  });
+  const intervalWeeks = clampComplianceInteger(
+    schedule?.weekly?.intervalWeeks,
+    1,
+    { min: 1, max: 4 }
+  );
+  const legacyFrequency = intervalWeeks === 2 ? 'biweekly' : 'weekly';
+
+  return weekdays.map((day) => ({
+    day,
+    name: DAY_LABELS[day] || `Day ${day}`,
+    frequency: legacyFrequency,
+    occurrences: null,
+    enabled: true,
+  }));
+};
+
+const stripDeprecatedComplianceFields = (value = {}) => {
+  const compliance = value && typeof value === 'object' ? { ...value } : {};
+  const reportingPeriod =
+    compliance.reportingPeriod && typeof compliance.reportingPeriod === 'object'
+      ? { ...compliance.reportingPeriod }
+      : {};
+  const submissionPolicy =
+    compliance.submissionPolicy && typeof compliance.submissionPolicy === 'object'
+      ? { ...compliance.submissionPolicy }
+      : {};
+  const enforcement =
+    compliance.enforcement && typeof compliance.enforcement === 'object'
+      ? { ...compliance.enforcement }
+      : {};
+
+  delete reportingPeriod.weekStartsOn;
+  delete reportingPeriod.timezone;
+  delete submissionPolicy.closeWindowAtPeriodEnd;
+  delete enforcement.closeWindowAtPeriodEnd;
+  delete compliance.autoLockMonthEnd;
+
+  if (Object.keys(reportingPeriod).length > 0) {
+    compliance.reportingPeriod = reportingPeriod;
+  }
+  if (Object.keys(submissionPolicy).length > 0) {
+    compliance.submissionPolicy = submissionPolicy;
+  }
+  if (Object.keys(enforcement).length > 0) {
+    compliance.enforcement = enforcement;
+  }
+
+  return compliance;
+};
+
+const DEFAULT_COMPLIANCE_CAPABILITY = {
+  enabled: false,
+  availability: {
+    startDate: null,
+    endDate: null,
+  },
+  reportingPeriod: {
+    scope: 'monthly',
+    weekStartsOn: 1,
+    timezone: null,
+    defaultYear: null,
+    defaultMonth: null,
+    customRange: {
+      maxDays: null,
+    },
+  },
+  submissionPolicy: {
+    maxSubmissionsPerPeriod: 1,
+    allowBackdating: false,
+    closeWindowAtPeriodEnd: false,
+  },
+  submissionFrequency: {
+    mode: 'daily',
+    count: 1,
+    weekdays: [],
+    monthDates: [],
+    intervalWeeks: 1,
+    custom: {
+      interval: null,
+    },
+  },
+  trackingMode: 'none',
+  frequency: 'daily',
+  dailyConfig: {
+    activeDays: [],
+    frequencyPerDay: 1,
+    skipWeekends: false,
+    skipHolidays: false,
+  },
+  weeklyConfig: {
+    days: [],
+  },
+  monthlyConfig: {
+    dates: [],
+    submissionLimitPerDate: 1,
+  },
+  schedule: {
+    frequency: 'daily',
+    startDate: null,
+    endDate: null,
+    daily: {
+      weekdays: [],
+    },
+    weekly: {
+      intervalWeeks: 1,
+      weekdays: [],
+      anchorDate: null,
+    },
+    monthly: {
+      dates: [],
+    },
+  },
+  submissionLimit: {
+    count: 1,
+    scope: 'occurrence',
+  },
+  enforcement: {
+    allowBackdating: false,
+    closeWindowAtPeriodEnd: false,
+  },
+  requireNodeId: true,
+  requireMonth: true,
+  trackCompliance: true,
+  autoGenerateCalendar: true,
+  autoLockMonthEnd: false,
+  calendarRequired: false,
+  eventTypes: [],
+  calendarGeneration: {
+    startDate: null,
+    endDate: null,
+    allowBackdating: false,
+    monthsToGenerate: null,
+  },
+};
+
+const resolveComplianceReportingScope = (value = {}, fallback = 'monthly') => {
+  const direct = String(value?.reportingPeriod?.scope || '')
+    .trim()
+    .toLowerCase();
+  if (VALID_COMPLIANCE_REPORTING_SCOPES.has(direct)) {
+    return direct;
+  }
+
+  const frequency = resolveComplianceScheduleFrequency(value, fallback);
+  if (frequency === 'daily' || frequency === 'weekly' || frequency === 'monthly') {
+    return frequency;
+  }
+
+  return fallback;
+};
+
+const resolveComplianceScheduleFrequency = (value = {}, fallback = 'monthly') => {
+  const direct = String(value?.schedule?.frequency || '')
+    .trim()
+    .toLowerCase();
+  if (VALID_COMPLIANCE_FREQUENCIES.has(direct)) {
+    return direct;
+  }
+
+  const trackingMode = String(value?.trackingMode || '')
+    .trim()
+    .toLowerCase();
+  if (trackingMode === 'none') {
+    return 'monthly';
+  }
+  if (VALID_COMPLIANCE_FREQUENCIES.has(trackingMode)) {
+    return trackingMode;
+  }
+
+  return fallback;
+};
+
+const normalizeComplianceCapability = (value = {}, defaults = null) => {
+  const resolvedDefaults =
+    defaults || DEFAULT_COMPLIANCE_CAPABILITY;
+  const source = value && typeof value === 'object' ? value : {};
+  const legacyDailyConfig =
+    source.dailyConfig && typeof source.dailyConfig === 'object'
+      ? source.dailyConfig
+      : {};
+  const legacyWeeklyConfig =
+    source.weeklyConfig && typeof source.weeklyConfig === 'object'
+      ? source.weeklyConfig
+      : {};
+  const legacyMonthlyConfig =
+    source.monthlyConfig && typeof source.monthlyConfig === 'object'
+      ? source.monthlyConfig
+      : {};
+  const legacyCalendarGeneration =
+    source.calendarGeneration && typeof source.calendarGeneration === 'object'
+      ? source.calendarGeneration
+      : {};
+  const availabilitySource =
+    source.availability && typeof source.availability === 'object'
+      ? source.availability
+      : {};
+  const reportingPeriodSource =
+    source.reportingPeriod && typeof source.reportingPeriod === 'object'
+      ? source.reportingPeriod
+      : {};
+  const scheduleSource =
+    source.schedule && typeof source.schedule === 'object' ? source.schedule : {};
+  const submissionLimitSource =
+    source.submissionLimit && typeof source.submissionLimit === 'object'
+      ? source.submissionLimit
+      : {};
+  const submissionPolicySource =
+    source.submissionPolicy && typeof source.submissionPolicy === 'object'
+      ? source.submissionPolicy
+      : {};
+  const submissionFrequencySource =
+    source.submissionFrequency && typeof source.submissionFrequency === 'object'
+      ? source.submissionFrequency
+      : {};
+  const enforcementSource =
+    source.enforcement && typeof source.enforcement === 'object'
+      ? source.enforcement
+      : {};
+
+  const reportingScope = resolveComplianceReportingScope(source);
+  const frequency =
+    reportingScope === 'daily' || reportingScope === 'weekly' || reportingScope === 'monthly'
+      ? reportingScope
+      : 'daily';
+  const submissionFrequencyModeCandidate = String(
+    submissionFrequencySource.mode || source.frequency || 'daily'
+  )
+    .trim()
+    .toLowerCase();
+  const submissionFrequencyMode =
+    submissionFrequencyModeCandidate === 'once' ||
+    submissionFrequencyModeCandidate === 'multiple' ||
+    submissionFrequencyModeCandidate === 'daily' ||
+    submissionFrequencyModeCandidate === 'weekly' ||
+    submissionFrequencyModeCandidate === 'monthly'
+      ? submissionFrequencyModeCandidate
+      : 'daily';
+  const submissionLimitCount = clampComplianceInteger(
+    submissionFrequencySource.count ??
+    submissionPolicySource.maxSubmissionsPerPeriod ??
+      submissionLimitSource.count ??
+      legacyMonthlyConfig.submissionLimitPerDate ??
+      legacyDailyConfig.frequencyPerDay ??
+      1,
+    1,
+    { min: 1, max: 20 }
+  );
+  const dailyWeekdays = normalizeComplianceNumberList(
+    submissionFrequencySource.weekdays ??
+      scheduleSource?.daily?.weekdays ??
+      legacyDailyConfig.activeDays,
+    { min: 0, max: 6 }
+  );
+  const weeklyWeekdays = normalizeComplianceNumberList(
+    submissionFrequencySource.weekdays ??
+      scheduleSource?.weekly?.weekdays ??
+      (Array.isArray(legacyWeeklyConfig.days)
+        ? legacyWeeklyConfig.days.map((day) => day?.day)
+        : []),
+    { min: 0, max: 6 }
+  );
+  const monthlyDates = normalizeComplianceNumberList(
+    submissionFrequencySource.monthDates ??
+      scheduleSource?.monthly?.dates ??
+      legacyMonthlyConfig.dates,
+    { min: 1, max: 31 }
+  );
+  const intervalWeeks = clampComplianceInteger(
+    submissionFrequencySource.intervalWeeks ??
+      scheduleSource?.weekly?.intervalWeeks ??
+      (Array.isArray(legacyWeeklyConfig.days) &&
+      legacyWeeklyConfig.days.some((day) => day?.frequency === 'biweekly')
+        ? 2
+        : 1),
+    1,
+    { min: 1, max: 4 }
+  );
+  const startDate =
+    typeof availabilitySource.startDate === 'string' && availabilitySource.startDate.trim()
+      ? availabilitySource.startDate
+      : typeof scheduleSource.startDate === 'string' && scheduleSource.startDate.trim()
+        ? scheduleSource.startDate
+        : typeof legacyCalendarGeneration.startDate === 'string' &&
+            legacyCalendarGeneration.startDate.trim()
+          ? legacyCalendarGeneration.startDate
+          : null;
+  const endDate =
+    typeof availabilitySource.endDate === 'string' && availabilitySource.endDate.trim()
+      ? availabilitySource.endDate
+      : typeof scheduleSource.endDate === 'string' && scheduleSource.endDate.trim()
+        ? scheduleSource.endDate
+        : typeof legacyCalendarGeneration.endDate === 'string' &&
+            legacyCalendarGeneration.endDate.trim()
+          ? legacyCalendarGeneration.endDate
+          : null;
+  const allowBackdating =
+    typeof submissionPolicySource.allowBackdating === 'boolean'
+      ? submissionPolicySource.allowBackdating
+      : typeof enforcementSource.allowBackdating === 'boolean'
+        ? enforcementSource.allowBackdating
+        : legacyCalendarGeneration.allowBackdating === true;
+  const closeWindowAtPeriodEnd = false;
+  const weekStartsOn = 1;
+  const timezone = null;
+  const defaultYear = (() => {
+    const raw = Number(reportingPeriodSource.defaultYear);
+    return Number.isInteger(raw) && raw >= 2000 && raw <= 2100 ? raw : null;
+  })();
+  const defaultMonth =
+    typeof reportingPeriodSource.defaultMonth === 'string' &&
+    /^\d{4}-\d{2}$/.test(reportingPeriodSource.defaultMonth)
+      ? reportingPeriodSource.defaultMonth
+      : null;
+  const customRangeSource =
+    reportingPeriodSource.customRange &&
+    typeof reportingPeriodSource.customRange === 'object'
+      ? reportingPeriodSource.customRange
+      : {};
+  const customFrequencySource =
+    submissionFrequencySource.custom &&
+    typeof submissionFrequencySource.custom === 'object'
+      ? submissionFrequencySource.custom
+      : {};
+  const customRangeMaxDays =
+    customRangeSource.maxDays == null || customRangeSource.maxDays === ''
+      ? null
+      : clampComplianceInteger(customRangeSource.maxDays, null, {
+          min: 1,
+          max: 366,
+        });
+  const customFrequencyInterval =
+    customFrequencySource.interval == null || customFrequencySource.interval === ''
+      ? null
+      : clampComplianceInteger(customFrequencySource.interval, null, {
+          min: 1,
+          max: 365,
+        });
+  const customFrequencyUnit =
+    customFrequencySource.unit === 'day' ||
+    customFrequencySource.unit === 'week' ||
+    customFrequencySource.unit === 'month'
+      ? customFrequencySource.unit
+      : null;
+
+  const normalizedSchedule = {
+    frequency:
+      submissionFrequencyMode === 'daily' ||
+      submissionFrequencyMode === 'weekly' ||
+      submissionFrequencyMode === 'monthly'
+        ? submissionFrequencyMode
+        : frequency,
+    startDate,
+    endDate,
+    daily: {
+      weekdays: dailyWeekdays,
+    },
+    weekly: {
+      intervalWeeks,
+      weekdays: weeklyWeekdays,
+      anchorDate:
+        typeof scheduleSource?.weekly?.anchorDate === 'string' &&
+        scheduleSource.weekly.anchorDate.trim()
+          ? scheduleSource.weekly.anchorDate
+          : startDate,
+    },
+    monthly: {
+      dates: monthlyDates,
+    },
+  };
+
+  return stripDeprecatedComplianceFields({
+    ...resolvedDefaults,
+    ...source,
+    availability: {
+      ...resolvedDefaults.availability,
+      ...(availabilitySource || {}),
+      startDate,
+      endDate,
+    },
+    reportingPeriod: {
+      ...resolvedDefaults.reportingPeriod,
+      ...(reportingPeriodSource || {}),
+      scope: reportingScope,
+      weekStartsOn,
+      timezone,
+      defaultYear,
+      defaultMonth,
+      customRange: {
+        ...resolvedDefaults.reportingPeriod.customRange,
+        ...(customRangeSource || {}),
+        maxDays: customRangeMaxDays,
+      },
+    },
+    submissionPolicy: {
+      ...resolvedDefaults.submissionPolicy,
+      ...(submissionPolicySource || {}),
+      maxSubmissionsPerPeriod: submissionLimitCount,
+      allowBackdating,
+      closeWindowAtPeriodEnd,
+    },
+    submissionFrequency: {
+      ...resolvedDefaults.submissionFrequency,
+      ...(submissionFrequencySource || {}),
+      mode: submissionFrequencyMode,
+      count: submissionLimitCount,
+      weekdays:
+        submissionFrequencyMode === 'daily' ? dailyWeekdays : weeklyWeekdays,
+      monthDates: monthlyDates,
+      intervalWeeks,
+      custom: {
+        ...resolvedDefaults.submissionFrequency.custom,
+        ...(customFrequencySource || {}),
+        interval: customFrequencyInterval,
+        ...(customFrequencyUnit ? { unit: customFrequencyUnit } : {}),
+      },
+    },
+    trackingMode:
+      source.enabled === true
+        ? submissionFrequencyMode === 'daily' ||
+          submissionFrequencyMode === 'weekly' ||
+          submissionFrequencyMode === 'monthly'
+          ? submissionFrequencyMode
+          : reportingScope === 'custom_range'
+            ? 'none'
+            : reportingScope === 'yearly'
+              ? 'monthly'
+              : frequency === 'monthly' &&
+                  monthlyDates.length === 0 &&
+                  reportingScope !== 'monthly'
+                ? 'none'
+                : frequency
+        : String(source.trackingMode || resolvedDefaults.trackingMode || 'none'),
+    frequency,
+    schedule: normalizedSchedule,
+    submissionLimit: {
+      count: submissionLimitCount,
+      scope: 'occurrence',
+      ...(submissionLimitSource || {}),
+    },
+    enforcement: {
+      allowBackdating,
+      closeWindowAtPeriodEnd,
+      ...(enforcementSource || {}),
+    },
+    dailyConfig: {
+      ...resolvedDefaults.dailyConfig,
+      ...legacyDailyConfig,
+      activeDays: dailyWeekdays,
+      frequencyPerDay: submissionLimitCount,
+      skipWeekends: false,
+    },
+    weeklyConfig: {
+      ...resolvedDefaults.weeklyConfig,
+      ...legacyWeeklyConfig,
+      days: buildLegacyWeeklyDaysFromSchedule({
+        schedule: normalizedSchedule,
+        fallbackDays: legacyWeeklyConfig.days,
+      }),
+    },
+    monthlyConfig: {
+      dates: monthlyDates,
+      submissionLimitPerDate: submissionLimitCount,
+    },
+    trackCompliance:
+      typeof source.trackCompliance === 'boolean'
+        ? source.trackCompliance
+        : resolvedDefaults.trackCompliance,
+    calendarGeneration: {
+      ...resolvedDefaults.calendarGeneration,
+      ...legacyCalendarGeneration,
+      startDate,
+      endDate,
+      allowBackdating,
+    },
+    autoLockMonthEnd: closeWindowAtPeriodEnd,
+  });
+};
+
+const normalizeWorkflowTriggerValue = (value, fallback = 'submission') => {
+  const candidate = String(value || fallback || 'submission').trim().toLowerCase();
+  if (candidate === 'submission' || candidate === 'submit') return 'submission';
+  if (candidate === 'update') return 'update';
+  if (candidate === 'manual') return 'manual';
+  return 'submission';
+};
+
 const defaultCapabilities = () => ({
   experience: {
     security: {
-      profile: 'private_safe',
-      mode: 'private',
+      enabled: false,
+      audience: 'public',
+      profile: 'open_public',
+      mode: 'public',
       publicSecureMode: 'off',
       channels: ['web'],
       access: {
-        whoCanAccess: 'authenticated_users',
+        whoCanAccess: 'anyone',
         allowedRoles: [],
         allowedUsers: [],
         restrictByLocation: false,
         allowedCountries: [],
+        requireNodeAccess: false,
       },
       authentication: {
-        requireLogin: true,
-        allowAnonymous: false,
+        method: 'none',
+        requireLogin: false,
+        allowAnonymous: true,
         requireOtp: false,
+      },
+      accessCode: {
+        code: null,
+        hint: null,
+        maxAttempts: 5,
+        lockoutMinutes: 15,
       },
       submissionProtection: {
         preventDuplicateSubmission: false,
@@ -766,6 +1321,12 @@ const defaultCapabilities = () => ({
       autoSave: false,
       submitOnComplete: true,
     },
+    previewSubmission: {
+      enabled: false,
+      layout: 'biodata_document',
+      allowEditBeforeSubmit: true,
+      showBranding: true,
+    },
     distribution: {
       enableSharing: true,
       allowEmbedding: false,
@@ -778,32 +1339,7 @@ const defaultCapabilities = () => ({
       customEmails: [],
       smsNotifications: false,
     },
-    compliance: {
-      enabled: false,
-      trackingMode: 'none',
-      dailyConfig: {
-        activeDays: [],
-        frequencyPerDay: 1,
-        skipWeekends: false,
-        skipHolidays: false,
-      },
-      weeklyConfig: {
-        days: [],
-      },
-      requireNodeId: true,
-      requireMonth: true,
-      trackCompliance: true,
-      autoGenerateCalendar: true,
-      autoLockMonthEnd: false,
-      calendarRequired: false,
-      eventTypes: [],
-      calendarGeneration: {
-        startDate: null,
-        endDate: null,
-        allowBackdating: false,
-        monthsToGenerate: null,
-      },
-    },
+    compliance: normalizeComplianceCapability(DEFAULT_COMPLIANCE_CAPABILITY),
     workflow: {
       enabled: false,
       approvalMode: 'none',
@@ -905,7 +1441,254 @@ const defaultCapabilities = () => ({
       showLastRunAt: true,
     },
   },
-});
+  });
+
+const deriveEnabledCapabilityFamilies = (capabilities = {}) =>
+  Object.entries(capabilities || {})
+    .filter(([, value]) => value && typeof value === 'object' && !Array.isArray(value))
+    .map(([key]) => key);
+
+const LEGACY_RUNTIME_ROOT_FIELDS = new Set([
+  'configuration',
+  'userSettings',
+  'permSettings',
+  'paymentConfig',
+  'workflows',
+  'style',
+  'wizardMode',
+  'columnSpans',
+  'calendar',
+  'behaviorHooks',
+]);
+
+const stripLegacyRuntimeFields = (value = {}) =>
+  Object.fromEntries(
+    Object.entries(value || {}).filter(([key]) => !LEGACY_RUNTIME_ROOT_FIELDS.has(key))
+  );
+
+const VALID_TRANSACTION_PAYMENT_CHANNELS = new Set([
+  'paystack',
+  'flutterwave',
+  '9psb',
+  'premium',
+  'sabypay',
+]);
+
+const normalizeTransactionPaymentChannel = (value) => {
+  const candidate = String(value || '').trim().toLowerCase();
+  if (!candidate) return null;
+  const normalized = candidate === 'sabypipe' ? 'sabypay' : candidate;
+  return VALID_TRANSACTION_PAYMENT_CHANNELS.has(normalized) ? normalized : null;
+};
+
+const normalizeTransactionCollectionStage = (value, fallback = 'submission') => {
+  const candidate = String(value || fallback || 'submission').trim().toLowerCase();
+  if (candidate === 'before_approval' || candidate === 'pre_approval') {
+    return 'pre_approval';
+  }
+  if (candidate === 'after_approval' || candidate === 'post_approval') {
+    return 'post_approval';
+  }
+  return 'submission';
+};
+
+const normalizeTransactionInvoiceAdjustment = (value = {}, defaults = {}) => {
+  const source = value && typeof value === 'object' ? value : {};
+  const mode = ['none', 'fixed', 'percentage', 'formula'].includes(
+    String(source.mode || '').trim().toLowerCase()
+  )
+    ? String(source.mode).trim().toLowerCase()
+    : defaults.mode || 'none';
+  return {
+    ...defaults,
+    ...source,
+    enabled: source.enabled === true || mode !== 'none',
+    mode,
+    value: Math.max(0, Number(source.value || 0)),
+    expression:
+      typeof source.expression === 'string' && source.expression.trim()
+        ? source.expression
+        : null,
+    conditions: Array.isArray(source.conditions) ? source.conditions : [],
+  };
+};
+
+const normalizeTransactionInvoice = (value = {}, defaults = {}) => {
+  const source = value && typeof value === 'object' ? value : {};
+  const calculationModeCandidate = String(
+    source.calculationMode || defaults.calculationMode || 'none'
+  )
+    .trim()
+    .toLowerCase();
+  const calculationMode = ['none', 'fixed', 'field_based', 'line_items', 'rule_based'].includes(
+    calculationModeCandidate
+  )
+    ? calculationModeCandidate
+    : 'none';
+  const lineItems = Array.isArray(source.lineItems) ? source.lineItems : [];
+  const discounts = normalizeTransactionInvoiceAdjustment(
+    source.discounts,
+    defaults.discounts || {}
+  );
+  const tax = normalizeTransactionInvoiceAdjustment(
+    source.tax,
+    defaults.tax || {}
+  );
+
+  return {
+    ...defaults,
+    ...source,
+    calculationMode,
+    baseAmount: Math.max(0, Number(source.baseAmount || 0)),
+    amountSourceField:
+      typeof source.amountSourceField === 'string' && source.amountSourceField.trim()
+        ? source.amountSourceField
+        : null,
+    lineItemsEnabled:
+      calculationMode === 'line_items' || calculationMode === 'rule_based',
+    lineItems,
+    discountsEnabled: discounts.enabled,
+    taxEnabled: tax.enabled,
+    discounts,
+    tax,
+    totals: {
+      ...(defaults.totals || {}),
+      ...(source.totals || {}),
+    },
+    invoiceNumbering: {
+      ...(defaults.invoiceNumbering || {}),
+      ...(source.invoiceNumbering || {}),
+      nextNumber: Math.max(
+        1,
+        Number(source?.invoiceNumbering?.nextNumber || defaults?.invoiceNumbering?.nextNumber || 1)
+      ),
+    },
+    presentation: {
+      ...(defaults.presentation || {}),
+      ...(source.presentation || {}),
+    },
+  };
+};
+
+const mergeProjectFormCapabilities = (sourceCapabilities = {}) => {
+  const defaults = defaultCapabilities();
+  const experience = sourceCapabilities?.experience || {};
+  const security = experience?.security || {};
+  const access = security?.access || {};
+  const authentication = security?.authentication || {};
+  const submissionProtection = security?.submissionProtection || {};
+  const behavior = experience?.behavior || {};
+  const previewSubmission = experience?.previewSubmission || {};
+  const distribution = experience?.distribution || {};
+  const notifications = experience?.notifications || {};
+  const compliance = experience?.compliance || {};
+  const workflow = experience?.workflow || {};
+
+  const transaction = sourceCapabilities?.transaction || {};
+  const payment = transaction?.payment || {};
+  const paymentPolicies = payment?.policies || {};
+  const normalizedPaymentChannels = Array.isArray(payment?.enabledChannels)
+    ? Array.from(
+        new Set(
+          payment.enabledChannels
+            .map((entry) => normalizeTransactionPaymentChannel(entry))
+            .filter(Boolean)
+        )
+      )
+    : defaults.transaction.payment.enabledChannels;
+  const normalizedDefaultPaymentChannel = normalizeTransactionPaymentChannel(
+    payment?.defaultChannel
+  );
+  const remittance = transaction?.remittance || {};
+  const remittanceSettlementRule = remittance?.settlementRule || {};
+  const remittanceRouting = remittance?.routing || {};
+  const invoice = transaction?.invoice || {};
+
+  const automation = sourceCapabilities?.automation || {};
+  const automationVisibility = automation?.operationalVisibility || {};
+
+  return {
+    ...defaults,
+    ...sourceCapabilities,
+    experience: {
+      ...defaults.experience,
+      ...experience,
+      security: {
+        ...normalizeSecurityCapabilityMatrix(security, defaults.experience.security),
+      },
+      behavior: {
+        ...defaults.experience.behavior,
+        ...behavior,
+      },
+      previewSubmission: {
+        ...defaults.experience.previewSubmission,
+        ...previewSubmission,
+      },
+      distribution: {
+        ...defaults.experience.distribution,
+        ...distribution,
+      },
+      notifications: {
+        ...defaults.experience.notifications,
+        ...notifications,
+      },
+      compliance: normalizeComplianceCapability(
+        compliance,
+        defaults.experience.compliance
+      ),
+      workflow: normalizeWorkflowCapability(
+        workflow,
+        defaults.experience.workflow
+      ),
+    },
+    transaction: {
+      ...defaults.transaction,
+      ...transaction,
+      payment: {
+        ...defaults.transaction.payment,
+        ...payment,
+        mode: payment?.enabled === true ? 'invoice' : 'none',
+        enabledChannels: normalizedPaymentChannels,
+        defaultChannel:
+          normalizedDefaultPaymentChannel &&
+          normalizedPaymentChannels.includes(normalizedDefaultPaymentChannel)
+            ? normalizedDefaultPaymentChannel
+            : normalizedPaymentChannels[0] || null,
+        collectionStage: normalizeTransactionCollectionStage(
+          payment?.collectionStage,
+          defaults.transaction.payment.collectionStage
+        ),
+        policies: {
+          ...defaults.transaction.payment.policies,
+          ...paymentPolicies,
+        },
+      },
+      remittance: {
+        ...defaults.transaction.remittance,
+        ...remittance,
+        settlementRule: {
+          ...defaults.transaction.remittance.settlementRule,
+          ...remittanceSettlementRule,
+        },
+        routing: {
+          ...defaults.transaction.remittance.routing,
+          ...remittanceRouting,
+        },
+      },
+      invoice: {
+        ...normalizeTransactionInvoice(invoice, defaults.transaction.invoice),
+      },
+    },
+    automation: {
+      ...defaults.automation,
+      ...automation,
+      operationalVisibility: {
+        ...defaults.automation.operationalVisibility,
+        ...automationVisibility,
+      },
+    },
+  };
+};
 
 const defaultSmartMappings = () => ({
   enabled: true,
@@ -920,6 +1703,253 @@ const defaultSmartMappings = () => ({
     eventDate: 'event_date',
   },
 });
+
+const PUBLIC_SECURE_MODE_VALUES = new Set([
+  'off',
+  'link_only',
+  'otp',
+  'access_code',
+]);
+
+const SECURITY_AUDIENCE_VALUES = new Set([
+  'anyone',
+  'authenticated_users',
+  'selected_roles',
+  'selected_users',
+]);
+
+const normalizeSecurityAudience = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (SECURITY_AUDIENCE_VALUES.has(normalized)) {
+    return normalized;
+  }
+  return 'anyone';
+};
+
+const normalizePublicSecurityMode = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (PUBLIC_SECURE_MODE_VALUES.has(normalized)) {
+    return normalized;
+  }
+  return 'off';
+};
+
+const dedupeStringArray = (value = [], { lowercase = false } = {}) =>
+  Array.from(
+    new Set(
+      (Array.isArray(value) ? value : [])
+        .map((entry) => String(entry || '').trim())
+        .filter(Boolean)
+        .map((entry) => (lowercase ? entry.toLowerCase() : entry))
+    )
+  );
+
+const generateAccessCodeValue = () =>
+  randomUUID()
+    .replace(/-/g, '')
+    .slice(0, 8)
+    .toUpperCase();
+
+const normalizeAccessCodeValue = (value) => {
+  const normalized = String(value || '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .toUpperCase();
+  return normalized || null;
+};
+
+const normalizeSecurityCapabilityMatrix = (security = {}, defaults = {}) => {
+  const access = security?.access || {};
+  const authentication = security?.authentication || {};
+  const accessCode = security?.accessCode || {};
+  const submissionProtection = security?.submissionProtection || {};
+  const normalizeAudienceValue = (audience) => {
+    const normalized = String(audience || '').trim().toLowerCase();
+    if (
+      normalized === 'public' ||
+      normalized === 'authenticated' ||
+      normalized === 'selected_roles' ||
+      normalized === 'selected_users'
+    ) {
+      return normalized;
+    }
+    if (normalized === 'anyone') return 'public';
+    if (normalized === 'authenticated_users') return 'authenticated';
+    return 'public';
+  };
+  const normalizeAuthMethod = (method) => {
+    const normalized = String(method || '').trim().toLowerCase();
+    if (
+      normalized === 'none' ||
+      normalized === 'otp' ||
+      normalized === 'access_code'
+    ) {
+      return normalized;
+    }
+    if (normalized === 'off') return 'none';
+    if (normalized === 'link_only') return 'otp';
+    return 'none';
+  };
+  const mapLegacyModeToMethod = (mode) => {
+    const normalized = String(mode || '').trim().toLowerCase();
+    if (normalized === 'otp' || normalized === 'link_only') return 'otp';
+    if (normalized === 'access_code') return 'access_code';
+    return 'none';
+  };
+  const mapAudienceToLegacy = (audience) => {
+    if (audience === 'public') return 'anyone';
+    if (audience === 'selected_roles') return 'selected_roles';
+    if (audience === 'selected_users') return 'selected_users';
+    return 'authenticated_users';
+  };
+  const mapMethodToPublicMode = (method) => {
+    if (method === 'otp') return 'otp';
+    if (method === 'access_code') return 'access_code';
+    return 'off';
+  };
+  const normalized = {
+    ...defaults,
+    ...security,
+    access: {
+      ...(defaults.access || {}),
+      ...access,
+    },
+    authentication: {
+      ...(defaults.authentication || {}),
+      ...authentication,
+    },
+    accessCode: {
+      ...(defaults.accessCode || {}),
+      ...accessCode,
+    },
+    submissionProtection: {
+      ...(defaults.submissionProtection || {}),
+      ...submissionProtection,
+    },
+  };
+
+  const legacyAudience = normalizeSecurityAudience(access?.whoCanAccess);
+  const initialAudience = normalizeAudienceValue(
+    security.audience || legacyAudience
+  );
+  const initialMethod = normalizeAuthMethod(
+    authentication?.method ||
+      mapLegacyModeToMethod(security.publicSecureMode)
+  );
+  const enabled =
+    typeof security.enabled === 'boolean'
+      ? security.enabled
+      : !(initialAudience === 'public' && initialMethod === 'none');
+
+  let audience = initialAudience;
+  let method = initialMethod;
+
+  if (!enabled) {
+    audience = 'public';
+    method = 'none';
+  } else if (method === 'access_code') {
+    audience = 'public';
+  } else {
+    if (audience === 'public') {
+      audience = 'authenticated';
+    }
+    method = 'otp';
+  }
+
+  const whoCanAccess = mapAudienceToLegacy(audience);
+  const publicSecureMode = mapMethodToPublicMode(method);
+  const isOpenPublic = !enabled || method === 'access_code';
+  const derivedProfile = normalized.access?.restrictByLocation
+    ? 'high_security'
+    : audience === 'public'
+      ? 'open_public'
+      : audience === 'selected_roles'
+        ? 'restricted_team'
+        : audience === 'selected_users'
+          ? 'internal_staff'
+          : 'private_safe';
+  const derivedMode =
+    derivedProfile === 'open_public'
+      ? 'public'
+      : derivedProfile === 'internal_staff'
+        ? 'internal'
+      : derivedProfile === 'private_safe'
+        ? 'private'
+        : 'restricted';
+
+  normalized.enabled = enabled;
+  normalized.audience = audience;
+  normalized.profile = derivedProfile;
+  normalized.mode = derivedMode;
+  normalized.publicSecureMode = publicSecureMode;
+  normalized.access = {
+    ...normalized.access,
+    whoCanAccess,
+    allowedRoles:
+      audience === 'selected_roles'
+        ? dedupeStringArray(normalized.access?.allowedRoles)
+        : [],
+    allowedUsers:
+      audience === 'selected_users'
+        ? dedupeStringArray(normalized.access?.allowedUsers, { lowercase: true })
+        : [],
+    allowedCountries: dedupeStringArray(normalized.access?.allowedCountries).map((entry) =>
+      entry.toUpperCase()
+    ),
+    restrictByLocation: normalized.access?.restrictByLocation === true,
+  };
+  normalized.authentication = {
+    ...normalized.authentication,
+    method,
+    requireLogin: enabled && method === 'otp',
+    allowAnonymous: isOpenPublic,
+    requireOtp: enabled && method === 'otp',
+  };
+  const normalizedAccessCode = normalizeAccessCodeValue(normalized.accessCode?.code);
+  normalized.accessCode = {
+    ...normalized.accessCode,
+    code:
+      publicSecureMode === 'access_code'
+        ? normalizedAccessCode || generateAccessCodeValue()
+        : normalizedAccessCode,
+    hint: normalized.accessCode?.hint
+      ? String(normalized.accessCode.hint).trim()
+      : null,
+    maxAttempts:
+      Number.isFinite(Number(normalized.accessCode?.maxAttempts)) &&
+      Number(normalized.accessCode.maxAttempts) > 0
+        ? Math.min(20, Math.max(1, Number(normalized.accessCode.maxAttempts)))
+        : 5,
+    lockoutMinutes:
+      Number.isFinite(Number(normalized.accessCode?.lockoutMinutes)) &&
+      Number(normalized.accessCode.lockoutMinutes) > 0
+        ? Math.min(1440, Math.max(1, Number(normalized.accessCode.lockoutMinutes)))
+        : 15,
+  };
+  normalized.submissionProtection = {
+    ...normalized.submissionProtection,
+    preventDuplicateSubmission:
+      normalized.submissionProtection?.preventDuplicateSubmission === true,
+    duplicateCheckField: normalized.submissionProtection?.duplicateCheckField
+      ? String(normalized.submissionProtection.duplicateCheckField).trim()
+      : null,
+    rateLimitEnabled: normalized.submissionProtection?.rateLimitEnabled === true,
+    maxSubmissionsPerUser:
+      Number.isFinite(Number(normalized.submissionProtection?.maxSubmissionsPerUser)) &&
+      Number(normalized.submissionProtection.maxSubmissionsPerUser) > 0
+        ? Number(normalized.submissionProtection.maxSubmissionsPerUser)
+        : null,
+  };
+  normalized.channels = dedupeStringArray(normalized.channels).filter(
+    (channel) => channel === 'web' || channel === 'api' || channel === 'whatsapp'
+  ).length
+    ? dedupeStringArray(normalized.channels).filter(
+        (channel) => channel === 'web' || channel === 'api' || channel === 'whatsapp'
+      )
+    : ['web'];
+
+  return normalized;
+};
 
 const toLookupTokens = (value = '') =>
   String(value || '')
@@ -973,11 +2003,12 @@ const detectSmartMappings = (elements = [], existingFields = {}) => {
   return detected;
 };
 
-const applyProjectFormSchemaDefaults = (projectFormLike = {}, options = {}) => {
-  const source =
+const normalizeProjectFormRuntimeConfig = (projectFormLike = {}, options = {}) => {
+  const rawSource =
     typeof projectFormLike?.toObject === 'function'
       ? projectFormLike.toObject()
       : projectFormLike || {};
+  const source = stripLegacyRuntimeFields(rawSource);
 
   const elements = Array.isArray(source.elements) ? source.elements : [];
   const defaultMappings = defaultSmartMappings();
@@ -1017,10 +2048,7 @@ const applyProjectFormSchemaDefaults = (projectFormLike = {}, options = {}) => {
         autoArrange: Boolean(source?.layout?.builder?.autoArrange),
       },
     },
-    capabilities: {
-      ...defaultCapabilities(),
-      ...(source.capabilities || {}),
-    },
+    capabilities: mergeProjectFormCapabilities(source.capabilities || {}),
     smartMappings,
     analytics: {
       views: Number(source?.analytics?.views || 0),
@@ -1038,9 +2066,11 @@ const applyProjectFormSchemaDefaults = (projectFormLike = {}, options = {}) => {
     metadata: {
       ...(source.metadata || {}),
       schemaVersion: '2.0.0',
-      enabledCapabilities: Array.isArray(source?.metadata?.enabledCapabilities)
-        ? source.metadata.enabledCapabilities
-        : [],
+      enabledCapabilities:
+        Array.isArray(source?.metadata?.enabledCapabilities) &&
+        source.metadata.enabledCapabilities.length > 0
+          ? source.metadata.enabledCapabilities
+          : deriveEnabledCapabilityFamilies(source.capabilities || {}),
       systemTarget: source?.metadata?.systemTarget || null,
       systemVersion: source?.metadata?.systemVersion || null,
     },
@@ -1055,6 +2085,9 @@ const applyProjectFormSchemaDefaults = (projectFormLike = {}, options = {}) => {
 
   return normalized;
 };
+
+const applyProjectFormSchemaDefaults = (projectFormLike = {}, options = {}) =>
+  normalizeProjectFormRuntimeConfig(projectFormLike, options);
 
 const inferDomainFromTags = (tags = []) => {
   const set = new Set(tags);
@@ -1192,53 +2225,89 @@ const hasFileUploadElement = (elements = []) =>
     return Boolean(properties.accept || properties.acceptedTypes);
   });
 
-const normalizeWorkflowTriggerOn = (workflows = []) => {
+const normalizeWorkflowTriggerOn = (workflows = [], fallbackTriggerOn = 'submission') => {
   if (!Array.isArray(workflows)) return [];
 
   const createWorkflowId = () =>
     `wf_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
   const createStepId = (index = 0) =>
     `step_${index + 1}_${Math.random().toString(36).slice(2, 7)}`;
+  const normalizedFallbackTriggerOn = normalizeWorkflowTriggerValue(fallbackTriggerOn);
 
   return workflows.map((workflow) => {
-    const triggerOn = String(workflow?.triggerOn || '').toLowerCase();
+    const triggerOn = normalizeWorkflowTriggerValue(
+      workflow?.triggerOn,
+      normalizedFallbackTriggerOn
+    );
     const steps = Array.isArray(workflow?.steps)
-      ? workflow.steps.map((step = {}, index) => ({
-          ...step,
-          id: step?.id || createStepId(index),
-          name: step?.name || `Step ${index + 1}`,
-          stepOrder:
-            Number.isFinite(step?.stepOrder) && step.stepOrder >= 0
-              ? step.stepOrder
-              : index,
-        }))
+      ? workflow.steps.map((step = {}, index) => {
+          const normalizedAssigneeRoles = Array.isArray(step?.assigneeRoles)
+            ? step.assigneeRoles
+                .map((entry) => String(entry || '').trim())
+                .filter(Boolean)
+            : [];
+          const normalizedAssigneeRole =
+            normalizedAssigneeRoles[0] || String(step?.assigneeRole || '').trim() || null;
+
+          return {
+            ...step,
+            id: step?.id || createStepId(index),
+            name: step?.name || `Step ${index + 1}`,
+            stepOrder:
+              Number.isFinite(step?.stepOrder) && step.stepOrder >= 0
+                ? step.stepOrder
+                : index,
+            assigneeRole: normalizedAssigneeRole,
+            assigneeRoles: normalizedAssigneeRoles.length
+              ? normalizedAssigneeRoles
+              : normalizedAssigneeRole
+                ? [normalizedAssigneeRole]
+                : [],
+          };
+        })
       : [];
 
     return {
       ...workflow,
       id: workflow?.id || createWorkflowId(),
-      triggerOn: triggerOn === 'submit' ? 'submission' : workflow?.triggerOn || 'submission',
+      triggerOn,
       steps,
     };
   });
 };
 
+const normalizeWorkflowCapability = (value = {}, defaults = null) => {
+  const resolvedDefaults = defaults || defaultCapabilities().experience.workflow;
+  const source = value && typeof value === 'object' ? value : {};
+  const normalizedRootTriggerOn = normalizeWorkflowTriggerValue(
+    source.triggerOn,
+    resolvedDefaults.triggerOn
+  );
+  const normalizedWorkflows = normalizeWorkflowTriggerOn(
+    Array.isArray(source.workflows) ? source.workflows : resolvedDefaults.workflows,
+    normalizedRootTriggerOn
+  );
+  const canonicalTriggerOn =
+    normalizedWorkflows[0]?.triggerOn || normalizedRootTriggerOn;
+
+  return {
+    ...resolvedDefaults,
+    ...source,
+    triggerOn: canonicalTriggerOn,
+    workflows: normalizedWorkflows,
+  };
+};
+
 const isStrictPublicAccessible = (projectForm) => {
   if (!projectForm) return false;
-  const isSystemForm =
-    projectForm?.metadata?.formCategory === SYSTEM_FORM_CATEGORY ||
-    projectForm?.identity?.category === SYSTEM_FORM_CATEGORY;
   return (
     projectForm?.identity?.status === 'published' &&
-    projectForm?.status === 'active' &&
-    (projectForm?.capabilities?.experience?.security?.mode === 'public' ||
-      isSystemForm)
+    projectForm?.status === 'active'
   );
 };
 
 const sanitizePublicForm = (projectForm) => {
-  const source =
-    typeof projectForm?.toObject === 'function' ? projectForm.toObject() : projectForm;
+  const source = normalizeProjectFormRuntimeConfig(projectForm);
 
   const inferSpecialFieldType = (element = {}) => {
     const properties = element.properties || {};
@@ -1327,6 +2396,21 @@ const sanitizePublicForm = (projectForm) => {
         };
       })
     : [];
+  const safeCapabilities = {
+    ...(source.capabilities || defaultCapabilities()),
+  };
+  if (safeCapabilities?.experience?.security?.accessCode) {
+    safeCapabilities.experience = {
+      ...(safeCapabilities.experience || {}),
+      security: {
+        ...(safeCapabilities.experience?.security || {}),
+        accessCode: {
+          ...safeCapabilities.experience.security.accessCode,
+          code: undefined,
+        },
+      },
+    };
+  }
 
   return {
     _id: source._id || null,
@@ -1353,9 +2437,12 @@ const sanitizePublicForm = (projectForm) => {
         columnSpans: source.layout?.grid?.columnSpans || {},
       },
     },
-    capabilities: source.capabilities || defaultCapabilities(),
+    capabilities: safeCapabilities,
     ui: source.ui || {},
     metadata: {
+      enabledCapabilities: Array.isArray(source.metadata?.enabledCapabilities)
+        ? source.metadata.enabledCapabilities
+        : [],
       elementsCount:
         source.metadata?.elementsCount ||
         safeElements.length,
@@ -1373,13 +2460,9 @@ const resolvePublicSecureMode = (projectForm) => {
   if (projectForm?.identity?.category === SYSTEM_FORM_CATEGORY) {
     return 'otp';
   }
-  const mode = String(
-    projectForm?.capabilities?.experience?.security?.publicSecureMode ||
-      'off'
-  ).toLowerCase();
-
-  if (['off', 'link_only', 'otp', 'access_code'].includes(mode)) return mode;
-  return 'off';
+  return normalizePublicSecurityMode(
+    projectForm?.capabilities?.experience?.security?.publicSecureMode || 'off'
+  );
 };
 
 const buildSchemaHash = (projectForm) => {
@@ -1556,10 +2639,10 @@ const createProjectForm = async (
     ...defaultCapabilities(),
     ...(normalizedBody.capabilities || {}),
   };
-  normalizedBody.capabilities.experience.workflow.workflows =
-    normalizeWorkflowTriggerOn(
-      normalizedBody?.capabilities?.experience?.workflow?.workflows || []
-    );
+  normalizedBody.capabilities.experience.workflow = normalizeWorkflowCapability(
+    normalizedBody?.capabilities?.experience?.workflow || {},
+    defaultCapabilities().experience.workflow
+  );
   normalizedBody.analytics = enrichAnalyticsProfile({
     identity: normalizedBody.identity || {},
     analytics: normalizedBody.analytics || {},
@@ -1963,14 +3046,14 @@ const updateProjectFormById = async (
   options = {}
 ) => {
   let normalizedUpdateBody = { ...updateBody };
-  if (Array.isArray(updateBody?.capabilities?.experience?.workflow?.workflows)) {
+  if (updateBody?.capabilities?.experience?.workflow) {
     normalizedUpdateBody.capabilities = normalizedUpdateBody.capabilities || {};
     normalizedUpdateBody.capabilities.experience =
       normalizedUpdateBody.capabilities.experience || {};
-    normalizedUpdateBody.capabilities.experience.workflow =
-      normalizedUpdateBody.capabilities.experience.workflow || {};
-    normalizedUpdateBody.capabilities.experience.workflow.workflows =
-      normalizeWorkflowTriggerOn(updateBody.capabilities.experience.workflow.workflows);
+    normalizedUpdateBody.capabilities.experience.workflow = normalizeWorkflowCapability(
+      updateBody.capabilities.experience.workflow,
+      defaultCapabilities().experience.workflow
+    );
   }
   const projectForm = await getProjectFormById(projectFormId);
   if (
@@ -2094,7 +3177,7 @@ const buildSystemFormTemplate = (target) => {
           security: {
             profile: 'private_safe',
             mode: 'private',
-            publicSecureMode: 'off',
+            publicSecureMode: 'otp',
             access: {
               whoCanAccess: 'authenticated_users',
               allowedRoles: [],
@@ -2105,7 +3188,7 @@ const buildSystemFormTemplate = (target) => {
             authentication: {
               requireLogin: true,
               allowAnonymous: false,
-              requireOtp: false,
+              requireOtp: true,
             },
             submissionProtection: {
               preventDuplicateSubmission: false,
@@ -2177,7 +3260,7 @@ const buildSystemFormTemplate = (target) => {
           security: {
             profile: 'private_safe',
             mode: 'private',
-            publicSecureMode: 'off',
+            publicSecureMode: 'otp',
             access: {
               whoCanAccess: 'authenticated_users',
               allowedRoles: [],
@@ -2188,7 +3271,7 @@ const buildSystemFormTemplate = (target) => {
             authentication: {
               requireLogin: true,
               allowAnonymous: false,
-              requireOtp: false,
+              requireOtp: true,
             },
             submissionProtection: {
               preventDuplicateSubmission: false,
@@ -2277,15 +3360,34 @@ const syncSystemFormTemplateIfNeeded = async (projectForm) => {
   const template = buildSystemFormTemplate(target);
   const currentVersion = String(projectForm?.metadata?.systemVersion || '');
   const expectedVersion = String(template?.metadata?.systemVersion || '');
-  if (currentVersion === expectedVersion) {
+  const ensureSystemFormIsLive = async () => {
+    let changed = false;
+
     if (projectForm?.metadata?.formCategory !== SYSTEM_FORM_CATEGORY) {
-      await ProjectForm.updateOne(
-        { _id: projectForm._id },
-        { $set: { 'metadata.formCategory': SYSTEM_FORM_CATEGORY } }
-      );
-      projectForm.metadata.formCategory = SYSTEM_FORM_CATEGORY;
+      projectForm.metadata = {
+        ...(projectForm.metadata?.toObject
+          ? projectForm.metadata.toObject()
+          : projectForm.metadata || {}),
+        formCategory: SYSTEM_FORM_CATEGORY,
+      };
+      changed = true;
     }
+
+    if (
+      String(projectForm?.identity?.status || '').toLowerCase() !== 'published' ||
+      String(projectForm?.status || '').toLowerCase() !== 'active'
+    ) {
+      await projectForm.publish();
+      changed = true;
+    } else if (changed) {
+      await projectForm.save();
+    }
+
     return projectForm;
+  };
+
+  if (currentVersion === expectedVersion) {
+    return ensureSystemFormIsLive();
   }
 
   projectForm.elements = template.elements;
@@ -2306,7 +3408,7 @@ const syncSystemFormTemplateIfNeeded = async (projectForm) => {
   projectForm.analytics = template.analytics;
   projectForm.ui = template.ui;
   await projectForm.save();
-  return projectForm;
+  return ensureSystemFormIsLive();
 };
 
 const bootstrapSystemFormsForTenant = async ({
@@ -2933,6 +4035,8 @@ const searchProjectForms = async (query, filter = {}, options = {}) => {
 };
 
 module.exports = {
+  normalizeComplianceCapability,
+  normalizeProjectFormRuntimeConfig,
   createProjectForm,
   queryProjectForms,
   getSystemProjectFormForTenant,

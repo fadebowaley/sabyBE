@@ -29,6 +29,7 @@ const login = {
   body: Joi.object().keys({
     email: Joi.string().required(),
     password: Joi.string().required(),
+    deviceId: Joi.string().allow('', null),
   }),
 };
 
@@ -122,6 +123,73 @@ const changePasswordAuthenticated = {
   body: Joi.object().keys({
     currentPassword: Joi.string().required(),
     newPassword: Joi.string().required().custom(password),
+  }),
+};
+
+const mfaAuthenticatorVerify = {
+  body: Joi.object().keys({
+    code: Joi.string().required().pattern(/^\d{6}$/),
+  }),
+};
+
+const mfaAuthenticatorToggle = {
+  body: Joi.object().keys({
+    enabled: Joi.boolean().required(),
+  }),
+};
+
+const mfaPasskeyVerify = {
+  body: Joi.object().keys({
+    id: Joi.string().required(),
+    rawId: Joi.string().required(),
+    type: Joi.string().valid('public-key').required(),
+    response: Joi.object()
+      .keys({
+        clientDataJSON: Joi.string().required(),
+        attestationObject: Joi.string().required(),
+        transports: Joi.array().items(Joi.string()).optional(),
+      })
+      .required(),
+    authenticatorAttachment: Joi.string().allow('', null),
+    clientExtensionResults: Joi.object().optional(),
+  }),
+};
+
+const mfaPasskeyAssertionOptions = {
+  body: Joi.object().keys({
+    mfaToken: Joi.string().required(),
+  }),
+};
+
+const mfaPasskeyAssertionVerify = {
+  body: Joi.object().keys({
+    mfaToken: Joi.string().required(),
+    deviceId: Joi.string().allow('', null),
+    credential: Joi.object()
+      .keys({
+        id: Joi.string().required(),
+        rawId: Joi.string().required(),
+        type: Joi.string().valid('public-key').required(),
+        response: Joi.object()
+          .keys({
+            clientDataJSON: Joi.string().required(),
+            authenticatorData: Joi.string().required(),
+            signature: Joi.string().required(),
+            userHandle: Joi.string().allow('', null),
+          })
+          .required(),
+        authenticatorAttachment: Joi.string().allow('', null),
+        clientExtensionResults: Joi.object().optional(),
+      })
+      .required(),
+  }),
+};
+
+const mfaAuthenticatorLoginVerify = {
+  body: Joi.object().keys({
+    mfaToken: Joi.string().required(),
+    code: Joi.string().required().pattern(/^\d{6}$/),
+    deviceId: Joi.string().allow('', null),
   }),
 };
 
@@ -263,6 +331,12 @@ module.exports = {
   changePassword,
   verifyPassword,
   changePasswordAuthenticated,
+  mfaAuthenticatorVerify,
+  mfaAuthenticatorToggle,
+  mfaPasskeyVerify,
+  mfaPasskeyAssertionOptions,
+  mfaPasskeyAssertionVerify,
+  mfaAuthenticatorLoginVerify,
   requestEmailChangeOtp,
   requestPhoneChangeOtp,
   onboardingPhoneOtpSend,

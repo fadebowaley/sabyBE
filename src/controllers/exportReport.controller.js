@@ -11,6 +11,49 @@ const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const exportReportService = require('../services/exportReport.service');
 const pick = require('../utils/pick');
+const ApiError = require('../utils/ApiError');
+const workspaceProjectAccessService = require('../services/workspaceProjectAccess.service');
+
+const canBypassWorkspaceScope = (req) =>
+  Boolean(req.user?.isSuper) || Boolean(req.user?.isSaby);
+
+const applyWorkspaceProjectScope = async (req, filters) => {
+  if (req.user?.tenantId) {
+    if (
+      filters.tenant_id &&
+      !canBypassWorkspaceScope(req) &&
+      String(filters.tenant_id) !== String(req.user.tenantId)
+    ) {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        'Cannot export data for another tenant'
+      );
+    }
+
+    filters.tenant_id = filters.tenant_id || req.user.tenantId;
+  }
+
+  const accessibleProjectIds =
+    await workspaceProjectAccessService.getAccessibleProjectIds({
+      tenantId: filters.tenant_id || req.user?.tenantId || null,
+      user: req.user,
+    });
+
+  if (!Array.isArray(accessibleProjectIds)) {
+    return filters;
+  }
+
+  if (filters.project_id) {
+    if (!accessibleProjectIds.includes(String(filters.project_id))) {
+      filters.project_ids = [];
+      delete filters.project_id;
+    }
+    return filters;
+  }
+
+  filters.project_ids = accessibleProjectIds;
+  return filters;
+};
 
 /**
  * GET /v1/export/submissions/csv
@@ -29,6 +72,8 @@ const exportSubmissionsCSV = catchAsync(async (req, res) => {
     'limit',
     'offset',
   ]);
+
+  await applyWorkspaceProjectScope(req, filters);
 
   const data = await exportReportService.exportSubmissionsCSV(filters);
   const stats = await exportReportService.getExportStats({
@@ -86,6 +131,8 @@ const exportSubmissionsJSON = catchAsync(async (req, res) => {
     'limit',
     'offset',
   ]);
+
+  await applyWorkspaceProjectScope(req, filters);
 
   const data = await exportReportService.exportSubmissionsJSON(filters);
   const stats = await exportReportService.getExportStats({

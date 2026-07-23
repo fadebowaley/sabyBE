@@ -31,6 +31,20 @@ const tokenSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    device: {
+      deviceId: { type: String, default: null },
+      deviceKey: { type: String, default: null, index: true },
+      deviceType: { type: String, default: null },
+      name: { type: String, default: null },
+      browser: { type: String, default: null },
+      platform: { type: String, default: null },
+      ip: { type: String, default: null },
+      userAgent: { type: String, default: null },
+    },
+    lastUsedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

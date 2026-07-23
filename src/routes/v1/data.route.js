@@ -3,6 +3,7 @@ const auth = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
 const dataValidation = require('../../validations/data.validation');
 const dataController = require('../../controllers/data.controller');
+const requireSubscriptionCapability = require('../../middlewares/requireSubscriptionCapability');
 
 const router = express.Router();
 
@@ -446,7 +447,13 @@ router.post('/import', auth('manageData'), validate(dataValidation.importData), 
  */
 
 // Export data
-router.get('/export', auth('getData'), validate(dataValidation.exportData), dataController.exportData);
+router.get(
+  '/export',
+  auth('getData'),
+  requireSubscriptionCapability('advancedExports'),
+  validate(dataValidation.exportData),
+  dataController.exportData
+);
 
 /**
  * @swagger

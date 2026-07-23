@@ -11,7 +11,71 @@ const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const submissionReportService = require('../services/submissionReport.service');
 const SubmissionModel = require('../models/submission.model');
+const ProjectForm = require('../models/projectForm.model');
+const ApiError = require('../utils/ApiError');
 const pick = require('../utils/pick');
+const projectFormWorkspaceService = require('../services/projectFormWorkspace.service');
+const workspaceProjectAccessService = require('../services/workspaceProjectAccess.service');
+
+const canBypassWorkspaceScope = (req) =>
+  Boolean(req.user?.isSuper) || Boolean(req.user?.isSaby);
+
+const hasExplicitWorkspaceScope = (workspaceId) => {
+  const normalizedWorkspaceId = String(workspaceId || '').trim();
+  return (
+    Boolean(normalizedWorkspaceId) &&
+    normalizedWorkspaceId !== projectFormWorkspaceService.DEFAULT_WORKSPACE_ID &&
+    normalizedWorkspaceId !== projectFormWorkspaceService.LEGACY_DEFAULT_WORKSPACE_ID
+  );
+};
+
+const assertProjectWorkspaceScope = async ({ req, tenantId, projectId }) => {
+  if (!tenantId || !projectId || canBypassWorkspaceScope(req)) {
+    return null;
+  }
+
+  const projectForm = await ProjectForm.findOne(
+    { tenantId, projectId, deletedAt: null },
+    { workspaceId: 1, projectId: 1, tenantId: 1 }
+  )
+    .lean()
+    .exec();
+
+  if (!projectForm || !hasExplicitWorkspaceScope(projectForm.workspaceId)) {
+    return projectForm;
+  }
+
+  const actorUserId = req.user?._id || req.user?.id || null;
+  if (!actorUserId) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Workspace-scoped access requires an authenticated user context'
+    );
+  }
+
+  await projectFormWorkspaceService.assertWorkspaceAccess({
+    tenantId,
+    workspaceId: String(projectForm.workspaceId).trim(),
+    userId: actorUserId,
+  });
+
+  return projectForm;
+};
+
+const assertSubmissionWorkspaceScope = async ({ req, submissionId }) => {
+  const submission = await SubmissionModel.getSubmissionById(submissionId);
+  if (!submission) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
+  }
+
+  await assertProjectWorkspaceScope({
+    req,
+    tenantId: submission.tenant_id,
+    projectId: submission.project_id,
+  });
+
+  return submission;
+};
 
 /**
  * GET /v1/submission-reports
@@ -36,6 +100,45 @@ const getSubmissions = catchAsync(async (req, res) => {
   ]);
 
   const options = pick(req.query, ['limit', 'offset']);
+
+  if (req.user?.tenantId) {
+    if (
+      filters.tenant_id &&
+      !canBypassWorkspaceScope(req) &&
+      String(filters.tenant_id) !== String(req.user.tenantId)
+    ) {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        'Cannot access submissions for another tenant'
+      );
+    }
+    filters.tenant_id = filters.tenant_id || req.user.tenantId;
+  }
+
+  if (req.user?.tenantId && filters.project_id) {
+    await assertProjectWorkspaceScope({
+      req,
+      tenantId: req.user.tenantId,
+      projectId: filters.project_id,
+    });
+  }
+
+  const accessibleProjectIds =
+    await workspaceProjectAccessService.getAccessibleProjectIds({
+      tenantId: filters.tenant_id || req.user?.tenantId || null,
+      user: req.user,
+    });
+
+  if (Array.isArray(accessibleProjectIds)) {
+    if (filters.project_id) {
+      if (!accessibleProjectIds.includes(String(filters.project_id))) {
+        filters.project_ids = [];
+        delete filters.project_id;
+      }
+    } else {
+      filters.project_ids = accessibleProjectIds;
+    }
+  }
 
   const result = await submissionReportService.getSubmissions(filters, options);
 
@@ -62,7 +165,8 @@ const getSubmissions = catchAsync(async (req, res) => {
  */
 const getModuleReportTable = catchAsync(async (req, res) => {
   const tenantId = req.user?.tenantId;
-  const isOwnerScoped =
+  const actorUserId = req.user?._id || req.user?.id || null;
+  let isOwnerScoped =
     Boolean(req.user?.isOwner) ||
     Boolean(req.user?.isSuper) ||
     Boolean(req.user?.isSaby);
@@ -86,6 +190,35 @@ const getModuleReportTable = catchAsync(async (req, res) => {
     req.user?.nodeId ||
     req.user?.node_id ||
     null;
+
+  const projectForm = await ProjectForm.findOne(
+    { tenantId, projectId: filters.project_id },
+    { workspaceId: 1, projectId: 1 }
+  )
+    .lean()
+    .exec();
+
+  if (!projectForm) {
+    return res.status(httpStatus.NOT_FOUND).send({
+      success: false,
+      message: 'Project form not found for the requested project_id',
+    });
+  }
+
+  const workspaceId = String(projectForm.workspaceId || '').trim();
+  const usesExplicitWorkspace =
+    workspaceId &&
+    workspaceId !== projectFormWorkspaceService.DEFAULT_WORKSPACE_ID &&
+    workspaceId !== projectFormWorkspaceService.LEGACY_DEFAULT_WORKSPACE_ID;
+
+  if (usesExplicitWorkspace && actorUserId) {
+    await projectFormWorkspaceService.assertWorkspaceAccess({
+      tenantId,
+      workspaceId,
+      userId: actorUserId,
+    });
+    isOwnerScoped = true;
+  }
 
   if (!isOwnerScoped && !nodeFilter) {
     return res.status(httpStatus.BAD_REQUEST).send({
@@ -119,6 +252,11 @@ const getModuleReportTable = catchAsync(async (req, res) => {
  * Get submission by ID
  */
 const getSubmissionById = catchAsync(async (req, res) => {
+  await assertSubmissionWorkspaceScope({
+    req,
+    submissionId: req.params.id,
+  });
+
   const submission = await submissionReportService.getSubmissionById(
     req.params.id
   );
@@ -144,6 +282,12 @@ const getComplianceReport = catchAsync(async (req, res) => {
       message: 'tenant_id and project_id are required',
     });
   }
+
+  await assertProjectWorkspaceScope({
+    req,
+    tenantId: tenant_id,
+    projectId: project_id,
+  });
 
   const report = await submissionReportService.getComplianceReport(
     tenant_id,
@@ -173,6 +317,12 @@ const getSubmissionsByNode = catchAsync(async (req, res) => {
     });
   }
 
+  await assertProjectWorkspaceScope({
+    req,
+    tenantId: tenant_id,
+    projectId: project_id,
+  });
+
   const options = pick(req.query, ['perm_only', 'limit']);
 
   const submissions = await submissionReportService.getSubmissionsByNode(
@@ -195,19 +345,55 @@ const getSubmissionsByNode = catchAsync(async (req, res) => {
  * Get submission statistics
  */
 const getSubmissionStats = catchAsync(async (req, res) => {
-  const { tenant_id } = req.query;
+  const tenantId = req.query.tenant_id || req.user?.tenantId;
 
-  if (!tenant_id) {
+  if (!tenantId) {
     return res.status(httpStatus.BAD_REQUEST).send({
       success: false,
       message: 'tenant_id is required',
     });
   }
 
+  if (
+    req.user?.tenantId &&
+    !canBypassWorkspaceScope(req) &&
+    String(tenantId) !== String(req.user.tenantId)
+  ) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Cannot access submission statistics for another tenant'
+    );
+  }
+
   const filters = pick(req.query, ['project_id', 'form_id', 'month', 'year']);
 
+  if (filters.project_id) {
+    await assertProjectWorkspaceScope({
+      req,
+      tenantId,
+      projectId: filters.project_id,
+    });
+  }
+
+  const accessibleProjectIds =
+    await workspaceProjectAccessService.getAccessibleProjectIds({
+      tenantId,
+      user: req.user,
+    });
+
+  if (Array.isArray(accessibleProjectIds)) {
+    if (filters.project_id) {
+      if (!accessibleProjectIds.includes(String(filters.project_id))) {
+        filters.project_ids = [];
+        delete filters.project_id;
+      }
+    } else {
+      filters.project_ids = accessibleProjectIds;
+    }
+  }
+
   const stats = await submissionReportService.getSubmissionStats(
-    tenant_id,
+    tenantId,
     filters
   );
 
@@ -232,6 +418,12 @@ const getMonthlyReport = catchAsync(async (req, res) => {
       message: 'tenant_id and project_id are required',
     });
   }
+
+  await assertProjectWorkspaceScope({
+    req,
+    tenantId: tenant_id,
+    projectId: project_id,
+  });
 
   const submissions = await submissionReportService.getMonthlySubmissions(
     tenant_id,
@@ -263,6 +455,12 @@ const getIncompleteSubmissions = catchAsync(async (req, res) => {
     });
   }
 
+  await assertProjectWorkspaceScope({
+    req,
+    tenantId: tenant_id,
+    projectId: project_id,
+  });
+
   const submissions = await submissionReportService.getIncompleteSubmissions(
     tenant_id,
     project_id,
@@ -291,6 +489,12 @@ const getLockedSubmissions = catchAsync(async (req, res) => {
     });
   }
 
+  await assertProjectWorkspaceScope({
+    req,
+    tenantId: tenant_id,
+    projectId: project_id,
+  });
+
   const submissions = await submissionReportService.getLockedSubmissions(
     tenant_id,
     project_id,
@@ -312,6 +516,11 @@ const getLockedSubmissions = catchAsync(async (req, res) => {
 const updateSubmission = catchAsync(async (req, res) => {
   const updates = pick(req.body, ['data', 'meta', 'status', 'event_date']);
   const user_id = req.user?.id || 'system';
+
+  await assertSubmissionWorkspaceScope({
+    req,
+    submissionId: req.params.id,
+  });
 
   const updated = await submissionReportService.updateSubmission(
     req.params.id,
@@ -341,6 +550,11 @@ const updateSubmissionStatus = catchAsync(async (req, res) => {
     });
   }
 
+  await assertSubmissionWorkspaceScope({
+    req,
+    submissionId: req.params.id,
+  });
+
   const updated = await submissionReportService.updateSubmissionStatus(
     req.params.id,
     status,
@@ -361,6 +575,11 @@ const updateSubmissionStatus = catchAsync(async (req, res) => {
 const lockSubmission = catchAsync(async (req, res) => {
   const { reason } = req.body;
   const user_id = req.user?.id || 'system';
+
+  await assertSubmissionWorkspaceScope({
+    req,
+    submissionId: req.params.id,
+  });
 
   const locked = await submissionReportService.lockSubmission(
     req.params.id,
@@ -383,6 +602,11 @@ const unlockSubmission = catchAsync(async (req, res) => {
   const { reason } = req.body;
   const user_id = req.user?.id || 'system';
 
+  await assertSubmissionWorkspaceScope({
+    req,
+    submissionId: req.params.id,
+  });
+
   const unlocked = await submissionReportService.unlockSubmission(
     req.params.id,
     user_id,
@@ -402,6 +626,11 @@ const unlockSubmission = catchAsync(async (req, res) => {
  */
 const deleteSubmission = catchAsync(async (req, res) => {
   const user_id = req.user?.id || 'system';
+
+  await assertSubmissionWorkspaceScope({
+    req,
+    submissionId: req.params.id,
+  });
 
   const deleted = await submissionReportService.deleteSubmission(
     req.params.id,
@@ -429,6 +658,15 @@ const bulkDeleteSubmissions = catchAsync(async (req, res) => {
       message: 'ids array is required',
     });
   }
+
+  await Promise.all(
+    ids.map((id) =>
+      assertSubmissionWorkspaceScope({
+        req,
+        submissionId: id,
+      })
+    )
+  );
 
   const result = await submissionReportService.bulkDeleteSubmissions(
     ids,
@@ -462,6 +700,15 @@ const bulkUpdateStatus = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'status is required');
   }
 
+  await Promise.all(
+    ids.map((id) =>
+      assertSubmissionWorkspaceScope({
+        req,
+        submissionId: id,
+      })
+    )
+  );
+
   const results = await SubmissionModel.bulk.bulkUpdateStatus(
     ids,
     status,
@@ -488,6 +735,12 @@ const bulkLockUnlock = catchAsync(async (req, res) => {
       'tenant_id, project_id, and month are required'
     );
   }
+
+  await assertProjectWorkspaceScope({
+    req,
+    tenantId: tenant_id,
+    projectId: project_id,
+  });
 
   const results = await SubmissionModel.bulk.bulkLockUnlock(
     tenant_id,
@@ -527,6 +780,12 @@ const bulkUpdateCompliance = catchAsync(async (req, res) => {
     );
   }
 
+  await assertProjectWorkspaceScope({
+    req,
+    tenantId: tenant_id,
+    projectId: project_id,
+  });
+
   const results = await SubmissionModel.bulk.bulkUpdateCompliance(
     tenant_id,
     project_id,
@@ -552,6 +811,18 @@ const bulkArchive = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'tenant_id is required');
   }
 
+  await Promise.all(
+    (Array.isArray(project_ids) ? project_ids : [])
+      .filter(Boolean)
+      .map((projectId) =>
+        assertProjectWorkspaceScope({
+          req,
+          tenantId: tenant_id,
+          projectId,
+        })
+      )
+  );
+
   const results = await SubmissionModel.bulk.bulkArchive(
     tenant_id,
     older_than_months,
@@ -574,6 +845,14 @@ const bulkDeleteAdvanced = catchAsync(async (req, res) => {
 
   if (!tenant_id) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'tenant_id is required');
+  }
+
+  if (filters.project_id) {
+    await assertProjectWorkspaceScope({
+      req,
+      tenantId: tenant_id,
+      projectId: filters.project_id,
+    });
   }
 
   const result = await SubmissionModel.bulk.bulkDelete(tenant_id, filters);
@@ -602,6 +881,15 @@ const bulkUpdateMetadata = catchAsync(async (req, res) => {
   if (!metadata || typeof metadata !== 'object') {
     throw new ApiError(httpStatus.BAD_REQUEST, 'metadata object is required');
   }
+
+  await Promise.all(
+    ids.map((id) =>
+      assertSubmissionWorkspaceScope({
+        req,
+        submissionId: id,
+      })
+    )
+  );
 
   const results = await SubmissionModel.bulk.bulkUpdateMetadata(ids, metadata);
 

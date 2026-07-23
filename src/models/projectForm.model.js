@@ -205,6 +205,13 @@ const WorkflowStepSchema = new mongoose.Schema(
     assigneeRoles: [{ type: String }],
     assigneeUsers: [{ type: String }],          // specific user IDs
     assigneeDynamicField: { type: String },     // form field that names the assignee
+    escalationType: {
+      type: String,
+      enum: ['none', 'role', 'user'],
+      default: 'none',
+    },
+    escalationRoles: [{ type: String }],
+    escalationUsers: [{ type: String }],
 
     // Service-level agreement
     sla: {
@@ -280,7 +287,7 @@ const AccessSchema = new mongoose.Schema(
         'selected_roles',
         'selected_users',
       ],
-      default: 'authenticated_users',
+      default: 'anyone',
     },
     allowedRoles: [String],
     allowedUsers: [String],
@@ -293,8 +300,13 @@ const AccessSchema = new mongoose.Schema(
 
 const SecurityAuthenticationSchema = new mongoose.Schema(
   {
-    requireLogin: { type: Boolean, default: true },
-    allowAnonymous: { type: Boolean, default: false },
+    method: {
+      type: String,
+      enum: ['none', 'otp', 'access_code'],
+      default: 'none',
+    },
+    requireLogin: { type: Boolean, default: false },
+    allowAnonymous: { type: Boolean, default: true },
     requireOtp: { type: Boolean, default: false },
   },
   { _id: false }
@@ -310,12 +322,32 @@ const SecuritySubmissionProtectionSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const SecurityAccessCodeSchema = new mongoose.Schema(
+  {
+    code: { type: String, default: null, trim: true },
+    hint: { type: String, default: null, trim: true },
+    maxAttempts: { type: Number, default: 5, min: 1, max: 20 },
+    lockoutMinutes: { type: Number, default: 15, min: 1, max: 1440 },
+  },
+  { _id: false }
+);
+
 const ExperienceBehaviorSchema = new mongoose.Schema(
   {
     allowMultipleSubmissions: { type: Boolean, default: true },
     enableProgressSave: { type: Boolean, default: true },
     autoSave: { type: Boolean, default: false },
     submitOnComplete: { type: Boolean, default: true },
+  },
+  { _id: false }
+);
+
+const ExperiencePreviewSubmissionSchema = new mongoose.Schema(
+  {
+    enabled: { type: Boolean, default: false },
+    layout: { type: String, default: 'biodata_document' },
+    allowEditBeforeSubmit: { type: Boolean, default: true },
+    showBranding: { type: Boolean, default: true },
   },
   { _id: false }
 );
@@ -356,6 +388,15 @@ const UISchema = new mongoose.Schema(
 
 const CapabilityExperienceSecuritySchema = new mongoose.Schema(
   {
+    enabled: {
+      type: Boolean,
+      default: false,
+    },
+    audience: {
+      type: String,
+      enum: ['public', 'authenticated', 'selected_roles', 'selected_users'],
+      default: 'public',
+    },
     profile: {
       type: String,
       enum: [
@@ -365,12 +406,12 @@ const CapabilityExperienceSecuritySchema = new mongoose.Schema(
         'internal_staff',
         'high_security',
       ],
-      default: 'private_safe',
+      default: 'open_public',
     },
     mode: {
       type: String,
       enum: ['public', 'private', 'restricted', 'internal'],
-      default: 'private',
+      default: 'public',
     },
     publicSecureMode: {
       type: String,
@@ -383,6 +424,10 @@ const CapabilityExperienceSecuritySchema = new mongoose.Schema(
     },
     authentication: {
       type: SecurityAuthenticationSchema,
+      default: () => ({}),
+    },
+    accessCode: {
+      type: SecurityAccessCodeSchema,
       default: () => ({}),
     },
     submissionProtection: {
@@ -403,9 +448,47 @@ const CapabilityExperienceSecuritySchema = new mongoose.Schema(
 const CapabilityExperienceComplianceSchema = new mongoose.Schema(
   {
     enabled: { type: Boolean, default: false },
+    availability: {
+      startDate: { type: String, default: null },
+      endDate: { type: String, default: null },
+    },
+    reportingPeriod: {
+      scope: {
+        type: String,
+        enum: ['yearly', 'monthly', 'weekly', 'daily', 'custom_range'],
+        default: 'monthly',
+      },
+      weekStartsOn: { type: Number, enum: [0, 1] },
+      timezone: { type: String },
+      defaultYear: { type: Number, default: null },
+      defaultMonth: { type: String, default: null },
+      customRange: {
+        maxDays: { type: Number, default: null },
+      },
+    },
+    submissionPolicy: {
+      maxSubmissionsPerPeriod: { type: Number, default: 1 },
+      allowBackdating: { type: Boolean, default: false },
+      closeWindowAtPeriodEnd: { type: Boolean },
+    },
+    submissionFrequency: {
+      mode: {
+        type: String,
+        enum: ['once', 'multiple', 'daily', 'weekly', 'monthly', 'custom'],
+        default: 'monthly',
+      },
+      count: { type: Number, default: 1 },
+      weekdays: { type: [Number], default: [] },
+      monthDates: { type: [Number], default: [] },
+      intervalWeeks: { type: Number, default: 1 },
+      custom: {
+        interval: { type: Number, default: null },
+        unit: { type: String, enum: ['day', 'week', 'month'], default: undefined },
+      },
+    },
     trackingMode: {
       type: String,
-      enum: ['none', 'daily', 'weekly'],
+      enum: ['none', 'daily', 'weekly', 'monthly'],
       default: 'none',
     },
     dailyConfig: {
@@ -435,16 +518,52 @@ const CapabilityExperienceComplianceSchema = new mongoose.Schema(
         default: [],
       },
     },
+    monthlyConfig: {
+      dates: { type: [Number], default: [] },
+      submissionLimitPerDate: { type: Number, default: 1 },
+    },
     frequency: {
       type: String,
-      enum: ['none', 'daily', 'weekly', 'biweekly', 'monthly'],
-      default: 'none',
+      enum: ['daily', 'weekly', 'monthly'],
+      default: 'monthly',
+    },
+    schedule: {
+      frequency: {
+        type: String,
+        enum: ['daily', 'weekly', 'monthly'],
+        default: 'monthly',
+      },
+      startDate: { type: String, default: null },
+      endDate: { type: String, default: null },
+      daily: {
+        weekdays: { type: [Number], default: [] },
+      },
+      weekly: {
+        intervalWeeks: { type: Number, default: 1 },
+        weekdays: { type: [Number], default: [] },
+        anchorDate: { type: String, default: null },
+      },
+      monthly: {
+        dates: { type: [Number], default: [] },
+      },
+    },
+    submissionLimit: {
+      count: { type: Number, default: 1 },
+      scope: {
+        type: String,
+        enum: ['occurrence'],
+        default: 'occurrence',
+      },
+    },
+    enforcement: {
+      allowBackdating: { type: Boolean, default: false },
+      closeWindowAtPeriodEnd: { type: Boolean },
     },
     requireNodeId: { type: Boolean, default: true },
     requireMonth: { type: Boolean, default: true },
     trackCompliance: { type: Boolean, default: true },
     autoGenerateCalendar: { type: Boolean, default: true },
-    autoLockMonthEnd: { type: Boolean, default: false },
+    autoLockMonthEnd: { type: Boolean },
     calendarRequired: { type: Boolean, default: false },
     eventTypes: { type: [String], default: [] },
     calendarGeneration: {
@@ -697,6 +816,10 @@ const CapabilitiesSchema = new mongoose.Schema(
         type: ExperienceBehaviorSchema,
         default: () => ({}),
       },
+      previewSubmission: {
+        type: ExperiencePreviewSubmissionSchema,
+        default: () => ({}),
+      },
       distribution: {
         type: ExperienceDistributionSchema,
         default: () => ({}),
@@ -888,6 +1011,10 @@ const ProjectFormSchema = new mongoose.Schema(
     metadata: {
       schemaVersion: { type: String, default: '2.0.0' },
       enabledCapabilities: { type: [String], default: [] },
+      moduleStudio: {
+        type: mongoose.Schema.Types.Mixed,
+        default: undefined,
+      },
       systemTarget: {
         type: String,
         enum: ['user_profile', 'node_profile', null],
@@ -1175,8 +1302,11 @@ ProjectFormSchema.methods.softDelete = async function (userId = null) {
   this.deletedAt = new Date();
   this.deletedBy = userId;
   this.status = 'archived';
+  if (!this.identity || typeof this.identity !== 'object') {
+    this.identity = {};
+  }
   this.identity.status = 'archived';
-  await this.save();
+  await this.save({ validateBeforeSave: false });
   return this;
 };
 

@@ -17,12 +17,28 @@
 const httpStatus = require('http-status');
 const SubmissionModel = require('../models/submission.model');
 const ProjectForm = require('../models/projectForm.model');
+const User = require('../models/user.model');
 const ApiError = require('../utils/ApiError');
 const { logActivity } = require('../utils/activityLogger');
 const { postgresPool } = require('../config/postgres');
+const mongoose = require('mongoose');
 
 const DEFAULT_TABLE_LIMIT = 100;
 const MAX_TABLE_LIMIT = 500;
+const DEFAULT_AGGREGATION_LIMIT = 25;
+const MAX_AGGREGATION_LIMIT = 50;
+const DEFAULT_TREND_LIMIT = 24;
+const MAX_TREND_LIMIT = 60;
+const ALLOWED_AGGREGATIONS = new Set(['sum', 'avg', 'min', 'max', 'count']);
+const ALLOWED_TREND_GRAINS = new Set(['day', 'week', 'month', 'quarter']);
+const ALLOWED_SUBMISSION_STATUSES = new Set([
+  'submitted',
+  'pending',
+  'approved',
+  'rejected',
+  'completed',
+  'failed',
+]);
 const HIERARCHY_ORDERING_CACHE_MS = 60 * 1000;
 const FIXED_COLUMN_LABELS = {
   node_name: 'Node Name',
@@ -31,6 +47,7 @@ const FIXED_COLUMN_LABELS = {
   status: 'Status',
   submitted_at: 'Submitted At',
 };
+const RESERVED_REPORT_PAYLOAD_KEYS = new Set(['__payment', '__invoice']);
 let hierarchyOrderingCapability = {
   checkedAt: 0,
   enabled: false,
@@ -69,6 +86,47 @@ const unwrapValue = (value) => {
     }
   }
   return value;
+};
+
+const compactStrings = (values = [], limit = 5000) =>
+  Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [values])
+        .map((value) => String(value || '').trim())
+        .filter(Boolean)
+    )
+  ).slice(0, limit);
+
+const normalizeSubmissionStatuses = (values = []) =>
+  compactStrings(values)
+    .map((value) => value.toLowerCase())
+    .filter((value) => ALLOWED_SUBMISSION_STATUSES.has(value));
+
+const shouldPreserveStructuredValue = (fieldType = '') => {
+  const normalized = String(fieldType || '').trim().toLowerCase();
+  return ['file', 'image', 'fileupload', 'profile_image_upload'].includes(normalized);
+};
+
+const resolveAggregationSql = (aggregate) => {
+  switch (aggregate) {
+    case 'sum':
+      return 'COALESCE(SUM(metric.value_numeric), 0)::numeric';
+    case 'avg':
+      return 'AVG(metric.value_numeric)::numeric';
+    case 'min':
+      return 'MIN(metric.value_numeric)::numeric';
+    case 'max':
+      return 'MAX(metric.value_numeric)::numeric';
+    case 'count':
+      return 'COUNT(DISTINCT fs.id)::numeric';
+    default:
+      return null;
+  }
+};
+
+const resolveTrendGrain = (grain) => {
+  const normalized = String(grain || 'month').trim().toLowerCase();
+  return ALLOWED_TREND_GRAINS.has(normalized) ? normalized : 'month';
 };
 
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -231,7 +289,7 @@ const buildDynamicColumns = (
     sourceKeyToColumnKey.set('user_id', 'user_id');
   }
 
-  const register = (sourceKey, labelHint, preferredKey = null) => {
+  const register = (sourceKey, labelHint, preferredKey = null, catalogRow = null) => {
     if (!sourceKey) return;
     if (sourceKeyToColumnKey.has(sourceKey)) return;
 
@@ -245,7 +303,13 @@ const buildDynamicColumns = (
     }
     usedKeys.add(candidate);
     sourceKeyToColumnKey.set(sourceKey, candidate);
-    dynamicColumns.push({ key: candidate, label, source_key: sourceKey });
+    dynamicColumns.push({
+      key: candidate,
+      label,
+      source_key: sourceKey,
+      field_type: catalogRow?.field_type || null,
+      metadata: catalogRow?.metadata || {},
+    });
   };
 
   catalogRows
@@ -259,12 +323,35 @@ const buildDynamicColumns = (
       );
     })
     .forEach((row) => {
-    register(row.field_key, row.field_label, toSnakeCase(row.field_key || ''));
+    register(row.field_key, row.field_label, toSnakeCase(row.field_key || ''), row);
     });
 
   submissionRows.forEach((row) => {
     const payload = row.data && typeof row.data === 'object' ? row.data : {};
-    Object.keys(payload).forEach((key) => register(key, null));
+    Object.keys(payload).forEach((key) => {
+      if (RESERVED_REPORT_PAYLOAD_KEYS.has(key)) return;
+      const rawValue = payload[key];
+      const inferredFieldType =
+        rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
+          ? (() => {
+              const mimeType = String(
+                rawValue.mimeType || rawValue.type || ''
+              ).toLowerCase();
+              const hasUploadShape = Boolean(
+                rawValue.uploadId || rawValue.url || rawValue.key
+              );
+              if (!hasUploadShape) return null;
+              if (mimeType.startsWith('image/')) return 'image';
+              return 'file';
+            })()
+          : null;
+      register(
+        key,
+        null,
+        null,
+        inferredFieldType ? { field_type: inferredFieldType, metadata: {} } : null
+      );
+    });
   });
 
   const columns = [];
@@ -318,6 +405,50 @@ const mergeOrderedFieldsWithCatalog = (orderedFields = [], catalogRows = []) => 
   return merged;
 };
 
+const buildUserDisplayMap = async ({ tenantId, userIds = [] }) => {
+  const cleanedIds = [...new Set((userIds || []).map((value) => String(value || '').trim()).filter(Boolean))];
+  if (cleanedIds.length === 0) {
+    return new Map();
+  }
+
+  const objectIds = cleanedIds.filter((value) => mongoose.Types.ObjectId.isValid(value));
+  const lookupFilters = [];
+
+  if (objectIds.length > 0) {
+    lookupFilters.push({ _id: { $in: objectIds } });
+  }
+
+  lookupFilters.push({ userId: { $in: cleanedIds } });
+
+  const users = await User.find({
+    tenantId,
+    $or: lookupFilters,
+  })
+    .select('_id userId firstname lastname email')
+    .lean()
+    .exec();
+
+  const userDisplayMap = new Map();
+  users.forEach((user) => {
+    const displayName =
+      `${user?.firstname || ''} ${user?.lastname || ''}`.trim() ||
+      user?.email ||
+      user?.userId ||
+      (user?._id ? String(user._id) : null);
+
+    if (!displayName) return;
+
+    if (user?._id) {
+      userDisplayMap.set(String(user._id), displayName);
+    }
+    if (user?.userId) {
+      userDisplayMap.set(String(user.userId), displayName);
+    }
+  });
+
+  return userDisplayMap;
+};
+
 /**
  * Get module report table in row/column format.
  * Columns are generated dynamically from form catalog + submission payload keys.
@@ -328,11 +459,14 @@ const getModuleReportTable = async (filters = {}) => {
     tenant_id,
     project_id,
     node_filter,
+    node_filters,
     search,
     debug,
     start_date,
     end_date,
     month,
+    status,
+    statuses,
     limit = DEFAULT_TABLE_LIMIT,
     offset = 0,
   } = filters;
@@ -357,14 +491,35 @@ const getModuleReportTable = async (filters = {}) => {
   const values = [tenant_id, project_id];
   let index = 3;
 
-  if (node_filter) {
+  const nodeFilterValues = compactStrings([
+    node_filter,
+    ...(Array.isArray(node_filters) ? node_filters : []),
+  ]);
+  if (nodeFilterValues.length === 1) {
     where.push(`(fs.node_id = $${index} OR fs.node_reference = $${index})`);
-    values.push(node_filter);
+    values.push(nodeFilterValues[0]);
+    index += 1;
+  } else if (nodeFilterValues.length > 1) {
+    where.push(`(fs.node_id = ANY($${index}::text[]) OR fs.node_reference = ANY($${index}::text[]))`);
+    values.push(nodeFilterValues);
     index += 1;
   }
   if (month) {
     where.push(`fs.month = $${index}`);
     values.push(month);
+    index += 1;
+  }
+  const statusValues = normalizeSubmissionStatuses([
+    status,
+    ...(Array.isArray(statuses) ? statuses : []),
+  ]);
+  if (statusValues.length === 1) {
+    where.push(`fs.status = $${index}`);
+    values.push(statusValues[0]);
+    index += 1;
+  } else if (statusValues.length > 1) {
+    where.push(`fs.status = ANY($${index}::text[])`);
+    values.push(statusValues);
     index += 1;
   }
   if (start_date) {
@@ -462,6 +617,12 @@ const getModuleReportTable = async (filters = {}) => {
   `;
   const rowsValues = [...values, safeLimit, safeOffset];
   const rowsResult = await postgresPool.query(rowsQuery, rowsValues);
+  const userDisplayMap = reportContext.hideIdentityColumns
+    ? new Map()
+    : await buildUserDisplayMap({
+        tenantId: tenant_id,
+        userIds: rowsResult.rows.map((row) => row.user_id),
+      });
 
   const countQuery = `SELECT COUNT(*)::bigint AS total FROM form_submissions fs ${whereClause}`;
   const countResult = await postgresPool.query(countQuery, values);
@@ -496,7 +657,7 @@ const getModuleReportTable = async (filters = {}) => {
   let catalogRows = [];
   try {
     const catalogQuery = `
-      SELECT field_key, field_label
+      SELECT field_key, field_label, field_type, metadata
       FROM form_field_catalog
       WHERE tenant_id = $1
         AND project_id = $2
@@ -525,6 +686,7 @@ const getModuleReportTable = async (filters = {}) => {
     rowsResult.rows,
     { hideIdentityColumns: reportContext.hideIdentityColumns }
   );
+  const columnByKey = new Map(columns.map((column) => [column.key, column]));
 
   const rows = rowsResult.rows.map((row, rowIndex) => {
     const reportRow = {
@@ -548,14 +710,20 @@ const getModuleReportTable = async (filters = {}) => {
     if (!reportContext.hideIdentityColumns) {
       reportRow.nodeid = row.node_reference || row.node_id || null;
       reportRow.node_name = row.node_name || null;
-      reportRow.user_id = row.user_id || null;
+      reportRow.user_id =
+        userDisplayMap.get(String(row.user_id || '').trim()) || row.user_id || null;
+      reportRow.__user_id = row.user_id || null;
     }
 
     const payload = row.data && typeof row.data === 'object' ? row.data : {};
     Object.entries(payload).forEach(([sourceKey, rawValue]) => {
+      if (RESERVED_REPORT_PAYLOAD_KEYS.has(sourceKey)) return;
       const key = sourceKeyToColumnKey.get(sourceKey);
       if (key) {
-        reportRow[key] = unwrapValue(rawValue);
+        const column = columnByKey.get(key);
+        reportRow[key] = shouldPreserveStructuredValue(column?.field_type)
+          ? rawValue
+          : unwrapValue(rawValue);
       }
     });
 
@@ -598,8 +766,10 @@ const getModuleReportTable = async (filters = {}) => {
       filters: {
         tenant_id,
         project_id,
-        node_filter: node_filter || null,
+        node_filter: nodeFilterValues.length === 1 ? nodeFilterValues[0] : null,
+        node_filters: nodeFilterValues.length > 1 ? nodeFilterValues : [],
         month: month || null,
+        statuses: statusValues,
         search: search || null,
         start_date: start_date || null,
         end_date: end_date || null,
@@ -617,6 +787,603 @@ const getModuleReportTable = async (filters = {}) => {
     };
   }
   return response;
+};
+
+const getModuleReportAggregation = async (filters = {}) => {
+  const {
+    tenant_id,
+    project_id,
+    metric_field_key,
+    dimension_field_key,
+    aggregate = 'sum',
+    node_filter,
+    node_filters,
+    search,
+    start_date,
+    end_date,
+    month,
+    status,
+    statuses,
+    dimension_values,
+    order_direction = 'desc',
+    limit = DEFAULT_AGGREGATION_LIMIT,
+    offset = 0,
+  } = filters;
+
+  if (!tenant_id) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'tenant_id is required');
+  }
+  if (!project_id) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'project_id is required');
+  }
+  if (!dimension_field_key) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'dimension_field_key is required');
+  }
+
+  const normalizedAggregate = String(aggregate || 'sum').trim().toLowerCase();
+  if (!ALLOWED_AGGREGATIONS.has(normalizedAggregate)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Unsupported aggregation');
+  }
+  const normalizedOrderDirection = String(order_direction || 'desc').trim().toLowerCase() === 'asc' ? 'asc' : 'desc';
+  const aggregateOrderKeyword = normalizedOrderDirection === 'asc' ? 'ASC' : 'DESC';
+  if (normalizedAggregate !== 'count' && !metric_field_key) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'metric_field_key is required');
+  }
+
+  const aggregateSql = resolveAggregationSql(normalizedAggregate);
+  const safeLimit = Math.min(
+    Math.max(Number(limit) || DEFAULT_AGGREGATION_LIMIT, 1),
+    MAX_AGGREGATION_LIMIT
+  );
+  const safeOffset = Math.max(Number(offset) || 0, 0);
+  const values = [tenant_id, project_id];
+  let index = 3;
+
+  const joins = [
+    `LEFT JOIN form_submission_facts dimension
+      ON dimension.submission_id = fs.id
+      AND dimension.tenant_id = fs.tenant_id
+      AND dimension.project_id = fs.project_id
+      AND dimension.field_key = $${index}`,
+  ];
+  values.push(dimension_field_key);
+  index += 1;
+
+  if (normalizedAggregate !== 'count') {
+    joins.push(
+      `LEFT JOIN form_submission_facts metric
+        ON metric.submission_id = fs.id
+        AND metric.tenant_id = fs.tenant_id
+        AND metric.project_id = fs.project_id
+        AND metric.field_key = $${index}`
+    );
+    values.push(metric_field_key);
+    index += 1;
+  }
+
+  const where = ['fs.tenant_id = $1', 'fs.project_id = $2', `fs.status != 'deleted'`];
+  const nodeFilterValues = compactStrings([
+    node_filter,
+    ...(Array.isArray(node_filters) ? node_filters : []),
+  ]);
+  if (nodeFilterValues.length === 1) {
+    where.push(`(fs.node_id = $${index} OR fs.node_reference = $${index})`);
+    values.push(nodeFilterValues[0]);
+    index += 1;
+  } else if (nodeFilterValues.length > 1) {
+    where.push(`(fs.node_id = ANY($${index}::text[]) OR fs.node_reference = ANY($${index}::text[]))`);
+    values.push(nodeFilterValues);
+    index += 1;
+  }
+  if (month) {
+    where.push(`fs.month = $${index}`);
+    values.push(month);
+    index += 1;
+  }
+  const statusValues = normalizeSubmissionStatuses([
+    status,
+    ...(Array.isArray(statuses) ? statuses : []),
+  ]);
+  if (statusValues.length === 1) {
+    where.push(`fs.status = $${index}`);
+    values.push(statusValues[0]);
+    index += 1;
+  } else if (statusValues.length > 1) {
+    where.push(`fs.status = ANY($${index}::text[])`);
+    values.push(statusValues);
+    index += 1;
+  }
+  const dimensionValues = compactStrings(dimension_values, 50).map((value) => value.toLowerCase());
+  if (dimensionValues.length === 1) {
+    where.push(`COALESCE(dimension.value_normalised, LOWER(dimension.value_text), '') = $${index}`);
+    values.push(dimensionValues[0]);
+    index += 1;
+  } else if (dimensionValues.length > 1) {
+    where.push(`COALESCE(dimension.value_normalised, LOWER(dimension.value_text), '') = ANY($${index}::text[])`);
+    values.push(dimensionValues);
+    index += 1;
+  }
+  if (start_date) {
+    if (typeof start_date === 'string' && DATE_ONLY_PATTERN.test(start_date)) {
+      where.push(`fs.created_at >= $${index}::date`);
+    } else {
+      where.push(`fs.created_at >= $${index}`);
+    }
+    values.push(start_date);
+    index += 1;
+  }
+  if (end_date) {
+    if (typeof end_date === 'string' && DATE_ONLY_PATTERN.test(end_date)) {
+      where.push(`fs.created_at < ($${index}::date + INTERVAL '1 day')`);
+    } else {
+      where.push(`fs.created_at <= $${index}`);
+    }
+    values.push(end_date);
+    index += 1;
+  }
+  if (search && String(search).trim() !== '') {
+    where.push(`(
+      CAST(fs.id AS TEXT) ILIKE $${index}
+      OR COALESCE(fs.node_name, '') ILIKE $${index}
+      OR COALESCE(fs.node_reference, '') ILIKE $${index}
+      OR COALESCE(fs.node_id, '') ILIKE $${index}
+      OR COALESCE(fs.status, '') ILIKE $${index}
+      OR COALESCE(dimension.value_text, '') ILIKE $${index}
+    )`);
+    values.push(`%${String(search).trim()}%`);
+    index += 1;
+  }
+
+  const numericPredicate =
+    normalizedAggregate === 'count' ? '' : 'AND metric.value_numeric IS NOT NULL';
+  const numericValueCountSql =
+    normalizedAggregate === 'count' ? '0::int' : 'COUNT(metric.value_numeric)::int';
+  const query = `
+    SELECT
+      COALESCE(
+        NULLIF(dimension.value_category, ''),
+        NULLIF(dimension.value_normalised, ''),
+        NULLIF(dimension.value_text, ''),
+        'Unspecified'
+      ) AS dimension_value,
+      ${aggregateSql} AS aggregate_value,
+      COUNT(DISTINCT fs.id)::int AS submission_count,
+      ${numericValueCountSql} AS numeric_value_count,
+      MIN(fs.created_at) AS first_submission_at,
+      MAX(fs.created_at) AS latest_submission_at,
+      (ARRAY_REMOVE(ARRAY_AGG(DISTINCT fs.id::text), NULL))[1:25] AS sampled_submission_ids
+    FROM form_submissions fs
+    ${joins.join('\n')}
+    WHERE ${where.join(' AND ')}
+      ${numericPredicate}
+    GROUP BY dimension_value
+    ORDER BY aggregate_value ${aggregateOrderKeyword} NULLS LAST, submission_count DESC, dimension_value ASC
+    LIMIT $${index} OFFSET $${index + 1}
+  `;
+  const result = await postgresPool.query(query, [...values, safeLimit, safeOffset]);
+
+  const countQuery = `
+    SELECT COUNT(*)::int AS group_count
+    FROM (
+      SELECT
+        COALESCE(
+          NULLIF(dimension.value_category, ''),
+          NULLIF(dimension.value_normalised, ''),
+          NULLIF(dimension.value_text, ''),
+          'Unspecified'
+        ) AS dimension_value
+      FROM form_submissions fs
+      ${joins.join('\n')}
+      WHERE ${where.join(' AND ')}
+        ${numericPredicate}
+      GROUP BY dimension_value
+    ) grouped
+  `;
+  const countResult = await postgresPool.query(countQuery, values);
+
+  const rows = result.rows.map((row) => ({
+    dimension_value: row.dimension_value,
+    aggregate_value:
+      row.aggregate_value === null || row.aggregate_value === undefined
+        ? null
+        : Number(row.aggregate_value),
+    submission_count: Number(row.submission_count || 0),
+    numeric_value_count: Number(row.numeric_value_count || 0),
+    first_submission_at: row.first_submission_at || null,
+    latest_submission_at: row.latest_submission_at || null,
+    sampled_submission_ids: Array.isArray(row.sampled_submission_ids)
+      ? row.sampled_submission_ids
+      : [],
+  }));
+
+  return {
+    total_groups: Number(countResult.rows[0]?.group_count || 0),
+    limit: safeLimit,
+    offset: safeOffset,
+    aggregation: {
+      aggregate: normalizedAggregate,
+      metric_field_key: normalizedAggregate === 'count' ? null : metric_field_key,
+      dimension_field_key,
+    },
+    rows,
+    query_context: {
+      source_table: 'form_submission_facts',
+      source_join: 'form_submissions',
+      read_only: true,
+      node_filter: nodeFilterValues.length === 1 ? nodeFilterValues[0] : null,
+      node_filters: nodeFilterValues.length > 1 ? nodeFilterValues : [],
+      month: month || null,
+      statuses: statusValues,
+      dimension_values: dimensionValues,
+      order_direction: normalizedOrderDirection,
+      start_date: start_date || null,
+      end_date: end_date || null,
+      search: search || null,
+    },
+  };
+};
+
+const getModuleReportTrend = async (filters = {}) => {
+  const {
+    tenant_id,
+    project_id,
+    metric_field_key,
+    aggregate = 'sum',
+    grain = 'month',
+    node_filter,
+    node_filters,
+    search,
+    start_date,
+    end_date,
+    month,
+    status,
+    statuses,
+    limit = DEFAULT_TREND_LIMIT,
+    offset = 0,
+  } = filters;
+
+  if (!tenant_id) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'tenant_id is required');
+  }
+  if (!project_id) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'project_id is required');
+  }
+
+  const normalizedAggregate = String(aggregate || 'sum').trim().toLowerCase();
+  if (!ALLOWED_AGGREGATIONS.has(normalizedAggregate)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Unsupported aggregation');
+  }
+  if (normalizedAggregate !== 'count' && !metric_field_key) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'metric_field_key is required');
+  }
+
+  const normalizedGrain = resolveTrendGrain(grain);
+  const aggregateSql = resolveAggregationSql(normalizedAggregate);
+  const safeLimit = Math.min(
+    Math.max(Number(limit) || DEFAULT_TREND_LIMIT, 1),
+    MAX_TREND_LIMIT
+  );
+  const safeOffset = Math.max(Number(offset) || 0, 0);
+  const values = [tenant_id, project_id];
+  let index = 3;
+
+  const joins = [];
+  if (normalizedAggregate !== 'count') {
+    joins.push(
+      `LEFT JOIN form_submission_facts metric
+        ON metric.submission_id = fs.id
+        AND metric.tenant_id = fs.tenant_id
+        AND metric.project_id = fs.project_id
+        AND metric.field_key = $${index}`
+    );
+    values.push(metric_field_key);
+    index += 1;
+  }
+
+  const where = ['fs.tenant_id = $1', 'fs.project_id = $2', `fs.status != 'deleted'`];
+  const nodeFilterValues = compactStrings([
+    node_filter,
+    ...(Array.isArray(node_filters) ? node_filters : []),
+  ]);
+  if (nodeFilterValues.length === 1) {
+    where.push(`(fs.node_id = $${index} OR fs.node_reference = $${index})`);
+    values.push(nodeFilterValues[0]);
+    index += 1;
+  } else if (nodeFilterValues.length > 1) {
+    where.push(`(fs.node_id = ANY($${index}::text[]) OR fs.node_reference = ANY($${index}::text[]))`);
+    values.push(nodeFilterValues);
+    index += 1;
+  }
+  if (month) {
+    where.push(`fs.month = $${index}`);
+    values.push(month);
+    index += 1;
+  }
+  const statusValues = normalizeSubmissionStatuses([
+    status,
+    ...(Array.isArray(statuses) ? statuses : []),
+  ]);
+  if (statusValues.length === 1) {
+    where.push(`fs.status = $${index}`);
+    values.push(statusValues[0]);
+    index += 1;
+  } else if (statusValues.length > 1) {
+    where.push(`fs.status = ANY($${index}::text[])`);
+    values.push(statusValues);
+    index += 1;
+  }
+  if (start_date) {
+    if (typeof start_date === 'string' && DATE_ONLY_PATTERN.test(start_date)) {
+      where.push(`fs.created_at >= $${index}::date`);
+    } else {
+      where.push(`fs.created_at >= $${index}`);
+    }
+    values.push(start_date);
+    index += 1;
+  }
+  if (end_date) {
+    if (typeof end_date === 'string' && DATE_ONLY_PATTERN.test(end_date)) {
+      where.push(`fs.created_at < ($${index}::date + INTERVAL '1 day')`);
+    } else {
+      where.push(`fs.created_at <= $${index}`);
+    }
+    values.push(end_date);
+    index += 1;
+  }
+  if (search && String(search).trim() !== '') {
+    where.push(`(
+      CAST(fs.id AS TEXT) ILIKE $${index}
+      OR COALESCE(fs.node_name, '') ILIKE $${index}
+      OR COALESCE(fs.node_reference, '') ILIKE $${index}
+      OR COALESCE(fs.node_id, '') ILIKE $${index}
+      OR COALESCE(fs.status, '') ILIKE $${index}
+    )`);
+    values.push(`%${String(search).trim()}%`);
+    index += 1;
+  }
+
+  const numericPredicate =
+    normalizedAggregate === 'count' ? '' : 'AND metric.value_numeric IS NOT NULL';
+  const numericValueCountSql =
+    normalizedAggregate === 'count' ? '0::int' : 'COUNT(metric.value_numeric)::int';
+  const bucketSql = `DATE_TRUNC('${normalizedGrain}', fs.created_at)`;
+  const query = `
+    SELECT
+      ${bucketSql} AS period_start,
+      ${aggregateSql} AS aggregate_value,
+      COUNT(DISTINCT fs.id)::int AS submission_count,
+      ${numericValueCountSql} AS numeric_value_count,
+      MIN(fs.created_at) AS first_submission_at,
+      MAX(fs.created_at) AS latest_submission_at,
+      (ARRAY_REMOVE(ARRAY_AGG(DISTINCT fs.id::text), NULL))[1:25] AS sampled_submission_ids
+    FROM form_submissions fs
+    ${joins.join('\n')}
+    WHERE ${where.join(' AND ')}
+      ${numericPredicate}
+    GROUP BY period_start
+    ORDER BY period_start ASC
+    LIMIT $${index} OFFSET $${index + 1}
+  `;
+  const result = await postgresPool.query(query, [...values, safeLimit, safeOffset]);
+
+  const countQuery = `
+    SELECT COUNT(*)::int AS period_count
+    FROM (
+      SELECT ${bucketSql} AS period_start
+      FROM form_submissions fs
+      ${joins.join('\n')}
+      WHERE ${where.join(' AND ')}
+        ${numericPredicate}
+      GROUP BY period_start
+    ) grouped
+  `;
+  const countResult = await postgresPool.query(countQuery, values);
+
+  const rows = result.rows.map((row) => ({
+    period_start: row.period_start || null,
+    aggregate_value:
+      row.aggregate_value === null || row.aggregate_value === undefined
+        ? null
+        : Number(row.aggregate_value),
+    submission_count: Number(row.submission_count || 0),
+    numeric_value_count: Number(row.numeric_value_count || 0),
+    first_submission_at: row.first_submission_at || null,
+    latest_submission_at: row.latest_submission_at || null,
+    sampled_submission_ids: Array.isArray(row.sampled_submission_ids)
+      ? row.sampled_submission_ids
+      : [],
+  }));
+
+  return {
+    total_periods: Number(countResult.rows[0]?.period_count || 0),
+    limit: safeLimit,
+    offset: safeOffset,
+    trend: {
+      aggregate: normalizedAggregate,
+      metric_field_key: normalizedAggregate === 'count' ? null : metric_field_key,
+      grain: normalizedGrain,
+      time_source: 'form_submissions.created_at',
+    },
+    rows,
+    query_context: {
+      source_table: 'form_submission_facts',
+      source_join: 'form_submissions',
+      read_only: true,
+      time_source: 'form_submissions.created_at',
+      grain: normalizedGrain,
+      node_filter: nodeFilterValues.length === 1 ? nodeFilterValues[0] : null,
+      node_filters: nodeFilterValues.length > 1 ? nodeFilterValues : [],
+      month: month || null,
+      statuses: statusValues,
+      start_date: start_date || null,
+      end_date: end_date || null,
+      search: search || null,
+    },
+  };
+};
+
+const getModuleReportPeriodComparison = async (filters = {}) => {
+  const {
+    tenant_id,
+    project_id,
+    metric_field_key,
+    aggregate = 'sum',
+    periods = [],
+    node_filter,
+    node_filters,
+    search,
+    status,
+    statuses,
+  } = filters;
+
+  if (!tenant_id) throw new ApiError(httpStatus.BAD_REQUEST, 'tenant_id is required');
+  if (!project_id) throw new ApiError(httpStatus.BAD_REQUEST, 'project_id is required');
+  if (!Array.isArray(periods) || periods.length !== 2) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Exactly two comparison periods are required');
+  }
+
+  const normalizedAggregate = String(aggregate || 'sum').trim().toLowerCase();
+  if (!ALLOWED_AGGREGATIONS.has(normalizedAggregate)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Unsupported aggregation');
+  }
+  if (normalizedAggregate !== 'count' && !metric_field_key) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'metric_field_key is required');
+  }
+
+  const aggregateSql = resolveAggregationSql(normalizedAggregate);
+  const nodeFilterValues = compactStrings([
+    node_filter,
+    ...(Array.isArray(node_filters) ? node_filters : []),
+  ]);
+  const statusValues = normalizeSubmissionStatuses([
+    status,
+    ...(Array.isArray(statuses) ? statuses : []),
+  ]);
+
+  const runPeriod = async (period) => {
+    const values = [tenant_id, project_id];
+    let index = 3;
+    const joins = [];
+
+    if (normalizedAggregate !== 'count') {
+      joins.push(
+        `LEFT JOIN form_submission_facts metric
+          ON metric.submission_id = fs.id
+          AND metric.tenant_id = fs.tenant_id
+          AND metric.project_id = fs.project_id
+          AND metric.field_key = $${index}`
+      );
+      values.push(metric_field_key);
+      index += 1;
+    }
+
+    const where = ['fs.tenant_id = $1', 'fs.project_id = $2', `fs.status != 'deleted'`];
+    if (nodeFilterValues.length === 1) {
+      where.push(`(fs.node_id = $${index} OR fs.node_reference = $${index})`);
+      values.push(nodeFilterValues[0]);
+      index += 1;
+    } else if (nodeFilterValues.length > 1) {
+      where.push(`(fs.node_id = ANY($${index}::text[]) OR fs.node_reference = ANY($${index}::text[]))`);
+      values.push(nodeFilterValues);
+      index += 1;
+    }
+    if (statusValues.length === 1) {
+      where.push(`fs.status = $${index}`);
+      values.push(statusValues[0]);
+      index += 1;
+    } else if (statusValues.length > 1) {
+      where.push(`fs.status = ANY($${index}::text[])`);
+      values.push(statusValues);
+      index += 1;
+    }
+    if (period.start) {
+      where.push(`fs.created_at >= $${index}`);
+      values.push(period.start);
+      index += 1;
+    }
+    if (period.end) {
+      where.push(`fs.created_at <= $${index}`);
+      values.push(period.end);
+      index += 1;
+    }
+    if (search && String(search).trim() !== '') {
+      where.push(`(
+        CAST(fs.id AS TEXT) ILIKE $${index}
+        OR COALESCE(fs.node_name, '') ILIKE $${index}
+        OR COALESCE(fs.node_reference, '') ILIKE $${index}
+        OR COALESCE(fs.node_id, '') ILIKE $${index}
+        OR COALESCE(fs.status, '') ILIKE $${index}
+      )`);
+      values.push(`%${String(search).trim()}%`);
+      index += 1;
+    }
+
+    const numericPredicate =
+      normalizedAggregate === 'count' ? '' : 'AND metric.value_numeric IS NOT NULL';
+    const numericValueCountSql =
+      normalizedAggregate === 'count' ? '0::int' : 'COUNT(metric.value_numeric)::int';
+    const query = `
+      SELECT
+        ${aggregateSql} AS aggregate_value,
+        COUNT(DISTINCT fs.id)::int AS submission_count,
+        ${numericValueCountSql} AS numeric_value_count,
+        MIN(fs.created_at) AS first_submission_at,
+        MAX(fs.created_at) AS latest_submission_at,
+        (ARRAY_REMOVE(ARRAY_AGG(DISTINCT fs.id::text), NULL))[1:25] AS sampled_submission_ids
+      FROM form_submissions fs
+      ${joins.join('\n')}
+      WHERE ${where.join(' AND ')}
+        ${numericPredicate}
+    `;
+    const result = await postgresPool.query(query, values);
+    const row = result.rows[0] || {};
+    return {
+      label: period.label || null,
+      start: period.start || null,
+      end: period.end || null,
+      aggregate_value:
+        row.aggregate_value === null || row.aggregate_value === undefined
+          ? null
+          : Number(row.aggregate_value),
+      submission_count: Number(row.submission_count || 0),
+      numeric_value_count: Number(row.numeric_value_count || 0),
+      first_submission_at: row.first_submission_at || null,
+      latest_submission_at: row.latest_submission_at || null,
+      sampled_submission_ids: Array.isArray(row.sampled_submission_ids)
+        ? row.sampled_submission_ids
+        : [],
+    };
+  };
+
+  const [current, baseline] = await Promise.all(periods.map(runPeriod));
+  const currentValue = Number(current.aggregate_value || 0);
+  const baselineValue = Number(baseline.aggregate_value || 0);
+  const absoluteChange = currentValue - baselineValue;
+  const percentChange = baselineValue !== 0 ? absoluteChange / baselineValue : null;
+
+  return {
+    comparison: {
+      aggregate: normalizedAggregate,
+      metric_field_key: normalizedAggregate === 'count' ? null : metric_field_key,
+      time_source: 'form_submissions.created_at',
+    },
+    periods: [current, baseline],
+    change: {
+      absolute: absoluteChange,
+      percent: percentChange,
+      direction: absoluteChange > 0 ? 'increase' : absoluteChange < 0 ? 'decrease' : 'no_change',
+    },
+    query_context: {
+      source_table: 'form_submission_facts',
+      source_join: 'form_submissions',
+      read_only: true,
+      time_source: 'form_submissions.created_at',
+      node_filter: nodeFilterValues.length === 1 ? nodeFilterValues[0] : null,
+      node_filters: nodeFilterValues.length > 1 ? nodeFilterValues : [],
+      statuses: statusValues,
+      search: search || null,
+    },
+  };
 };
 
 /**
@@ -1231,4 +1998,7 @@ module.exports = {
   deleteSubmission,
   bulkDeleteSubmissions,
   getModuleReportTable,
+  getModuleReportAggregation,
+  getModuleReportTrend,
+  getModuleReportPeriodComparison,
 };

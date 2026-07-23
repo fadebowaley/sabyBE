@@ -7,6 +7,7 @@ const {
   projectFormService,
   projectFormPublicAccessService,
 } = require('../services');
+const workspaceProjectAccessService = require('../services/workspaceProjectAccess.service');
 
 /**
  * Create a new form submission
@@ -120,6 +121,22 @@ const getSubmissions = catchAsync(async (req, res) => {
     filter.tenantId = req.user.tenantId;
   }
 
+  const accessibleProjectIds =
+    await workspaceProjectAccessService.getAccessibleProjectIds({
+      tenantId: filter.tenantId || null,
+      user: req.user,
+    });
+
+  if (Array.isArray(accessibleProjectIds)) {
+    if (filter.projectId) {
+      filter.projectId = accessibleProjectIds.includes(String(filter.projectId))
+        ? filter.projectId
+        : { $in: [] };
+    } else {
+      filter.projectId = { $in: accessibleProjectIds };
+    }
+  }
+
   const result = await projectFormSubmissionService.querySubmissions(
     filter,
     options
@@ -173,14 +190,27 @@ const getSubmissionsByTenant = catchAsync(async (req, res) => {
   ]);
 
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate']);
-  console.log('We have hit the project submission stuffs . . . ')
+  const accessibleProjectIds =
+    await workspaceProjectAccessService.getAccessibleProjectIds({
+      tenantId,
+      user: req.user,
+    });
+
+  if (Array.isArray(accessibleProjectIds)) {
+    if (filter.projectId) {
+      filter.projectId = accessibleProjectIds.includes(String(filter.projectId))
+        ? filter.projectId
+        : { $in: [] };
+    } else {
+      filter.projectId = { $in: accessibleProjectIds };
+    }
+  }
+
   const result = await projectFormSubmissionService.getSubmissionsByTenant(
     tenantId,
     filter,
     options
   );
-
-  console.log('Getting the result',result);
 
   res.send(result);
 });

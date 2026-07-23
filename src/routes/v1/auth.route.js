@@ -549,6 +549,63 @@ router.post(
   authController.changePasswordAuthenticated
 );
 
+router.get('/security/overview', auth(), authController.getSecurityOverview);
+
+router.get('/sessions', auth(), authController.getSessions);
+
+router.post('/sessions/logout-all', auth(), authController.logoutAllSessions);
+
+router.post(
+  '/mfa/authenticator/setup',
+  auth(),
+  authController.setupAuthenticatorMfa
+);
+
+router.post(
+  '/mfa/authenticator/verify',
+  auth(),
+  validate(authValidation.mfaAuthenticatorVerify),
+  authController.verifyAuthenticatorMfa
+);
+
+router.patch(
+  '/mfa/authenticator',
+  auth(),
+  validate(authValidation.mfaAuthenticatorToggle),
+  authController.toggleAuthenticatorMfa
+);
+
+router.post(
+  '/mfa/passkey/options',
+  auth(),
+  authController.generatePasskeyRegistrationOptions
+);
+
+router.post(
+  '/mfa/passkey/verify',
+  auth(),
+  validate(authValidation.mfaPasskeyVerify),
+  authController.verifyPasskeyRegistration
+);
+
+router.post(
+  '/mfa/login/passkey/options',
+  validate(authValidation.mfaPasskeyAssertionOptions),
+  authController.generatePasskeyAssertionOptions
+);
+
+router.post(
+  '/mfa/login/passkey/verify',
+  validate(authValidation.mfaPasskeyAssertionVerify),
+  authController.verifyPasskeyAssertion
+);
+
+router.post(
+  '/mfa/login/authenticator/verify',
+  validate(authValidation.mfaAuthenticatorLoginVerify),
+  authController.verifyAuthenticatorLoginMfa
+);
+
 /**
  * @swagger
  * /auth/change-password-authenticated:

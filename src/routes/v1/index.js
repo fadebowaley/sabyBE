@@ -30,6 +30,10 @@ const paymentRoute = require('./payment.route');
 const reportRoute = require('./report.route');
 const settingsRoute = require('./settings.route');
 const statementRoute = require('./statement.route');
+const subscriptionRoute = require('./subscription.route');
+const subscriptionAdminRoute = require('./subscriptionAdmin.route');
+const subscriptionCatalogRoute = require('./subscriptionCatalog.route');
+const securitySupportRoute = require('./securitySupport.route');
 const collectionRoute = require('./collection.route');
 const inmailRoute = require('./inmail.route');
 const storageRoute = require('./storage.route');
@@ -56,8 +60,11 @@ const eventComplianceRoute = require('./eventCompliance.route');
 const permSubmissionRoute = require('./permSubmission.route');
 // Workflow
 const workflowRoute = require('./workflow.route');
+const approvalRoute = require('./approval.route');
 const copilotRoute = require('./copilot.route');
+const cmsPageRoute = require('./cmsPage.route');
 const whatsappRoute = require('./whatsapp.route');
+const executiveIntelligenceRoute = require('./executiveIntelligence.route');
 
 // declare rest of the routes: nodeLevel, nodeStructure, node etc.
 const config = require('../../config/config');
@@ -197,6 +204,22 @@ const defaultRoutes = [
     route: statementRoute,
   },
   {
+    path: '/subscriptions/admin',
+    route: subscriptionAdminRoute,
+  },
+  {
+    path: '/security-support',
+    route: securitySupportRoute,
+  },
+  {
+    path: '/subscriptions/catalog',
+    route: subscriptionCatalogRoute,
+  },
+  {
+    path: '/subscriptions',
+    route: subscriptionRoute,
+  },
+  {
     path: '/collections',
     route: collectionRoute,
   },
@@ -243,8 +266,20 @@ const defaultRoutes = [
     route: workflowRoute,
   },
   {
+    path: '/approvals',
+    route: approvalRoute,
+  },
+  {
     path: '/copilot',
     route: copilotRoute,
+  },
+  {
+    path: '/cms',
+    route: cmsPageRoute,
+  },
+  {
+    path: '/executive-intelligence',
+    route: executiveIntelligenceRoute,
   },
   {
     path: '/whatsapp',

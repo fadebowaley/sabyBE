@@ -3,7 +3,7 @@ const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { Nodes } = require('../models');
-const { nodeService } = require('../services');
+const { nodeService, subscriptionService } = require('../services');
 const copilotActionService = require('../services/copilotAction.service');
 const {
   invalidateTenantEntityCaches,
@@ -42,10 +42,20 @@ const invalidateNodeResolverCache = async (tenantId) => {
   }
 };
 
+const assertNodeCreationHeadroom = async (tenantId) =>
+  subscriptionService.assertSubscriptionLimit({
+    tenantId,
+    limitKey: 'nodes',
+    delta: 1,
+    message:
+      'Your current workspace subscription has reached its node limit. Upgrade billing to add another node.',
+  });
+
 // Create a new node
 const createNode = catchAsync(async (req, res) => {
   // SECURITY: Add tenantId from authenticated user
   req.body.tenantId = req.user.tenantId;
+  await assertNodeCreationHeadroom(req.user.tenantId);
   const node = await nodeService.createNode(req.body);
   await invalidateNodeResolverCache(req.user?.tenantId || node?.tenantId);
   await copilotActionService.recordExistingAction({

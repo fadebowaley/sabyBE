@@ -9,6 +9,7 @@ const httpStatus = require('http-status');
 const { postgresPool } = require('../config/postgres');
 const logger = require('../config/logger');
 const ApiError = require('../utils/ApiError');
+const projectFormService = require('./projectForm.service');
 
 /**
  * Get calendar for a specific tenant, project, and month
@@ -286,7 +287,9 @@ const getEventsByMonth = async (tenant_id, project_id, month, year) => {
  * Master function that routes to appropriate generator based on trackingMode
  */
 const generateCalendarFromForm = async (form, month, year) => {
-  const permSettings = form?.capabilities?.experience?.compliance || {};
+  const permSettings = projectFormService.normalizeComplianceCapability(
+    form?.capabilities?.experience?.compliance || {}
+  );
 
   if (!permSettings?.enabled) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'PERM is not enabled for this form');
@@ -304,6 +307,9 @@ const generateCalendarFromForm = async (form, month, year) => {
     case 'weekly':
       return generateWeeklyCalendar(form, month, year);
 
+    case 'monthly':
+      return generateMonthlyCalendar(form, month, year);
+
     default:
       throw new ApiError(httpStatus.BAD_REQUEST, `Unknown tracking mode: ${trackingMode}`);
   }
@@ -318,27 +324,34 @@ const generateMonthOnlyCalendar = async (form, month, year) => {
     const tenant_id = form.tenantId;
     const project_id = form.projectId;
     const form_id = form.formId || form._id?.toString();
+    const permSettings = projectFormService.normalizeComplianceCapability(
+      form?.capabilities?.experience?.compliance || {}
+    );
+    const totalEvents = Math.max(
+      1,
+      Number(permSettings?.submissionLimit?.count || 1)
+    );
 
     const result = await postgresPool.query(
       `
       INSERT INTO event_calendar 
       (tenant_id, project_id, form_id, month, year, tracking_mode, total_events, is_required)
-      VALUES ($1, $2, $3, $4, $5, 'none', 1, true)
+      VALUES ($1, $2, $3, $4, $5, 'none', $6, true)
       ON CONFLICT (tenant_id, project_id, COALESCE(form_id, ''), month) 
       DO UPDATE SET
         tracking_mode = 'none',
-        total_events = 1,
+        total_events = $6,
         updated_at = NOW()
       RETURNING *
     `,
-      [tenant_id, project_id, form_id, month, year]
+      [tenant_id, project_id, form_id, month, year, totalEvents]
     );
 
     logger.info(`Generated month-only calendar for ${tenant_id}/${project_id}/${month}`);
 
     return {
       mode: 'none',
-      total_events: 1,
+      total_events: totalEvents,
       message: 'Month-only tracking enabled. Users can submit anytime.',
       calendar: result.rows[0],
     };
@@ -355,10 +368,13 @@ const generateMonthOnlyCalendar = async (form, month, year) => {
 const generateDailyCalendar = async (form, month, year) => {
   try {
     const { tenantId, projectId, formId } = form;
-    const permSettings = form?.capabilities?.experience?.compliance || {};
-    const { dailyConfig } = permSettings;
+    const permSettings = projectFormService.normalizeComplianceCapability(
+      form?.capabilities?.experience?.compliance || {}
+    );
+    const weekdays = permSettings?.schedule?.daily?.weekdays || [];
+    const submissionLimitPerDate = Number(permSettings?.submissionLimit?.count || 1);
 
-    if (!dailyConfig?.activeDays || dailyConfig.activeDays.length === 0) {
+    if (!weekdays.length) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         'Daily tracking requires at least one active day'
@@ -383,9 +399,9 @@ const generateDailyCalendar = async (form, month, year) => {
       const dayOfWeek = d.getDay();
 
       // Check if this day is active
-      if (dailyConfig.activeDays.includes(dayOfWeek)) {
+      if (weekdays.includes(dayOfWeek)) {
         // Skip holidays if configured (basic implementation - could be enhanced)
-        if (dailyConfig.skipHolidays && isHoliday(d)) {
+        if (permSettings?.dailyConfig?.skipHolidays && isHoliday(d)) {
           continue;
         }
 
@@ -394,13 +410,12 @@ const generateDailyCalendar = async (form, month, year) => {
     }
 
     const totalDays = allDates.length;
-    const frequencyPerDay = dailyConfig.frequencyPerDay || 1;
-    const totalExpected = totalDays * frequencyPerDay;
+    const totalExpected = totalDays * submissionLimitPerDate;
 
     const dailyConfigJson = {
-      active_days: dailyConfig.activeDays,
-      frequency_per_day: frequencyPerDay,
-      skip_holidays: dailyConfig.skipHolidays || false,
+      active_days: weekdays,
+      frequency_per_day: submissionLimitPerDate,
+      skip_holidays: permSettings?.dailyConfig?.skipHolidays || false,
       dates: allDates,
       total_days: totalDays,
       total_expected: totalExpected,
@@ -437,7 +452,7 @@ const generateDailyCalendar = async (form, month, year) => {
     return {
       mode: 'daily',
       total_days: totalDays,
-      frequency_per_day: frequencyPerDay,
+      frequency_per_day: submissionLimitPerDate,
       total_events: totalExpected,
       message: `Daily tracking enabled. ${totalExpected} submissions expected.`,
       calendar: result.rows[0],
@@ -455,10 +470,20 @@ const generateDailyCalendar = async (form, month, year) => {
 const generateWeeklyCalendar = async (form, month, year) => {
   try {
     const { tenantId, projectId, formId } = form;
-    const permSettings = form?.capabilities?.experience?.compliance || {};
-    const { weeklyConfig } = permSettings;
+    const permSettings = projectFormService.normalizeComplianceCapability(
+      form?.capabilities?.experience?.compliance || {}
+    );
+    const schedule = permSettings?.schedule || {};
+    const weekdays = Array.isArray(schedule?.weekly?.weekdays)
+      ? schedule.weekly.weekdays
+      : [];
+    const intervalWeeks = Math.max(1, Number(schedule?.weekly?.intervalWeeks || 1));
+    const anchorDate = schedule?.weekly?.anchorDate
+      ? new Date(`${schedule.weekly.anchorDate}T00:00:00Z`)
+      : new Date(`${month}T00:00:00Z`);
+    const submissionLimitPerDate = Number(permSettings?.submissionLimit?.count || 1);
 
-    if (!weeklyConfig?.days || weeklyConfig.days.length === 0) {
+    if (!weekdays.length) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         'Weekly tracking requires at least one day configuration'
@@ -482,40 +507,39 @@ const generateWeeklyCalendar = async (form, month, year) => {
       total_events: 0,
     };
 
-    // Process each configured day
-    for (const dayConfig of weeklyConfig.days) {
-      if (!dayConfig.enabled) continue;
-
+    // Process each configured weekday
+    for (const dayOfWeek of weekdays) {
       const dates = [];
       let currentDate = new Date(monthStart);
 
-      // Find all occurrences of this day in the month
       while (currentDate <= monthEnd) {
-        if (currentDate.getDay() === dayConfig.day) {
-          dates.push(currentDate.toISOString().split('T')[0]);
+        if (currentDate.getDay() === dayOfWeek) {
+          const diffMs = currentDate.getTime() - anchorDate.getTime();
+          const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+          const weekIndex = diffDays >= 0 ? Math.floor(diffDays / 7) : null;
+          if (weekIndex !== null && weekIndex % intervalWeeks === 0) {
+            dates.push(currentDate.toISOString().split('T')[0]);
+          }
         }
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      // Apply frequency filter
-      let finalDates = dates;
-      if (dayConfig.frequency === 'biweekly') {
-        // Take every other occurrence
-        finalDates = dates.filter((_, idx) => idx % 2 === 0);
-      } else if (dayConfig.frequency === 'monthly') {
-        // Take only specified occurrences
-        finalDates = dates.slice(0, dayConfig.occurrences || 1);
-      }
+      const totalExpectedForDay = dates.length * submissionLimitPerDate;
 
       weeklyConfigJson.days.push({
-        day: dayConfig.day,
-        name: dayConfig.name,
-        frequency: dayConfig.frequency,
-        dates: finalDates,
-        count: finalDates.length,
+        day: dayOfWeek,
+        name:
+          ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][
+            dayOfWeek
+          ] || 'Day',
+        interval_weeks: intervalWeeks,
+        dates,
+        count: dates.length,
+        submission_limit_per_date: submissionLimitPerDate,
+        total_expected: totalExpectedForDay,
       });
 
-      weeklyConfigJson.total_events += finalDates.length;
+      weeklyConfigJson.total_events += totalExpectedForDay;
     }
 
     const result = await postgresPool.query(
@@ -556,6 +580,82 @@ const generateWeeklyCalendar = async (form, month, year) => {
     };
   } catch (error) {
     logger.error('Error generating weekly calendar:', error);
+    throw error;
+  }
+};
+
+const generateMonthlyCalendar = async (form, month, year) => {
+  try {
+    const { tenantId, projectId, formId } = form;
+    const permSettings = projectFormService.normalizeComplianceCapability(
+      form?.capabilities?.experience?.compliance || {}
+    );
+    const configuredDates = Array.isArray(permSettings?.schedule?.monthly?.dates)
+      ? permSettings.schedule.monthly.dates
+      : [];
+    const submissionLimitPerDate = Number(permSettings?.submissionLimit?.count || 1);
+    const monthMatch = month.match(/^(\d{4})-(\d{2})/);
+    if (!monthMatch) {
+      throw new ApiError(httpStatus.BAD_REQUEST, `Invalid month format: ${month}`);
+    }
+
+    const yearNum = parseInt(monthMatch[1], 10);
+    const monthNum = parseInt(monthMatch[2], 10);
+    const lastDayInMonth = new Date(yearNum, monthNum, 0).getDate();
+    const validDates = configuredDates
+      .map((entry) => Number(entry))
+      .filter(
+        (entry) => Number.isInteger(entry) && entry >= 1 && entry <= lastDayInMonth
+      );
+    const resolvedDates = validDates
+      .map(
+        (day) =>
+          `${yearNum}-${String(monthNum).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      );
+    const monthlyConfigJson = {
+      dates: resolvedDates,
+      day_numbers: validDates,
+      submission_limit_per_date: submissionLimitPerDate,
+      total_expected: resolvedDates.length * submissionLimitPerDate,
+    };
+
+    const result = await postgresPool.query(
+      `
+      INSERT INTO event_calendar
+      (tenant_id, project_id, form_id, month, year, tracking_mode, monthly_config, total_events, is_required)
+      VALUES ($1, $2, $3, $4, $5, 'monthly', $6, $7, true)
+      ON CONFLICT (tenant_id, project_id, COALESCE(form_id, ''), month)
+      DO UPDATE SET
+        tracking_mode = 'monthly',
+        monthly_config = $6,
+        total_events = $7,
+        updated_at = NOW()
+      RETURNING *
+    `,
+      [
+        tenantId,
+        projectId,
+        formId || form._id?.toString(),
+        month,
+        yearNum,
+        JSON.stringify(monthlyConfigJson),
+        monthlyConfigJson.total_expected,
+      ]
+    );
+
+    logger.info(
+      `Generated monthly calendar: ${monthlyConfigJson.total_expected} submissions expected for ${month}`
+    );
+
+    return {
+      mode: 'monthly',
+      total_events: monthlyConfigJson.total_expected,
+      breakdown: monthlyConfigJson.dates,
+      message: `Monthly tracking enabled. ${monthlyConfigJson.total_expected} submissions expected.`,
+      calendar: result.rows[0],
+    };
+  } catch (error) {
+    logger.error('Error generating monthly calendar:', error);
     throw error;
   }
 };

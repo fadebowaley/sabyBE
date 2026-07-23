@@ -346,7 +346,7 @@ class NotificationQueueService {
       ? `${Number(anomaly.deviation).toFixed(1)}%`
       : 'significant';
 
-    const subject = `[${severity}] Anomaly detected: ${metricKey} — ${projectName || 'project'}`;
+    const subject = `[${severity}] Anomaly detected: ${metricKey} - ${projectName || 'project'}`;
     const message =
       `A ${severity} anomaly was detected in "${projectName || 'your project'}" ` +
       `for ${monthLabel || 'the current period'}.\n\n` +
@@ -368,9 +368,32 @@ class NotificationQueueService {
         [tenantId]
       );
 
-      const { sendEmail } = require('./email.service');
+      const { sendSabyEmail } = require('./email.service');
       const results = await Promise.allSettled(
-        admins.map((a) => sendEmail(a.email, subject, message))
+        admins.map((a) =>
+          sendSabyEmail({
+            to: a.email,
+            subject,
+            preheader: `Saby detected an unusual movement in ${projectName || 'your project'}.`,
+            layout: 'operationalAlert',
+            label: 'Anomaly alert',
+            icon: 'ALT',
+            headline: 'Saby detected an anomaly.',
+            body: [
+              `Saby detected a ${severity} anomaly in "${projectName || 'your project'}" for ${
+                monthLabel || 'the current period'
+              }.`,
+              'This metric moved outside the expected baseline. Please investigate the source and resolve any operational issue.',
+            ],
+            detailsRows: [
+              ['Metric', metricKey],
+              ['Severity', severity],
+              ['Deviation', `${deviation} from baseline`],
+              ['Tenant', tenantId],
+            ],
+            ctaLabel: 'Investigate alert',
+          })
+        )
       );
 
       const sent = results.filter((r) => r.status === 'fulfilled').length;
@@ -399,10 +422,26 @@ class NotificationQueueService {
     const { subject, message, template } = notificationData;
 
     try {
-      // Use the existing email service to send custom notifications
-      const { sendEmail } = require('./email.service');
+      const { sendSabyEmail } = require('./email.service');
 
-      await sendEmail(userData.email, subject, message);
+      await sendSabyEmail({
+        to: userData.email,
+        subject,
+        preheader: String(message || '').slice(0, 140),
+        layout: template?.layout || 'default',
+        label: template?.label || 'Saby notification',
+        icon: template?.icon || 'SBY',
+        headline: template?.headline || subject,
+        body: [message || 'You have a new Saby notification.'],
+        tone: template?.tone || 'neutral',
+        purpose: template?.purpose || 'default',
+        detailsRows: [
+          ['Project', projectData?.projectName || projectData?.name || 'N/A'],
+        ],
+        ctaLabel: template?.ctaLabel || '',
+        ctaUrl: template?.ctaUrl || '',
+        showManageNotifications: true,
+      });
 
       return {
         success: true,

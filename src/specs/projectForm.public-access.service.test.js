@@ -1,5 +1,6 @@
 const mockJwt = {
   verify: jest.fn(),
+  sign: jest.fn(() => 'signed-access-token'),
 };
 
 const mockConfig = {
@@ -25,6 +26,7 @@ const mockPublicFormAccess = {
 
 const mockUser = {
   findById: jest.fn(),
+  findOne: jest.fn(),
 };
 
 const mockNodes = {
@@ -40,6 +42,16 @@ const mockProjectForm = {
 const mockProjectFormService = {
   incrementProjectSubmissions: jest.fn(),
   submitSystemFormByPublicRef: jest.fn(),
+  normalizeProjectFormRuntimeConfig: jest.fn((value) => value),
+  buildPublicQrContext: jest.fn((value) => ({
+    secureMode:
+      value?.capabilities?.experience?.security?.publicSecureMode || 'otp',
+    pipelineTarget: 'postgres_unified',
+    schemaVersion: value?.schemaVersion || '2.0.0',
+    schemaHash: 'schema-hash',
+    qrVersion: 'v1',
+  })),
+  getPublicProjectFormByReference: jest.fn(),
 };
 
 const mockCounter = {
@@ -48,6 +60,7 @@ const mockCounter = {
 
 const mockEmailService = {
   sendOtpEmail: jest.fn(),
+  sendSabyEmail: jest.fn(),
 };
 
 const mockSmsService = {
@@ -61,6 +74,9 @@ const mockSubmissionService = {
 
 const mockIdempotency = {
   buildDeterministicIdempotencyKey: jest.fn(() => 'idem-123'),
+};
+const mockPostgresPool = {
+  query: jest.fn(),
 };
 
 jest.mock('jsonwebtoken', () => mockJwt);
@@ -78,6 +94,9 @@ jest.mock('../services/submission.service', () => mockSubmissionService);
 jest.mock('../services/email.service', () => mockEmailService);
 jest.mock('../services/sms.service', () => mockSmsService);
 jest.mock('../utils/idempotency', () => mockIdempotency);
+jest.mock('../config/postgres', () => ({
+  postgresPool: mockPostgresPool,
+}));
 
 const service = require('../services/projectFormPublicAccess.service');
 
@@ -130,6 +149,7 @@ describe('projectFormPublicAccess.service', () => {
       typ: 'public_form_access',
       jti: 'access-jti-1',
       sub: 'user-1',
+      accessContextType: 'identity',
       tenantId: 'tenant-1',
       projectId: 'project-1',
       projectFormId: 'form-doc-1',
@@ -141,7 +161,60 @@ describe('projectFormPublicAccess.service', () => {
     mockPublicFormAccess.updateMany.mockResolvedValue(undefined);
     mockCounter.getNextSequence.mockResolvedValue(42);
     mockEmailService.sendOtpEmail.mockResolvedValue(undefined);
+    mockEmailService.sendSabyEmail.mockResolvedValue(undefined);
     mockSmsService.sendOtpSms.mockResolvedValue(undefined);
+    mockPostgresPool.query.mockResolvedValue({ rows: [] });
+    mockUser.findOne.mockResolvedValue(makeUserDoc());
+    mockProjectForm.findOne.mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        _id: 'form-doc-1',
+        tenantId: 'tenant-1',
+        projectId: 'project-1',
+        publicRef: 'public-ref-1',
+        shareRef: 'share-ref-1',
+        schemaVersion: '2.0.0',
+        capabilities: {
+          experience: {
+            security: {
+              publicSecureMode: 'otp',
+              access: {
+                whoCanAccess: 'authenticated_users',
+              },
+            },
+          },
+        },
+      }),
+    });
+    mockProjectFormService.getPublicProjectFormByReference.mockResolvedValue({
+      projectForm: {
+        _id: 'form-doc-1',
+        tenantId: 'tenant-1',
+        projectId: 'project-1',
+        publicRef: 'public-ref-1',
+        shareRef: 'share-ref-1',
+        shareCode: 'share-001',
+        schemaVersion: '2.0.0',
+        capabilities: {
+          experience: {
+            security: {
+              publicSecureMode: 'otp',
+              access: {
+                whoCanAccess: 'authenticated_users',
+                allowedRoles: [],
+                allowedUsers: [],
+                restrictByLocation: false,
+              },
+              authentication: {
+                requireLogin: true,
+                allowAnonymous: false,
+              },
+            },
+          },
+        },
+      },
+      canonicalRef: 'share-ref-1',
+      resolvedBy: 'shareRef',
+    });
   });
 
   test('consumeAccessLink returns access context for verified token without mutating token state', async () => {
@@ -398,6 +471,319 @@ describe('projectFormPublicAccess.service', () => {
       fieldKey: 'membership_id',
       value: 'MEM-000042',
       sequence: 42,
+    });
+  });
+
+  test('requestAccessCode rejects link-only secure forms', async () => {
+    mockProjectFormService.getPublicProjectFormByReference.mockResolvedValue({
+      projectForm: {
+        _id: 'form-doc-1',
+        tenantId: 'tenant-1',
+        projectId: 'project-1',
+        publicRef: 'public-ref-1',
+        shareRef: 'share-ref-1',
+        shareCode: 'share-001',
+        schemaVersion: '2.0.0',
+        capabilities: {
+          experience: {
+            security: {
+              publicSecureMode: 'link_only',
+              access: {
+                whoCanAccess: 'authenticated_users',
+                allowedRoles: [],
+                allowedUsers: [],
+                restrictByLocation: false,
+              },
+              authentication: {
+                requireLogin: true,
+                allowAnonymous: false,
+              },
+            },
+          },
+        },
+      },
+      canonicalRef: 'share-ref-1',
+      resolvedBy: 'shareRef',
+    });
+
+    await expect(
+      service.requestAccessCode({
+        reference: 'share-ref-1',
+        channel: 'email',
+        identifier: 'ada@example.com',
+      })
+    ).rejects.toMatchObject({
+      message:
+        'This secure form uses a different public access gate and cannot send OTP codes.',
+    });
+  });
+
+  test('verifyAccessGateCode accepts configured access code and issues anonymous secure session', async () => {
+    mockProjectFormService.getPublicProjectFormByReference.mockResolvedValue({
+      projectForm: {
+        _id: 'form-doc-1',
+        tenantId: 'tenant-1',
+        projectId: 'project-1',
+        publicRef: 'public-ref-1',
+        shareRef: 'share-ref-1',
+        shareCode: 'share-001',
+        schemaVersion: '2.0.0',
+        capabilities: {
+          experience: {
+            security: {
+              publicSecureMode: 'access_code',
+              access: {
+                whoCanAccess: 'anyone',
+                allowedRoles: [],
+                allowedUsers: [],
+                restrictByLocation: false,
+              },
+              accessCode: {
+                code: 'MEMBER24',
+                hint: 'Provided by admin',
+                maxAttempts: 4,
+                lockoutMinutes: 10,
+              },
+            },
+          },
+        },
+      },
+      canonicalRef: 'share-ref-1',
+      resolvedBy: 'shareRef',
+    });
+    mockPublicFormAccess.findOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(
+        makeAccessDoc({
+          identifierType: 'access_code',
+          identifier: 'access_code',
+          userId: null,
+          status: 'verified',
+          metadata: {
+            accessMethod: 'access_code',
+            accessContextType: 'anonymous',
+          },
+        })
+      );
+    mockJwt.verify.mockReturnValueOnce({
+      typ: 'public_form_access',
+      jti: 'access-jti-1',
+      accessContextType: 'anonymous',
+      tenantId: 'tenant-1',
+      projectId: 'project-1',
+      projectFormId: 'form-doc-1',
+      publicRef: 'public-ref-1',
+      shareRef: 'share-ref-1',
+    });
+
+    const result = await service.verifyAccessGateCode({
+      reference: 'share-ref-1',
+      accessCode: 'member24',
+      requestContext: {
+        ip: '127.0.0.1',
+      },
+    });
+
+    expect(mockPublicFormAccess.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tokenType: 'public_form_access',
+        identifierType: 'access_code',
+        identifier: 'access_code',
+        userId: null,
+        metadata: expect.objectContaining({
+          accessMethod: 'access_code',
+          accessContextType: 'anonymous',
+        }),
+      })
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        success: true,
+        accessToken: expect.any(String),
+        nodes: [],
+        user: null,
+      })
+    );
+  });
+
+  test('consumeAccessLink revokes stale sessions when the form security mode changes', async () => {
+    const accessDoc = makeAccessDoc({
+      secureMode: 'access_code',
+      identifierType: 'access_code',
+      identifier: 'access_code',
+      userId: null,
+      status: 'verified',
+      metadata: {
+        accessMethod: 'access_code',
+        accessContextType: 'anonymous',
+      },
+    });
+    mockPublicFormAccess.findOne.mockResolvedValue(accessDoc);
+    mockProjectForm.findOne.mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        _id: 'form-doc-1',
+        tenantId: 'tenant-1',
+        projectId: 'project-1',
+        publicRef: 'public-ref-1',
+        shareRef: 'share-ref-1',
+        schemaVersion: '2.0.0',
+        capabilities: {
+          experience: {
+            security: {
+              publicSecureMode: 'otp',
+              access: {
+                whoCanAccess: 'authenticated_users',
+              },
+            },
+          },
+        },
+      }),
+    });
+    mockJwt.verify.mockReturnValueOnce({
+      typ: 'public_form_access',
+      jti: 'access-jti-1',
+      accessContextType: 'anonymous',
+      tenantId: 'tenant-1',
+      projectId: 'project-1',
+      projectFormId: 'form-doc-1',
+      publicRef: 'public-ref-1',
+      shareRef: 'share-ref-1',
+    });
+
+    await expect(
+      service.consumeAccessLink({ accessToken: 'token-1' })
+    ).rejects.toMatchObject({
+      message: 'This secure session is no longer valid. Please authenticate again.',
+    });
+
+    expect(accessDoc.status).toBe('revoked');
+    expect(accessDoc.save).toHaveBeenCalled();
+  });
+
+  test('submitWithAccess queues anonymous access-code submissions without node binding', async () => {
+    const accessDoc = makeAccessDoc({
+      secureMode: 'access_code',
+      identifierType: 'access_code',
+      identifier: 'access_code',
+      userId: null,
+      status: 'verified',
+      metadata: {
+        accessMethod: 'access_code',
+        accessContextType: 'anonymous',
+      },
+    });
+    const claimedDoc = makeAccessDoc({
+      secureMode: 'access_code',
+      identifierType: 'access_code',
+      identifier: 'access_code',
+      userId: null,
+      status: 'submitting',
+      metadata: {
+        accessMethod: 'access_code',
+        accessContextType: 'anonymous',
+        submissionClaimedAt: '2026-01-01T00:00:00.000Z',
+      },
+    });
+    mockPublicFormAccess.findOne.mockResolvedValue(accessDoc);
+    mockPublicFormAccess.findOneAndUpdate.mockResolvedValue(claimedDoc);
+    mockJwt.verify.mockReturnValueOnce({
+      typ: 'public_form_access',
+      jti: 'access-jti-1',
+      accessContextType: 'anonymous',
+      tenantId: 'tenant-1',
+      projectId: 'project-1',
+      projectFormId: 'form-doc-1',
+      publicRef: 'public-ref-1',
+      shareRef: 'share-ref-1',
+    });
+    mockProjectForm.findOne.mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        _id: 'form-doc-1',
+        tenantId: 'tenant-1',
+        projectId: 'project-1',
+        publicRef: 'public-ref-1',
+        formId: 'form-001',
+        formReference: 'ref-001',
+        identity: { name: 'Membership Form', tags: ['membership'] },
+        metadata: { formCategory: 'standard' },
+        capabilities: {
+          experience: {
+            security: {
+              publicSecureMode: 'access_code',
+              access: { whoCanAccess: 'anyone' },
+            },
+          },
+        },
+      }),
+    });
+    mockSubmissionService.queueSubmission.mockResolvedValue({
+      jobId: 'job-321',
+      status: 'queued',
+    });
+
+    const result = await service.submitWithAccess({
+      accessToken: 'token-1',
+      submissionData: { first_name: 'Ada' },
+      metadata: { source: 'test' },
+      requestContext: { ip: '127.0.0.1' },
+    });
+
+    expect(mockSubmissionService.queueSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nodeId: null,
+        source: 'public_secure_access_code',
+      })
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        success: true,
+        status: 'queued',
+        jobId: 'job-321',
+        node: null,
+      })
+    );
+  });
+
+  test('issueAccessLink rejects accounts outside selected secure users', async () => {
+    mockProjectFormService.getPublicProjectFormByReference.mockResolvedValue({
+      projectForm: {
+        _id: 'form-doc-1',
+        tenantId: 'tenant-1',
+        projectId: 'project-1',
+        publicRef: 'public-ref-1',
+        shareRef: 'share-ref-1',
+        shareCode: 'share-001',
+        schemaVersion: '2.0.0',
+        capabilities: {
+          experience: {
+            security: {
+              publicSecureMode: 'link_only',
+              access: {
+                whoCanAccess: 'selected_users',
+                allowedRoles: [],
+                allowedUsers: ['approved@example.com'],
+                restrictByLocation: false,
+              },
+              authentication: {
+                requireLogin: true,
+                allowAnonymous: false,
+              },
+            },
+          },
+        },
+      },
+      canonicalRef: 'share-ref-1',
+      resolvedBy: 'shareRef',
+    });
+    mockUser.findOne.mockResolvedValue(makeUserDoc({ email: 'denied@example.com' }));
+
+    await expect(
+      service.issueAccessLink({
+        reference: 'share-ref-1',
+        identifier: 'denied@example.com',
+      })
+    ).rejects.toMatchObject({
+      message: 'This account is not permitted to access this secure form.',
     });
   });
 });

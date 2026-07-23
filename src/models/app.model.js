@@ -23,6 +23,14 @@ const allowedApps = [
   'HaloCompliance',
   'HaloInsight',
   'HaloProperties',
+  'Excel',
+  'GoogleDrive',
+  'MicrosoftWord',
+  'Slides',
+  'Gmail',
+  'Slack',
+  'Teams',
+  'Webhook',
 ];
 
 const appSchema = mongoose.Schema(

@@ -86,10 +86,23 @@ const findCalendarSlot = (calendarRows, submissionDate) => {
         if (Array.isArray(day.dates) && day.dates.includes(submissionDate)) {
           return {
             row,
-            totalSlots: day.count || day.frequency_per_day || 1,
+            totalSlots:
+              day.submission_limit_per_date ||
+              day.frequency_per_day ||
+              day.count ||
+              1,
           };
         }
       }
+    }
+
+    const monthly = row.monthly_config || {};
+    if (Array.isArray(monthly.dates) && monthly.dates.includes(submissionDate)) {
+      return {
+        row,
+        totalSlots:
+          monthly.submission_limit_per_date || monthly.frequency_per_day || 1,
+      };
     }
   }
   return null;
@@ -239,8 +252,21 @@ const getSubmissionWindowStatus = async ({
   if (!isAccepting) {
     const futureDates = [];
     calendarRows.forEach((row) => {
-      const config = row.daily_config || row.weekly_config || {};
-      (config.dates || []).forEach((dateStr) => {
+      const dateSets = [];
+      if (Array.isArray(row?.daily_config?.dates)) {
+        dateSets.push(row.daily_config.dates);
+      }
+      if (Array.isArray(row?.monthly_config?.dates)) {
+        dateSets.push(row.monthly_config.dates);
+      }
+      if (Array.isArray(row?.weekly_config?.days)) {
+        row.weekly_config.days.forEach((day) => {
+          if (Array.isArray(day?.dates)) {
+            dateSets.push(day.dates);
+          }
+        });
+      }
+      dateSets.flat().forEach((dateStr) => {
         if (dateStr >= todayStr) {
           futureDates.push(dateStr);
         }
@@ -289,7 +315,8 @@ const getSubmissionWindowStatus = async ({
  *
  *   - "none"   → no specific date schedule; returns { trackingMode: 'none', dates: null }
  *   - "daily"  → dates come from daily_config.dates[], slots from frequency_per_day
- *   - "weekly" → dates come from weekly_config.days[].dates[], slots from each day's count
+ *   - "weekly" → dates come from weekly_config.days[].dates[], slots from each day's per-date limit
+ *   - "monthly" → dates come from monthly_config.dates[], slots from submission_limit_per_date
  *
  * @param {{ tenantId, projectId, nodeId, month }} opts   month = "YYYY-MM-DD"
  * @returns {{
@@ -343,11 +370,18 @@ const getAllowedDates = async ({ tenantId, projectId, nodeId, month }) => {
   } else if (trackingMode === 'weekly') {
     const wc = cal.weekly_config || {};
     for (const dayDef of (wc.days || [])) {
-      // weekly_config.days[].count = number of slots for that day type
-      const freq = dayDef.count || 1;
+      const freq =
+        dayDef.submission_limit_per_date || dayDef.frequency_per_day || 1;
       for (const dateStr of (dayDef.dates || [])) {
         slots.push({ date: dateStr, required: freq, dayLabel: dayDef.name || DAY_NAMES[dayDef.day] });
       }
+    }
+  } else if (trackingMode === 'monthly') {
+    const mc = cal.monthly_config || {};
+    const freq = mc.submission_limit_per_date || 1;
+    for (const dateStr of mc.dates || []) {
+      const dow = new Date(dateStr + 'T00:00:00Z').getUTCDay();
+      slots.push({ date: dateStr, required: freq, dayLabel: DAY_NAMES[dow] });
     }
   }
 

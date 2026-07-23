@@ -18,6 +18,7 @@ const exportSubmissionsCSV = async (filters = {}) => {
     const {
       tenant_id,
       project_id,
+      project_ids,
       status,
       month,
       year,
@@ -62,6 +63,13 @@ const exportSubmissionsCSV = async (filters = {}) => {
     if (project_id) {
       query += ` AND fs.project_id = $${paramIndex++}`;
       values.push(project_id);
+    } else if (Array.isArray(project_ids)) {
+      if (project_ids.length === 0) {
+        query += ' AND 1 = 0';
+      } else {
+        query += ` AND fs.project_id = ANY($${paramIndex++}::text[])`;
+        values.push(project_ids);
+      }
     }
 
     if (status) {
@@ -602,7 +610,7 @@ const generateCSV = (data, headers) => {
  */
 const getExportStats = async (filters = {}) => {
   try {
-    const { tenant_id, project_id, data_type } = filters;
+    const { tenant_id, project_id, project_ids, data_type } = filters;
 
     let tableName = 'form_submissions';
     let tenantColumn = 'tenant_id';
@@ -647,6 +655,13 @@ const getExportStats = async (filters = {}) => {
     if (project_id) {
       conditions.push(`${projectColumn} = $${paramIndex++}`);
       values.push(project_id);
+    } else if (Array.isArray(project_ids)) {
+      if (project_ids.length === 0) {
+        conditions.push('1 = 0');
+      } else {
+        conditions.push(`${projectColumn} = ANY($${paramIndex++}::text[])`);
+        values.push(project_ids);
+      }
     }
 
     if (conditions.length > 0) {

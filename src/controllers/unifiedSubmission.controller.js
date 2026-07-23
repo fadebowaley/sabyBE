@@ -17,6 +17,7 @@ const { logActivity } = require('../utils/activityLogger');
 const SubmissionModel = require('../models/submission.model');
 const ActivityLogModel = require('../models/activityLog.model');
 const ProjectForm = require('../models/projectForm.model');
+const { Payment, PaymentSettlement } = require('../models');
 const {
   eventCalendarService,
   eventComplianceService,
@@ -27,6 +28,15 @@ const Nodes = require('../models/node.model');
 const { postgresPool } = require('../config/postgres');
 const { buildDeterministicIdempotencyKey } = require('../utils/idempotency');
 const copilotActionService = require('../services/copilotAction.service');
+const publicSubmissionValidationService = require('../services/publicSubmissionValidation.service');
+const projectFormInvoiceService = require('../services/projectFormInvoice.service');
+const {
+  buildFinancialSubmissionData,
+  buildTransactionMeta,
+} = require('../services/submissionFinancialFields.service');
+
+const asObject = (value) =>
+  value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 
 const resolveNodeIdToObjectId = async (tenantId, nodeIdOrObjectId) => {
   if (!nodeIdOrObjectId) return null;
@@ -610,6 +620,238 @@ async function resolveNodeMetadata(submissions = []) {
   return nodeMap;
 }
 
+const maskAccountNumber = (value) => {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (!digits) return null;
+  return digits.length <= 4 ? `••••${digits}` : `••••${digits.slice(-4)}`;
+};
+
+const sanitizeSettlementAccount = (account = {}) => {
+  const source = asObject(account);
+  if (!Object.keys(source).length) return null;
+  return {
+    bankName: source.bankName || null,
+    accountName: source.accountName || null,
+    accountNumber: maskAccountNumber(source.accountNumber),
+  };
+};
+
+const sanitizePaymentSummary = (payment) => {
+  if (!payment) return null;
+  return {
+    id: String(payment._id || payment.id || ''),
+    reference: payment.reference || null,
+    status: payment.status || null,
+    amount: payment.amount ?? null,
+    total: payment.total ?? null,
+    currency: payment.currency || null,
+    paymentMethod: payment.paymentMethod || null,
+    providerRef: payment.providerRef || null,
+    completedAt: payment.completedAt || null,
+    createdAt: payment.createdAt || null,
+    updatedAt: payment.updatedAt || null,
+  };
+};
+
+const sanitizeSettlementSummary = (settlement) => {
+  if (!settlement) return null;
+  return {
+    id: String(settlement._id || settlement.id || ''),
+    paymentReference: settlement.paymentReference || null,
+    status: settlement.status || null,
+    availabilityStatus: settlement.availabilityStatus || null,
+    fundingStatus: settlement.fundingStatus || null,
+    guardrailStatus: settlement.guardrailStatus || null,
+    guardrailReason: settlement.guardrailReason || null,
+    provider: settlement.provider || null,
+    currency: settlement.currency || null,
+    amount: settlement.amount ?? null,
+    netAmount: settlement.netAmount ?? null,
+    destinationType: settlement.destinationType || null,
+    destinationNodeId: settlement.destinationNodeId || null,
+    destinationNodeReference: settlement.destinationNodeReference || null,
+    destinationNodeName: settlement.destinationNodeName || null,
+    sourceNodeId: settlement.sourceNodeId || null,
+    sourceNodeReference: settlement.sourceNodeReference || null,
+    sourceNodeName: settlement.sourceNodeName || null,
+    targetLevelId: settlement.targetLevelId || null,
+    destinationAccount: sanitizeSettlementAccount(settlement.destinationAccount),
+    providerSettlementId: settlement.providerSettlementId || null,
+    providerSettledAt: settlement.providerSettledAt || null,
+    providerTransferId: settlement.providerTransferId || null,
+    attempts: settlement.attempts ?? 0,
+    failureReason: settlement.failureReason || null,
+    createdAt: settlement.createdAt || null,
+    updatedAt: settlement.updatedAt || null,
+  };
+};
+
+const getSubmissionPaymentLookup = (submission) => {
+  const meta = asObject(submission?.meta);
+  const transaction = asObject(meta.transaction);
+  const refs = [
+    transaction.paymentIntentReference,
+    transaction.paymentReference,
+    transaction.reference,
+    meta.paymentIntentReference,
+    meta.paymentReference,
+  ]
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean);
+  const ids = [transaction.paymentIntentId, transaction.paymentId, meta.paymentIntentId, meta.paymentId]
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean);
+  return { refs, ids };
+};
+
+async function resolvePaymentSettlementMetadata(submissions = []) {
+  if (!Array.isArray(submissions) || submissions.length === 0) {
+    return new Map();
+  }
+
+  const tenantIds = [
+    ...new Set(
+      submissions
+        .map((submission) => String(submission.tenant_id || '').trim())
+        .filter(Boolean)
+    ),
+  ];
+  const submissionIds = submissions
+    .map((submission) => String(submission.id || '').trim())
+    .filter(Boolean);
+  const referenceSet = new Set();
+  const paymentIdSet = new Set();
+
+  submissions.forEach((submission) => {
+    const lookup = getSubmissionPaymentLookup(submission);
+    lookup.refs.forEach((entry) => referenceSet.add(entry));
+    lookup.ids.forEach((entry) => paymentIdSet.add(entry));
+  });
+
+  const paymentOr = [];
+  if (submissionIds.length) {
+    paymentOr.push({ submissionId: { $in: submissionIds } });
+    paymentOr.push({ 'metadata.submissionDraftId': { $in: submissionIds } });
+  }
+  if (referenceSet.size) {
+    paymentOr.push({ reference: { $in: [...referenceSet] } });
+  }
+  const validPaymentObjectIds = [...paymentIdSet].filter((id) =>
+    mongoose.Types.ObjectId.isValid(id)
+  );
+  if (validPaymentObjectIds.length) {
+    paymentOr.push({
+      _id: {
+        $in: validPaymentObjectIds.map((id) => new mongoose.Types.ObjectId(id)),
+      },
+    });
+  }
+
+  if (!paymentOr.length) {
+    return new Map();
+  }
+
+  const paymentQuery = { $or: paymentOr };
+  if (tenantIds.length) {
+    paymentQuery.tenantId = { $in: tenantIds };
+  }
+
+  const payments = await Payment.find(paymentQuery)
+    .select(
+      '_id tenantId reference status amount total currency paymentMethod providerRef submissionId completedAt createdAt updatedAt metadata.submissionDraftId'
+    )
+    .lean();
+
+  payments.forEach((payment) => {
+    if (payment.reference) referenceSet.add(String(payment.reference));
+    if (payment._id) paymentIdSet.add(String(payment._id));
+  });
+
+  const settlementOr = [];
+  if (referenceSet.size) {
+    settlementOr.push({ paymentReference: { $in: [...referenceSet] } });
+  }
+  if (submissionIds.length) {
+    settlementOr.push({ submissionId: { $in: submissionIds } });
+  }
+  const settlementPaymentObjectIds = [...paymentIdSet].filter((id) =>
+    mongoose.Types.ObjectId.isValid(id)
+  );
+  if (settlementPaymentObjectIds.length) {
+    settlementOr.push({
+      paymentId: {
+        $in: settlementPaymentObjectIds.map((id) => new mongoose.Types.ObjectId(id)),
+      },
+    });
+  }
+
+  const settlementQuery = settlementOr.length ? { $or: settlementOr } : null;
+  if (settlementQuery && tenantIds.length) {
+    settlementQuery.tenantId = { $in: tenantIds };
+  }
+
+  const settlements = settlementQuery
+    ? await PaymentSettlement.find(settlementQuery)
+        .select(
+          '_id tenantId paymentId paymentReference submissionId provider currency amount netAmount status availabilityStatus fundingStatus guardrailStatus guardrailReason destinationType destinationNodeId destinationNodeReference destinationNodeName sourceNodeId sourceNodeReference sourceNodeName targetLevelId destinationAccount providerSettlementId providerSettledAt providerTransferId attempts failureReason createdAt updatedAt'
+        )
+        .lean()
+    : [];
+
+  const paymentByReference = new Map();
+  const paymentById = new Map();
+  const paymentBySubmissionId = new Map();
+  payments.forEach((payment) => {
+    if (payment.reference) paymentByReference.set(String(payment.reference), payment);
+    if (payment._id) paymentById.set(String(payment._id), payment);
+    if (payment.submissionId) paymentBySubmissionId.set(String(payment.submissionId), payment);
+    if (payment.metadata?.submissionDraftId) {
+      paymentBySubmissionId.set(String(payment.metadata.submissionDraftId), payment);
+    }
+  });
+
+  const settlementByReference = new Map();
+  const settlementByPaymentId = new Map();
+  const settlementBySubmissionId = new Map();
+  settlements.forEach((settlement) => {
+    if (settlement.paymentReference) {
+      settlementByReference.set(String(settlement.paymentReference), settlement);
+    }
+    if (settlement.paymentId) {
+      settlementByPaymentId.set(String(settlement.paymentId), settlement);
+    }
+    if (settlement.submissionId) {
+      settlementBySubmissionId.set(String(settlement.submissionId), settlement);
+    }
+  });
+
+  const result = new Map();
+  submissions.forEach((submission) => {
+    const submissionId = String(submission.id || '');
+    const lookup = getSubmissionPaymentLookup(submission);
+    const payment =
+      lookup.refs.map((ref) => paymentByReference.get(ref)).find(Boolean) ||
+      lookup.ids.map((id) => paymentById.get(id)).find(Boolean) ||
+      paymentBySubmissionId.get(submissionId) ||
+      null;
+    const settlement =
+      (payment?.reference ? settlementByReference.get(String(payment.reference)) : null) ||
+      (payment?._id ? settlementByPaymentId.get(String(payment._id)) : null) ||
+      lookup.refs.map((ref) => settlementByReference.get(ref)).find(Boolean) ||
+      settlementBySubmissionId.get(submissionId) ||
+      null;
+
+    if (payment || settlement) {
+      result.set(submissionId, {
+        payment: sanitizePaymentSummary(payment),
+        settlement: sanitizeSettlementSummary(settlement),
+      });
+    }
+  });
+
+  return result;
+}
+
 function buildNodeHierarchyPayload(nodeDoc, nodeMap) {
   if (!nodeDoc) {
     return null;
@@ -893,9 +1135,15 @@ const listSubmissions = catchAsync(async (req, res) => {
 
   logger.info(`[listSubmissions] Retrieved ${submissions.length} submissions`);
 
-  const nodeMetadata = await resolveNodeMetadata(submissions);
+  const [nodeMetadata, paymentSettlementMetadata] = await Promise.all([
+    resolveNodeMetadata(submissions),
+    resolvePaymentSettlementMetadata(submissions),
+  ]);
   const enrichedSubmissions = submissions.map((submission) =>
-    decorateSubmissionWithStructuredData(submission, nodeMetadata)
+    ({
+      ...decorateSubmissionWithStructuredData(submission, nodeMetadata),
+      paymentSettlement: paymentSettlementMetadata.get(String(submission.id || '')) || null,
+    })
   );
   const summary = buildSubmissionSummary(enrichedSubmissions);
 
@@ -1616,18 +1864,43 @@ const submitPublicDataByReference = catchAsync(async (req, res) => {
     reference
   );
 
-  const projectForm = resolved.projectForm;
+  const validationResult =
+    await publicSubmissionValidationService.runPublicPreSubmitPipeline({
+      projectForm: resolved.projectForm,
+      submissionData: payload,
+      metadata: {
+        ...(meta || {}),
+        publicAccess: {
+          reference,
+        },
+      },
+      routeType: 'public_standard',
+      actorContext: {
+        ip: req.ip || req.headers['x-forwarded-for'] || null,
+      },
+    });
+  const projectForm = validationResult.projectForm;
+  const normalizedSubmissionData = validationResult.submissionData || payload;
+  const invoiceSnapshot = await projectFormInvoiceService.evaluateInvoiceSnapshot({
+    projectForm,
+    submissionData: normalizedSubmissionData,
+    allocateNumber: true,
+  });
 
   const submissionBody = {
     tenantId: projectForm.tenantId,
     projectId: projectForm.projectId,
-    project_name: projectForm.configuration?.projectName,
-    project_category:
-      projectForm.configuration?.category ||
-      projectForm.configuration?.analysisProfile?.domain,
+    project_name: projectForm?.identity?.name || null,
+    project_category: Array.isArray(projectForm?.identity?.tags)
+      ? projectForm.identity.tags[0] || null
+      : null,
     formId: projectForm.formId,
     nodeId: nodeId || nodeIdAlias || null,
-    payload,
+    payload: buildFinancialSubmissionData({
+      submissionData: normalizedSubmissionData,
+      metadata: meta,
+      invoiceSnapshot,
+    }),
     source: 'public_standard_form',
     meta: {
       ...(meta || {}),
@@ -1640,6 +1913,11 @@ const submitPublicDataByReference = catchAsync(async (req, res) => {
         shareCode: projectForm.shareCode || null,
         pipelineTarget: 'postgres_unified',
       },
+      requestContext: {
+        ip: req.ip || req.headers['x-forwarded-for'] || null,
+        userAgent: req.get('user-agent') || null,
+      },
+      transaction: buildTransactionMeta(meta, invoiceSnapshot),
       anonymous: true,
     },
     event_date: eventDate,

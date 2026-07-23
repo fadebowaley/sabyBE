@@ -12,6 +12,9 @@ const {
   emailService,
   apiKeyService,
   tenantOnboardingService,
+  sessionService,
+  mfaService,
+  userSecurityService,
 } = require('../services');
 const { Role, User } = require('../models');
 const logger = require('../config/logger');
@@ -81,6 +84,79 @@ const deriveSocialNameParts = ({ firstname, lastname, name, email }) => {
 
 const generateSocialPassword = () =>
   `Saby${crypto.randomBytes(12).toString('hex')}A1`;
+
+const resolveClientIp = (req) =>
+  String(
+    req.headers['x-forwarded-for'] ||
+      req.headers['x-real-ip'] ||
+      req.ip ||
+      req.socket?.remoteAddress ||
+      ''
+  )
+    .split(',')[0]
+    .trim();
+
+const normalizeDeviceId = (value) => {
+  const normalized = String(value || '').trim();
+  return /^[a-zA-Z0-9:_-]{16,160}$/.test(normalized) ? normalized : null;
+};
+
+const resolveTrustedDeviceId = (req) =>
+  normalizeDeviceId(
+    req.headers['x-saby-device-id'] ||
+      req.body?.deviceId ||
+      req.cookies?.saby_trusted_device_id
+  );
+
+const hashDeviceKey = (value) =>
+  crypto.createHash('sha256').update(String(value || '')).digest('hex');
+
+const parseDeviceFromRequest = (req) => {
+  const userAgent = String(req.headers['user-agent'] || '').trim();
+  const browser = /Edg\//.test(userAgent)
+    ? 'Microsoft Edge'
+    : /Chrome\//.test(userAgent)
+      ? 'Chrome'
+      : /Safari\//.test(userAgent) && !/Chrome\//.test(userAgent)
+        ? 'Safari'
+        : /Firefox\//.test(userAgent)
+          ? 'Firefox'
+          : userAgent
+            ? 'Browser'
+            : 'Unknown browser';
+  const platform = /Macintosh|Mac OS X/.test(userAgent)
+    ? 'macOS'
+    : /Windows/.test(userAgent)
+      ? 'Windows'
+      : /Android/.test(userAgent)
+        ? 'Android'
+        : /iPhone|iPad|iPod/.test(userAgent)
+          ? 'iOS'
+          : /Linux/.test(userAgent)
+            ? 'Linux'
+            : null;
+  const deviceType = /iPhone|Android.*Mobile/.test(userAgent)
+    ? 'mobile'
+    : /iPad|Tablet|Android/.test(userAgent)
+      ? 'tablet'
+      : 'desktop';
+  const deviceId = resolveTrustedDeviceId(req);
+  const fallbackIdentity = [browser, platform || 'unknown-platform', deviceType, userAgent]
+    .filter(Boolean)
+    .join('|');
+  const deviceKey = hashDeviceKey(deviceId ? `trusted:${deviceId}` : `ua:${fallbackIdentity}`);
+
+  return {
+    deviceId,
+    deviceKey,
+    deviceType,
+    name: platform ? `${browser} on ${platform}` : browser,
+    browser,
+    platform,
+    ip: resolveClientIp(req),
+    userAgent,
+  };
+};
 
 const upsertSocialAuthAudit = async ({
   user,
@@ -278,8 +354,10 @@ const buildAuthUserResponse = async (user) => {
   };
 };
 
-const buildAuthLoginPayload = async (user) => {
-  const tokens = await tokenService.generateAuthTokens(user);
+const buildAuthLoginPayload = async (user, req) => {
+  const tokens = await tokenService.generateAuthTokens(user, {
+    device: req ? parseDeviceFromRequest(req) : undefined,
+  });
   const userResponse = await buildAuthUserResponse(user);
   return { user: userResponse, tokens };
 };
@@ -342,7 +420,16 @@ const login = catchAsync(async (req, res) => {
       password,
       'web'
     );
-    const payload = await buildAuthLoginPayload(user);
+    const mfaChallenge = await mfaService.createLoginChallenge(user);
+    if (mfaChallenge.required) {
+      return res.status(httpStatus.OK).send({
+        mfaRequired: true,
+        message: 'Multi-factor authentication is required',
+        email: user.email,
+        ...mfaChallenge,
+      });
+    }
+    const payload = await buildAuthLoginPayload(user, req);
     res.send(payload);
   } catch (error) {
     // If user exists but is unverified, return phone number for OTP flow
@@ -440,7 +527,8 @@ const verifyPhoneLoginOtp = catchAsync(async (req, res) => {
   }
 
   const refreshedUser = await userService.getUserById(user.id);
-  const payload = await buildAuthLoginPayload(refreshedUser);
+  await authService.assertMainAppAccess(refreshedUser);
+  const payload = await buildAuthLoginPayload(refreshedUser, req);
   res.status(httpStatus.OK).send(payload);
 });
 
@@ -544,7 +632,8 @@ const socialLogin = catchAsync(async (req, res) => {
     isNewUser,
   });
   const refreshedUser = await userService.getUserById(user.id);
-  const payload = await buildAuthLoginPayload(refreshedUser);
+  await authService.assertMainAppAccess(refreshedUser);
+  const payload = await buildAuthLoginPayload(refreshedUser, req);
   res.status(httpStatus.OK).send({
     ...payload,
     auth: {
@@ -836,6 +925,96 @@ const changePasswordAuthenticated = catchAsync(async (req, res) => {
     success: true,
     message: 'Password changed successfully',
   });
+});
+
+const getSecurityOverview = catchAsync(async (req, res) => {
+  const result = await userSecurityService.getSecurityOverview({
+    userId: req.user._id || req.user.id,
+    currentRefreshToken: req.body?.refreshToken || req.query?.refreshToken,
+  });
+  res.status(httpStatus.OK).send(result);
+});
+
+const getSessions = catchAsync(async (req, res) => {
+  const result = await sessionService.listUserSessions({
+    userId: req.user._id || req.user.id,
+    currentRefreshToken: req.query?.refreshToken,
+  });
+  res.status(httpStatus.OK).send({ results: result });
+});
+
+const logoutAllSessions = catchAsync(async (req, res) => {
+  const result = await sessionService.revokeAllUserSessions({
+    userId: req.user._id || req.user.id,
+  });
+  res.status(httpStatus.OK).send({
+    success: true,
+    message: 'All sessions revoked successfully',
+    ...result,
+  });
+});
+
+const setupAuthenticatorMfa = catchAsync(async (req, res) => {
+  const result = await mfaService.setupAuthenticator(req.user._id || req.user.id);
+  res.status(httpStatus.OK).send(result);
+});
+
+const verifyAuthenticatorMfa = catchAsync(async (req, res) => {
+  const result = await mfaService.verifyAuthenticator({
+    userId: req.user._id || req.user.id,
+    code: req.body.code,
+  });
+  res.status(httpStatus.OK).send({
+    success: true,
+    message: 'Authenticator verified successfully',
+    ...result,
+  });
+});
+
+const toggleAuthenticatorMfa = catchAsync(async (req, res) => {
+  const result = await mfaService.setAuthenticatorEnabled({
+    userId: req.user._id || req.user.id,
+    enabled: req.body.enabled,
+  });
+  res.status(httpStatus.OK).send(result);
+});
+
+const generatePasskeyRegistrationOptions = catchAsync(async (req, res) => {
+  const result = await mfaService.generatePasskeyRegistrationOptions(req.user._id || req.user.id);
+  res.status(httpStatus.OK).send(result);
+});
+
+const verifyPasskeyRegistration = catchAsync(async (req, res) => {
+  const result = await mfaService.verifyPasskeyRegistration({
+    userId: req.user._id || req.user.id,
+    credential: req.body,
+  });
+  res.status(httpStatus.OK).send(result);
+});
+
+const generatePasskeyAssertionOptions = catchAsync(async (req, res) => {
+  const result = await mfaService.generatePasskeyAssertionOptions({
+    mfaToken: req.body.mfaToken,
+  });
+  res.status(httpStatus.OK).send(result);
+});
+
+const verifyPasskeyAssertion = catchAsync(async (req, res) => {
+  const user = await mfaService.verifyPasskeyAssertion({
+    mfaToken: req.body.mfaToken,
+    credential: req.body.credential,
+  });
+  const payload = await buildAuthLoginPayload(user, req);
+  res.status(httpStatus.OK).send(payload);
+});
+
+const verifyAuthenticatorLoginMfa = catchAsync(async (req, res) => {
+  const user = await mfaService.verifyAuthenticatorLogin({
+    mfaToken: req.body.mfaToken,
+    code: req.body.code,
+  });
+  const payload = await buildAuthLoginPayload(user, req);
+  res.status(httpStatus.OK).send(payload);
 });
 
 /**
@@ -1377,6 +1556,17 @@ module.exports = {
   changePassword,
   verifyPassword,
   changePasswordAuthenticated,
+  getSecurityOverview,
+  getSessions,
+  logoutAllSessions,
+  setupAuthenticatorMfa,
+  verifyAuthenticatorMfa,
+  toggleAuthenticatorMfa,
+  generatePasskeyRegistrationOptions,
+  verifyPasskeyRegistration,
+  generatePasskeyAssertionOptions,
+  verifyPasskeyAssertion,
+  verifyAuthenticatorLoginMfa,
   requestEmailChangeOtp,
   requestPhoneChangeOtp,
   sendOnboardingPhoneOtp,
