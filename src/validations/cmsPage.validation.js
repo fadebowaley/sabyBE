@@ -57,6 +57,7 @@ const pageBody = Joi.object({
   seoTitle: Joi.string().allow('').max(180).optional(),
   seoDescription: Joi.string().allow('').max(300).optional(),
   images: Joi.array().items(image).optional(),
+  id: Joi.any().strip(),
   _id: Joi.any().strip(),
   __v: Joi.any().strip(),
   createdAt: Joi.any().strip(),
