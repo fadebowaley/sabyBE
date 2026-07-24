@@ -1,7 +1,11 @@
 const express = require('express');
 const request = require('supertest');
 
-const mockAuthService = {};
+
+const mockAuthService = {
+  assertMainAppAccess: jest.fn(),
+};
+
 const mockUserService = {
   getUserByEmail: jest.fn(),
   createUser: jest.fn(),
@@ -85,13 +89,24 @@ const buildUserDoc = (overrides = {}) => ({
 });
 
 describe('auth social-login route', () => {
+
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockTokenService.generateAuthTokens.mockResolvedValue({
-      access: { token: 'access-token', expires: new Date().toISOString() },
-      refresh: { token: 'refresh-token', expires: new Date().toISOString() },
-    });
+  jest.clearAllMocks();
+
+  mockAuthService.assertMainAppAccess.mockResolvedValue(true);
+
+  mockTokenService.generateAuthTokens.mockResolvedValue({
+    access: {
+      token: 'access-token',
+      expires: new Date().toISOString(),
+    },
+    refresh: {
+      token: 'refresh-token',
+      expires: new Date().toISOString(),
+    },
   });
+});
+
 
   test('creates a user on first Google social sign-in', async () => {
     const createdUser = buildUserDoc({
@@ -125,11 +140,15 @@ describe('auth social-login route', () => {
         emailVerified: true,
       });
 
+    console.log('SIGNUP ERROR:', res.status, res.body);
+
     expect(res.status).toBe(200);
     expect(res.body?.auth).toEqual({
       provider: 'google',
       mode: 'signup',
     });
+
+
     expect(mockUserService.createUser).toHaveBeenCalledWith(
       expect.objectContaining({
         email: 'new.user@example.com',
@@ -172,6 +191,8 @@ describe('auth social-login route', () => {
         email: 'existing.user@example.com',
         emailVerified: true,
       });
+
+    console.log('LOGIN ERROR:', res.status, res.body);
 
     expect(res.status).toBe(200);
     expect(res.body?.auth).toEqual({

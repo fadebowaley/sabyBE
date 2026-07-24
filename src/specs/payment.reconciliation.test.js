@@ -2,6 +2,10 @@ const mockPaymentModel = {
   find: jest.fn(),
 };
 
+const mockPaymentSettlementModel = {
+  find: jest.fn(),
+};
+
 const mockPaymentEventService = {
   appendPaymentEvent: jest.fn(),
 };
@@ -12,6 +16,7 @@ const mockPaymentRemittanceService = {
 
 jest.mock('../models', () => ({
   Payment: mockPaymentModel,
+  PaymentSettlement: mockPaymentSettlementModel,
 }));
 
 jest.mock('../services/paymentEvent.service', () => mockPaymentEventService);
@@ -26,9 +31,12 @@ const buildQueryChain = (rows) => ({
 
 describe('payment.reconciliation.service', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockPaymentEventService.appendPaymentEvent.mockResolvedValue(true);
-  });
+  jest.clearAllMocks();
+  mockPaymentEventService.appendPaymentEvent.mockResolvedValue(true);
+  mockPaymentSettlementModel.find.mockReturnValue(
+    buildQueryChain([])
+  );
+});
 
   test('marks stuck processing payments as failed and queues remittance for eligible completions', async () => {
     const stuckPayment = {

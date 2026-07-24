@@ -14,15 +14,27 @@ const mockPaymentWebhookEventModel = {
   findByIdAndUpdate: jest.fn(),
 };
 
-jest.mock('../config/config', () => ({
-  payment: {
-    webhookSecret: 'test-webhook-secret',
-    webhookToleranceSec: 300,
-  },
-}));
+const mockPaymentEventModel = {
+  create: jest.fn(),
+  findOne: jest.fn(),
+};
+
+jest.mock('../config/config', () => {
+  const actualConfig = jest.requireActual('../config/config');
+  return {
+    ...actualConfig,
+    payment: {
+      ...actualConfig.payment,
+      webhookSecret: 'test-webhook-secret',
+      webhookToleranceSec: 300,
+    },
+  };
+});
+
 
 jest.mock('../models', () => ({
   PaymentWebhookEvent: mockPaymentWebhookEventModel,
+  PaymentEvent: mockPaymentEventModel,
 }));
 
 jest.mock('../services/payment.service', () => mockPaymentService);
