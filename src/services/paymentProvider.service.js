@@ -306,8 +306,22 @@ const initializeFlutterwaveCheckout = async ({
     body: JSON.stringify(payload),
   });
 
-  const data = await response.json().catch(() => ({}));
+  const rawText = await response.text().catch(() => '');
+  console.log('[Flutterwave] Response status:', response.status);
+  console.log('[Flutterwave] cf-mitigated:', response.headers.get('cf-mitigated') || 'N/A');
+  console.log('[Flutterwave] cf-ray:', response.headers.get('cf-ray') || 'N/A');
+  console.log('[Flutterwave] Raw response (first 500 chars):', rawText.substring(0, 500));
+
+  let data;
+  try {
+    data = JSON.parse(rawText);
+  } catch (_) {
+    data = {};
+    console.log('[Flutterwave] Response is NOT valid JSON — likely Cloudflare challenge page');
+  }
+
   if (!response.ok || data?.status !== 'success') {
+    console.log('[Flutterwave] FAILED — status:', response.status, 'message:', data?.message || 'No message');
     throw new ApiError(
       httpStatus.BAD_GATEWAY,
       data?.message || 'Failed to initialize Flutterwave checkout.'
