@@ -65,6 +65,7 @@ const copilotRoute = require('./copilot.route');
 const cmsPageRoute = require('./cmsPage.route');
 const whatsappRoute = require('./whatsapp.route');
 const executiveIntelligenceRoute = require('./executiveIntelligence.route');
+const geoRoute = require('./geo.route');
 
 // declare rest of the routes: nodeLevel, nodeStructure, node etc.
 const config = require('../../config/config');
@@ -280,6 +281,10 @@ const defaultRoutes = [
   {
     path: '/executive-intelligence',
     route: executiveIntelligenceRoute,
+  },
+  {
+    path: '/geo',
+    route: geoRoute,
   },
   {
     path: '/whatsapp',
