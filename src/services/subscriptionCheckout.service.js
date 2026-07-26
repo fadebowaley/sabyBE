@@ -54,7 +54,7 @@ const initializeSubscriptionCheckout = async ({ user, payload = {} }) => {
   const currency = normalizeCurrency(payload.currency);
   const provider = normalizeProvider(payload.provider);
   const addOnIds = normalizeAddonIds(payload.addOns);
-  const promoCode = String(payload.promoCode || '').trim().toUpperCase() || null;
+  const promoCode = String(payload.code || payload.promoCode || '').trim().toUpperCase() || null;
   await loadSubscriptionCatalog();
 
   const pricing = buildSubscriptionCharge({
@@ -126,6 +126,7 @@ const initializeSubscriptionCheckout = async ({ user, payload = {} }) => {
       credits: pricing.credits,
       promo: pricing.promo,
       promoCode,
+      code: promoCode,
       gatewayPolicy: SUBSCRIPTION_GATEWAY_POLICY.model,
       checkoutTitle: 'Saby Subscription',
       checkoutDescription: `${plan.name} subscription`,

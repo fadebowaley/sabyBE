@@ -228,7 +228,18 @@ const DEFAULT_SUBSCRIPTION_CATALOG = {
     amount: 0,
     label: 'Finance credit',
   },
-  creditRules: [],
+  creditRules: [
+    {
+      id: 'credit_rule_100pct',
+      label: 'Full credit',
+      enabled: false,
+      mode: 'percentage',
+      value: 100,
+      currency: null,
+      startsAt: null,
+      expiresAt: null,
+    },
+  ],
   manualValidation: {
     enabled: true,
     note: 'Manual payment review available for finance admins.',
@@ -343,9 +354,11 @@ const normalizePromoCode = (promo = {}) => {
 
 const normalizeAdjustmentRule = (rule = {}, fallback = {}) => {
   const id = String(rule.id || fallback.id || `${Date.now()}`).trim();
+  const code = String(rule.code || '').trim().toUpperCase() || null;
   const label = String(rule.label || fallback.label || 'Adjustment').trim();
   return {
     id,
+    code,
     label,
     enabled: rule.enabled !== false,
     mode: String(rule.mode || fallback.mode || 'fixed').trim().toLowerCase() === 'percentage'
@@ -623,39 +636,61 @@ const buildSubscriptionCharge = ({
       normalizedCurrency
     );
   const automaticDiscounts = [];
-  if (discountConfig.enabled === true) {
-    automaticDiscounts.push({
-      id: 'legacy_discount',
-      label: String(discountConfig.label || 'Finance discount'),
-      mode: String(discountConfig.mode || 'percentage'),
-      value: Number(discountConfig.value || 0),
-      amount: adjustmentAmount(discountConfig, subtotal),
-    });
-  }
-  (catalog.discountRules || []).filter(isRuleActive).forEach((rule) => {
-    automaticDiscounts.push({
-      ...rule,
-      amount: adjustmentAmount(rule, subtotal),
-    });
-  });
   const normalizedPromoCode = String(promoCode || '').trim().toUpperCase();
   let appliedPromo = null;
+  let resolvedType = null;
+
   if (normalizedPromoCode) {
-    const promo = (catalog.promoCodes || []).find(
-      (entry) => String(entry.code || '').trim().toUpperCase() === normalizedPromoCode
+    const matchCode = (entry, normalized) =>
+      String(entry.code || entry.id || '').trim().toUpperCase() === normalized;
+
+    let resolvedRule = null;
+
+    const discountRule = (catalog.discountRules || []).find((entry) =>
+      matchCode(entry, normalizedPromoCode)
     );
-    if (
-      !promo ||
-      !isRuleActive(promo) ||
-      (promo.maxRedemptions != null && Number(promo.maxRedemptions) === 0)
-    ) {
-      throw new ApiError(httpStatus.BAD_REQUEST, 'Promo code is invalid or unavailable.');
+    if (discountRule && isRuleActive(discountRule)) {
+      resolvedType = 'discount';
+      resolvedRule = discountRule;
+    } else {
+      const promo = (catalog.promoCodes || []).find((entry) =>
+        matchCode(entry, normalizedPromoCode)
+      );
+      if (
+        promo &&
+        isRuleActive(promo) &&
+        (promo.maxRedemptions == null || Number(promo.maxRedemptions) > 0)
+      ) {
+        resolvedType = 'promo';
+        resolvedRule = promo;
+      } else {
+        const creditRule = (catalog.creditRules || []).find((entry) =>
+          matchCode(entry, normalizedPromoCode)
+        );
+        if (creditRule && isRuleActive(creditRule)) {
+          resolvedType = 'credit';
+          resolvedRule = creditRule;
+        }
+      }
     }
-    appliedPromo = {
-      ...promo,
-      amount: adjustmentAmount(promo, subtotal),
-    };
-    automaticDiscounts.push(appliedPromo);
+
+    if (!resolvedRule) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Code is invalid or unavailable.');
+    }
+
+    if (resolvedType === 'discount' || resolvedType === 'promo') {
+      automaticDiscounts.push({
+        ...resolvedRule,
+        amount: adjustmentAmount(resolvedRule, subtotal),
+      });
+    }
+
+    if (resolvedType === 'promo') {
+      appliedPromo = {
+        ...resolvedRule,
+        amount: adjustmentAmount(resolvedRule, subtotal),
+      };
+    }
   }
   const discountAmount = roundAmount(
     automaticDiscounts.reduce((sum, rule) => sum + Number(rule.amount || 0), 0),
@@ -668,21 +703,17 @@ const buildSubscriptionCharge = ({
       : 0;
   const legacyCredit = catalog.credits || DEFAULT_SUBSCRIPTION_CATALOG.credits;
   const appliedCredits = [];
-  if (legacyCredit.enabled === true) {
-    appliedCredits.push({
-      id: 'legacy_credit',
-      label: String(legacyCredit.label || 'Finance credit'),
-      mode: 'fixed',
-      value: Number(legacyCredit.amount || 0),
-      amount: roundAmount(Number(legacyCredit.amount || 0), normalizedCurrency),
-    });
+  if (resolvedType === 'credit' && normalizedPromoCode) {
+    const creditRule = (catalog.creditRules || []).find((entry) =>
+      String(entry.code || entry.id || '').trim().toUpperCase() === normalizedPromoCode
+    );
+    if (creditRule && isRuleActive(creditRule)) {
+      appliedCredits.push({
+        ...creditRule,
+        amount: adjustmentAmount(creditRule, taxableBase + tax),
+      });
+    }
   }
-  (catalog.creditRules || []).filter(isRuleActive).forEach((rule) => {
-    appliedCredits.push({
-      ...rule,
-      amount: adjustmentAmount(rule, taxableBase + tax),
-    });
-  });
   const creditAmount = roundAmount(
     appliedCredits.reduce((sum, rule) => sum + Number(rule.amount || 0), 0),
     normalizedCurrency
