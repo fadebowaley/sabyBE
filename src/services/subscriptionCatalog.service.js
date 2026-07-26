@@ -354,7 +354,7 @@ const normalizePromoCode = (promo = {}) => {
 
 const normalizeAdjustmentRule = (rule = {}, fallback = {}) => {
   const id = String(rule.id || fallback.id || `${Date.now()}`).trim();
-  const code = String(rule.code || '').trim().toUpperCase() || null;
+  const code = String(rule.code || rule.label || '').trim().toUpperCase() || null;
   const label = String(rule.label || fallback.label || 'Adjustment').trim();
   return {
     id,
@@ -642,7 +642,7 @@ const buildSubscriptionCharge = ({
 
   if (normalizedPromoCode) {
     const matchCode = (entry, normalized) =>
-      String(entry.code || entry.id || '').trim().toUpperCase() === normalized;
+      String(entry.code || entry.label || entry.id || '').trim().toUpperCase() === normalized;
 
     let resolvedRule = null;
 
