@@ -190,8 +190,18 @@ const activateSubscriptionFromPayment = async (payment, context = {}) => {
     planSubtotal: Number(metadata.planSubtotal ?? 0),
     addOnsSubtotal: Number(metadata.addOnsSubtotal ?? 0),
     subtotal: Number(metadata.subtotal ?? 0),
+    taxableBase: Number(metadata.taxableBase ?? 0),
+    discount: Number(metadata.discount ?? 0),
+    credits: Number(metadata.credits ?? 0),
+    promoAmount: Number(metadata.promoAmount ?? 0),
     tax: Number(metadata.tax ?? 0),
     vatRate: Number(metadata.vatRate ?? 0),
+    adjustments: Array.isArray(metadata.adjustments)
+      ? metadata.adjustments
+      : Array.isArray(invoiceSnapshot.adjustments)
+        ? invoiceSnapshot.adjustments
+        : [],
+    checkoutMode: metadata.checkoutMode || null,
     lineItems: Array.isArray(invoiceSnapshot.lineItems)
       ? invoiceSnapshot.lineItems
       : [],

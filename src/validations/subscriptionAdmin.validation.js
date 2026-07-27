@@ -84,6 +84,22 @@ const startOrExtendTrial = {
   }),
 };
 
+const tenantDeletionParams = Joi.object({
+  tenantId: Joi.string().trim().min(1).required(),
+});
+
+const previewTenantDeletion = {
+  params: tenantDeletionParams,
+};
+
+const deleteTenant = {
+  params: tenantDeletionParams,
+  body: Joi.object({
+    confirmation: Joi.string().trim().min(1).required(),
+    securityKey: Joi.string().trim().min(1).required(),
+  }),
+};
+
 module.exports = {
   subscriptionStatuses,
   listAdminSubscriptions,
@@ -91,4 +107,6 @@ module.exports = {
   updateAdminSubscription,
   updateAdminSubscriptionStatus,
   startOrExtendTrial,
+  previewTenantDeletion,
+  deleteTenant,
 };

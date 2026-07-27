@@ -30,6 +30,20 @@ router
   );
 
 router
+  .route('/tenants/:tenantId/delete-preview')
+  .get(
+    validate(subscriptionAdminValidation.previewTenantDeletion),
+    subscriptionAdminController.previewTenantDeletion
+  );
+
+router
+  .route('/tenants/:tenantId')
+  .delete(
+    validate(subscriptionAdminValidation.deleteTenant),
+    subscriptionAdminController.deleteTenant
+  );
+
+router
   .route('/:subscriptionId')
   .patch(
     validate(subscriptionAdminValidation.updateAdminSubscription),

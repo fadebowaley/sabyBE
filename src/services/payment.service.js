@@ -50,6 +50,111 @@ const formatPdfMoney = (amount, currency = 'NGN') =>
     maximumFractionDigits: 2,
   })}`;
 
+const toPdfAmount = (value) => {
+  if (value && typeof value === 'object') {
+    if (value.amount !== undefined) return toPdfAmount(value.amount);
+    if (value.total !== undefined) return toPdfAmount(value.total);
+  }
+  const numeric = Number(value ?? 0);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const firstPresentAmount = (...values) => {
+  for (const value of values) {
+    if (value === undefined || value === null || value === '') continue;
+    const numeric = toPdfAmount(value);
+    if (Number.isFinite(numeric)) return numeric;
+  }
+  return null;
+};
+
+const formatPaymentMethodLabel = (method) => {
+  const normalized = String(method || '').trim().toLowerCase();
+  const labels = {
+    paystack: 'Paystack',
+    flutterwave: 'Flutterwave',
+    full_credit: 'Full credit checkout',
+    manual: 'Manual checkout',
+    credit_card: 'Credit card',
+    debit_card: 'Debit card',
+    bank_transfer: 'Bank transfer',
+    '9psb': '9PSB',
+    sabypay: 'SabyPay',
+    premium: 'Premium',
+    trialling: 'Trial',
+    paypal: 'PayPal',
+    crypto: 'Crypto',
+  };
+  return labels[normalized] || sanitizePdfText(method || '-');
+};
+
+const normalizeBillingDisplayLine = (value) =>
+  sanitizePdfText(value)
+    .replace(/\bAdmilrality\b/gi, 'Admiralty')
+    .replace(/\bIIkeja\b/g, 'Ikeja');
+
+const resolveAdjustmentCode = (entry = {}) =>
+  String(entry.code || entry.promoCode || entry.discountCode || '')
+    .trim()
+    .toUpperCase();
+
+const buildAdjustmentLabel = (entry = {}) => {
+  const code = resolveAdjustmentCode(entry);
+  const rawType = String(entry.type || '').trim().toLowerCase();
+  const base =
+    rawType === 'promo'
+      ? 'Promo applied'
+      : rawType === 'credit'
+        ? 'Credit applied'
+        : rawType === 'coupon'
+          ? 'Coupon applied'
+          : sanitizePdfText(entry.label || 'Adjustment applied');
+  return code ? `${base} (${code})` : base;
+};
+
+const getBillingAdjustments = (metadata = {}) => {
+  const invoiceSnapshot =
+    metadata.invoiceSnapshot && typeof metadata.invoiceSnapshot === 'object'
+      ? metadata.invoiceSnapshot
+      : {};
+  const sourceAdjustments = Array.isArray(metadata.adjustments)
+    ? metadata.adjustments
+    : Array.isArray(invoiceSnapshot.adjustments)
+      ? invoiceSnapshot.adjustments
+      : [];
+  if (sourceAdjustments.length) {
+    return sourceAdjustments
+      .map((entry) => ({
+        label: buildAdjustmentLabel(entry),
+        amount: toPdfAmount(entry.amount),
+      }))
+      .filter((entry) => entry.amount > 0);
+  }
+
+  const discount = toPdfAmount(metadata.discount ?? invoiceSnapshot.discount);
+  const credits = toPdfAmount(metadata.credits ?? invoiceSnapshot.credits);
+  const promo = toPdfAmount(metadata.promoAmount ?? metadata.promo ?? invoiceSnapshot.promo);
+  const promoCode =
+    String(metadata.promoCode || metadata.code || '').trim().toUpperCase() || null;
+  const adjustments = [];
+  if (discount > 0) {
+    adjustments.push({
+      label:
+        promo > 0
+          ? `Promo applied${promoCode ? ` (${promoCode})` : ''}`
+          : `Coupon applied${promoCode ? ` (${promoCode})` : ''}`,
+      amount: discount,
+    });
+  }
+  if (credits > 0) {
+    adjustments.push({
+      label: `Credit applied${!promo && promoCode ? ` (${promoCode})` : ''}`,
+      amount: credits,
+    });
+  }
+  return adjustments;
+};
+
 const safeReferencePart = (value) =>
   String(value || 'document').replace(/[^a-zA-Z0-9._-]+/g, '-');
 
@@ -337,14 +442,18 @@ const getLineItems = (payment) => {
       label: metadata.planName ? `${metadata.planName} subscription` : 'Saby subscription',
       period: metadata.billingPeriod ? `${metadata.billingPeriod} billing` : '',
       quantity: 1,
-      unitPrice: Number(payment.total || payment.amount || 0),
-      amount: Number(payment.total || payment.amount || 0),
+      unitPrice: firstPresentAmount(payment.total, payment.amount) ?? 0,
+      amount: firstPresentAmount(payment.total, payment.amount) ?? 0,
     },
   ];
 };
 
 const buildBillingPdf = async ({ payment, type }) => {
   const metadata = payment.metadata && typeof payment.metadata === 'object' ? payment.metadata : {};
+  const invoiceSnapshot =
+    metadata.invoiceSnapshot && typeof metadata.invoiceSnapshot === 'object'
+      ? metadata.invoiceSnapshot
+      : {};
   const identity = await resolveBillingIdentity(payment);
   const currency = payment.currency || metadata.currency || 'NGN';
   const paidAt = payment.completedAt || payment.paymentDate || payment.createdAt || new Date();
@@ -353,12 +462,22 @@ const buildBillingPdf = async ({ payment, type }) => {
   const actionUrl = isReceipt ? getPaymentReviewUrl(payment) : resolveInvoicePaymentUrl(payment);
   const receiptNumber = String(payment.providerRef || payment.reference || payment.id || payment._id || '').replace(/^SUB-/, '');
   const lineItems = getLineItems(payment);
-  const subtotal = Number(metadata.subtotal ?? payment.amount ?? payment.total ?? 0);
-  const discount = Number(metadata.discount || 0) + Number(metadata.credits || 0);
-  const tax = Number(metadata.tax || 0);
-  const total = Number(payment.total || payment.amount || subtotal + tax - discount);
+  const adjustments = getBillingAdjustments(metadata);
+  const adjustmentTotal = adjustments.reduce((sum, entry) => sum + toPdfAmount(entry.amount), 0);
+  const subtotal = firstPresentAmount(metadata.subtotal, invoiceSnapshot.subtotal, payment.amount, payment.total) ?? 0;
+  const tax = toPdfAmount(metadata.tax ?? invoiceSnapshot.tax);
+  const total =
+    firstPresentAmount(payment.total, payment.amount, metadata.total, invoiceSnapshot.total) ??
+    Math.max(0, subtotal + tax - adjustmentTotal);
   const reference = payment.reference || String(payment._id || payment.id);
-  const actionLabel = isReceipt ? 'Review payment' : 'Pay invoice';
+  const paymentMethodLabel = formatPaymentMethodLabel(payment.paymentMethod);
+  const isFullCreditCheckout =
+    String(payment.paymentMethod || '').trim().toLowerCase() === 'full_credit';
+  const actionLabel = isReceipt
+    ? isFullCreditCheckout
+      ? 'View billing'
+      : 'Review payment'
+    : 'Pay invoice';
   const logoPath = resolveSabyLogoPath();
   const buffer = await createPdfBuffer((doc) => {
     const left = 42;
@@ -401,11 +520,11 @@ const buildBillingPdf = async ({ payment, type }) => {
     doc.fillColor(ink).font('Helvetica-Bold').fontSize(9);
     identity.issuer.slice(0, 5).forEach((line, index) => {
       doc.font(index === 0 ? 'Helvetica-Bold' : 'Helvetica').fillColor(index === 0 ? ink : '#334155');
-      fitText(doc, line, left + 16, y + 31 + index * 11, { width: 220, size: 8.3 });
+      fitText(doc, normalizeBillingDisplayLine(line), left + 16, y + 31 + index * 11, { width: 220, size: 8.3 });
     });
     identity.billTo.slice(0, 5).forEach((line, index) => {
       doc.font(index === 0 ? 'Helvetica-Bold' : 'Helvetica').fillColor(index === 0 ? ink : '#334155');
-      fitText(doc, line, left + 280, y + 31 + index * 11, { width: 225, size: 8.3 });
+      fitText(doc, normalizeBillingDisplayLine(line), left + 280, y + 31 + index * 11, { width: 225, size: 8.3 });
     });
 
     y = 276;
@@ -450,7 +569,7 @@ const buildBillingPdf = async ({ payment, type }) => {
 
     const totalRows = [
       ['Subtotal', subtotal],
-      ...(discount > 0 ? [['Discount/Credit', -discount]] : []),
+      ...adjustments.map((entry) => [entry.label, -toPdfAmount(entry.amount)]),
       ...(tax > 0 ? [['Tax', tax]] : []),
       ['Total', total],
       [isReceipt ? 'Amount paid' : 'Amount due', total],
@@ -458,12 +577,26 @@ const buildBillingPdf = async ({ payment, type }) => {
     y = Math.max(y + 4, isReceipt ? 400 : 430);
     totalRows.forEach(([label, amount], index) => {
       const isFinal = index === totalRows.length - 1;
-      drawRule(doc, y - 5, 330, right, '#dbe3ef');
+      drawRule(doc, y - 5, 292, right, '#dbe3ef');
       doc.fillColor(ink).font(isFinal ? 'Helvetica-Bold' : 'Helvetica').fontSize(isFinal ? 9 : 8.3);
-      doc.text(label, 330, y, { width: 110 });
-      doc.text(formatPdfMoney(amount, currency), 442, y, { width: 128, align: 'right' });
+      fitText(doc, label, 292, y, { width: 145, size: isFinal ? 9 : 8.3 });
+      doc.text(formatPdfMoney(amount, currency), 438, y, { width: 132, align: 'right' });
       y += 15;
     });
+
+    if (isReceipt && isFullCreditCheckout) {
+      y += 14;
+      doc.roundedRect(left, y, contentWidth, 45, 10).fill('#f8fafc');
+      doc.fillColor(ink).font('Helvetica-Bold').fontSize(8.7).text('No external provider charged', left + 14, y + 12);
+      fitText(
+        doc.font('Helvetica').fillColor('#334155'),
+        'This subscription was activated using available credit, coupon, or promotional value.',
+        left + 14,
+        y + 26,
+        { width: contentWidth - 28, size: 8 }
+      );
+      y += 48;
+    }
 
     if (isReceipt) {
       y = Math.max(y + 20, 520);
@@ -472,15 +605,15 @@ const buildBillingPdf = async ({ payment, type }) => {
       doc.roundedRect(left, y - 12, contentWidth, 25, 8).fill('#eef4ff');
       doc.fillColor('#475569').font('Helvetica-Bold').fontSize(8);
       doc.text('Payment method', left + 10, y - 4);
-      doc.text('Date', left + 235, y - 4);
-      doc.text('Amount paid', left + 330, y - 4, { width: 82, align: 'right' });
-      doc.text('Receipt', left + 450, y - 4);
+      doc.text('Date', left + 195, y - 4);
+      doc.text('Amount paid', left + 285, y - 4, { width: 82, align: 'right' });
+      doc.text('Receipt', left + 386, y - 4);
       y += 26;
       doc.fillColor(ink).font('Helvetica').fontSize(8.6);
-      fitText(doc, payment.paymentMethod || '-', left + 10, y, { width: 185, size: 8.6 });
-      doc.text(formatPdfDate(paidAt), left + 235, y);
-      doc.text(formatPdfMoney(total, currency), left + 330, y, { width: 82, align: 'right' });
-      fitText(doc, receiptNumber || reference, left + 450, y, { width: 78, size: 8.4 });
+      fitText(doc, paymentMethodLabel, left + 10, y, { width: 165, size: 8.6 });
+      doc.text(formatPdfDate(paidAt), left + 195, y);
+      doc.text(formatPdfMoney(total, currency), left + 285, y, { width: 82, align: 'right' });
+      fitText(doc, receiptNumber || reference, left + 386, y, { width: 142, size: 8.4 });
     }
 
     drawRule(doc, 724, left, right);

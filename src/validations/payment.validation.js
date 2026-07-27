@@ -42,6 +42,8 @@ const PAYMENT_METHODS = [
   '9psb',
   'premium',
   'sabypay',
+  'trialling',
+  'full_credit',
   'credit_card',
   'debit_card',
   'paypal',
@@ -57,6 +59,7 @@ const subscriptionCheckout = {
     currency: subscriptionCatalogValidation.subscriptionCurrency.default('NGN'),
     provider: subscriptionCatalogValidation.subscriptionProvider.default('paystack'),
     addOns: subscriptionCatalogValidation.subscriptionAddonIds,
+    code: Joi.string().trim().allow('', null).optional(),
     promoCode: Joi.string().trim().allow('', null).optional(),
     returnUrl: Joi.string().uri().optional().allow('', null),
   }),
@@ -67,7 +70,7 @@ const createPayment = {
   body: Joi.object().keys({
     tenantId: Joi.string().optional(),
     userId: Joi.string().optional(),
-    amount: Joi.number().positive().required(),
+    amount: Joi.number().min(0).required(),
     currency: Joi.string().valid(...PAYMENT_CURRENCIES).required(),
     status: Joi.string()
       .valid(...PAYMENT_STATUSES)
@@ -90,7 +93,7 @@ const createPayment = {
     reference: Joi.string().required(),
     paymentMethod: Joi.string().valid(...PAYMENT_METHODS).required(),
     paymentDate: Joi.date().default(Date.now),
-    total: Joi.number().positive().required(),
+    total: Joi.number().min(0).required(),
     metadata: Joi.object().optional(),
     paymentDetails: Joi.object().optional(),
   }),
@@ -245,9 +248,15 @@ const generatePaymentReceipt = {
 const verifyReturn = {
   body: Joi.object().keys({
     provider: Joi.string().valid('flutterwave', 'paystack').required(),
-    paymentReference: Joi.string().required(),
+    paymentReference: Joi.string().optional().allow('', null),
+    reference: Joi.string().optional().allow('', null),
+    tx_ref: Joi.string().optional().allow('', null),
+    trxref: Joi.string().optional().allow('', null),
+    payment_reference: Joi.string().optional().allow('', null),
     transactionId: Joi.string().optional().allow('', null),
-  }),
+    transaction_id: Joi.string().optional().allow('', null),
+    id: Joi.string().optional().allow('', null),
+  }).or('paymentReference', 'reference', 'tx_ref', 'trxref', 'payment_reference'),
 };
 
 module.exports = {

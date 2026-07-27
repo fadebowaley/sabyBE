@@ -30,15 +30,18 @@ const initializeSubscriptionCheckout = catchAsync(async (req, res) => {
     plan: result.plan,
     pricing: result.pricing,
     addOns: result.addOns,
-    payment: {
-      id: result.payment.id || result.payment._id,
-      reference: result.payment.reference,
-      status: result.payment.status,
-      amount: result.payment.amount,
-      total: result.payment.total,
-      currency: result.payment.currency,
-      paymentMethod: result.payment.paymentMethod,
-    },
+    subscription: result.subscription || null,
+    payment: result.payment
+      ? {
+          id: result.payment.id || result.payment._id,
+          reference: result.payment.reference,
+          status: result.payment.status,
+          amount: result.payment.amount,
+          total: result.payment.total,
+          currency: result.payment.currency,
+          paymentMethod: result.payment.paymentMethod,
+        }
+      : null,
     checkout: result.checkout,
   });
 });
@@ -388,7 +391,15 @@ const paymentWebhook = catchAsync(async (req, res) => {
 });
 
 const verifyPaymentReturn = catchAsync(async (req, res) => {
-  const { provider, paymentReference, transactionId } = req.body;
+  const { provider } = req.body;
+  const paymentReference =
+    req.body.paymentReference ||
+    req.body.reference ||
+    req.body.tx_ref ||
+    req.body.trxref ||
+    req.body.payment_reference;
+  const transactionId =
+    req.body.transactionId || req.body.transaction_id || req.body.id || null;
   const tenantId = getRequestTenantId(req);
   const actorUserId = getActorUserId(req);
 

@@ -1,5 +1,6 @@
 const catchAsync = require('../utils/catchAsync');
 const { subscriptionService } = require('../services');
+const tenantDeletionService = require('../services/tenantDeletion.service');
 
 const actorFromRequest = (req) => ({
   userId: req.user?._id || req.user?.id || req.user?.userId || null,
@@ -45,10 +46,32 @@ const startOrExtendTrial = catchAsync(async (req, res) => {
   res.send({ subscription });
 });
 
+const previewTenantDeletion = catchAsync(async (req, res) => {
+  const preview = await tenantDeletionService.previewTenantDeletion(
+    req.params.tenantId
+  );
+  res.send({ preview });
+});
+
+const deleteTenant = catchAsync(async (req, res) => {
+  const result = await tenantDeletionService.deleteTenant({
+    tenantId: req.params.tenantId,
+    securityKey: req.body?.securityKey,
+    confirmation: req.body?.confirmation,
+    actor: {
+      ...actorFromRequest(req),
+      email: req.user?.email || null,
+    },
+  });
+  res.send(result);
+});
+
 module.exports = {
   listAdminSubscriptions,
   createAdminSubscription,
   updateAdminSubscription,
   updateAdminSubscriptionStatus,
   startOrExtendTrial,
+  previewTenantDeletion,
+  deleteTenant,
 };

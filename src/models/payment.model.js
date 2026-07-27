@@ -42,6 +42,7 @@ const PAYMENT_METHODS = [
   'premium',
   'sabypay',
   'trialling',
+  'full_credit',
   'credit_card',
   'debit_card',
   'paypal',
