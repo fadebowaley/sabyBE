@@ -25,6 +25,7 @@ const dlqService = require('../services/dlq.service');
 const emailService = require('../services/email.service');
 const User = require('../models/user.model');
 const Node = require('../models/node.model');
+const ProjectForm = require('../models/projectForm.model');
 const incrementalSubmissionRollupService = require('../services/incrementalSubmissionRollup.service');
 const approvalOrchestratorService = require('../services/approvalOrchestrator.service');
 const ApiError = require('../utils/ApiError');
@@ -209,7 +210,7 @@ const createSubmissionWorker = () => {
       try {
         // Try PostgreSQL node_dimension table first
         const nodeQuery = await postgresPool.query(
-          `SELECT node_name, node_reference FROM node_dimension 
+          `SELECT node_name, node_reference FROM node_dimension
              WHERE node_id = $1 AND tenant_id = $2 LIMIT 1`,
           [nodeId, tenantId]
         );

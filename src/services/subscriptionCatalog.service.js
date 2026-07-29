@@ -214,6 +214,11 @@ const DEFAULT_SUBSCRIPTION_CATALOG = {
   meteredPricing: SUBSCRIPTION_METERED_PRICING,
   gatewayPolicy: SUBSCRIPTION_GATEWAY_POLICY,
   vatRate: VAT_RATE,
+  exchangeRates: {
+    usdToNgn: 1500,
+    source: 'manual',
+    updatedAt: null,
+  },
   supportedCurrencies: SUBSCRIPTION_SUPPORTED_CURRENCIES,
   supportedProviders: SUBSCRIPTION_SUPPORTED_PROVIDERS,
   discounts: {
@@ -416,6 +421,17 @@ const normalizeSubscriptionCatalog = (catalog = {}) => {
     vatRate: Number.isFinite(Number(source.vatRate))
       ? Number(source.vatRate)
       : DEFAULT_SUBSCRIPTION_CATALOG.vatRate,
+    exchangeRates:
+      source.exchangeRates && typeof source.exchangeRates === 'object'
+        ? {
+            ...cloneValue(DEFAULT_SUBSCRIPTION_CATALOG.exchangeRates),
+            ...cloneValue(source.exchangeRates),
+            usdToNgn: Number.isFinite(Number(source.exchangeRates.usdToNgn))
+              ? Number(source.exchangeRates.usdToNgn)
+              : DEFAULT_SUBSCRIPTION_CATALOG.exchangeRates.usdToNgn,
+            source: String(source.exchangeRates.source || 'manual').trim() || 'manual',
+          }
+        : cloneValue(DEFAULT_SUBSCRIPTION_CATALOG.exchangeRates),
     supportedCurrencies: Array.isArray(source.supportedCurrencies) &&
       source.supportedCurrencies.length > 0
       ? source.supportedCurrencies.map((currency) => normalizeCurrency(currency))

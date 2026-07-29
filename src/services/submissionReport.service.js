@@ -34,8 +34,10 @@ const ALLOWED_TREND_GRAINS = new Set(['day', 'week', 'month', 'quarter']);
 const ALLOWED_SUBMISSION_STATUSES = new Set([
   'submitted',
   'pending',
+  'pending_approval',
   'approved',
   'rejected',
+  'changes_requested',
   'completed',
   'failed',
 ]);
@@ -48,6 +50,60 @@ const FIXED_COLUMN_LABELS = {
   submitted_at: 'Submitted At',
 };
 const RESERVED_REPORT_PAYLOAD_KEYS = new Set(['__payment', '__invoice']);
+
+const normalizeJsonArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+const actorCanActionApprovalStep = (step, actor = {}) => {
+  if (!step || String(step.approval_step_status || '').toLowerCase() !== 'in_progress') {
+    return false;
+  }
+
+  const actorUserId = String(actor.userId || '').trim();
+  const actorRoleRefs = Array.from(
+    new Set(
+      [actor.role, ...(Array.isArray(actor.roles) ? actor.roles : [])]
+        .map((entry) => String(entry || '').trim())
+        .filter(Boolean)
+    )
+  );
+  const assigneeType = String(step.approver_type || '').trim().toLowerCase();
+  const assigneeRole = String(step.approver_role || '').trim();
+  const assigneeRoles = normalizeJsonArray(step.approver_roles);
+  const assigneeUsers = normalizeJsonArray(step.approver_users);
+
+  if (assigneeType === 'user') {
+    return Boolean(actorUserId) &&
+      assigneeUsers.map((entry) => String(entry || '').trim()).includes(actorUserId);
+  }
+
+  if (assigneeType === 'role' || !assigneeType) {
+    const allowedRoles = new Set(
+      [assigneeRole, ...assigneeRoles]
+        .map((entry) => String(entry || '').trim())
+        .filter(Boolean)
+    );
+    return actorRoleRefs.some((entry) => allowedRoles.has(entry));
+  }
+
+  return false;
+};
+
+const normalizeApprovalLabel = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return null;
+  return prettifyKey(normalized);
+};
 let hierarchyOrderingCapability = {
   checkedAt: 0,
   enabled: false,
@@ -469,6 +525,7 @@ const getModuleReportTable = async (filters = {}) => {
     statuses,
     limit = DEFAULT_TABLE_LIMIT,
     offset = 0,
+    approval_actor = null,
   } = filters;
 
   if (!tenant_id) {
@@ -583,6 +640,46 @@ const getModuleReportTable = async (filters = {}) => {
     `
     : '';
 
+  const approvalJoin = `
+    LEFT JOIN LATERAL (
+      SELECT
+        sw.id AS workflow_id,
+        sw.workflow_name,
+        sw.workflow_type,
+        sw.status AS workflow_status,
+        sws.id AS approval_id,
+        sws.step_name AS approval_step,
+        sws.step_order AS approval_step_order,
+        sws.status AS approval_step_status,
+        sws.action AS approval_action,
+        sws.action_type AS approval_action_type,
+        sws.assignee_type AS approver_type,
+        sws.assignee_role AS approver_role,
+        sws.assignee_roles AS approver_roles,
+        sws.assignee_users AS approver_users,
+        sws.action_by_user_name AS approval_actor_name,
+        sws.action_by_user_email AS approval_actor_email,
+        sws.comments AS approval_comment,
+        sws.actioned_at AS approval_actioned_at,
+        sws.due_at AS approval_due_at
+      FROM submission_workflows sw
+      JOIN submission_workflow_steps sws
+        ON sws.workflow_id = sw.id
+       AND sws.tenant_id = sw.tenant_id
+      WHERE sw.submission_id = fs.id
+        AND sw.tenant_id = fs.tenant_id
+      ORDER BY
+        CASE
+          WHEN sws.status = 'in_progress' THEN 0
+          WHEN sws.status = 'pending' THEN 1
+          ELSE 2
+        END ASC,
+        sws.step_order ASC,
+        sws.updated_at DESC NULLS LAST
+      LIMIT 1
+    ) approval ON TRUE
+  `;
+
   const orderByClause = canUseHierarchyOrdering
     ? `
       ORDER BY
@@ -608,9 +705,29 @@ const getModuleReportTable = async (filters = {}) => {
       COALESCE(nd.lineage_refs, ARRAY[]::text[]) AS hierarchy_lineage_refs,
       COALESCE(nd.lineage_names, ARRAY[]::text[]) AS hierarchy_lineage_names,
       COALESCE(nd.depth, 0) AS hierarchy_depth,
-      COALESCE(nd.level_name, NULL) AS hierarchy_level_name
+      COALESCE(nd.level_name, NULL) AS hierarchy_level_name,
+      approval.workflow_id,
+      approval.workflow_name,
+      approval.workflow_type,
+      approval.workflow_status,
+      approval.approval_id,
+      approval.approval_step,
+      approval.approval_step_order,
+      approval.approval_step_status,
+      approval.approval_action,
+      approval.approval_action_type,
+      approval.approver_type,
+      approval.approver_role,
+      approval.approver_roles,
+      approval.approver_users,
+      approval.approval_actor_name,
+      approval.approval_actor_email,
+      approval.approval_comment,
+      approval.approval_actioned_at,
+      approval.approval_due_at
     FROM form_submissions fs
     ${hierarchyJoin}
+    ${approvalJoin}
     ${whereClause}
     ${orderByClause}
     LIMIT $${index} OFFSET $${index + 1}
@@ -642,8 +759,9 @@ const getModuleReportTable = async (filters = {}) => {
       MAX(created_at) AS latest_submission_at,
       COUNT(*) FILTER (WHERE status = 'submitted')::bigint AS submitted_count,
       COUNT(*) FILTER (WHERE status = 'approved')::bigint AS approved_count,
-      COUNT(*) FILTER (WHERE status = 'pending')::bigint AS pending_count,
+      COUNT(*) FILTER (WHERE status IN ('pending', 'pending_approval'))::bigint AS pending_count,
       COUNT(*) FILTER (WHERE status = 'rejected')::bigint AS rejected_count,
+      COUNT(*) FILTER (WHERE status = 'changes_requested')::bigint AS changes_requested_count,
       COUNT(*) FILTER (WHERE status = 'completed')::bigint AS completed_count,
       COUNT(*) FILTER (WHERE status = 'failed')::bigint AS failed_count
     FROM form_submissions fs
@@ -689,11 +807,46 @@ const getModuleReportTable = async (filters = {}) => {
   const columnByKey = new Map(columns.map((column) => [column.key, column]));
 
   const rows = rowsResult.rows.map((row, rowIndex) => {
+    const approvalStatus =
+      row.workflow_id || row.approval_id
+        ? row.status || row.workflow_status || row.approval_step_status
+        : null;
+    const canActionApproval = actorCanActionApprovalStep(
+      row,
+      approval_actor || {}
+    );
     const reportRow = {
       sn: safeOffset + rowIndex + 1,
       submission_id: row.id,
       status: row.status,
       submitted_at: row.created_at,
+      approval_status: approvalStatus,
+      approval_workflow: normalizeApprovalLabel(approvalStatus) || 'No approval',
+      workflow_id: row.workflow_id || null,
+      workflow_name: row.workflow_name || null,
+      workflow_type: row.workflow_type || null,
+      workflow_status: row.workflow_status || null,
+      approval_id: row.approval_id || null,
+      approval_step: row.approval_step || null,
+      approval_level:
+        row.approval_step_order !== null && row.approval_step_order !== undefined
+          ? Number(row.approval_step_order) + 1
+          : null,
+      approval_step_status: row.approval_step_status || null,
+      approval_action: row.approval_action || null,
+      approval_action_type: row.approval_action_type || null,
+      approver_type: row.approver_type || null,
+      approver_role: row.approver_role || null,
+      approver_roles: normalizeJsonArray(row.approver_roles),
+      approver_users: normalizeJsonArray(row.approver_users),
+      approval_actor:
+        row.approval_actor_name || row.approval_actor_email || null,
+      approval_comment: row.approval_comment || null,
+      approval_actioned_at: row.approval_actioned_at || null,
+      approval_due_at: row.approval_due_at || null,
+      can_approve: canActionApproval,
+      can_reject: canActionApproval,
+      can_request_changes: canActionApproval,
       __lineage_refs: Array.isArray(row.hierarchy_lineage_refs)
         ? row.hierarchy_lineage_refs
         : [],
@@ -746,6 +899,7 @@ const getModuleReportTable = async (filters = {}) => {
       approved_count: Number(summaryRow.approved_count || 0),
       pending_count: Number(summaryRow.pending_count || 0),
       rejected_count: Number(summaryRow.rejected_count || 0),
+      changes_requested_count: Number(summaryRow.changes_requested_count || 0),
       completed_count: Number(summaryRow.completed_count || 0),
       failed_count: Number(summaryRow.failed_count || 0),
     },

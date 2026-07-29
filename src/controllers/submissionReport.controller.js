@@ -12,10 +12,51 @@ const catchAsync = require('../utils/catchAsync');
 const submissionReportService = require('../services/submissionReport.service');
 const SubmissionModel = require('../models/submission.model');
 const ProjectForm = require('../models/projectForm.model');
+const { Role } = require('../models');
 const ApiError = require('../utils/ApiError');
 const pick = require('../utils/pick');
 const projectFormWorkspaceService = require('../services/projectFormWorkspace.service');
 const workspaceProjectAccessService = require('../services/workspaceProjectAccess.service');
+
+const resolveActorRoleRefs = async (req) => {
+  const rawRoles = Array.isArray(req.user?.roles) ? req.user.roles : [];
+  const roleIds = rawRoles
+    .map((entry) => String(entry?._id || entry || '').trim())
+    .filter(Boolean);
+  const roleNames = rawRoles
+    .map((entry) => String(entry?.name || '').trim())
+    .filter(Boolean);
+
+  if (roleIds.length === 0) {
+    return Array.from(new Set([req.user?.role, ...roleNames].filter(Boolean)));
+  }
+
+  const roles = await Role.find({
+    _id: { $in: roleIds },
+    tenantId: req.user?.tenantId,
+  })
+    .select('_id name')
+    .lean()
+    .exec();
+
+  return Array.from(
+    new Set(
+      [
+        req.user?.role,
+        ...roleIds,
+        ...roleNames,
+        ...roles.map((role) => String(role._id)),
+        ...roles.map((role) => String(role.name || '').trim()).filter(Boolean),
+      ].filter(Boolean)
+    )
+  );
+};
+
+const getApprovalActorFromRequest = async (req) => ({
+  userId: req.user?.id || req.user?._id || req.user?.userId || null,
+  role: req.user?.role || null,
+  roles: await resolveActorRoleRefs(req),
+});
 
 const canBypassWorkspaceScope = (req) =>
   Boolean(req.user?.isSuper) || Boolean(req.user?.isSaby);
@@ -238,6 +279,7 @@ const getModuleReportTable = catchAsync(async (req, res) => {
     limit: filters.limit,
     offset: filters.offset,
     node_filter: isOwnerScoped ? nodeFilter || null : nodeFilter,
+    approval_actor: await getApprovalActorFromRequest(req),
   });
 
   res.status(httpStatus.OK).send({

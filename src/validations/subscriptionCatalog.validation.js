@@ -62,6 +62,13 @@ const subscriptionCatalogUpdate = {
       meteredPricing: Joi.object().unknown(true).optional(),
       gatewayPolicy: Joi.object().unknown(true).optional(),
       vatRate: Joi.number().min(0).max(1).optional(),
+      exchangeRates: Joi.object({
+        usdToNgn: Joi.number().positive().required(),
+        source: Joi.string().trim().allow('', null).optional(),
+        updatedAt: Joi.date().allow(null).optional(),
+      })
+        .unknown(true)
+        .optional(),
       discounts: Joi.object().unknown(true).optional(),
       discountRules: Joi.array()
         .items(

@@ -1744,6 +1744,125 @@ const dedupeStringArray = (value = [], { lowercase = false } = {}) =>
     )
   );
 
+const collectWorkflowApprovalReferences = (workflowCapability = {}) => {
+  const userRefs = new Set();
+  const roleRefs = new Set();
+  const workflows = Array.isArray(workflowCapability.workflows)
+    ? workflowCapability.workflows
+    : [];
+
+  workflows.forEach((workflow) => {
+    const steps = Array.isArray(workflow?.steps) ? workflow.steps : [];
+    steps.forEach((step) => {
+      dedupeStringArray(step?.assigneeUsers).forEach((entry) => userRefs.add(entry));
+      dedupeStringArray(step?.escalationUsers).forEach((entry) => userRefs.add(entry));
+      dedupeStringArray(step?.assigneeRoles).forEach((entry) => roleRefs.add(entry));
+      dedupeStringArray(step?.escalationRoles).forEach((entry) => roleRefs.add(entry));
+      const assigneeRole = String(step?.assigneeRole || '').trim();
+      if (assigneeRole) roleRefs.add(assigneeRole);
+      const escalateTo = String(step?.sla?.escalateTo || '').trim();
+      if (escalateTo) {
+        if (step?.escalationType === 'user') {
+          userRefs.add(escalateTo);
+        } else if (step?.escalationType === 'role') {
+          roleRefs.add(escalateTo);
+        }
+      }
+    });
+  });
+
+  return {
+    userRefs: Array.from(userRefs),
+    roleRefs: Array.from(roleRefs),
+  };
+};
+
+const validateWorkflowApprovalAssignments = async ({
+  tenantId,
+  actorUserId,
+  workspaceId,
+  workflowCapability,
+}) => {
+  const { userRefs, roleRefs } =
+    collectWorkflowApprovalReferences(workflowCapability);
+  if (userRefs.length === 0 && roleRefs.length === 0) return;
+
+  if (!tenantId || !actorUserId) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Tenant and actor are required to validate workflow approvers'
+    );
+  }
+
+  if (userRefs.length > 0) {
+    const { members = [] } =
+      await projectFormWorkspaceService.listWorkspaceMembers({
+        tenantId,
+        userId: actorUserId,
+        includeAll: true,
+      });
+    const scopedMembers = workspaceId
+      ? members.filter((member) =>
+          Array.isArray(member.assignments)
+            ? member.assignments.some(
+                (assignment) =>
+                  String(assignment?.workspaceId || '') === String(workspaceId)
+              )
+            : false
+        )
+      : members;
+    const allowedUserIds = new Set(
+      scopedMembers
+        .map((member) => String(member.userId || '').trim())
+        .filter(Boolean)
+    );
+    const invalidUserRefs = userRefs.filter(
+      (entry) => !allowedUserIds.has(entry)
+    );
+
+    if (invalidUserRefs.length > 0) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'Workflow approver users must be active members of this workspace'
+      );
+    }
+  }
+
+  if (roleRefs.length > 0) {
+    const roles = await Role.find({
+      tenantId,
+      $or: [
+        {
+          _id: {
+            $in: roleRefs.filter((entry) =>
+              mongoose.Types.ObjectId.isValid(entry)
+            ),
+          },
+        },
+        { name: { $in: roleRefs } },
+      ],
+    })
+      .select('_id name')
+      .lean()
+      .exec();
+    const allowedRoleRefs = new Set();
+    roles.forEach((role) => {
+      allowedRoleRefs.add(String(role._id));
+      if (role.name) allowedRoleRefs.add(String(role.name));
+    });
+    const invalidRoleRefs = roleRefs.filter(
+      (entry) => !allowedRoleRefs.has(entry)
+    );
+
+    if (invalidRoleRefs.length > 0) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'Workflow approver roles must belong to this tenant'
+      );
+    }
+  }
+};
+
 const generateAccessCodeValue = () =>
   randomUUID()
     .replace(/-/g, '')
@@ -2656,6 +2775,12 @@ const createProjectForm = async (
     workspaceId: normalizedBody.workspaceId || options.workspaceId,
   });
   normalizedBody.workspaceId = workspaceId;
+  await validateWorkflowApprovalAssignments({
+    tenantId,
+    actorUserId: options.actorUserId || createdBy,
+    workspaceId,
+    workflowCapability: normalizedBody?.capabilities?.experience?.workflow,
+  });
 
   const projectForm = await ProjectForm.createProjectForm(
     normalizedBody,
@@ -3139,6 +3264,13 @@ const updateProjectFormById = async (
         : projectForm.metadata || {}),
       ...(normalizedUpdateBody.metadata || {}),
     },
+  });
+
+  await validateWorkflowApprovalAssignments({
+    tenantId: projectForm.tenantId,
+    actorUserId: options.actorUserId,
+    workspaceId: normalizedUpdateBody.workspaceId || projectForm.workspaceId,
+    workflowCapability: normalizedUpdateBody?.capabilities?.experience?.workflow,
   });
 
   Object.assign(projectForm, normalizedUpdateBody);

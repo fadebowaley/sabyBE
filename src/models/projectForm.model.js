@@ -183,7 +183,7 @@ const WorkflowStepSchema = new mongoose.Schema(
     // Maps to step `type` at runtime but is preserved for round-trip fidelity
     actionType: {
       type: String,
-      enum: ['SUBMIT', 'REVIEW', 'APPROVE', 'ESCALATE', 'NOTIFY'],
+      enum: ['SUBMIT', 'REVIEW', 'APPROVE', 'REJECT', 'ESCALATE', 'NOTIFY'],
     },
 
     // Step category (runtime type used by the backend service)

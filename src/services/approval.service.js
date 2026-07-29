@@ -219,10 +219,11 @@ const getSubmissionApproval = async ({ submissionId, tenantId }) => {
   };
 };
 
-const getApprovalQueue = async ({ tenantId, role, userId, limit = 50 }) => {
+const getApprovalQueue = async ({ tenantId, role, roles = [], userId, limit = 50 }) => {
   const steps = await workflowService.getPendingStepsForActor({
     tenantId,
     role,
+    roles,
     userId,
     limit,
   });

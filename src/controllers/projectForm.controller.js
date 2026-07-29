@@ -267,6 +267,11 @@ const assertFormCreationHeadroom = async (tenantId) =>
     delta: 1,
     message:
       'Your current workspace subscription has reached its form limit. Upgrade billing to create another module.',
+    details: {
+      code: 'PROJECT_FORM_LIMIT_REACHED',
+      limitKey: 'forms',
+      action: 'create_project_form',
+    },
   });
 
 /**

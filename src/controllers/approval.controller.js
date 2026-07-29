@@ -1,7 +1,40 @@
 const catchAsync = require('../utils/catchAsync');
 const { approvalService } = require('../services');
+const { Role } = require('../models');
 
-const getActorFromRequest = (req) => ({
+const resolveActorRoleRefs = async (req) => {
+  const rawRoles = Array.isArray(req.user?.roles) ? req.user.roles : [];
+  const roleIds = rawRoles
+    .map((entry) => String(entry?._id || entry || '').trim())
+    .filter(Boolean);
+  const roleNames = rawRoles
+    .map((entry) => String(entry?.name || '').trim())
+    .filter(Boolean);
+
+  if (roleIds.length === 0) {
+    return Array.from(new Set([req.user?.role, ...roleNames].filter(Boolean)));
+  }
+
+  const roles = await Role.find({
+    _id: { $in: roleIds },
+    tenantId: req.user?.tenantId,
+  })
+    .select('_id name')
+    .lean()
+    .exec();
+
+  return Array.from(
+    new Set([
+      req.user?.role,
+      ...roleIds,
+      ...roleNames,
+      ...roles.map((role) => String(role._id)),
+      ...roles.map((role) => String(role.name || '').trim()).filter(Boolean),
+    ].filter(Boolean))
+  );
+};
+
+const getActorFromRequest = async (req) => ({
   userId: req.user?.id || req.user?._id || req.user?.userId || null,
   userName:
     req.user?.name ||
@@ -9,18 +42,21 @@ const getActorFromRequest = (req) => ({
     null,
   userEmail: req.user?.email || null,
   role: req.user?.role || null,
+  roles: await resolveActorRoleRefs(req),
 });
 
 const getApprovalQueue = catchAsync(async (req, res) => {
   const tenantId = req.user?.tenantId;
   const userId = req.user?.id || req.user?._id || req.user?.userId || null;
   const role = req.query.role || req.user?.role || null;
+  const roles = await resolveActorRoleRefs(req);
   const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
 
   const items = await approvalService.getApprovalQueue({
     tenantId,
     userId,
     role,
+    roles,
     limit,
   });
 
@@ -44,7 +80,7 @@ const getSubmissionApproval = catchAsync(async (req, res) => {
 
 const approveApproval = catchAsync(async (req, res) => {
   const tenantId = req.user?.tenantId;
-  const actor = getActorFromRequest(req);
+  const actor = await getActorFromRequest(req);
 
   const result = await approvalService.actOnApproval({
     approvalId: req.params.approvalId,
@@ -62,7 +98,7 @@ const approveApproval = catchAsync(async (req, res) => {
 
 const rejectApproval = catchAsync(async (req, res) => {
   const tenantId = req.user?.tenantId;
-  const actor = getActorFromRequest(req);
+  const actor = await getActorFromRequest(req);
 
   const result = await approvalService.actOnApproval({
     approvalId: req.params.approvalId,
@@ -80,7 +116,7 @@ const rejectApproval = catchAsync(async (req, res) => {
 
 const requestChangesApproval = catchAsync(async (req, res) => {
   const tenantId = req.user?.tenantId;
-  const actor = getActorFromRequest(req);
+  const actor = await getActorFromRequest(req);
 
   const result = await approvalService.actOnApproval({
     approvalId: req.params.approvalId,
@@ -98,7 +134,7 @@ const requestChangesApproval = catchAsync(async (req, res) => {
 
 const escalateApproval = catchAsync(async (req, res) => {
   const tenantId = req.user?.tenantId;
-  const actor = getActorFromRequest(req);
+  const actor = await getActorFromRequest(req);
 
   const result = await approvalService.actOnApproval({
     approvalId: req.params.approvalId,
@@ -116,7 +152,7 @@ const escalateApproval = catchAsync(async (req, res) => {
 
 const bulkApproveApprovals = catchAsync(async (req, res) => {
   const tenantId = req.user?.tenantId;
-  const actor = getActorFromRequest(req);
+  const actor = await getActorFromRequest(req);
 
   const result = await approvalService.actOnApprovalsBulk({
     approvalIds: req.body?.approvalIds || [],
@@ -134,7 +170,7 @@ const bulkApproveApprovals = catchAsync(async (req, res) => {
 
 const bulkRejectApprovals = catchAsync(async (req, res) => {
   const tenantId = req.user?.tenantId;
-  const actor = getActorFromRequest(req);
+  const actor = await getActorFromRequest(req);
 
   const result = await approvalService.actOnApprovalsBulk({
     approvalIds: req.body?.approvalIds || [],

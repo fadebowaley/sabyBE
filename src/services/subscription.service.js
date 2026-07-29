@@ -745,6 +745,7 @@ const assertSubscriptionLimit = async ({
   delta = 1,
   nextUsage = null,
   message = null,
+  details = null,
 }) => {
   const subscription = await getCurrentSubscription(tenantId, { refreshUsage: true });
   if (!subscription) {
@@ -777,10 +778,19 @@ const assertSubscriptionLimit = async ({
 
   if (exceeds) {
     const label = LIMIT_LABELS[limitKey] || 'resource';
+    const defaultDetails = {
+      code: `${String(limitKey || 'resource').toUpperCase()}_LIMIT_REACHED`,
+      limitKey,
+      limit: usageEntry.limit,
+      used: candidateUsed,
+    };
     throw new ApiError(
       httpStatus.FORBIDDEN,
       message ||
-        `Your current workspace subscription has reached its ${label} limit. Upgrade billing to continue.`
+        `Your current workspace subscription has reached its ${label} limit. Upgrade billing to continue.`,
+      true,
+      '',
+      details ? { ...defaultDetails, ...details } : defaultDetails
     );
   }
 

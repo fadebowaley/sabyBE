@@ -54,6 +54,13 @@ const collectTenantUsage = async ({ tenantId, subscription = null }) => {
   }
 
   const { start, end } = resolveUsageWindow(subscription);
+  const billableProjectFormFilter = {
+    tenantId: normalizedTenantId,
+    deletedAt: null,
+    'identity.category': { $ne: 'system' },
+    'identity.status': { $nin: ['archived'] },
+    status: { $nin: ['archived'] },
+  };
 
   const [
     seats,
@@ -65,7 +72,7 @@ const collectTenantUsage = async ({ tenantId, subscription = null }) => {
   ] = await Promise.all([
     User.countDocuments({ tenantId: normalizedTenantId, deletedAt: null }),
     Nodes.countDocuments({ tenantId: normalizedTenantId, deletedAt: null }),
-    ProjectForm.countDocuments({ tenantId: normalizedTenantId }),
+    ProjectForm.countDocuments(billableProjectFormFilter),
     Storage.aggregate([
       {
         $match: {

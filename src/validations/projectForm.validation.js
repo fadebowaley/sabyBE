@@ -732,10 +732,10 @@ const permSettingsSchema = Joi.object({
   calendarRequired: Joi.boolean().default(false),
   eventTypes: Joi.array().items(Joi.string()).default([]),
   calendarGeneration: Joi.object({
-    startDate: Joi.string().isoDate().optional(),
-    endDate: Joi.string().isoDate().optional(),
+    startDate: Joi.string().isoDate().allow(null, '').optional(),
+    endDate: Joi.string().isoDate().allow(null, '').optional(),
     allowBackdating: Joi.boolean().default(false),
-    monthsToGenerate: Joi.number().integer().min(1).max(36).optional(),
+    monthsToGenerate: Joi.number().integer().min(1).max(36).allow(null).optional(),
   }).optional(),
 }).unknown(true).default({
   enabled: false,
@@ -801,6 +801,7 @@ const workflowStepSchema = Joi.object({
   sla: Joi.object({
     hours: Joi.number().integer().min(1).default(48),
     escalateTo: Joi.string().allow('', null).optional(),
+    escalateOnExpiry: Joi.boolean().default(false),
   }).optional(),
   type: Joi.string().optional(),
   description: Joi.string().allow('', null).optional(),
@@ -1569,10 +1570,10 @@ const publishProjectForm = {
   body: Joi.object()
     .keys({
       calendarGeneration: Joi.object({
-        startDate: Joi.string().isoDate().optional(),
-        endDate: Joi.string().isoDate().optional(),
+        startDate: Joi.string().isoDate().allow(null, '').optional(),
+        endDate: Joi.string().isoDate().allow(null, '').optional(),
         allowBackdating: Joi.boolean().default(false),
-        monthsToGenerate: Joi.number().integer().min(1).max(36).optional(),
+        monthsToGenerate: Joi.number().integer().min(1).max(36).allow(null).optional(),
       }).optional(),
     })
     .optional(),

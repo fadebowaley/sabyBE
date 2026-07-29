@@ -63,7 +63,12 @@ const syncSubmissionApprovalStatus = async (submissionId, status) => {
 };
 
 const canActorActionStep = (step, actor = {}) => {
-  const actorRole = String(actor.role || '').trim();
+  const actorRoleRefs = [
+    actor.role,
+    ...(Array.isArray(actor.roles) ? actor.roles : []),
+  ]
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean);
   const actorUserId = String(actor.userId || '').trim();
   const assigneeType = String(step.assignee_type || '').trim().toLowerCase();
   const assigneeRole = String(step.assignee_role || '').trim();
@@ -76,9 +81,13 @@ const canActorActionStep = (step, actor = {}) => {
   }
 
   if (assigneeType === 'role' || !assigneeType) {
-    if (!actorRole) return false;
-    if (assigneeRole && assigneeRole === actorRole) return true;
-    return assigneeRoles.map((entry) => String(entry || '').trim()).includes(actorRole);
+    if (actorRoleRefs.length === 0) return false;
+    const allowedRoles = new Set(
+      [assigneeRole, ...assigneeRoles]
+        .map((entry) => String(entry || '').trim())
+        .filter(Boolean)
+    );
+    return actorRoleRefs.some((entry) => allowedRoles.has(entry));
   }
 
   return true;
@@ -612,9 +621,17 @@ const actionStep = async (workflowId, stepDefId, action, actor, comments, workfl
 const getPendingStepsForActor = async ({
   tenantId,
   role = null,
+  roles = [],
   userId = null,
   limit = 50,
 }) => {
+  const roleRefs = Array.from(
+    new Set(
+      [role, ...(Array.isArray(roles) ? roles : [])]
+        .map((entry) => String(entry || '').trim())
+        .filter(Boolean)
+    )
+  );
   const result = await postgresPool.query(
     `SELECT sws.*, sw.workflow_name, sw.workflow_type, sw.submission_id,
             sw.submitted_by_user_name, sw.submitted_by_user_email
@@ -622,9 +639,9 @@ const getPendingStepsForActor = async ({
      JOIN submission_workflows sw ON sws.workflow_id = sw.id
      WHERE sws.tenant_id = $1
        AND (
-         ($2::varchar IS NOT NULL AND (
-           sws.assignee_role = $2
-           OR COALESCE(sws.assignee_roles, '[]'::jsonb) @> jsonb_build_array($2::varchar)
+         ($2::text[] IS NOT NULL AND array_length($2::text[], 1) > 0 AND (
+           sws.assignee_role = ANY($2::text[])
+           OR COALESCE(sws.assignee_roles, '[]'::jsonb) ?| $2::text[]
          ))
          OR
          ($3::varchar IS NOT NULL AND COALESCE(sws.assignee_users, '[]'::jsonb) @> jsonb_build_array($3::varchar))
@@ -632,7 +649,7 @@ const getPendingStepsForActor = async ({
        AND sws.status = 'in_progress'
      ORDER BY sws.due_at ASC NULLS LAST
      LIMIT $4`,
-    [tenantId, role || null, userId || null, limit]
+    [tenantId, roleRefs.length ? roleRefs : null, userId || null, limit]
   );
   return result.rows;
 };
