@@ -131,6 +131,7 @@ describe('approval.service', () => {
     expect(mockWorkflowService.getPendingStepsForActor).toHaveBeenCalledWith({
       tenantId: 'tenant-1',
       role: 'manager',
+      roles: [],
       userId: 'user-2',
       limit: 20,
     });
