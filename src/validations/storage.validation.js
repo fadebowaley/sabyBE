@@ -72,6 +72,15 @@ const downloadSharedFile = {
   }),
 };
 
+const downloadFileByKey = {
+  query: Joi.object()
+    .keys({
+      key: Joi.string().optional(),
+      url: Joi.string().uri().optional(),
+    })
+    .or('key', 'url'),
+};
+
 const searchFiles = {
   query: Joi.object().keys({
     q: Joi.string().required().min(1),
@@ -140,6 +149,7 @@ module.exports = {
   shareFile,
   getSharedFile,
   downloadSharedFile,
+  downloadFileByKey,
   searchFiles,
   moveFile,
   copyFile,

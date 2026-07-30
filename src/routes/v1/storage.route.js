@@ -129,6 +129,12 @@ router.get('/stats',
   storageController.getStorageStats
 );
 
+router.get('/download-by-key',
+  auth('view:storage:file'),
+  validate(storageValidation.downloadFileByKey),
+  storageController.downloadFileByKey
+);
+
 router.get('/:fileId',
   auth('view:storage:file'),
   validate(storageValidation.getFile),

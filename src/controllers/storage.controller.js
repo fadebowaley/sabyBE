@@ -153,6 +153,44 @@ const downloadSharedFile = catchAsync(async (req, res) => {
   res.send({ downloadUrl, fileName: file.originalName });
 });
 
+const ALLOWED_DIRECT_DOWNLOAD_PREFIXES = ['public/forms/', 'public/uploads/', 'uploads/'];
+
+const normalizeStorageDownloadKey = (rawKey = '') => {
+  const value = String(rawKey || '').trim();
+  if (!value) return '';
+
+  if (/^https?:\/\//i.test(value)) {
+    try {
+      const parsed = new URL(value);
+      return decodeURIComponent(parsed.pathname.replace(/^\/+/, ''));
+    } catch {
+      return '';
+    }
+  }
+
+  return value.replace(/^\/+/, '');
+};
+
+const downloadFileByKey = catchAsync(async (req, res) => {
+  const rawKey = req.query.key || req.query.url || '';
+  const key = normalizeStorageDownloadKey(rawKey);
+
+  if (!key || !ALLOWED_DIRECT_DOWNLOAD_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid storage key');
+  }
+
+  const {
+    StorageProviderFactory,
+  } = require('../services/providers/storageProvider');
+  const provider = StorageProviderFactory.create('aws-s3');
+  const downloadUrl = await provider.generatePresignedUrl(key, 300);
+
+  res.send({
+    downloadUrl,
+    fileName: decodeURIComponent(key.split('/').pop() || 'File'),
+  });
+});
+
 const searchFiles = catchAsync(async (req, res) => {
   const { q: query } = req.query;
 
@@ -254,6 +292,7 @@ module.exports = {
   shareFile,
   getSharedFile,
   downloadSharedFile,
+  downloadFileByKey,
   searchFiles,
   getStorageStats,
   moveFile,
