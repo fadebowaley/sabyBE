@@ -43,6 +43,10 @@ const getActorFromRequest = async (req) => ({
   userEmail: req.user?.email || null,
   role: req.user?.role || null,
   roles: await resolveActorRoleRefs(req),
+  isAdmin: Boolean(req.user?.isAdmin),
+  isOwner: Boolean(req.user?.isOwner),
+  isSaby: Boolean(req.user?.isSaby),
+  isSuper: Boolean(req.user?.isSuper),
 });
 
 const getApprovalQueue = catchAsync(async (req, res) => {

@@ -56,6 +56,10 @@ const getApprovalActorFromRequest = async (req) => ({
   userId: req.user?.id || req.user?._id || req.user?.userId || null,
   role: req.user?.role || null,
   roles: await resolveActorRoleRefs(req),
+  isAdmin: Boolean(req.user?.isAdmin),
+  isOwner: Boolean(req.user?.isOwner),
+  isSaby: Boolean(req.user?.isSaby),
+  isSuper: Boolean(req.user?.isSuper),
 });
 
 const canBypassWorkspaceScope = (req) =>

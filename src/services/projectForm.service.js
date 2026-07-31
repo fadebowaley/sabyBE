@@ -2179,6 +2179,10 @@ const normalizeProjectFormRuntimeConfig = (projectFormLike = {}, options = {}) =
     ui: {
       theme: source?.ui?.theme || 'default',
       primaryColor: source?.ui?.primaryColor || '#3b82f6',
+      secondaryColor: source?.ui?.secondaryColor || '#dbeafe',
+      companyLogoUrl: source?.ui?.companyLogoUrl || '',
+      conversationTitle: source?.ui?.conversationTitle || '',
+      conversationDescription: source?.ui?.conversationDescription || '',
       layout: source?.ui?.layout || 'single',
       showProgressBar: source?.ui?.showProgressBar !== false,
     },

@@ -67,6 +67,11 @@ const actionWorkflowStep = catchAsync(async (req, res) => {
     userName: req.user?.name || [req.user?.firstname, req.user?.lastname].filter(Boolean).join(' '),
     userEmail: req.user?.email,
     role: req.user?.role || null,
+    roles: Array.isArray(req.user?.roles) ? req.user.roles : [],
+    isAdmin: Boolean(req.user?.isAdmin),
+    isOwner: Boolean(req.user?.isOwner),
+    isSaby: Boolean(req.user?.isSaby),
+    isSuper: Boolean(req.user?.isSuper),
   };
 
   const result = await workflowService.actionStep(

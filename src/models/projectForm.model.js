@@ -376,6 +376,10 @@ const UISchema = new mongoose.Schema(
   {
     theme: { type: String, default: 'default' },
     primaryColor: { type: String, default: '#3b82f6' },
+    secondaryColor: { type: String, default: '#dbeafe' },
+    companyLogoUrl: { type: String, default: '' },
+    conversationTitle: { type: String, default: '' },
+    conversationDescription: { type: String, default: '' },
     layout: {
       type: String,
       enum: ['single', 'multi-step'],

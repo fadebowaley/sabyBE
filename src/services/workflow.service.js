@@ -62,6 +62,29 @@ const syncSubmissionApprovalStatus = async (submissionId, status) => {
   );
 };
 
+const APPROVAL_FALLBACK_ROLE_REFS = new Set([
+  'admin',
+  'owner',
+  'sabyadmin',
+  'sabyowner',
+  'superadmin',
+  'superuser',
+  'tenantadmin',
+  'tenantowner',
+]);
+
+const actorHasApprovalFallbackAccess = (actor = {}) => {
+  if (actor.isAdmin || actor.isOwner || actor.isSaby || actor.isSuper) {
+    return true;
+  }
+
+  const roleRefs = [actor.role, ...(Array.isArray(actor.roles) ? actor.roles : [])]
+    .map((entry) => String(entry || '').trim().toLowerCase())
+    .filter(Boolean);
+
+  return roleRefs.some((entry) => APPROVAL_FALLBACK_ROLE_REFS.has(entry));
+};
+
 const canActorActionStep = (step, actor = {}) => {
   const actorRoleRefs = [
     actor.role,
@@ -76,8 +99,18 @@ const canActorActionStep = (step, actor = {}) => {
   const assigneeUsers = Array.isArray(step.assignee_users) ? step.assignee_users : [];
 
   if (assigneeType === 'user') {
-    if (!actorUserId) return false;
-    return assigneeUsers.map((entry) => String(entry || '').trim()).includes(actorUserId);
+    const allowedUsers = assigneeUsers
+      .map((entry) => String(entry || '').trim())
+      .filter(Boolean);
+
+    if (allowedUsers.length > 0) {
+      if (!actorUserId) return false;
+      return allowedUsers.includes(actorUserId);
+    }
+
+    // Legacy/broken workflow rows may have `assignee_type=user` without users.
+    // Let workspace owners/admins recover the approval instead of deadlocking it.
+    return actorHasApprovalFallbackAccess(actor);
   }
 
   if (assigneeType === 'role' || !assigneeType) {
