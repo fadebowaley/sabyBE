@@ -72,6 +72,14 @@ const downloadSharedFile = {
   }),
 };
 
+const requestPresignedUpload = {
+  body: Joi.object().keys({
+    filename: Joi.string().required().min(1),
+    contentType: Joi.string().required().min(1),
+    size: Joi.number().integer().min(1).required(),
+  }),
+};
+
 const downloadFileByKey = {
   query: Joi.object()
     .keys({
@@ -141,6 +149,7 @@ const updateFilePermissions = {
 };
 
 module.exports = {
+  requestPresignedUpload,
   uploadFile,
   uploadMultipleFiles,
   getFiles,

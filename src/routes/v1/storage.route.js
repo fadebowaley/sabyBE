@@ -69,6 +69,12 @@ const upload = multer({
  */
 
 // File operations
+router.post('/presign',
+  auth('create:storage:file'),
+  validate(storageValidation.requestPresignedUpload),
+  storageController.requestPresignedUpload
+);
+
 router.post('/upload', 
   auth('create:storage:file'), 
   upload.single('file'),

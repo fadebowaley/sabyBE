@@ -64,6 +64,18 @@ class AWSS3Provider {
     return this.s3.getSignedUrl('getObject', params);
   }
 
+  async generatePresignedUploadUrl(key, contentType, expiresIn = 600) {
+    const params = {
+      Bucket: this.bucket,
+      Key: key,
+      Expires: expiresIn,
+      ContentType: contentType,
+      ServerSideEncryption: 'AES256',
+    };
+
+    return this.s3.getSignedUrlPromise('putObject', params);
+  }
+
   async copy(sourceKey, destinationKey) {
     const params = {
       Bucket: this.bucket,

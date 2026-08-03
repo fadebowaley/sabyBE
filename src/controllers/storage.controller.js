@@ -3,6 +3,9 @@ const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { storageService } = require('../services');
+const {
+  StorageProviderFactory: PresignedUploadStorageProviderFactory,
+} = require('../services/providers/storageProvider');
 
 const uploadFile = catchAsync(async (req, res) => {
   if (!req.file) {
@@ -283,7 +286,40 @@ const updateFilePermissions = catchAsync(async (req, res) => {
   res.send(file);
 });
 
+const requestPresignedUpload = catchAsync(async (req, res) => {
+  const { filename, contentType, size } = req.body;
+  const maxSizeBytes = 10 * 1024 * 1024;
+
+  if (size > maxSizeBytes) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'File size must be less than 10MB'
+    );
+  }
+
+  const timestamp = Date.now();
+  const safeName = String(filename).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const key = `public/uploads/${timestamp}_${safeName}`;
+
+  const provider = PresignedUploadStorageProviderFactory.create('aws-s3');
+
+  const uploadUrl = await provider.generatePresignedUploadUrl(
+    key,
+    contentType,
+    300
+  );
+  const region = process.env.AWS_REGION || 'us-east-1';
+  const bucket =
+    process.env.AWS_S3_BUCKET ||
+    process.env.AWS_BUCKET_NAME ||
+    'halocrm-storage';
+  const fileUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+
+  res.status(httpStatus.OK).send({ uploadUrl, fileUrl, key });
+});
+
 module.exports = {
+  requestPresignedUpload,
   uploadFile,
   uploadMultipleFiles,
   getFiles,
