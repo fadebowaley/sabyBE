@@ -50,6 +50,7 @@ const complianceReportRoute = require('./complianceReport.route');
 const validationReportRoute = require('./validationReport.route');
 const notificationReportRoute = require('./notificationReport.route');
 const analyticsReportRoute = require('./analyticsReport.route');
+const auditTrailRoute = require('./auditTrail.route');
 const trendAnalysisRoute = require('./trendAnalysis.route');
 const permReportRoute = require('./permReport.route');
 const rollupReportRoute = require('./rollupReport.route');
@@ -281,6 +282,10 @@ const defaultRoutes = [
   {
     path: '/executive-intelligence',
     route: executiveIntelligenceRoute,
+  },
+  {
+    path: '/audit-trail',
+    route: auditTrailRoute,
   },
   {
     path: '/geo',

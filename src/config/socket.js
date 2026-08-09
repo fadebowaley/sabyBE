@@ -65,8 +65,15 @@ const emitActivityUpdate = (tenantId, activityData) => {
   }
 };
 
+const emitAuditTrailUpdate = (tenantId, auditEntry) => {
+  if (io && tenantId) {
+    io.to(`tenant:${tenantId}`).emit('audit-trail-update', auditEntry);
+  }
+};
+
 module.exports = {
   initializeSocket,
   getIO,
   emitActivityUpdate,
+  emitAuditTrailUpdate,
 };

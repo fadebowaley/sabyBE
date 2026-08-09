@@ -112,6 +112,7 @@ const createUserFormSettings = {
               .default({}),
           })
           .default({}),
+        profileModal: Joi.object().optional().default({}),
       }),
   }),
 };
@@ -134,7 +135,7 @@ const getUserFormSettingsById = {
 
 const getUserFormSettingsByUserId = {
   params: Joi.object().keys({
-    userId: Joi.string().required().custom(objectId),
+    userId: Joi.string().required().min(1),
   }),
 };
 
@@ -175,12 +176,12 @@ const updateUserFormSettings = {
           onSubmit: Joi.object().keys({
             sendToUser: Joi.boolean(),
             sendToOwner: Joi.boolean(),
-            emailTemplateId: Joi.string(),
+            emailTemplateId: Joi.string().allow(''),
             customEmails: Joi.array().items(Joi.string().email()),
           }),
           onFailure: Joi.object().keys({
             sendToOwner: Joi.boolean(),
-            emailTemplateId: Joi.string(),
+            emailTemplateId: Joi.string().allow(''),
           }),
         }),
         ui: Joi.object().keys({
@@ -213,6 +214,7 @@ const updateUserFormSettings = {
             validateOnBlur: Joi.boolean(),
           }),
         }),
+        profileModal: Joi.object().optional().default({}),
       }),
     })
     .min(1),
@@ -220,7 +222,7 @@ const updateUserFormSettings = {
 
 const updateUserFormSettingsByUserId = {
   params: Joi.object().keys({
-    userId: Joi.string().required().custom(objectId),
+    userId: Joi.string().required().min(1),
   }),
   body: Joi.object()
     .keys({
@@ -255,12 +257,12 @@ const updateUserFormSettingsByUserId = {
           onSubmit: Joi.object().keys({
             sendToUser: Joi.boolean(),
             sendToOwner: Joi.boolean(),
-            emailTemplateId: Joi.string(),
+            emailTemplateId: Joi.string().allow(''),
             customEmails: Joi.array().items(Joi.string().email()),
           }),
           onFailure: Joi.object().keys({
             sendToOwner: Joi.boolean(),
-            emailTemplateId: Joi.string(),
+            emailTemplateId: Joi.string().allow(''),
           }),
         }),
         ui: Joi.object().keys({
@@ -293,6 +295,7 @@ const updateUserFormSettingsByUserId = {
             validateOnBlur: Joi.boolean(),
           }),
         }),
+        profileModal: Joi.object().optional().default({}),
       }),
     })
     .min(1),
@@ -306,13 +309,13 @@ const deleteUserFormSettings = {
 
 const deleteUserFormSettingsByUserId = {
   params: Joi.object().keys({
-    userId: Joi.string().required().custom(objectId),
+    userId: Joi.string().required().min(1),
   }),
 };
 
 const upsertUserFormSettings = {
   params: Joi.object().keys({
-    userId: Joi.string().required().custom(objectId),
+    userId: Joi.string().required().min(1),
   }),
   body: Joi.object().keys({
     tenantId: tenantIdSchema,
@@ -422,6 +425,7 @@ const upsertUserFormSettings = {
               .default({}),
           })
           .default({}),
+        profileModal: Joi.object().optional().default({}),
       }),
   }),
 };

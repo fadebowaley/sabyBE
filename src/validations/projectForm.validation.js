@@ -12,7 +12,7 @@ const formElementSchema = Joi.object({
     label: Joi.string().allow(''),
     placeholder: Joi.string().allow(''),
     required: Joi.boolean().default(false),
-    validation: Joi.object().allow({}),
+    validation: Joi.any(),
     options: Joi.array().items(Joi.string()),
     multiple: Joi.boolean().default(false),
     accept: Joi.string(),
