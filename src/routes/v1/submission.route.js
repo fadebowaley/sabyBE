@@ -1,6 +1,7 @@
 const express = require('express');
 const auth = require('../../middlewares/auth');
-const requireAccess = require('../../middlewares/requireAccess')
+const requireAccess = require('../../middlewares/requireAccess');
+const { apiKeyAuth } = require('../../middlewares/apiKeyAuth');
 const validate = require('../../middlewares/validate');
 const submissionValidation = require('../../validations/submission.validation');
 const submissionController = require('../../controllers/submission.controller');
@@ -17,6 +18,14 @@ router
     submissionController.submitData
   )
   .get(auth('submission:read'), submissionController.listSubmissions);
+
+// Public embed submission — API key validated, no role permission gate
+router.post(
+  '/embed',
+  apiKeyAuth(),
+  validate(submissionValidation.submitData),
+  submissionController.submitData
+);
 
 router.route('/:form_id').get(submissionController.getSubmissionById).delete(submissionController.deleteSubmission);
 
