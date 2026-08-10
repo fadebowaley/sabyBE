@@ -1,5 +1,6 @@
 const express = require('express');
 const auth = require('../../middlewares/auth');
+const { apiKeyAuth } = require('../../middlewares/apiKeyAuth');
 const validate = require('../../middlewares/validate');
 const submissionValidation = require('../../validations/submission.validation');
 const unifiedSubmissionController = require('../../controllers/unifiedSubmission.controller');
@@ -127,6 +128,14 @@ router
     unifiedSubmissionController.submitData
   )
   .get(auth(), unifiedSubmissionController.listSubmissions);
+
+// Embed submission — API key validated, no JWT/permission gate
+router.post(
+  '/embed',
+  apiKeyAuth(),
+  validate(submissionValidation.submitData),
+  unifiedSubmissionController.submitData
+);
 
 // Retry failed submission
 router.post(
