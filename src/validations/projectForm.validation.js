@@ -129,7 +129,7 @@ const userSettingsSchema = Joi.object({
   }).default({}),
   distribution: Joi.object({
     enableSharing: Joi.boolean().default(true),
-    allowEmbedding: Joi.boolean().default(false),
+    allowEmbedding: Joi.boolean().default(true),
     generateQR: Joi.boolean().default(false),
     enableDeepLinking: Joi.boolean().default(false),
   }).default({}),

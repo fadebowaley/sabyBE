@@ -355,7 +355,7 @@ const ExperiencePreviewSubmissionSchema = new mongoose.Schema(
 const ExperienceDistributionSchema = new mongoose.Schema(
   {
     enableSharing: { type: Boolean, default: true },
-    allowEmbedding: { type: Boolean, default: false },
+    allowEmbedding: { type: Boolean, default: true },
     generateQR: { type: Boolean, default: false },
     enableDeepLinking: { type: Boolean, default: false },
   },

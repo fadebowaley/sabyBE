@@ -1329,7 +1329,7 @@ const defaultCapabilities = () => ({
     },
     distribution: {
       enableSharing: true,
-      allowEmbedding: false,
+      allowEmbedding: true,
       generateQR: false,
       enableDeepLinking: false,
     },

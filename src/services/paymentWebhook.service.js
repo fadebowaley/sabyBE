@@ -9,6 +9,7 @@ const paymentEventService = require('./paymentEvent.service');
 const paymentSubmissionSyncService = require('./paymentSubmissionSync.service');
 const subscriptionService = require('./subscription.service');
 const ApiError = require('../utils/ApiError');
+const paymentFlowService = require('./paymentFlow.service');
 
 const SUPPORTED_PROVIDER_STATUSES = [
   'pending',
@@ -502,6 +503,10 @@ const processWebhookEvent = async (req) => {
         paymentReference: completedPayment.reference,
         failureReason: null,
       });
+
+      await paymentFlowService.upsertPaymentFlow(
+        paymentFlowService.fromPayment(completedPayment)
+      );
 
       return {
         duplicate: false,

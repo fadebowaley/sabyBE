@@ -1,4 +1,5 @@
 const { PaymentSettlement } = require('../models');
+const paymentFlowService = require('./paymentFlow.service');
 
 const buildSettlementIdempotencyKey = ({ payment, destination }) =>
   [
@@ -62,6 +63,11 @@ const createOrGetSettlementForPayment = async (payment) => {
 
   try {
     const settlement = await PaymentSettlement.create(payload);
+
+    await paymentFlowService.upsertPaymentFlow(
+      paymentFlowService.fromSettlement(settlement)
+    );
+
     return { settlement, created: true };
   } catch (error) {
     if (error?.code === 11000) {
@@ -143,6 +149,11 @@ const markSettlementProviderSettled = async ({
     },
   };
   await settlement.save();
+
+  await paymentFlowService.upsertPaymentFlow(
+    paymentFlowService.fromSettlement(settlement)
+  );
+
   return settlement;
 };
 

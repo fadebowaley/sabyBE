@@ -5,6 +5,7 @@ const paymentEventService = require('./paymentEvent.service');
 const paymentRemittanceService = require('./paymentRemittance.service');
 const paymentSettlementService = require('./paymentSettlement.service');
 const flutterwaveSettlementService = require('./flutterwaveSettlement.service');
+const paymentFlowService = require('./paymentFlow.service');
 
 const toIsoDate = (date) => new Date(date).toISOString().slice(0, 10);
 
@@ -44,12 +45,16 @@ const runReconciliationSweep = async () => {
       eventType: 'reconciliation_marked_failed',
       fromStatus,
       toStatus: payment.status,
-      userId: payment.userId,
+      userId:       payment.userId,
       source: 'reconciliation-worker',
       dedupeKey: `recon-failed:${payment.id}:${new Date().toISOString().slice(0, 16)}`,
-      metadata: {
-        stuckMinutes,
-      },
+      metadata: { stuckMinutes },
+    });
+
+    await paymentFlowService.upsertPaymentFlow({
+      ...paymentFlowService.fromPayment(payment),
+      reconciliation_status: 'stuck_recovered',
+      last_reconciled_at: new Date().toISOString(),
     });
 
     failedCount += 1;
@@ -144,6 +149,15 @@ const runReconciliationSweep = async () => {
     if (result?.queued) {
       remittanceQueued += 1;
     }
+
+    await paymentFlowService.upsertPaymentFlow({
+      ...paymentFlowService.fromPayment(payment),
+      ...paymentFlowService.fromSettlement(settlement),
+      reconciliation_status: 'clean',
+      last_reconciled_at: new Date().toISOString(),
+      remittance_queued: result?.queued || false,
+    });
+
     providerSettled += 1;
   }
 

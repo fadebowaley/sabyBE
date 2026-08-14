@@ -27,6 +27,7 @@ const departmentRoute = require('./department.route');
 const eventRoute = require('./event.route');
 const eventConfigRoute = require('./eventConfig.route');
 const paymentRoute = require('./payment.route');
+const paymentFlowRoute = require('./paymentFlow.route');
 const reportRoute = require('./report.route');
 const settingsRoute = require('./settings.route');
 const statementRoute = require('./statement.route');
@@ -286,6 +287,10 @@ const defaultRoutes = [
   {
     path: '/audit-trail',
     route: auditTrailRoute,
+  },
+  {
+    path: '/payment-flow',
+    route: paymentFlowRoute,
   },
   {
     path: '/geo',
