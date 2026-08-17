@@ -65,7 +65,7 @@ const SubmissionModel = {
       ON CONFLICT (tenant_id, idempotency_key)
       WHERE idempotency_key IS NOT NULL
       DO UPDATE SET updated_at = form_submissions.updated_at
-      RETURNING *;
+      RETURNING *, (xmax = 0) AS _inserted;
     `;
 
     const values = [
@@ -94,6 +94,20 @@ const SubmissionModel = {
     try {
       const db = client || postgresPool;
       const result = await db.query(query, values);
+      if (result.rows[0]?._inserted === true) {
+        try {
+          const ProjectForm = require('./projectForm.model');
+          await ProjectForm.updateOne(
+            { tenantId: tenant_id, projectId: project_id, deletedAt: null },
+            { $inc: { 'analytics.submissions': 1 } }
+          );
+        } catch (counterError) {
+          console.warn(
+            '⚠️ Failed to increment form submission counter:',
+            counterError.message
+          );
+        }
+      }
       return result.rows[0];
     } catch (err) {
       console.error('❌ Error saving submission:', err.message);

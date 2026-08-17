@@ -430,7 +430,7 @@ const nodeId = node_id;
       ON CONFLICT (tenant_id, idempotency_key)
       WHERE idempotency_key IS NOT NULL
       DO UPDATE SET updated_at = form_submissions.updated_at
-      RETURNING *
+      RETURNING *, (xmax = 0) AS _inserted
     `;
 
     const submissionId = uuidv4();
@@ -468,6 +468,20 @@ const nodeId = node_id;
       await client.query('COMMIT');
     const submission = insertResult.rows[0];
     logger.info(`✅ PERM submission created: ${submission.id}`);
+
+    if (submission?._inserted === true) {
+      try {
+        const ProjectForm = require('../models/projectForm.model');
+        await ProjectForm.updateOne(
+          { tenantId: tenant_id, projectId: project_id, deletedAt: null },
+          { $inc: { 'analytics.submissions': 1 } }
+        );
+      } catch (counterError) {
+        logger.warn(
+          `⚠️ Failed to increment PERM form submission counter: ${counterError.message}`
+        );
+      }
+    }
 
     return {
       submission,

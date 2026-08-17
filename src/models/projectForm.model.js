@@ -650,6 +650,7 @@ const CapabilityTransactionInvoiceSchema = new mongoose.Schema(
   {
     enabled: { type: Boolean, default: false },
     calculationMode: { type: String, default: 'none' },
+    currency: { type: String, default: null },
     baseAmount: { type: Number, default: 0 },
     amountSourceField: { type: String, default: null },
     lineItemsEnabled: { type: Boolean, default: false },

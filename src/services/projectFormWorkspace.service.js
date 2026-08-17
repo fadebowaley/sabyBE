@@ -391,6 +391,10 @@ const listWorkspaces = async ({ tenantId, userId, includeAll = false }) => {
             tenantId: normalizeString(tenantId),
             deletedAt: null,
             workspaceId: { $in: workspaceIds },
+            $nor: [
+              { 'identity.category': 'system' },
+              { 'metadata.formCategory': 'system' },
+            ],
           },
         },
         {

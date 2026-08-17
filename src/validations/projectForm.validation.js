@@ -235,6 +235,7 @@ const invoiceConfigSchema = Joi.object({
   calculationMode: Joi.string()
     .valid('none', 'fixed', 'field_based', 'line_items', 'rule_based')
     .default('none'),
+  currency: Joi.string().allow('', null).default(null),
   baseAmount: Joi.number().min(0).default(0),
   amountSourceField: Joi.string().allow('', null).default(null),
   lineItemsEnabled: Joi.boolean().default(false),

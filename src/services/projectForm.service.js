@@ -1387,6 +1387,7 @@ const defaultCapabilities = () => ({
     invoice: {
       enabled: false,
       calculationMode: 'none',
+      currency: null,
       baseAmount: 0,
       amountSourceField: null,
       lineItemsEnabled: false,
@@ -1539,6 +1540,10 @@ const normalizeTransactionInvoice = (value = {}, defaults = {}) => {
     ...defaults,
     ...source,
     calculationMode,
+    currency:
+      typeof source.currency === 'string' && source.currency.trim()
+        ? source.currency.trim().toUpperCase()
+        : defaults.currency || null,
     baseAmount: Math.max(0, Number(source.baseAmount || 0)),
     amountSourceField:
       typeof source.amountSourceField === 'string' && source.amountSourceField.trim()
@@ -2951,7 +2956,8 @@ const getProjectFormByPublicRef = async (publicRef, options = {}) => {
 
 /**
  * Resolve and return strict public form payload by reference.
- * Supports canonical publicRef and legacy projectId.
+ * Supports canonical publicRef, human-readable formReference (formId, e.g. #SB-000001)
+ * and legacy projectId.
  * @param {string} reference
  * @returns {Promise<Object>}
  */
@@ -2968,6 +2974,20 @@ const getPublicProjectFormByReference = async (reference) => {
       deletedAt: null,
     });
     resolvedBy = 'publicRef';
+  }
+
+  if (!projectForm) {
+    // Resolve by human-readable formReference (formId). Normalize the optional
+    // "#" prefix so both "SB-000001" and "#SB-000001" resolve.
+    const bareRef = String(reference || '').trim().replace(/^#/, '');
+    if (bareRef) {
+      const candidates = Array.from(new Set([bareRef, `#${bareRef}`]));
+      projectForm = await ProjectForm.findOne({
+        formReference: { $in: candidates },
+        deletedAt: null,
+      });
+      if (projectForm) resolvedBy = 'formReference';
+    }
   }
 
   if (!projectForm) {
@@ -3047,6 +3067,10 @@ const getProjectFormsByTenant = async (tenantId, filter = {}, options = {}) => {
     ...filter,
     tenantId,
     deletedAt: null,
+    $nor: [
+      { 'identity.category': SYSTEM_FORM_CATEGORY },
+      { 'metadata.formCategory': SYSTEM_FORM_CATEGORY },
+    ],
   };
 
   return queryProjectForms(tenantFilter, options);
@@ -3169,7 +3193,7 @@ const duplicateProjectFormByProjectId = async ({
  * @param {Object} options - Update options
  * @returns {Promise<ProjectForm>}
  */
-const updateProjectFormById = async (
+const performProjectFormUpdateById = async (
   projectFormId,
   updateBody,
   options = {}
@@ -3286,6 +3310,42 @@ const updateProjectFormById = async (
 
   await fieldCatalogService.syncCatalogFromForm(projectForm);
   return projectForm;
+};
+
+const isMongooseVersionError = (error) =>
+  Boolean(
+    error &&
+      (error.name === 'VersionError' ||
+        String(error?.message || '').includes('No matching document found for id'))
+  );
+
+/**
+ * Update a project form by ID.
+ *
+ * Autosave issues rapid overlapping PATCH requests. Because the update is a
+ * load-then-save cycle, Mongoose's optimistic concurrency version key (__v)
+ * can be stale by the time save() runs, throwing a VersionError ("No matching
+ * document found for id ... version ..."). We retry with a fresh read so the
+ * last writer wins instead of surfacing a 500.
+ */
+const updateProjectFormById = async (projectFormId, updateBody, options = {}) => {
+  const maxAttempts = 3;
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await performProjectFormUpdateById(projectFormId, updateBody, options);
+    } catch (error) {
+      if (!isMongooseVersionError(error) || attempt >= maxAttempts) {
+        throw error;
+      }
+      lastError = error;
+      logger.warn(
+        { projectFormId, attempt, message: error.message },
+        'Project form update hit a version conflict; retrying with a fresh read'
+      );
+    }
+  }
+  throw lastError;
 };
 
 const buildSystemFormTemplate = (target) => {

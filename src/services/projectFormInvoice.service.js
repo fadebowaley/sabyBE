@@ -517,7 +517,7 @@ const evaluateInvoiceSnapshot = async ({
   return {
     enabled: true,
     calculationMode,
-    currency: payment?.currency || null,
+    currency: invoice?.currency || payment?.currency || null,
     subtotal: resolvedBaseAmount,
     taxableBase,
     discount,

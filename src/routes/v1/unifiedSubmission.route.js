@@ -1,6 +1,9 @@
 const express = require('express');
 const auth = require('../../middlewares/auth');
-const { apiKeyAuth } = require('../../middlewares/apiKeyAuth');
+const {
+  apiKeyAuth,
+  validateEnvironment,
+} = require('../../middlewares/apiKeyAuth');
 const validate = require('../../middlewares/validate');
 const submissionValidation = require('../../validations/submission.validation');
 const unifiedSubmissionController = require('../../controllers/unifiedSubmission.controller');
@@ -129,10 +132,12 @@ router
   )
   .get(auth(), unifiedSubmissionController.listSubmissions);
 
-// Embed submission — API key validated, no JWT/permission gate
+// Embed submission — API key validated, no JWT/permission gate.
+// Only live (production) keys may submit data; staging keys are blocked.
 router.post(
   '/embed',
   apiKeyAuth(),
+  validateEnvironment('production'),
   validate(submissionValidation.submitData),
   unifiedSubmissionController.submitData
 );
