@@ -798,6 +798,32 @@ router.patch(
   authController.updateOnboardingReceivingAccounts
 );
 
+router.get(
+  '/settlement/banks',
+  auth(),
+  authController.listSettlementBanks
+);
+
+router.post(
+  '/settlement/accounts/resolve',
+  auth(),
+  validate(authValidation.settlementAccountResolve),
+  authController.resolveSettlementAccount
+);
+
+router.post(
+  '/settlement/accounts/otp',
+  auth(),
+  authController.sendSettlementAccountOtp
+);
+
+router.post(
+  '/settlement/accounts',
+  auth(),
+  validate(authValidation.settlementAccountAdd),
+  authController.addSettlementAccount
+);
+
 /**
  * @swagger
  * /auth/check-api-key-status:

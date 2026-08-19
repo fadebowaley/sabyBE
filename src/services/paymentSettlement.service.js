@@ -1,5 +1,6 @@
 const { PaymentSettlement } = require('../models');
 const paymentFlowService = require('./paymentFlow.service');
+const subscriptionCatalogService = require('./subscriptionCatalog.service');
 
 const buildSettlementIdempotencyKey = ({ payment, destination }) =>
   [
@@ -17,6 +18,11 @@ const buildSettlementFromPayment = (payment) => {
   const collectionPlan = metadata.collectionPlan || {};
   const amount = Number(payment.total || payment.amount || 0);
 
+  const feeConfig =
+    subscriptionCatalogService.getActiveSubscriptionCatalog()?.serviceFee || {};
+  const serviceFee = subscriptionCatalogService.computeServiceFee(amount);
+  const netAmount = Math.max(0, Math.round((amount - serviceFee) * 100) / 100);
+
   return {
     tenantId: payment.tenantId,
     paymentId: payment._id,
@@ -26,8 +32,11 @@ const buildSettlementFromPayment = (payment) => {
     provider: collectionPlan.paymentMethod || payment.paymentMethod,
     currency: payment.currency,
     amount,
-    fee: 0,
-    netAmount: amount,
+    fee: serviceFee,
+    serviceFee,
+    serviceFeeRate: Number.isFinite(Number(feeConfig.rate)) ? Number(feeConfig.rate) : null,
+    serviceFeeFlat: Number.isFinite(Number(feeConfig.flat)) ? Number(feeConfig.flat) : null,
+    netAmount,
     status: 'pending',
     availabilityStatus: 'unknown',
     fundingStatus: 'provider_verified',
@@ -64,9 +73,10 @@ const createOrGetSettlementForPayment = async (payment) => {
   try {
     const settlement = await PaymentSettlement.create(payload);
 
-    await paymentFlowService.upsertPaymentFlow(
-      paymentFlowService.fromSettlement(settlement)
-    );
+    await paymentFlowService.upsertPaymentFlow({
+      ...paymentFlowService.fromPayment(payment),
+      ...paymentFlowService.fromSettlement(settlement),
+    });
 
     return { settlement, created: true };
   } catch (error) {

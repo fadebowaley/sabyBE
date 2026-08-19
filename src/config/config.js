@@ -431,6 +431,7 @@ module.exports = {
       paystack: {
         publicKey: envVars.PAYSTACK_PUBLIC_KEY,
         secretKey: envVars.PAYSTACK_SECRET_KEY,
+        webhookSecret: envVars.PAYSTACK_WEBHOOK_SECRET,
       },
       flutterwave: {
         publicKey: envVars.FLUTTERWAVE_PUBLIC_KEY,

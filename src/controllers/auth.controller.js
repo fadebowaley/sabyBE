@@ -12,6 +12,7 @@ const {
   emailService,
   apiKeyService,
   tenantOnboardingService,
+  settlementAccountService,
   sessionService,
   mfaService,
   userSecurityService,
@@ -1516,10 +1517,15 @@ const getOnboardingProfile = catchAsync(async (req, res) => {
 });
 
 const upsertOnboardingProfile = catchAsync(async (req, res) => {
-  const result = await tenantOnboardingService.completeOnboarding({
-    userId: req.user.id,
-    payload: req.body,
-  });
+  const result = req.body?.settings
+    ? await tenantOnboardingService.upsertGlobalSettings({
+        userId: req.user.id,
+        payload: req.body,
+      })
+    : await tenantOnboardingService.completeOnboarding({
+        userId: req.user.id,
+        payload: req.body,
+      });
   res.status(httpStatus.OK).send(result);
 });
 
@@ -1535,6 +1541,46 @@ const updateOnboardingReceivingAccounts = catchAsync(async (req, res) => {
   const result = await tenantOnboardingService.updateReceivingAccountsOnly({
     userId: req.user.id,
     receivingAccounts: req.body.receivingAccounts,
+  });
+  res.status(httpStatus.OK).send(result);
+});
+
+const listSettlementBanks = catchAsync(async (req, res) => {
+  const banks = await settlementAccountService.listBanks({
+    currency: req.query.currency,
+  });
+  res.status(httpStatus.OK).send({ ok: true, banks });
+});
+
+const resolveSettlementAccount = catchAsync(async (req, res) => {
+  const account = await settlementAccountService.resolveAccount({
+    accountNumber: req.body.accountNumber,
+    bankCode: req.body.bankCode,
+  });
+  res.status(httpStatus.OK).send({ ok: true, account });
+});
+
+const sendSettlementAccountOtp = catchAsync(async (req, res) => {
+  const delivery = await authService.sendUserOtp(req.user, {
+    allowFallback: true,
+    preserveOtpVerified: true,
+  });
+  res.status(httpStatus.OK).send({
+    ok: true,
+    email: delivery.email,
+    channels: delivery.channels,
+  });
+});
+
+const addSettlementAccount = catchAsync(async (req, res) => {
+  const verification = await authService.verifyOtp(req.user.email, req.body.otp);
+  if (!verification.success) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid or expired OTP.');
+  }
+
+  const result = await tenantOnboardingService.addReceivingAccount({
+    userId: req.user.id,
+    account: req.body.account,
   });
   res.status(httpStatus.OK).send(result);
 });
@@ -1576,4 +1622,8 @@ module.exports = {
   upsertOnboardingProfile,
   upsertOnboardingDraft,
   updateOnboardingReceivingAccounts,
+  listSettlementBanks,
+  resolveSettlementAccount,
+  sendSettlementAccountOtp,
+  addSettlementAccount,
 };

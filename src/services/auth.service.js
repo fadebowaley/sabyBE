@@ -142,14 +142,16 @@ const generateOtp = () =>
  */
 
 const sendUserOtp = async (user, options = {}) => {
-  const { allowFallback = false } = options;
+  const { allowFallback = false, preserveOtpVerified = false } = options;
   const otp = generateOtp();
   console.log('🔐 OTP for user', user.email, ':', otp);
   const update = {
     otp,
     otpExpires: moment().add(10, 'minutes').toDate(),
-    otpVerified: false,
   };
+  if (!preserveOtpVerified) {
+    update.otpVerified = false;
+  }
 
   await User.updateOne({ _id: user._id }, update); // No validation issues
 

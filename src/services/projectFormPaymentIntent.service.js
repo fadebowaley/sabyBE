@@ -575,7 +575,8 @@ const prepareProjectFormPaymentIntent = async ({
     preferredChannel ||
     (defaultChannel && enabledChannels.includes(defaultChannel)
       ? defaultChannel
-      : enabledChannels[0]);
+      : null) ||
+    (enabledChannels.includes('flutterwave') ? 'flutterwave' : enabledChannels[0]);
 
   const invoiceSnapshot = await projectFormInvoiceService.evaluateInvoiceSnapshot({
     projectForm: normalizedForm,

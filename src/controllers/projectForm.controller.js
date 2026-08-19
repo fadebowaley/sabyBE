@@ -806,6 +806,30 @@ const getProjectFormsByTenant = catchAsync(async (req, res) => {
 });
 
 /**
+ * List public project forms for an API-key client. The tenant is resolved from
+ * the authenticated API key (req.tenantId). Returns compact sanitized summaries.
+ */
+const listPublicProjectFormsByApiKey = catchAsync(async (req, res) => {
+  const tenantId = req.apiKey?.tenant || req.tenantId;
+  if (!tenantId) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Tenant could not be resolved from the API key');
+  }
+
+  const filter = pick(req.query, ['status', 'identity.status']);
+  const options = pick(req.query, ['limit', 'page', 'sortBy']);
+  const result = await projectFormService.listPublicProjectFormsByTenant(
+    tenantId,
+    filter,
+    options
+  );
+
+  res.send({
+    ...result,
+    tenantId: String(tenantId),
+  });
+});
+
+/**
  * Get project forms by user
  */
 const getProjectFormsByUser = catchAsync(async (req, res) => {
@@ -1267,7 +1291,12 @@ const getPublicPaymentStatus = catchAsync(async (req, res) => {
       'Payment return reference does not match requested payment.'
     );
   }
-  if (returnProvider === 'flutterwave' || transactionId || txRef) {
+  if (
+    returnProvider === 'flutterwave' ||
+    returnProvider === 'paystack' ||
+    transactionId ||
+    txRef
+  ) {
     await paymentWebhookService.verifyAndCompleteProviderPayment({
       provider: returnProvider || 'flutterwave',
       paymentReference: req.params.reference,
@@ -1774,6 +1803,7 @@ module.exports = {
   listProjectWorkspaceMembers,
   getProjectFormsByTenant,
   getProjectFormsByUser,
+  listPublicProjectFormsByApiKey,
   getProjectForm,
   getProjectFormByProjectId,
   getProjectFormByPublicRef,

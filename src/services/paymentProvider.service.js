@@ -1,6 +1,7 @@
 const httpStatus = require('http-status');
 const validator = require('validator');
 const config = require('../config/config');
+const { GlobalSettings, TenantOnboarding } = require('../models');
 const ApiError = require('../utils/ApiError');
 
 const PROVIDER_CONFIG = config.payment?.providers || {};
@@ -24,6 +25,35 @@ const FLUTTERWAVE_DEFAULT_OPTIONS_BY_CURRENCY = {
   NGN: ['card', 'bank_transfer', 'ussd'],
   USD: ['card'],
   GBP: ['card'],
+};
+
+const DEFAULT_LOGO_PATH = '/logo-saby.svg';
+
+const resolveTenantBrand = async (tenantId) => {
+  if (!tenantId) {
+    return { name: null, logoUrl: null };
+  }
+  try {
+    const [settings, onboarding] = await Promise.all([
+      GlobalSettings.findOne({ tenantId }).lean(),
+      TenantOnboarding.findOne({ tenantId }).lean(),
+    ]);
+    const rawName = String(settings?.organizationName || '').trim();
+    const companyName = String(onboarding?.company?.name || '').trim();
+    const name =
+      (rawName && rawName !== 'Default Organization Name' ? rawName : '') ||
+      companyName;
+    const logoUrl = String(settings?.logoUrl || '').trim() || null;
+    return { name, logoUrl };
+  } catch (error) {
+    return { name: null, logoUrl: null };
+  }
+};
+
+const resolveBrandLogoUrl = (logoUrl) => {
+  if (logoUrl) return logoUrl;
+  const base = String(config.payment?.returnBaseUrl || '').trim().replace(/\/+$/, '');
+  return base ? `${base}${DEFAULT_LOGO_PATH}` : null;
 };
 
 const normalizeProvider = (value) =>
@@ -260,6 +290,13 @@ const initializeFlutterwaveCheckout = async ({
     };
   }
 
+  const brand = await resolveTenantBrand(payment.tenantId);
+  const checkoutTitle =
+    payment?.metadata?.checkoutTitle ||
+    brand.name ||
+    'Form Payment';
+  const logoUrl = resolveBrandLogoUrl(brand.logoUrl);
+
   const payload = {
     tx_ref: String(payment.reference || ''),
     amount: Number(payment.total || payment.amount || 0),
@@ -271,11 +308,12 @@ const initializeFlutterwaveCheckout = async ({
       phonenumber: customer.phone || undefined,
     },
     customizations: {
-      title: payment?.metadata?.checkoutTitle || 'Form Payment',
+      title: checkoutTitle,
       description:
         payment?.metadata?.checkoutDescription ||
         payment?.metadata?.projectName ||
         'Public form checkout',
+      ...(logoUrl ? { logo: logoUrl } : {}),
     },
     meta: {
       paymentId: String(payment._id || payment.id || ''),
@@ -397,7 +435,10 @@ const verifyFlutterwaveTransaction = async ({
 
 const normalizePaystackStatus = (status) => {
   const normalized = String(status || '').trim().toLowerCase();
-  return normalized === 'success' ? 'successful' : normalized;
+  if (normalized === 'success') return 'successful';
+  if (normalized === 'pending') return 'processing';
+  if (normalized === 'abandoned') return 'cancelled';
+  return normalized;
 };
 
 const verifyPaystackTransaction = async ({ txRef = null }) => {

@@ -6,7 +6,6 @@ const projectFormService = require('./projectForm.service');
 const SUPPORTED_INVOICE_CALCULATION_MODES = new Set([
   'none',
   'fixed',
-  'field_based',
   'line_items',
 ]);
 const SUPPORTED_INVOICE_LINE_ITEM_TYPES = new Set(['fixed', 'percentage']);
@@ -318,36 +317,13 @@ const inspectInvoiceCalculationSupport = (projectFormLike) => {
     };
   }
 
-  if (calculationMode === 'field_based' && !String(invoice?.amountSourceField || '').trim()) {
-    return {
-      supported: false,
-      reason: 'invoice_amount_source_missing',
-      message: 'This invoice configuration is missing its amount source field.',
-      normalizedForm,
-      invoice,
-    };
-  }
-  if (
-    calculationMode === 'field_based' &&
-    !fieldExists(fieldIds, invoice?.amountSourceField)
-  ) {
-    return {
-      supported: false,
-      reason: 'invoice_amount_source_stale',
-      message:
-        'This invoice configuration references a field that no longer exists on the form. Update the invoice amount source field.',
-      normalizedForm,
-      invoice,
-    };
-  }
-
   const lineItems = Array.isArray(invoice?.lineItems) ? invoice.lineItems : [];
   const hasUnsupportedLineItem = lineItems.some((item) => {
     const calculationType = String(item?.calculationType || 'fixed').trim().toLowerCase();
     if (!SUPPORTED_INVOICE_LINE_ITEM_TYPES.has(calculationType)) {
       return true;
     }
-    if (calculationType === 'percentage' && !String(item?.sourceField || '').trim()) {
+    if (!String(item?.sourceField || '').trim()) {
       return true;
     }
     return Array.isArray(item?.conditions)
@@ -373,8 +349,7 @@ const inspectInvoiceCalculationSupport = (projectFormLike) => {
   }
   const staleLineItem = lineItems.find((item) => {
     if (item?.enabled === false || item?.active === false) return false;
-    const calculationType = String(item?.calculationType || 'fixed').trim().toLowerCase();
-    return calculationType === 'percentage' && !fieldExists(fieldIds, item?.sourceField);
+    return !fieldExists(fieldIds, item?.sourceField);
   });
   if (staleLineItem) {
     return {
@@ -467,16 +442,6 @@ const evaluateInvoiceSnapshot = async ({
 
   if (calculationMode === 'fixed') {
     resolvedBaseAmount = roundCurrency(invoice?.baseAmount || 0);
-  } else if (calculationMode === 'field_based') {
-    const sourceField = String(invoice?.amountSourceField || '').trim();
-    const sourcedValue = coerceNumericValue(resolveAnswerValue(lookup, sourceField));
-    if (sourcedValue == null) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        'Invoice amount source must contain a valid number before submission.'
-      );
-    }
-    resolvedBaseAmount = roundCurrency(sourcedValue);
   } else if (calculationMode === 'line_items') {
     lineItems = evaluateLineItems(invoice, lookup);
     resolvedBaseAmount = roundCurrency(

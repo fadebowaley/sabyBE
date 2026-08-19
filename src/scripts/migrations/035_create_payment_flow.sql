@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public.payment_flow (
     provider_settlement_id VARCHAR(128),
     provider_settled_at  TIMESTAMPTZ,
     settlement_fee       NUMERIC(12,2) DEFAULT 0,
+    service_fee          NUMERIC(12,2) DEFAULT 0,
     net_amount           NUMERIC(12,2),
 
     destination_type     VARCHAR(32),

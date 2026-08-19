@@ -8,6 +8,7 @@ const logger = require('../config/logger');
 const config = require('../config/config');
 const paymentRemittanceService = require('./paymentRemittance.service');
 const paymentEventService = require('./paymentEvent.service');
+const paymentFlowService = require('./paymentFlow.service');
 const emailService = require('./email.service');
 
 const ALLOWED_STATUS_TRANSITIONS = {
@@ -970,6 +971,9 @@ const completePayment = async (
   }
 
   await payment.save();
+  await paymentFlowService.upsertPaymentFlow(
+    paymentFlowService.fromPayment(payment)
+  );
   await paymentEventService.appendPaymentEvent({
     tenantId: payment.tenantId,
     payment,

@@ -1,4 +1,5 @@
 const httpStatus = require('http-status');
+const { randomUUID } = require('crypto');
 const logger = require('../config/logger');
 const smsService = require('./sms.service');
 const {
@@ -108,6 +109,49 @@ const updateReceivingAccountsOnly = async ({ userId, receivingAccounts }) => {
     profile: nextProfile,
     receivingAccounts: sanitizedReceivingAccounts,
   };
+};
+
+const getTenantReceivingAccounts = async (tenantId) => {
+  const settings = await GlobalSettings.findOne({ tenantId }).lean();
+  if (Array.isArray(settings?.receivingAccounts)) {
+    return settings.receivingAccounts;
+  }
+  const profile = await TenantOnboarding.findOne({ tenantId }).lean();
+  return Array.isArray(profile?.company?.receivingAccounts)
+    ? profile.company.receivingAccounts
+    : [];
+};
+
+const addReceivingAccount = async ({ userId, account }) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  if (!(user.isOwner || user.isSuper || user.isSaby)) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Only tenant owner accounts can manage receiving accounts.'
+    );
+  }
+
+  const current = await getTenantReceivingAccounts(user.tenantId);
+  const normalizedAccount = {
+    id: sanitizeText(account?.id) || randomUUID(),
+    label: sanitizeText(account?.label),
+    accountNumber: sanitizeText(account?.accountNumber),
+    bankName: sanitizeText(account?.bankName),
+    bankCode: sanitizeText(account?.bankCode),
+    bankCategory: sanitizeText(account?.bankCategory),
+    accountName: sanitizeText(account?.accountName),
+    isPrimary: sanitizeBoolean(account?.isPrimary, false),
+    isActive: sanitizeBoolean(account?.isActive, true),
+  };
+
+  return updateReceivingAccountsOnly({
+    userId,
+    receivingAccounts: [...current, normalizedAccount],
+  });
 };
 
 const syncTenantUserOnboardingProjection = async ({
@@ -494,6 +538,7 @@ const getOnboardingStatus = async ({ userId }) => {
       completed: true,
       reason: 'owner_only',
       profile: null,
+      settings: null,
     };
   }
 
@@ -580,6 +625,138 @@ const getOnboardingStatus = async ({ userId }) => {
         lastSavedAt: profile?.draftProgress?.lastSavedAt || profile?.updatedAt || null,
       },
     },
+    settings: sanitizeGlobalSettings(settings || {}),
+  };
+};
+
+const GLOBAL_SETTINGS_FIELDS = {
+  organizationName: 'text',
+  logoUrl: 'text',
+  primaryColor: 'text',
+  contactEmail: 'text',
+  contactPhone: 'text',
+  websiteUrl: 'text',
+  socialLinks: 'object',
+  timezone: 'text',
+  language: 'text',
+  multiTenant: 'bool',
+  eventSchedule: 'stringArray',
+  enableLiveStreaming: 'bool',
+  liveStreamUrl: 'text',
+  enableEventRegistration: 'bool',
+  maxEventParticipants: 'number',
+  enablePayments: 'bool',
+  currency: 'text',
+  receivingAccounts: 'receivingAccounts',
+  exchangeRates: 'object',
+  donationCategories: 'stringArray',
+  supportedPaymentGateways: 'stringArray',
+  defaultPaymentGateway: 'text',
+  enableRecurringDonations: 'bool',
+  enableReporting: 'bool',
+  reportingFrequency: 'text',
+  enableAttendanceTracking: 'bool',
+  trackEngagementPatterns: 'bool',
+  generateReports: 'bool',
+  enableDataLocks: 'bool',
+  lockPeriod: 'number',
+  adminOverride: 'bool',
+  allowGuestAccess: 'bool',
+  emailSMTP: 'object',
+  enableSMSNotifications: 'bool',
+  enablePushNotifications: 'bool',
+  announcementBroadcast: 'bool',
+  enableTwoFactorAuth: 'bool',
+  passwordStrengthPolicy: 'text',
+  gdprCompliance: 'bool',
+  cookieConsentBanner: 'bool',
+  enableIPWhitelisting: 'bool',
+  ipWhitelist: 'stringArray',
+  apiRateLimit: 'number',
+  accountRecovery: 'bool',
+};
+
+const GLOBAL_SETTINGS_DEFAULTS = {
+  organizationName: 'Default Organization Name',
+  primaryColor: '#0000FF',
+  timezone: 'UTC',
+  language: 'en',
+  eventSchedule: ['Monday 9 AM', 'Thursday 6 PM'],
+  maxEventParticipants: 1000,
+  currency: 'USD',
+  donationCategories: ['General Fund', 'Project Fund', 'Special Fund'],
+  supportedPaymentGateways: ['paypal', 'stripe', 'square'],
+  defaultPaymentGateway: 'paypal',
+  reportingFrequency: 'monthly',
+  lockPeriod: 14,
+  passwordStrengthPolicy: 'medium',
+  apiRateLimit: 1000,
+};
+
+const sanitizeGlobalSettings = (raw = {}) => {
+  const out = {};
+  Object.entries(GLOBAL_SETTINGS_FIELDS).forEach(([key, type]) => {
+    const value = raw[key];
+    const fallback = GLOBAL_SETTINGS_DEFAULTS[key];
+    if (type === 'bool') {
+      out[key] = sanitizeBoolean(value, Boolean(fallback));
+    } else if (type === 'number') {
+      const parsed = Number(value);
+      out[key] = Number.isFinite(parsed) ? parsed : fallback;
+    } else if (type === 'stringArray') {
+      out[key] =
+        Array.isArray(value) && value.length
+          ? value.map((item) => String(item)).filter(Boolean)
+          : fallback || [];
+    } else if (type === 'object') {
+      out[key] =
+        value && typeof value === 'object' && !Array.isArray(value)
+          ? value
+          : fallback || {};
+    } else if (type === 'receivingAccounts') {
+      out[key] = sanitizeReceivingAccounts(value);
+    } else {
+      out[key] = sanitizeText(value, fallback);
+    }
+  });
+  return out;
+};
+
+const upsertGlobalSettings = async ({ userId, payload = {} }) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  if (!(user.isOwner || user.isSuper || user.isSaby)) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Only tenant owner accounts can manage global settings.'
+    );
+  }
+
+  const tenantId = user.tenantId;
+  const incoming = payload?.settings || payload || {};
+  const previous = await GlobalSettings.findOne({ tenantId }).lean();
+
+  const sanitized = sanitizeGlobalSettings({
+    ...(previous || {}),
+    ...incoming,
+  });
+
+  await GlobalSettings.findOneAndUpdate(
+    { tenantId },
+    { $set: { tenantId, ...sanitized } },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+
+  await invalidateStudioAccessState({ tenantId, userId: user._id });
+
+  const updated = await GlobalSettings.findOne({ tenantId }).lean();
+  return {
+    ok: true,
+    tenantId,
+    settings: sanitizeGlobalSettings(updated || {}),
   };
 };
 
@@ -943,4 +1120,7 @@ module.exports = {
   saveOnboardingDraft,
   completeOnboarding,
   updateReceivingAccountsOnly,
+  addReceivingAccount,
+  getTenantReceivingAccounts,
+  upsertGlobalSettings,
 };

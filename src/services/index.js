@@ -32,6 +32,7 @@ module.exports.paymentSettlementService = require('./paymentSettlement.service')
 module.exports.settlementProviderService = require('./settlementProvider.service');
 module.exports.flutterwaveTransferService = require('./flutterwaveTransfer.service');
 module.exports.flutterwaveSettlementService = require('./flutterwaveSettlement.service');
+module.exports.settlementAccountService = require('./settlementAccount.service');
 module.exports.reportService = require('./report.service');
 module.exports.appService = require('./app.service');
 module.exports.appCatalogService = require('./appCatalog.service');

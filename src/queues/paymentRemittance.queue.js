@@ -16,11 +16,11 @@ const queueRemittance = async (payload = {}, options = {}) => {
   }
 
   return paymentRemittanceQueue.add(
-    'payment:remittance',
+    'payment-remittance',
     payload,
     {
       ...buildJobOptions('critical'),
-      jobId: options.jobId || `payment-remittance:${paymentId}`,
+      jobId: options.jobId || `payment-remittance-${paymentId}`,
       ...options,
     }
   );

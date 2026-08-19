@@ -78,6 +78,13 @@ const runReconciliationSweep = async () => {
     if (result?.queued) {
       remittanceQueued += 1;
     }
+
+    await paymentFlowService.upsertPaymentFlow({
+      ...paymentFlowService.fromPayment(payment),
+      reconciliation_status: 'clean',
+      last_reconciled_at: new Date().toISOString(),
+      remittance_queued: result?.queued || false,
+    });
   }
 
   const settlementLookbackDays =

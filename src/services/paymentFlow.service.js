@@ -8,7 +8,7 @@ const COLUMNS = [
   'payment_status', 'payment_created_at', 'payment_processed_at',
   'payment_completed_at', 'payment_failed_at', 'failure_reason',
   'settlement_id', 'settlement_status', 'funding_status', 'availability_status',
-  'provider_settlement_id', 'provider_settled_at', 'settlement_fee', 'net_amount',
+  'provider_settlement_id', 'provider_settled_at', 'settlement_fee', 'service_fee', 'net_amount',
   'destination_type', 'destination_node',
   'reconciliation_status', 'last_reconciled_at', 'remittance_queued',
   'updated_at',
@@ -57,7 +57,7 @@ const upsertPaymentFlow = async (fields) => {
         ${setClauses.join(',\n        ')}
     `;
 
-    await postgresPool.query(sql, [...insertValues, ...values]);
+    await postgresPool.query(sql, [...values, ...insertValues]);
   } catch (error) {
     if (error.code === '42P01') {
       // Table doesn't exist — migration hasn't run
@@ -94,6 +94,7 @@ const fromPayment = (payment) => ({
  * Merge with an existing payment_flow row (only sets settlement fields).
  */
 const fromSettlement = (settlement) => ({
+  tenant_id: settlement.tenantId,
   payment_id: String(settlement.paymentId),
   settlement_id: String(settlement._id),
   settlement_status: settlement.status,
@@ -102,6 +103,7 @@ const fromSettlement = (settlement) => ({
   provider_settlement_id: settlement.providerSettlementId,
   provider_settled_at: settlement.providerSettledAt,
   settlement_fee: Number(settlement.fee || 0),
+  service_fee: Number(settlement.serviceFee || 0),
   net_amount: Number(settlement.netAmount || 0),
   destination_type: settlement.destinationType,
   destination_node: settlement.destinationNodeName || settlement.destinationNodeReference,

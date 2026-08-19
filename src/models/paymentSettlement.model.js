@@ -51,6 +51,9 @@ const paymentSettlementSchema = mongoose.Schema(
     currency: { type: String, required: true, index: true },
     amount: { type: Number, required: true },
     fee: { type: Number, default: 0 },
+    serviceFee: { type: Number, default: 0 },
+    serviceFeeRate: { type: Number, default: null },
+    serviceFeeFlat: { type: Number, default: null },
     netAmount: { type: Number, required: true },
     status: {
       type: String,

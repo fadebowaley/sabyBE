@@ -233,7 +233,7 @@ const invoiceChargeAdjustmentSchema = Joi.object({
 const invoiceConfigSchema = Joi.object({
   enabled: Joi.boolean().default(false),
   calculationMode: Joi.string()
-    .valid('none', 'fixed', 'field_based', 'line_items', 'rule_based')
+    .valid('none', 'fixed', 'line_items', 'rule_based')
     .default('none'),
   currency: Joi.string().allow('', null).default(null),
   baseAmount: Joi.number().min(0).default(0),
@@ -268,11 +268,6 @@ const invoiceConfigSchema = Joi.object({
   .custom((value, helpers) => {
     if (value.calculationMode === 'fixed' && Number(value.baseAmount) < 0) {
       return helpers.error('any.custom', { message: 'baseAmount must be 0 or greater' });
-    }
-    if (value.calculationMode === 'field_based' && !value.amountSourceField) {
-      return helpers.error('any.custom', {
-        message: 'amountSourceField is required when calculationMode is field_based',
-      });
     }
     if (
       ['line_items', 'rule_based'].includes(value.calculationMode) &&
@@ -1155,6 +1150,20 @@ const getPublicProjectFormByReference = {
   }),
 };
 
+const listPublicProjectForms = {
+  query: Joi.object().keys({
+    status: Joi.string()
+      .valid('active', 'inactive', 'archived')
+      .optional(),
+    'identity.status': Joi.string()
+      .valid('draft', 'published', 'archived')
+      .optional(),
+    limit: Joi.number().integer().min(1).max(100).default(50),
+    page: Joi.number().integer().min(1).default(1),
+    sortBy: Joi.string().optional(),
+  }),
+};
+
 const getPublicProjectFormByShortCode = {
   params: Joi.object().keys({
     shortCode: Joi.string().alphanum().min(4).max(16).required(),
@@ -1655,6 +1664,7 @@ module.exports = {
   getProjectFormByProjectId,
   getProjectFormByPublicRef,
   getPublicProjectFormByReference,
+  listPublicProjectForms,
   getPublicProjectFormByShortCode,
   requestPublicAccessLink,
   requestPublicAccessCode,

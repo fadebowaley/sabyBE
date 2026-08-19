@@ -225,7 +225,7 @@ const onboardingProfileUpsert = {
         phoneNumber: Joi.string().allow('', null),
         roleTitle: Joi.string().allow('', null),
       })
-      .required(),
+      .optional(),
     company: Joi.object()
       .keys({
         name: Joi.string().required(),
@@ -241,7 +241,7 @@ const onboardingProfileUpsert = {
         address: Joi.string().allow('', null),
         receivingAccounts: Joi.array().items(receivingAccountSchema).default([]),
       })
-      .required(),
+      .optional(),
     node: Joi.object()
       .keys({
         rootNodeName: Joi.string().allow('', null),
@@ -256,7 +256,8 @@ const onboardingProfileUpsert = {
           .falsy('0')
           .allow(null),
       })
-      .required(),
+      .optional(),
+    settings: Joi.object().optional(),
   }),
 };
 
@@ -315,6 +316,32 @@ const onboardingReceivingAccountsUpdate = {
   }),
 };
 
+const settlementAccountResolve = {
+  body: Joi.object().keys({
+    accountNumber: Joi.string().required(),
+    bankCode: Joi.string().required(),
+  }),
+};
+
+const settlementAccountAdd = {
+  body: Joi.object().keys({
+    otp: Joi.string().required(),
+    account: Joi.object()
+      .keys({
+        id: Joi.string().allow('', null),
+        label: Joi.string().allow('', null),
+        accountNumber: Joi.string().required(),
+        bankName: Joi.string().allow('', null),
+        bankCode: Joi.string().required(),
+        bankCategory: Joi.string().allow('', null),
+        accountName: Joi.string().required(),
+        isPrimary: Joi.boolean(),
+        isActive: Joi.boolean(),
+      })
+      .required(),
+  }),
+};
+
 module.exports = {
   register,
   login,
@@ -344,4 +371,6 @@ module.exports = {
   onboardingProfileUpsert,
   onboardingDraftUpsert,
   onboardingReceivingAccountsUpdate,
+  settlementAccountResolve,
+  settlementAccountAdd,
 };

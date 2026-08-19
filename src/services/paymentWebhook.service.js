@@ -20,6 +20,16 @@ const SUPPORTED_PROVIDER_STATUSES = [
   'refunded',
 ];
 
+const PAYSTACK_EVENT_STATUS_MAP = {
+  'charge.success': 'completed',
+  'charge.pending': 'processing',
+  'charge.failed': 'failed',
+  'charge.abandoned': 'cancelled',
+  'transfer.success': 'completed',
+  'transfer.failed': 'failed',
+  'transfer.reversed': 'refunded',
+};
+
 const toUnixSeconds = (value) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -39,17 +49,37 @@ const parseWebhookTimestamp = (req) => {
   return toUnixSeconds(headerTimestamp);
 };
 
-const extractProvider = (req, body) =>
-  (
+const PAYSTACK_WEBHOOK_EVENT_PREFIXES = [
+  'charge.',
+  'transfer.',
+  'customeridentification.',
+  'subscription.',
+];
+
+const extractProvider = (req, body) => {
+  const explicit =
     req.get('x-payment-provider') ||
     req.get('x-provider') ||
     body?.provider ||
-    (body?.event && body?.data?.tx_ref ? 'flutterwave' : null) ||
-    'unknown'
-  )
-    .toString()
-    .trim()
-    .toLowerCase();
+    '';
+  if (explicit) {
+    return explicit.toString().trim().toLowerCase();
+  }
+
+  if (body?.event && body?.data?.tx_ref) {
+    return 'flutterwave';
+  }
+
+  const event = String(body?.event || '');
+  if (
+    req.get('x-paystack-signature') ||
+    PAYSTACK_WEBHOOK_EVENT_PREFIXES.some((prefix) => event.startsWith(prefix))
+  ) {
+    return 'paystack';
+  }
+
+  return 'unknown';
+};
 
 const extractEventId = (req, body) =>
   (
@@ -66,6 +96,7 @@ const extractSignature = (req) =>
   (
     req.get('verif-hash') ||
     req.get('flutterwave-signature') ||
+    req.get('x-paystack-signature') ||
     req.get('x-payment-signature') ||
     req.get('x-signature') ||
     ''
@@ -139,6 +170,31 @@ const verifyProviderWebhookSignature = ({ provider, timestamp, signature, rawBod
     return;
   }
 
+  if (provider === 'paystack') {
+    const webhookSecret = String(
+      config.payment?.providers?.paystack?.webhookSecret ||
+        config.payment?.providers?.paystack?.secretKey ||
+        ''
+    ).trim();
+    if (!webhookSecret) {
+      throw new ApiError(
+        httpStatus.SERVICE_UNAVAILABLE,
+        'Paystack webhook secret is not configured'
+      );
+    }
+    if (!signature) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Missing Paystack webhook signature');
+    }
+    const expectedSignature = crypto
+      .createHmac('sha512', webhookSecret)
+      .update(rawBody)
+      .digest('hex');
+    if (!constantTimeEquals(signature, expectedSignature)) {
+      throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid Paystack webhook signature');
+    }
+    return;
+  }
+
   verifyWebhookSignature(timestamp, signature, rawBody);
 };
 
@@ -177,16 +233,19 @@ const normalizeWebhookPayload = (payload) => {
     payload?.providerRef ||
     data.providerRef ||
     data.transactionId ||
+    data.transaction_id ||
     data.processorReference ||
+    data.id ||
     null;
   const rawStatus =
     payload?.status ||
     payload?.paymentStatus ||
     payload?.event ||
     payload?.type;
-  const normalizedStatus = rawStatus
+  const rawStatusKey = rawStatus
     ? rawStatus.toString().trim().toLowerCase()
     : null;
+  const normalizedStatus = PAYSTACK_EVENT_STATUS_MAP[rawStatusKey] || rawStatusKey;
 
   return {
     paymentReference,
@@ -226,6 +285,60 @@ const completeVerifiedProviderPayment = async ({
   dedupeKeyPrefix,
 }) => {
   assertVerifiedTransactionMatchesPayment({ payment, verified });
+
+  if (
+    verified.status === 'processing' ||
+    verified.status === 'pending'
+  ) {
+    if (payment.status === 'completed') {
+      return payment;
+    }
+
+    let currentPayment = payment;
+    if (currentPayment.status === 'pending') {
+      currentPayment = await paymentService.processPayment(
+        currentPayment._id,
+        {
+          providerRef: verified.providerRef,
+          paymentDetails: {
+            provider: verified.provider,
+            paymentType: verified.paymentType,
+            verifiedAt: new Date().toISOString(),
+            raw: verified.raw,
+          },
+        },
+        currentPayment.tenantId,
+        {
+          source,
+          sourceRef,
+          dedupeKey: `${dedupeKeyPrefix}:processing`,
+        }
+      );
+    }
+
+    await paymentEventService.appendPaymentEvent({
+      tenantId: currentPayment.tenantId,
+      payment: currentPayment,
+      eventType: 'provider_verification_pending',
+      fromStatus: currentPayment.status,
+      toStatus: currentPayment.status,
+      userId: currentPayment.userId,
+      source,
+      sourceRef,
+      dedupeKey: `${dedupeKeyPrefix}:provider-verification-pending`,
+      metadata: {
+        provider: verified.provider,
+        providerRef: verified.providerRef,
+        txRef: verified.txRef,
+        amount: verified.amount,
+        currency: verified.currency,
+        paymentType: verified.paymentType,
+        verifiedStatus: verified.status,
+      },
+    });
+
+    return currentPayment;
+  }
 
   if (verified.status !== 'successful' && verified.status !== 'completed') {
     throw new ApiError(
@@ -495,6 +608,40 @@ const processWebhookEvent = async (req) => {
         source: 'flutterwave-webhook',
         sourceRef: webhookEvent._id?.toString(),
         dedupeKeyPrefix: `webhook:${webhookEvent._id}:flutterwave`,
+      });
+
+      await markEventOutcome(webhookEvent._id, {
+        webhookStatus: 'processed',
+        paymentId: completedPayment._id,
+        paymentReference: completedPayment.reference,
+        failureReason: null,
+      });
+
+      await paymentFlowService.upsertPaymentFlow(
+        paymentFlowService.fromPayment(completedPayment)
+      );
+
+      return {
+        duplicate: false,
+        processed: true,
+        ignored: false,
+        paymentId: completedPayment._id.toString(),
+        paymentReference: completedPayment.reference,
+        status: 'completed',
+      };
+    }
+
+    if (provider === 'paystack' && normalized.status === 'completed') {
+      const verified = await paymentProviderService.verifyTransaction({
+        provider: 'paystack',
+        txRef: normalized.paymentReference,
+      });
+      const completedPayment = await completeVerifiedProviderPayment({
+        payment,
+        verified,
+        source: 'paystack-webhook',
+        sourceRef: webhookEvent._id?.toString(),
+        dedupeKeyPrefix: `webhook:${webhookEvent._id}:paystack`,
       });
 
       await markEventOutcome(webhookEvent._id, {

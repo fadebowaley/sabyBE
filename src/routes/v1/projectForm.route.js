@@ -8,6 +8,7 @@ const {
   publicFormReadLimiter,
   publicFormSubmitLimiter,
 } = require('../../middlewares/publicFormRateLimiter');
+const { apiKeyAuth } = require('../../middlewares/apiKeyAuth');
 
 const router = express.Router();
 
@@ -417,6 +418,14 @@ router.get(
   publicFormReadLimiter,
   validate(projectFormValidation.getPublicProjectFormByReference),
   projectFormController.getPublicProjectFormByReference
+);
+
+// List public project forms for an API-key client (tenant resolved from the key)
+router.get(
+  '/public/list',
+  apiKeyAuth(),
+  validate(projectFormValidation.listPublicProjectForms),
+  projectFormController.listPublicProjectFormsByApiKey
 );
 
 router.post(

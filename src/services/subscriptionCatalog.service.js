@@ -250,6 +250,14 @@ const DEFAULT_SUBSCRIPTION_CATALOG = {
     note: 'Manual payment review available for finance admins.',
   },
   promoCodes: [],
+  serviceFee: {
+    enabled: true,
+    rate: 0.015,
+    flat: 100,
+    min: 100,
+    max: 5000,
+    freeBelow: 500,
+  },
 };
 
 const cloneValue = (value) => JSON.parse(JSON.stringify(value));
@@ -258,6 +266,35 @@ let activeSubscriptionCatalog = cloneValue(DEFAULT_SUBSCRIPTION_CATALOG);
 let catalogLoaded = false;
 
 const getActiveSubscriptionCatalog = () => activeSubscriptionCatalog;
+
+/**
+ * Compute the Saby platform service fee for a collected amount.
+ * Fee = clamp(amount * rate + flat, min, max). Returns 0 when disabled.
+ * @param {number} amount
+ * @param {object} [config] - optional override (defaults to active catalog serviceFee)
+ */
+const computeServiceFee = (amount, config = null) => {
+  const feeConfig = config || getActiveSubscriptionCatalog().serviceFee || {};
+  if (feeConfig.enabled === false) return 0;
+
+  const numericAmount = Math.max(0, Number(amount || 0));
+  if (!numericAmount) return 0;
+
+  const freeBelow = Number(feeConfig.freeBelow || 0);
+  if (freeBelow > 0 && numericAmount < freeBelow) return 0;
+
+  const rate = Number(feeConfig.rate || 0);
+  const flat = Number(feeConfig.flat || 0);
+  const min = Number(feeConfig.min || 0);
+  const max = Number(feeConfig.max || 0);
+
+  const raw = numericAmount * rate + flat;
+  let fee = raw;
+  if (min > 0) fee = Math.max(fee, min);
+  if (max > 0) fee = Math.min(fee, max);
+
+  return Math.round(fee * 100) / 100;
+};
 
 const normalizeCatalogPlan = (plan = {}) => {
   const id = normalizePlanId(plan.id || plan.planId);
@@ -474,6 +511,27 @@ const normalizeSubscriptionCatalog = (catalog = {}) => {
     promoCodes: Array.isArray(source.promoCodes)
       ? source.promoCodes.map((promo) => normalizePromoCode(promo)).filter(Boolean)
       : [],
+    serviceFee:
+      source.serviceFee && typeof source.serviceFee === 'object'
+        ? {
+            enabled: source.serviceFee.enabled !== false,
+            rate: Number.isFinite(Number(source.serviceFee.rate))
+              ? Number(source.serviceFee.rate)
+              : DEFAULT_SUBSCRIPTION_CATALOG.serviceFee.rate,
+            flat: Number.isFinite(Number(source.serviceFee.flat))
+              ? Number(source.serviceFee.flat)
+              : DEFAULT_SUBSCRIPTION_CATALOG.serviceFee.flat,
+            min: Number.isFinite(Number(source.serviceFee.min))
+              ? Number(source.serviceFee.min)
+              : DEFAULT_SUBSCRIPTION_CATALOG.serviceFee.min,
+            max: Number.isFinite(Number(source.serviceFee.max))
+              ? Number(source.serviceFee.max)
+              : DEFAULT_SUBSCRIPTION_CATALOG.serviceFee.max,
+            freeBelow: Number.isFinite(Number(source.serviceFee.freeBelow))
+              ? Number(source.serviceFee.freeBelow)
+              : DEFAULT_SUBSCRIPTION_CATALOG.serviceFee.freeBelow,
+          }
+        : cloneValue(DEFAULT_SUBSCRIPTION_CATALOG.serviceFee),
   };
 };
 
@@ -808,4 +866,5 @@ module.exports = {
   getSubscriptionAddonsForPlan,
   resolveSelectedSubscriptionAddons,
   buildSubscriptionCharge,
+  computeServiceFee,
 };

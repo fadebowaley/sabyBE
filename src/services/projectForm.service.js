@@ -1521,7 +1521,7 @@ const normalizeTransactionInvoice = (value = {}, defaults = {}) => {
   )
     .trim()
     .toLowerCase();
-  const calculationMode = ['none', 'fixed', 'field_based', 'line_items', 'rule_based'].includes(
+  const calculationMode = ['none', 'fixed', 'line_items', 'rule_based'].includes(
     calculationModeCandidate
   )
     ? calculationModeCandidate
@@ -3077,6 +3077,65 @@ const getProjectFormsByTenant = async (tenantId, filter = {}, options = {}) => {
 };
 
 /**
+ * List publicly accessible project forms for a tenant, exposed to API-key
+ * clients. Returns compact, sanitized summaries (no element definitions,
+ * internal metadata, or workspace/access details).
+ * @param {string} tenantId - Tenant to list forms for
+ * @param {Object} [filter={}] - Additional filters (status, identity.status, ...)
+ * @param {Object} [options={}] - Query options (limit, page, sortBy)
+ * @returns {Promise<QueryResult>}
+ */
+const listPublicProjectFormsByTenant = async (tenantId, filter = {}, options = {}) => {
+  const tenantFilter = {
+    ...filter,
+    tenantId,
+    deletedAt: null,
+    $nor: [
+      { 'identity.category': SYSTEM_FORM_CATEGORY },
+      { 'metadata.formCategory': SYSTEM_FORM_CATEGORY },
+    ],
+  };
+
+  const result = await queryProjectForms(tenantFilter, {
+    limit: options.limit || 50,
+    page: options.page || 1,
+    sortBy: options.sortBy || 'createdAt:desc',
+    select:
+      'projectId formReference shareRef publicRef tenantId identity.name identity.description identity.status status elements capabilities createdAt updatedAt',
+  });
+
+  const results = (result.results || []).map((projectForm) => {
+    const isPublic = isStrictPublicAccessible(projectForm);
+    const secureMode = String(
+      projectForm?.capabilities?.experience?.security?.mode || 'off'
+    ).toLowerCase();
+    return {
+      projectId: projectForm.projectId,
+      formReference: projectForm.formReference || null,
+      shareRef: projectForm.shareRef || null,
+      publicRef: projectForm.publicRef || null,
+      tenantId: projectForm.tenantId,
+      name: projectForm?.identity?.name || projectForm?.identity?.title || '',
+      description: projectForm?.identity?.description || '',
+      status: projectForm?.identity?.status || projectForm?.status || 'draft',
+      formStatus: projectForm?.status || 'inactive',
+      secureMode,
+      publicAccessible: isPublic,
+      elementCount: Array.isArray(projectForm?.elements)
+        ? projectForm.elements.length
+        : 0,
+      createdAt: projectForm.createdAt,
+      updatedAt: projectForm.updatedAt,
+    };
+  });
+
+  return {
+    ...result,
+    results,
+  };
+};
+
+/**
  * Get project forms by user (created by user)
  * @param {ObjectId} userId - The user ID
  * @param {Object} filter - Additional filters
@@ -4244,6 +4303,7 @@ module.exports = {
   buildPublicQrContext,
   getProjectFormsByTenant,
   getProjectFormsByUser,
+  listPublicProjectFormsByTenant,
   duplicateProjectFormByProjectId,
   updateProjectFormById,
   updateProjectFormByProjectId,

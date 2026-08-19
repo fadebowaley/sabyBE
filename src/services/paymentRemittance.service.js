@@ -46,7 +46,7 @@ const enqueueIfEligible = async (payment, context = {}) => {
   };
 
   const job = await queueRemittance(payload, {
-    jobId: `payment-remittance:${payload.paymentId}`,
+    jobId: `payment-remittance-${payload.paymentId}`,
   });
 
   logger.info(
