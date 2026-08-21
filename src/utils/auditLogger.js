@@ -254,6 +254,15 @@ const buildInsertSql = (batchSize) =>
      `(${columns.map((_, j) => `$${i * columns.length + j + 1}`).join(', ')})`
    ).join(', ')}`;
 
+const insertSingle = async (entry) => {
+  const values = columns.map((col) => entry[col] ?? null);
+  const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+  await postgresPool.query(
+    `INSERT INTO public.audit_trail (${columns.join(', ')}) VALUES (${placeholders})`,
+    values
+  );
+};
+
 const flush = async () => {
   if (!queue.length) return;
 
@@ -277,7 +286,23 @@ const flush = async () => {
     if (error.code === '42P01') {
       // Table doesn't exist yet — migrations haven't run, silently discard
     } else {
-      logger.error(`[AuditTrail] Batch insert failed: ${error.message}`);
+      // A single invalid row must not drop the rest of the batch — retry each
+      // row individually and skip the ones that still fail.
+      logger.error(`[AuditTrail] Batch insert failed (${batch.length} rows): ${error.message}`);
+      let dropped = 0;
+      for (const entry of batch) {
+        try {
+          await insertSingle(entry);
+        } catch (singleError) {
+          dropped += 1;
+          if (singleError.code !== '42P01') {
+            logger.error(`[AuditTrail] Row insert failed: ${singleError.message}`);
+          }
+        }
+      }
+      if (dropped > 0) {
+        logger.warn(`[AuditTrail] Dropped ${dropped} audit row(s) after per-row retry`);
+      }
     }
   }
 
@@ -321,6 +346,11 @@ const buildAuditEntry = (req, res, started, opts = {}) => {
 
     // Unauthenticated requests — only log if they hit auth routes or return errors
     if (!userId && res.statusCode < 400 && !path.includes('/auth/')) return null;
+
+    // audit_trail.tenant_id is NOT NULL — rows without a tenant cannot be
+    // persisted (e.g. /auth/login, /auth/refresh-tokens have no req.user).
+    // Drop them here so a single null-tenant row can't poison the whole batch.
+    if (!tenantId) return null;
 
     const resource = opts.resource || inferResource(path);
     const action = opts.action || inferAction(req.method, path);

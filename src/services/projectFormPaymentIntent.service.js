@@ -740,13 +740,61 @@ const createProjectFormPaymentIntent = async (params) => {
     submissionData: params?.submissionData || {},
     respondentContext: params?.respondentContext || {},
   });
-  const checkout = await paymentProviderService.initializeHostedCheckout({
-    payment,
-    paymentMethod: prepared.collectionPlan.paymentMethod,
-    customer,
-    invoiceSnapshot: prepared.invoiceSnapshot,
-    respondentContext: params?.respondentContext || {},
-  });
+  const collectionProvider = String(
+    prepared.collectionPlan.paymentMethod || ''
+  ).trim().toLowerCase();
+
+  let inline = null;
+  if (collectionProvider === 'flutterwave') {
+    const inlineResult = await paymentProviderService.initializeFlutterwaveInline({
+      payment,
+      customer,
+      invoiceSnapshot: prepared.invoiceSnapshot,
+      respondentContext: params?.respondentContext || {},
+    });
+    if (inlineResult?.supported === true && inlineResult.inline) {
+      inline = inlineResult.inline;
+    }
+  }
+
+  let checkout = null;
+  let hostedCheckoutError = null;
+  if (!inline) {
+    try {
+      checkout = await paymentProviderService.initializeHostedCheckout({
+        payment,
+        paymentMethod: prepared.collectionPlan.paymentMethod,
+        customer,
+        invoiceSnapshot: prepared.invoiceSnapshot,
+        respondentContext: params?.respondentContext || {},
+      });
+    } catch (error) {
+      hostedCheckoutError = error;
+    }
+    if (!checkout) {
+      checkout = {
+        supported: false,
+        provider: collectionProvider,
+        status: 'unavailable',
+        authorizationUrl: null,
+        accessCode: null,
+        providerRef: null,
+        message: String(
+          hostedCheckoutError?.message || 'Failed to initialize payment checkout for this channel.'
+        ),
+      };
+    }
+  } else {
+    checkout = {
+      supported: true,
+      provider: collectionProvider,
+      status: 'inline_ready',
+      authorizationUrl: null,
+      accessCode: null,
+      providerRef: null,
+      message: 'Inline checkout ready.',
+    };
+  }
 
   const nextMetadata = {
     ...(payment.metadata || {}),
@@ -757,6 +805,7 @@ const createProjectFormPaymentIntent = async (params) => {
       authorizationUrl: checkout.authorizationUrl || null,
       accessCode: checkout.accessCode || null,
       message: checkout.message || null,
+      inline: inline ? 'ready' : null,
     },
     customer,
   };
@@ -820,6 +869,7 @@ const createProjectFormPaymentIntent = async (params) => {
         message: checkout.message || null,
         authorizationUrl: checkout.authorizationUrl || null,
         accessCode: checkout.accessCode || null,
+        inline: inline || null,
       },
     },
   };

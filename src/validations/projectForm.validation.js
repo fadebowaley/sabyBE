@@ -953,6 +953,13 @@ const uiSchema = Joi.object({
   primaryColor: Joi.string().default('#3b82f6'),
   layout: Joi.string().valid('single', 'multi-step').default('single'),
   showProgressBar: Joi.boolean().default(true),
+  headerLayout: Joi.string()
+    .valid('classic', 'centered', 'inline', 'banner')
+    .default('classic'),
+  headerPattern: Joi.string()
+    .valid('none', 'dots', 'grid', 'diagonal', 'waves')
+    .default('none'),
+  headerPatternOpacity: Joi.number().min(0).max(100).default(12),
 })
   .unknown(true)
   .default({});

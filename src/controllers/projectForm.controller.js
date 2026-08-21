@@ -196,7 +196,12 @@ const assertProjectFormTransactionCapabilityAccess = async ({
   tenantId,
   payload,
   existingProjectForm = null,
+  actor = null,
 }) => {
+  if (actor?.isSaby) {
+    return;
+  }
+
   const {
     payloadTransaction,
     existingTransaction,
@@ -285,6 +290,7 @@ const createProjectForm = catchAsync(async (req, res) => {
   await assertProjectFormTransactionCapabilityAccess({
     tenantId,
     payload: req.body,
+    actor: req.user,
   });
 
   const projectForm = await projectFormService.createProjectForm(
@@ -1369,6 +1375,7 @@ const updateProjectForm = catchAsync(async (req, res) => {
     tenantId: req.user.tenantId,
     payload: req.body,
     existingProjectForm,
+    actor: req.user,
   });
 
   const projectForm = await projectFormService.updateProjectFormById(
@@ -1404,6 +1411,7 @@ const updateProjectFormByProjectId = catchAsync(async (req, res) => {
     tenantId: req.user.tenantId,
     payload: req.body,
     existingProjectForm,
+    actor: req.user,
   });
 
   const projectForm = await projectFormService.updateProjectFormByProjectId(
@@ -1636,6 +1644,7 @@ const updatePaymentConfig = catchAsync(async (req, res) => {
       },
     },
     existingProjectForm: projectForm,
+    actor: req.user,
   });
 
   projectForm.capabilities = projectForm.capabilities || {};

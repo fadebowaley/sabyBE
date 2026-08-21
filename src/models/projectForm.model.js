@@ -386,6 +386,9 @@ const UISchema = new mongoose.Schema(
       default: 'single',
     },
     showProgressBar: { type: Boolean, default: true },
+    headerLayout: { type: String, default: 'classic' },
+    headerPattern: { type: String, default: 'none' },
+    headerPatternOpacity: { type: Number, default: 12 },
   },
   { _id: false }
 );

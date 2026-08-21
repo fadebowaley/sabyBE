@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const httpStatus = require('http-status');
 const validator = require('validator');
 const config = require('../config/config');
@@ -240,6 +241,7 @@ const initializePaystackCheckout = async ({
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(12000),
   });
 
   const data = await response.json().catch(() => ({}));
@@ -262,34 +264,13 @@ const initializePaystackCheckout = async ({
   };
 };
 
-const initializeFlutterwaveCheckout = async ({
+const buildFlutterwaveCheckoutPayload = async ({
   payment,
   customer,
-  invoiceSnapshot,
+  invoiceSnapshot = null,
   respondentContext = {},
 }) => {
-  const secretKey = String(PROVIDER_CONFIG?.flutterwave?.secretKey || '').trim();
-  if (!secretKey) {
-    return {
-      supported: false,
-      provider: 'flutterwave',
-      status: 'provider_not_configured',
-      message: 'Flutterwave credentials are not configured for this environment.',
-    };
-  }
-
-  assertValidCheckoutCustomer({ provider: 'Flutterwave', customer });
-
   const redirectUrl = buildReturnUrl({ payment, respondentContext });
-  if (!redirectUrl) {
-    return {
-      supported: false,
-      provider: 'flutterwave',
-      status: 'return_url_missing',
-      message: 'Flutterwave checkout requires a valid return URL.',
-    };
-  }
-
   const brand = await resolveTenantBrand(payment.tenantId);
   const checkoutTitle =
     payment?.metadata?.checkoutTitle ||
@@ -335,6 +316,133 @@ const initializeFlutterwaveCheckout = async ({
   });
   payload.payment_options = paymentOptions;
 
+  return { payload, redirectUrl };
+};
+
+const computeFlutterwavePayloadHash = ({
+  secretKey,
+  amount,
+  currency,
+  customerEmail,
+  txRef,
+}) => {
+  const hashedSecretKey = crypto
+    .createHash('sha256')
+    .update(String(secretKey), 'utf8')
+    .digest('hex');
+  const stringToBeHashed = `${String(amount)}${String(currency).toUpperCase()}${String(
+    customerEmail
+  ).toLowerCase()}${String(txRef)}${hashedSecretKey}`;
+  return crypto
+    .createHash('sha256')
+    .update(stringToBeHashed, 'utf8')
+    .digest('hex');
+};
+
+const initializeFlutterwaveInline = async ({
+  payment,
+  customer,
+  invoiceSnapshot = null,
+  respondentContext = {},
+}) => {
+  const secretKey = String(PROVIDER_CONFIG?.flutterwave?.secretKey || '').trim();
+  const publicKey = String(PROVIDER_CONFIG?.flutterwave?.publicKey || '').trim();
+  if (!secretKey || !publicKey) {
+    return {
+      supported: false,
+      provider: 'flutterwave',
+      status: 'provider_not_configured',
+      message: 'Flutterwave credentials are not configured for this environment.',
+      inline: null,
+    };
+  }
+
+  const normalizedCustomer = normalizeCustomerIdentity(customer);
+  assertValidCheckoutCustomer({ provider: 'Flutterwave', customer: normalizedCustomer });
+
+  const { payload } = await buildFlutterwaveCheckoutPayload({
+    payment,
+    customer: normalizedCustomer,
+    invoiceSnapshot,
+    respondentContext,
+  });
+
+  const payloadHash = computeFlutterwavePayloadHash({
+    secretKey,
+    amount: payload.amount,
+    currency: payload.currency,
+    customerEmail: payload.customer.email,
+    txRef: payload.tx_ref,
+  });
+
+  const inline = {
+    public_key: publicKey,
+    tx_ref: payload.tx_ref,
+    amount: payload.amount,
+    currency: payload.currency,
+    payment_options: payload.payment_options,
+    customer: {
+      email: payload.customer.email,
+      name: payload.customer.name,
+      ...(payload.customer.phonenumber
+        ? { phone_number: payload.customer.phonenumber }
+        : {}),
+    },
+    customizations: payload.customizations,
+    meta: payload.meta,
+    payload_hash: payloadHash,
+  };
+
+  return {
+    supported: true,
+    provider: 'flutterwave',
+    status: 'inline_initialized',
+    message: 'Flutterwave inline checkout ready.',
+    inline,
+  };
+};
+
+const initializeFlutterwaveCheckout = async ({
+  payment,
+  customer,
+  invoiceSnapshot,
+  respondentContext = {},
+}) => {
+  const secretKey = String(PROVIDER_CONFIG?.flutterwave?.secretKey || '').trim();
+  if (!secretKey) {
+    return {
+      supported: false,
+      provider: 'flutterwave',
+      status: 'provider_not_configured',
+      message: 'Flutterwave credentials are not configured for this environment.',
+    };
+  }
+
+  const normalizedCustomer = normalizeCustomerIdentity(customer);
+  assertValidCheckoutCustomer({ provider: 'Flutterwave', customer: normalizedCustomer });
+
+  const { payload, redirectUrl } = await buildFlutterwaveCheckoutPayload({
+    payment,
+    customer: normalizedCustomer,
+    invoiceSnapshot,
+    respondentContext,
+  });
+  if (!redirectUrl) {
+    return {
+      supported: false,
+      provider: 'flutterwave',
+      status: 'return_url_missing',
+      message: 'Flutterwave checkout requires a valid return URL.',
+    };
+  }
+
+  console.log('[Flutterwave] Checkout payload:', JSON.stringify({
+    tx_ref: payload.tx_ref,
+    amount: payload.amount,
+    currency: payload.currency,
+    customizations: payload.customizations,
+  }));
+
   const response = await fetch('https://api.flutterwave.com/v3/payments', {
     method: 'POST',
     headers: {
@@ -342,6 +450,7 @@ const initializeFlutterwaveCheckout = async ({
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(12000),
   });
 
   const rawText = await response.text().catch(() => '');
@@ -409,6 +518,7 @@ const verifyFlutterwaveTransaction = async ({
       Authorization: `Bearer ${secretKey}`,
       'Content-Type': 'application/json',
     },
+    signal: AbortSignal.timeout(12000),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok || data?.status !== 'success') {
@@ -466,6 +576,7 @@ const verifyPaystackTransaction = async ({ txRef = null }) => {
         Authorization: `Bearer ${secretKey}`,
         'Content-Type': 'application/json',
       },
+      signal: AbortSignal.timeout(12000),
     }
   );
   const data = await response.json().catch(() => ({}));
@@ -549,6 +660,7 @@ const initializeHostedCheckout = async ({
 
 module.exports = {
   initializeHostedCheckout,
+  initializeFlutterwaveInline,
   verifyTransaction,
   normalizeFlutterwavePaymentOptions,
 };

@@ -2190,6 +2190,12 @@ const normalizeProjectFormRuntimeConfig = (projectFormLike = {}, options = {}) =
       conversationDescription: source?.ui?.conversationDescription || '',
       layout: source?.ui?.layout || 'single',
       showProgressBar: source?.ui?.showProgressBar !== false,
+      headerLayout: source?.ui?.headerLayout || 'classic',
+      headerPattern: source?.ui?.headerPattern || 'none',
+      headerPatternOpacity:
+        typeof source?.ui?.headerPatternOpacity === 'number'
+          ? source.ui.headerPatternOpacity
+          : 12,
     },
     metadata: {
       ...(source.metadata || {}),
