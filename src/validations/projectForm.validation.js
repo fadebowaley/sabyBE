@@ -954,10 +954,37 @@ const uiSchema = Joi.object({
   layout: Joi.string().valid('single', 'multi-step').default('single'),
   showProgressBar: Joi.boolean().default(true),
   headerLayout: Joi.string()
-    .valid('classic', 'centered', 'inline', 'banner')
+    .valid(
+      'classic',
+      'centered',
+      'inline',
+      'banner',
+      'split',
+      'spotlight',
+      'editorial',
+      'executive',
+      'stacked',
+      'minimal'
+    )
     .default('classic'),
   headerPattern: Joi.string()
-    .valid('none', 'dots', 'grid', 'diagonal', 'waves')
+    .valid(
+      'none',
+      'dots',
+      'grid',
+      'diagonal',
+      'waves',
+      'crosshatch',
+      'blueprint',
+      'contour',
+      'circuit',
+      'constellation',
+      'mosaic',
+      'orbit',
+      'rays',
+      'topography',
+      'chevron'
+    )
     .default('none'),
   headerPatternOpacity: Joi.number().min(0).max(100).default(12),
 })

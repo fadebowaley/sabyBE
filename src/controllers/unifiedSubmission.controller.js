@@ -31,6 +31,10 @@ const copilotActionService = require('../services/copilotAction.service');
 const publicSubmissionValidationService = require('../services/publicSubmissionValidation.service');
 const projectFormInvoiceService = require('../services/projectFormInvoice.service');
 const {
+  evaluateFormMode,
+  sanitizeProctoringMetadata,
+} = require('../services/formModeEvaluator.service');
+const {
   buildFinancialSubmissionData,
   buildTransactionMeta,
 } = require('../services/submissionFinancialFields.service');
@@ -1886,6 +1890,19 @@ const submitPublicDataByReference = catchAsync(async (req, res) => {
     submissionData: normalizedSubmissionData,
     allocateNumber: true,
   });
+  const modeResult = evaluateFormMode({
+    projectForm,
+    submissionData: normalizedSubmissionData,
+  });
+  const normalizedMeta = {
+    ...(meta || {}),
+    modeResult: modeResult || undefined,
+    proctoring: sanitizeProctoringMetadata(meta?.proctoring, {
+      maxWarnings:
+        projectForm?.metadata?.moduleStudio?.document?.settings?.formModeConfig?.quiz?.proctoring
+          ?.maxWarnings,
+    }),
+  };
 
   const submissionBody = {
     tenantId: projectForm.tenantId,
@@ -1898,12 +1915,12 @@ const submitPublicDataByReference = catchAsync(async (req, res) => {
     nodeId: nodeId || nodeIdAlias || null,
     payload: buildFinancialSubmissionData({
       submissionData: normalizedSubmissionData,
-      metadata: meta,
+      metadata: normalizedMeta,
       invoiceSnapshot,
     }),
     source: 'public_standard_form',
     meta: {
-      ...(meta || {}),
+      ...normalizedMeta,
       publicAccess: {
         reference,
         canonicalRef: resolved.canonicalRef,
@@ -1935,6 +1952,7 @@ const submitPublicDataByReference = catchAsync(async (req, res) => {
     jobId: result.jobId,
     status: result.status,
     canonicalRef: resolved.canonicalRef,
+    modeResult,
   });
 });
 

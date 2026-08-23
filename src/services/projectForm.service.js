@@ -2586,6 +2586,24 @@ const sanitizePublicForm = (projectForm) => {
       systemTarget: source.metadata?.systemTarget || null,
       systemVersion: source.metadata?.systemVersion || null,
       schemaVersion: '2.0.0',
+      moduleStudio: {
+        document: {
+          settings: {
+            formMode:
+              source.metadata?.moduleStudio?.document?.settings?.formMode ||
+              'universal',
+            formModeConfig:
+              source.metadata?.moduleStudio?.document?.settings
+                ?.formModeConfig || {},
+            language:
+              source.metadata?.moduleStudio?.document?.settings?.language ||
+              'English',
+            translations:
+              source.metadata?.moduleStudio?.document?.settings
+                ?.translations || {},
+          },
+        },
+      },
     },
   };
 };

@@ -442,6 +442,47 @@ const buildDynamicColumns = (
     });
   });
 
+  const modeResultRows = submissionRows
+    .map((row) => row.meta?.modeResult)
+    .filter((result) => result && typeof result === 'object');
+  if (modeResultRows.length > 0) {
+    const mode = String(modeResultRows[0].mode || '').trim().toLowerCase();
+    const label =
+      mode === 'lead_qualification'
+        ? 'Lead Result'
+        : mode === 'knowledge_quiz'
+          ? 'Quiz Result'
+          : mode === 'match_quiz'
+            ? 'Match Result'
+            : 'Result';
+    register('mode_result', label, 'mode_result', {
+      field_type: 'mode_result',
+      metadata: { mode },
+    });
+  }
+
+  const proctoringRows = submissionRows
+    .map((row) => row.meta?.proctoring)
+    .filter((result) => result && typeof result === 'object');
+  if (proctoringRows.length > 0) {
+    register('proctoring_status', 'Integrity Status', 'proctoring_status', {
+      field_type: 'status',
+      metadata: { source: 'proctoring' },
+    });
+    register('proctoring_warnings', 'Warnings', 'proctoring_warnings', {
+      field_type: 'number',
+      metadata: { source: 'proctoring' },
+    });
+    register('proctoring_focus_events', 'Focus Loss Events', 'proctoring_focus_events', {
+      field_type: 'number',
+      metadata: { source: 'proctoring' },
+    });
+    register('proctoring_paste_attempts', 'Paste Attempts', 'proctoring_paste_attempts', {
+      field_type: 'number',
+      metadata: { source: 'proctoring' },
+    });
+  }
+
   const columns = [];
   if (!hideIdentityColumns) {
     columns.push(
@@ -731,6 +772,7 @@ const getModuleReportTable = async (filters = {}) => {
       fs.node_reference,
       fs.node_name,
       fs.user_id,
+      fs.meta,
       fs.status,
       fs.data,
       fs.created_at,
@@ -911,6 +953,30 @@ const getModuleReportTable = async (filters = {}) => {
           : unwrapValue(rawValue);
       }
     });
+
+    const modeResult = row.meta?.modeResult;
+    if (modeResult && typeof modeResult === 'object') {
+      reportRow.mode_result =
+        modeResult.band ||
+        modeResult.match ||
+        (typeof modeResult.percentage === 'number'
+          ? `${modeResult.percentage}%${modeResult.passed ? ' Passed' : ' Not passed'}`
+          : typeof modeResult.score === 'number'
+            ? `Score ${modeResult.score}`
+            : null);
+    }
+
+    const proctoring = row.meta?.proctoring;
+    if (proctoring && typeof proctoring === 'object') {
+      reportRow.proctoring_status = proctoring.status || 'unknown';
+      reportRow.proctoring_warnings = Number(proctoring.warningCount || 0);
+      reportRow.proctoring_focus_events = Number(
+        proctoring.summary?.tabSwitchCount || 0
+      ) + Number(proctoring.summary?.windowBlurCount || 0);
+      reportRow.proctoring_paste_attempts = Number(
+        proctoring.summary?.copyPasteAttemptCount || 0
+      );
+    }
 
     return reportRow;
   });

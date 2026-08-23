@@ -683,6 +683,12 @@ router.patch(
   projectFormController.updateProjectForm
 );
 
+router.post(
+  '/:projectFormId/translations/generate',
+  auth('update:project-form'),
+  projectFormController.generateProjectFormTranslation
+);
+
 /**
  * @swagger
  * /project-forms/{projectFormId}:

@@ -12,6 +12,7 @@ const {
 const projectFormPublicAccessService = require('../services/projectFormPublicAccess.service');
 const publicFormUploadService = require('../services/publicFormUpload.service');
 const projectFormInvoiceService = require('../services/projectFormInvoice.service');
+const projectFormTranslationService = require('../services/projectFormTranslation.service');
 const paymentWebhookService = require('../services/paymentWebhook.service');
 const {
   invalidateTenantEntityCaches,
@@ -1430,6 +1431,19 @@ const updateProjectFormByProjectId = catchAsync(async (req, res) => {
   });
 });
 
+const generateProjectFormTranslation = catchAsync(async (req, res) => {
+  const projectForm = await projectFormService.getProjectFormById(req.params.projectFormId);
+  await assertWorkspaceWriteAccessForProjectForm({
+    projectForm,
+    userId: req.user._id,
+  });
+  const draft = await projectFormTranslationService.generateTranslationDraft({
+    projectForm,
+    targetLanguage: req.body?.targetLanguage,
+  });
+  res.status(httpStatus.OK).send({ success: true, draft });
+});
+
 
 
 /**
@@ -1838,6 +1852,7 @@ module.exports = {
   getProjectStorageFolder,
   updateProjectForm,
   updateProjectFormByProjectId,
+  generateProjectFormTranslation,
   duplicateProjectForm,
   deleteProjectForm,
   softDeleteProjectForm,

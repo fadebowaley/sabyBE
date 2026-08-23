@@ -24,6 +24,10 @@ const {
 } = require('../utils/phoneNumber');
 const projectFormInvoiceService = require('./projectFormInvoice.service');
 const {
+  evaluateFormMode,
+  sanitizeProctoringMetadata,
+} = require('./formModeEvaluator.service');
+const {
   buildFinancialSubmissionData,
   buildTransactionMeta,
 } = require('./submissionFinancialFields.service');
@@ -1925,6 +1929,16 @@ const submitWithAccess = async ({
     submissionData,
     allocateNumber: true,
   });
+  const modeResult = evaluateFormMode({ projectForm, submissionData });
+  metadata = {
+    ...(metadata && typeof metadata === 'object' ? metadata : {}),
+    modeResult: modeResult || undefined,
+    proctoring: sanitizeProctoringMetadata(metadata?.proctoring, {
+      maxWarnings:
+        projectForm?.metadata?.moduleStudio?.document?.settings?.formModeConfig?.quiz?.proctoring
+          ?.maxWarnings,
+    }),
+  };
 
   if (!isAnonymousAccess) {
     await assertSecureUserEligible({
