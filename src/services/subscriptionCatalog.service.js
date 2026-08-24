@@ -271,35 +271,6 @@ let catalogLoaded = false;
 
 const getActiveSubscriptionCatalog = () => activeSubscriptionCatalog;
 
-/**
- * Compute the Saby platform service fee for a collected amount.
- * Fee = clamp(amount * rate + flat, min, max). Returns 0 when disabled.
- * @param {number} amount
- * @param {object} [config] - optional override (defaults to active catalog serviceFee)
- */
-const computeServiceFee = (amount, config = null) => {
-  const feeConfig = config || getActiveSubscriptionCatalog().serviceFee || {};
-  if (feeConfig.enabled === false) return 0;
-
-  const numericAmount = Math.max(0, Number(amount || 0));
-  if (!numericAmount) return 0;
-
-  const freeBelow = Number(feeConfig.freeBelow || 0);
-  if (freeBelow > 0 && numericAmount < freeBelow) return 0;
-
-  const rate = Number(feeConfig.rate || 0);
-  const flat = Number(feeConfig.flat || 0);
-  const min = Number(feeConfig.min || 0);
-  const max = Number(feeConfig.max || 0);
-
-  const raw = numericAmount * rate + flat;
-  let fee = raw;
-  if (min > 0) fee = Math.max(fee, min);
-  if (max > 0) fee = Math.min(fee, max);
-
-  return Math.round(fee * 100) / 100;
-};
-
 const normalizeCatalogPlan = (plan = {}) => {
   const id = normalizePlanId(plan.id || plan.planId);
   const sourcePlan = SUBSCRIPTION_PLANS[id] || {};
