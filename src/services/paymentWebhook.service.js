@@ -417,6 +417,32 @@ const completeVerifiedProviderPayment = async ({
     );
   }
 
+  // Capture provider fees for settlement calculation
+  const raw = verified?.raw || {};
+  if (raw) {
+    const providerFees = {
+      app_fee: Number(raw.app_fee || 0),
+      merchant_fee: Number(raw.merchant_fee || 0),
+      charged_amount: Number(raw.charged_amount || raw.amount || 0),
+      amount_settled: Number(raw.amount_settled || raw.charged_amount || raw.amount || 0),
+    };
+    await paymentService.updatePaymentById(
+      currentPayment._id,
+      {
+        metadata: {
+          ...currentPayment.metadata,
+          providerFees,
+        },
+      },
+      currentPayment.tenantId,
+      {
+        source: 'webhook-fee-capture',
+        sourceRef: sourceRef,
+        dedupeKey: `${dedupeKeyPrefix}:provider-fees`,
+      }
+    );
+  }
+
   await paymentEventService.appendPaymentEvent({
     tenantId: currentPayment.tenantId,
     payment: currentPayment,

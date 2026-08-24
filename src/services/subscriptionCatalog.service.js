@@ -250,13 +250,17 @@ const DEFAULT_SUBSCRIPTION_CATALOG = {
     note: 'Manual payment review available for finance admins.',
   },
   promoCodes: [],
-  serviceFee: {
+  // collectionFee for form payments only (subscriptions have no extra fee)
+  collectionFee: {
     enabled: true,
+    // For amounts < 500: flat fee only
+    // For amounts >= 500: percentage + flat
     rate: 0.015,
-    flat: 100,
-    min: 100,
-    max: 5000,
-    freeBelow: 500,
+    flat: 50,
+    flatBelow500: 50,
+    min: 50,
+    max: 2000,
+    freeBelow: 0,
   },
 };
 
@@ -511,27 +515,31 @@ const normalizeSubscriptionCatalog = (catalog = {}) => {
     promoCodes: Array.isArray(source.promoCodes)
       ? source.promoCodes.map((promo) => normalizePromoCode(promo)).filter(Boolean)
       : [],
-    serviceFee:
-      source.serviceFee && typeof source.serviceFee === 'object'
+    // collectionFee for form payments only (subscriptions have no extra fee)
+    collectionFee:
+      source.collectionFee && typeof source.collectionFee === 'object'
         ? {
-            enabled: source.serviceFee.enabled !== false,
-            rate: Number.isFinite(Number(source.serviceFee.rate))
-              ? Number(source.serviceFee.rate)
-              : DEFAULT_SUBSCRIPTION_CATALOG.serviceFee.rate,
-            flat: Number.isFinite(Number(source.serviceFee.flat))
-              ? Number(source.serviceFee.flat)
-              : DEFAULT_SUBSCRIPTION_CATALOG.serviceFee.flat,
-            min: Number.isFinite(Number(source.serviceFee.min))
-              ? Number(source.serviceFee.min)
-              : DEFAULT_SUBSCRIPTION_CATALOG.serviceFee.min,
-            max: Number.isFinite(Number(source.serviceFee.max))
-              ? Number(source.serviceFee.max)
-              : DEFAULT_SUBSCRIPTION_CATALOG.serviceFee.max,
-            freeBelow: Number.isFinite(Number(source.serviceFee.freeBelow))
-              ? Number(source.serviceFee.freeBelow)
-              : DEFAULT_SUBSCRIPTION_CATALOG.serviceFee.freeBelow,
+            enabled: source.collectionFee.enabled !== false,
+            rate: Number.isFinite(Number(source.collectionFee.rate))
+              ? Number(source.collectionFee.rate)
+              : DEFAULT_SUBSCRIPTION_CATALOG.collectionFee.rate,
+            flat: Number.isFinite(Number(source.collectionFee.flat))
+              ? Number(source.collectionFee.flat)
+              : DEFAULT_SUBSCRIPTION_CATALOG.collectionFee.flat,
+            flatBelow500: Number.isFinite(Number(source.collectionFee.flatBelow500))
+              ? Number(source.collectionFee.flatBelow500)
+              : DEFAULT_SUBSCRIPTION_CATALOG.collectionFee.flatBelow500,
+            min: Number.isFinite(Number(source.collectionFee.min))
+              ? Number(source.collectionFee.min)
+              : DEFAULT_SUBSCRIPTION_CATALOG.collectionFee.min,
+            max: Number.isFinite(Number(source.collectionFee.max))
+              ? Number(source.collectionFee.max)
+              : DEFAULT_SUBSCRIPTION_CATALOG.collectionFee.max,
+            freeBelow: Number.isFinite(Number(source.collectionFee.freeBelow))
+              ? Number(source.collectionFee.freeBelow)
+              : DEFAULT_SUBSCRIPTION_CATALOG.collectionFee.freeBelow,
           }
-        : cloneValue(DEFAULT_SUBSCRIPTION_CATALOG.serviceFee),
+        : cloneValue(DEFAULT_SUBSCRIPTION_CATALOG.collectionFee),
   };
 };
 
@@ -625,6 +633,51 @@ const roundAmount = (amount, currency) => {
   }
   return Math.round(numeric * 100) / 100;
 };
+
+/**
+ * Compute the Saby platform collection fee for a form payment amount.
+ * Only applies to purpose === 'collection' (form payments).
+ * Subscriptions do NOT use this fee.
+ * 
+ * Fee structure:
+ * - Amount < 500: flatBelow500 (fixed fee)
+ * - Amount >= 500: clamp(amount * rate + flat, min, max)
+ * Returns 0 when disabled.
+ * @param {number} amount
+ * @param {object} [config] - optional override (defaults to active catalog collectionFee)
+ */
+const computeCollectionFee = (amount, config = null) => {
+  const feeConfig = config || getActiveSubscriptionCatalog().collectionFee || {};
+  if (feeConfig.enabled === false) return 0;
+
+  const numericAmount = Math.max(0, Number(amount || 0));
+  if (!numericAmount) return 0;
+
+  const freeBelow = Number(feeConfig.freeBelow || 0);
+  if (freeBelow > 0 && numericAmount < freeBelow) return 0;
+
+  // Amount < 500: flat fee only
+  if (numericAmount < 500) {
+    const flatBelow500 = Number(feeConfig.flatBelow500 || feeConfig.flat || 0);
+    return Math.round(flatBelow500 * 100) / 100;
+  }
+
+  // Amount >= 500: percentage + flat
+  const rate = Number(feeConfig.rate || 0);
+  const flat = Number(feeConfig.flat || 0);
+  const min = Number(feeConfig.min || 0);
+  const max = Number(feeConfig.max || 0);
+
+  const raw = numericAmount * rate + flat;
+  let fee = raw;
+  if (min > 0) fee = Math.max(fee, min);
+  if (max > 0) fee = Math.min(fee, max);
+
+  return Math.round(fee * 100) / 100;
+};
+
+// Deprecated alias for backward compatibility
+const computeServiceFee = computeCollectionFee;
 
 const getSubscriptionPlan = (planId) =>
   getActiveSubscriptionCatalog().plans[normalizePlanId(planId)] || null;
@@ -866,5 +919,6 @@ module.exports = {
   getSubscriptionAddonsForPlan,
   resolveSelectedSubscriptionAddons,
   buildSubscriptionCharge,
-  computeServiceFee,
+  computeCollectionFee,
+  computeServiceFee, // deprecated alias
 };

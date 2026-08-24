@@ -17,11 +17,25 @@ const buildSettlementFromPayment = (payment) => {
   const destination = remittancePlan.destination || {};
   const collectionPlan = metadata.collectionPlan || {};
   const amount = Number(payment.total || payment.amount || 0);
+  const purpose = payment.purpose || 'collection';
 
-  const feeConfig =
-    subscriptionCatalogService.getActiveSubscriptionCatalog()?.serviceFee || {};
-  const serviceFee = subscriptionCatalogService.computeServiceFee(amount);
-  const netAmount = Math.max(0, Math.round((amount - serviceFee) * 100) / 100);
+  // Provider fees (from Flutterwave/Paystack webhook)
+  const providerFees = metadata.providerFees || {};
+  const providerAppFee = Number(providerFees.app_fee || 0);
+  const providerMerchantFee = Number(providerFees.merchant_fee || 0);
+  const providerTotalFee = providerAppFee + providerMerchantFee;
+
+  // Collection fee ONLY for purpose === 'collection'
+  // Subscriptions have NO extra fee (only plan price + VAT + add-ons)
+  let serviceFee = 0;
+  if (purpose === 'collection') {
+    const feeConfig =
+      subscriptionCatalogService.getActiveSubscriptionCatalog()?.collectionFee || {};
+    serviceFee = subscriptionCatalogService.computeCollectionFee(amount, feeConfig);
+  }
+  
+  // Net amount = amount - Collection fee (if collection) - Provider fees
+  const netAmount = Math.max(0, Math.round((amount - serviceFee - providerTotalFee) * 100) / 100);
 
   return {
     tenantId: payment.tenantId,
@@ -34,8 +48,19 @@ const buildSettlementFromPayment = (payment) => {
     amount,
     fee: serviceFee,
     serviceFee,
-    serviceFeeRate: Number.isFinite(Number(feeConfig.rate)) ? Number(feeConfig.rate) : null,
-    serviceFeeFlat: Number.isFinite(Number(feeConfig.flat)) ? Number(feeConfig.flat) : null,
+    serviceFeeRate: purpose === 'collection'
+      ? Number.isFinite(Number(subscriptionCatalogService.getActiveSubscriptionCatalog()?.collectionFee?.rate))
+        ? Number(subscriptionCatalogService.getActiveSubscriptionCatalog()?.collectionFee?.rate)
+        : null
+      : null,
+    serviceFeeFlat: purpose === 'collection'
+      ? Number.isFinite(Number(subscriptionCatalogService.getActiveSubscriptionCatalog()?.collectionFee?.flat))
+        ? Number(subscriptionCatalogService.getActiveSubscriptionCatalog()?.collectionFee?.flat)
+        : null
+      : null,
+    providerFee: providerTotalFee,
+    providerAppFee,
+    providerMerchantFee,
     netAmount,
     status: 'pending',
     availabilityStatus: 'unknown',
@@ -56,6 +81,11 @@ const buildSettlementFromPayment = (payment) => {
       remittancePlan,
       collectionPlan,
       invoiceSnapshot: metadata.invoiceSnapshot || null,
+      providerFees: {
+        app_fee: providerAppFee,
+        merchant_fee: providerMerchantFee,
+        total: providerTotalFee,
+      },
     },
   };
 };

@@ -71,23 +71,28 @@ const upsertPaymentFlow = async (fields) => {
  * Build a payment flow row from a MongoDB Payment document.
  * Call this after Payment.save() or on key lifecycle events.
  */
-const fromPayment = (payment) => ({
-  tenant_id: payment.tenantId,
-  user_id: payment.userId,
-  payment_id: String(payment._id),
-  payment_reference: payment.reference,
-  provider: payment.paymentMethod,
-  amount: Number(payment.total || payment.amount || 0),
-  currency: payment.currency,
-  purpose: payment.purpose,
-  beneficiary: payment.beneficiaryType,
-  payment_status: payment.status,
-  payment_created_at: payment.createdAt || payment.paymentDate,
-  payment_processed_at: payment.processedAt,
-  payment_completed_at: payment.completedAt,
-  payment_failed_at: payment.failedAt,
-  failure_reason: payment.failureReason,
-});
+const fromPayment = (payment) => {
+  const respondent = payment.metadata?.respondentContext || {};
+  return {
+    tenant_id: payment.tenantId,
+    user_id: payment.userId,
+    user_name: respondent.fullName || respondent.name || null,
+    user_email: respondent.email || null,
+    payment_id: String(payment._id),
+    payment_reference: payment.reference,
+    provider: payment.paymentMethod,
+    amount: Number(payment.total || payment.amount || 0),
+    currency: payment.currency,
+    purpose: payment.purpose,
+    beneficiary: payment.beneficiaryType,
+    payment_status: payment.status,
+    payment_created_at: payment.createdAt || payment.paymentDate,
+    payment_processed_at: payment.processedAt,
+    payment_completed_at: payment.completedAt,
+    payment_failed_at: payment.failedAt,
+    failure_reason: payment.failureReason,
+  };
+};
 
 /**
  * Build from a MongoDB PaymentSettlement document.
@@ -104,6 +109,9 @@ const fromSettlement = (settlement) => ({
   provider_settled_at: settlement.providerSettledAt,
   settlement_fee: Number(settlement.fee || 0),
   service_fee: Number(settlement.serviceFee || 0),
+  provider_fee: Number(settlement.providerFee || 0),
+  provider_app_fee: Number(settlement.providerAppFee || 0),
+  provider_merchant_fee: Number(settlement.providerMerchantFee || 0),
   net_amount: Number(settlement.netAmount || 0),
   destination_type: settlement.destinationType,
   destination_node: settlement.destinationNodeName || settlement.destinationNodeReference,
