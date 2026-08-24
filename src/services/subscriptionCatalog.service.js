@@ -795,10 +795,7 @@ const buildSubscriptionCharge = ({
     normalizedCurrency
   );
   const taxableBase = roundAmount(Math.max(0, subtotal - discountAmount), normalizedCurrency);
-  const tax =
-    normalizedBillingPeriod === 'annual'
-      ? roundAmount(taxableBase * Number(catalog.vatRate || VAT_RATE), normalizedCurrency)
-      : 0;
+  const tax = roundAmount(taxableBase * Number(catalog.vatRate || VAT_RATE), normalizedCurrency);
   const legacyCredit = catalog.credits || DEFAULT_SUBSCRIPTION_CATALOG.credits;
   const appliedCredits = [];
   if (resolvedType === 'credit' && normalizedPromoCode) {
@@ -843,7 +840,7 @@ const buildSubscriptionCharge = ({
     promo: appliedPromo,
     tax,
     total,
-    vatRate: normalizedBillingPeriod === 'annual' ? Number(catalog.vatRate || VAT_RATE) : 0,
+    vatRate: Number(catalog.vatRate || VAT_RATE),
     lineItems: [
       {
         id: plan.id,
