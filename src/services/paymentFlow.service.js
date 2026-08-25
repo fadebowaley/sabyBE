@@ -98,24 +98,31 @@ const fromPayment = (payment) => {
  * Build from a MongoDB PaymentSettlement document.
  * Merge with an existing payment_flow row (only sets settlement fields).
  */
-const fromSettlement = (settlement) => ({
-  tenant_id: settlement.tenantId,
-  payment_id: String(settlement.paymentId),
-  settlement_id: String(settlement._id),
-  settlement_status: settlement.status,
-  funding_status: settlement.fundingStatus,
-  availability_status: settlement.availabilityStatus,
-  provider_settlement_id: settlement.providerSettlementId,
-  provider_settled_at: settlement.providerSettledAt,
-  settlement_fee: Number(settlement.fee || 0),
-  service_fee: Number(settlement.serviceFee || 0),
-  provider_fee: Number(settlement.providerFee || 0),
-  provider_app_fee: Number(settlement.providerAppFee || 0),
-  provider_merchant_fee: Number(settlement.providerMerchantFee || 0),
-  net_amount: Number(settlement.netAmount || 0),
-  destination_type: settlement.destinationType,
-  destination_node: settlement.destinationNodeName || settlement.destinationNodeReference,
-});
+const fromSettlement = (settlement) => {
+  const destAccount = settlement.destinationAccount || {};
+  return {
+    tenant_id: settlement.tenantId,
+    payment_id: String(settlement.paymentId),
+    settlement_id: String(settlement._id),
+    settlement_status: settlement.status,
+    funding_status: settlement.fundingStatus,
+    availability_status: settlement.availabilityStatus,
+    provider_settlement_id: settlement.providerSettlementId,
+    provider_settled_at: settlement.providerSettledAt,
+    settlement_fee: Number(settlement.fee || 0),
+    service_fee: Number(settlement.serviceFee || 0),
+    provider_fee: Number(settlement.providerFee || 0),
+    provider_app_fee: Number(settlement.providerAppFee || 0),
+    provider_merchant_fee: Number(settlement.providerMerchantFee || 0),
+    net_amount: Number(settlement.netAmount || 0),
+    destination_type: settlement.destinationType,
+    destination_node: settlement.destinationNodeName || settlement.destinationNodeReference,
+    destination_account_number: destAccount.accountNumber || null,
+    destination_account_name: destAccount.accountName || destAccount.label || null,
+    destination_bank_name: destAccount.bankName || null,
+    destination_bank_code: destAccount.bankCode || null,
+  };
+};
 
 /**
  * Query payment flow with filters.
