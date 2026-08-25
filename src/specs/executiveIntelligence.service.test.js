@@ -3656,13 +3656,51 @@ describe('executiveIntelligence.service request execution context', () => {
     expect(mockSubmissionReportService.getModuleReportAggregation).not.toHaveBeenCalled();
   });
 
-  test('returns a blocked diagnostic context when no active artifact exists', async () => {
-    mockTenantKnowledgeArtifact.findOne.mockReturnValue(activeArtifactChain(null));
+  test('builds an initial artifact when an authorized workspace user opens Intelligence', async () => {
+    mockBuilderSources();
+    mockTenantKnowledgeArtifact.findOne.mockReturnValueOnce(activeArtifactChain(null));
+    let createdRecord;
+
+    mockTenantKnowledgeArtifact.create.mockImplementation(async (payload) => {
+      createdRecord = { _id: 'artifact-1', ...payload };
+      return createdRecord;
+    });
+    mockTenantKnowledgeArtifact.findByIdAndUpdate.mockImplementation(async (_id, update) => ({
+      ...createdRecord,
+      status: update.$set.status,
+      artifact: {
+        ...createdRecord.artifact,
+        status: update.$set['artifact.status'],
+      },
+    }));
 
     const context = await executiveIntelligenceService.createRequestContext({
       user: {
         _id: 'user-owner',
         userId: 'HLU-OWNER',
+        tenantId: 'tenant-1',
+        email: 'owner@saby.test',
+        isOwner: true,
+      },
+      body: {
+        message: 'Generate a report',
+      },
+    });
+
+    expect(mockTenantKnowledgeArtifact.create).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId: 'tenant-1', status: 'building' })
+    );
+    expect(context.execution_allowed).toBe(true);
+    expect(context.artifact_status).toBe('active');
+  });
+
+  test('returns a blocked diagnostic context when a non-operator has no active artifact', async () => {
+    mockTenantKnowledgeArtifact.findOne.mockReturnValue(activeArtifactChain(null));
+
+    const context = await executiveIntelligenceService.createRequestContext({
+      user: {
+        _id: 'user-member',
+        userId: 'HLU-MEMBER',
         tenantId: 'tenant-1',
       },
       body: {

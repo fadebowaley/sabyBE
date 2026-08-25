@@ -1175,6 +1175,9 @@ const getActiveArtifact = async ({ tenantId }) =>
     .sort({ artifactVersion: -1 })
     .lean();
 
+const canInitializeTenantArtifact = (user = {}) =>
+  Boolean(user.isOwner || user.isSuper || user.isAdmin || user.isSaby);
+
 const getArtifactPayload = (record) => record?.artifact || null;
 
 const resolveArtifactUser = ({ artifact, user }) => {
@@ -2860,7 +2863,14 @@ const createRequestContext = async ({ user, body = {} }) => {
 
   const started = Date.now();
   const requestId = createRequestId();
-  const activeArtifact = await getActiveArtifact({ tenantId: user.tenantId });
+  let activeArtifact = await getActiveArtifact({ tenantId: user.tenantId });
+  if (!activeArtifact && canInitializeTenantArtifact(user)) {
+    activeArtifact = await buildTenantArtifact({
+      tenantId: user.tenantId,
+      builtBy: normalizeId(user),
+      activate: true,
+    });
+  }
   const artifact = getArtifactPayload(activeArtifact);
   const requestedReferences = Array.isArray(body.references) ? body.references : [];
   const requestedNodeIds = Array.isArray(body.requestedNodeIds) ? body.requestedNodeIds : [];
