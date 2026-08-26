@@ -83,6 +83,8 @@ const connectToDatabases = async () => {
       ) {
         const { scheduleCleanup } = require('./jobs/cleanupDeletedForms');
         scheduleCleanup();
+        const { startReconciliationCron } = require('./jobs/paymentReconciliationCron');
+        startReconciliationCron();
         logger.info('✅ Scheduled jobs initialized');
       } else if (process.env.JOBS_ENABLED === 'false') {
         logger.info('⊘ Scheduled jobs disabled (JOBS_ENABLED=false)');

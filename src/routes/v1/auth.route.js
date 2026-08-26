@@ -824,6 +824,42 @@ router.post(
   authController.addSettlementAccount
 );
 
+router.get(
+  '/flutterwave/transfer-logs',
+  auth(),
+  authController.listTransferLogs
+);
+
+router.get(
+  '/flutterwave/transfer-logs/stats',
+  auth(),
+  authController.getTransferStats
+);
+
+router.get(
+  '/flutterwave/transfer-logs/export',
+  auth(),
+  authController.exportTransferLogs
+);
+
+router.get(
+  '/flutterwave/transfer-logs/settlement/:settlementId',
+  auth(),
+  authController.getTransferLogsBySettlement
+);
+
+router.get(
+  '/flutterwave/transfer-logs/payment/:paymentReference',
+  auth(),
+  authController.getTransferLogsByPayment
+);
+
+router.get(
+  '/flutterwave/transfer-logs/:id',
+  auth(),
+  authController.getTransferLog
+);
+
 /**
  * @swagger
  * /auth/check-api-key-status:

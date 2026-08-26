@@ -73,6 +73,8 @@ const enqueueIfEligible = async (payment, context = {}) => {
   return { queued: true, jobId: String(job.id) };
 };
 
+const T_PLUS_ONE_HOURS = Number(config.payment?.remittance?.tPlusOneHours || 24);
+
 const processRemittanceJob = async (job) => {
   const { paymentId, remittanceConfigId, requestedAt, reference } = job.data || {};
   if (!paymentId) {
@@ -89,6 +91,21 @@ const processRemittanceJob = async (job) => {
       `[Payment Remittance] Skipping ineligible payment ${reference || payment.reference}`
     );
     return { skipped: true, reason: 'not_eligible' };
+  }
+
+  // T+1 CHECK: Skip if payment completed less than T_PLUS_ONE_HOURS ago
+  const paymentCompletedAt = payment.completedAt || payment.processedAt || payment.updatedAt;
+  if (paymentCompletedAt) {
+    const hoursSinceCompletion = (Date.now() - new Date(paymentCompletedAt).getTime()) / 36e5;
+    if (hoursSinceCompletion < T_PLUS_ONE_HOURS) {
+      logger.info(
+        `[Payment Remittance] Skipping ${payment.reference} - only ${hoursSinceCompletion.toFixed(1)}h since completion (T+${T_PLUS_ONE_HOURS}h required)`
+      );
+      // Requeue for later by throwing a special error that triggers retry
+      const retryError = new Error('T_PLUS_ONE_PENDING');
+      retryError.code = 'T_PLUS_ONE_PENDING';
+      throw retryError;
+    }
   }
 
   const { settlement, created } =
@@ -365,6 +382,21 @@ const processRemittanceJob = async (job) => {
     };
     await payment.save();
   } catch (error) {
+    // Handle T+1 pending - requeue without counting as failure
+    if (error.code === 'T_PLUS_ONE_PENDING') {
+      logger.info(
+        `[Payment Remittance] Requeueing ${payment.reference} for T+1 (${(Date.now() - new Date(payment.completedAt || payment.processedAt || payment.updatedAt).getTime()) / 36e5}h elapsed)`
+      );
+      return {
+        success: true,
+        skipped: true,
+        reason: 't_plus_one_pending',
+        paymentId: String(payment._id),
+        reference: payment.reference,
+        settlementId: String(settlement._id || settlement.id),
+      };
+    }
+
     const failedSettlement = await paymentSettlementService.markSettlementFailed({
       settlement,
       error,
@@ -399,6 +431,14 @@ const processRemittanceJob = async (job) => {
 };
 
 const handleRemittanceFailure = async (job, err) => {
+  // Don't treat T+1 pending as a failure
+  if (err?.code === 'T_PLUS_ONE_PENDING') {
+    logger.info(
+      `[Payment Remittance] Job ${job?.id} T+1 pending - not counting as failure`
+    );
+    return { dlqSaved: false, willRetry: true, reason: 't_plus_one_pending' };
+  }
+
   const attempts = Number(job?.attemptsMade || 0);
   const maxAttempts = Number(job?.opts?.attempts || 3);
   const remaining = Math.max(maxAttempts - attempts, 0);

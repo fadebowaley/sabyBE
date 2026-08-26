@@ -17,7 +17,15 @@ const {
   mfaService,
   userSecurityService,
 } = require('../services');
-const { Role, User } = require('../models');
+const {
+  listTransferLogs,
+  getTransferLog,
+  getTransferLogsBySettlement,
+  getTransferLogsByPayment,
+  getTransferStats,
+  exportTransferLogs,
+} = require('../controllers/flutterwaveTransferLog.controller');
+const { Role, User, FlutterwaveTransferLog } = require('../models');
 const logger = require('../config/logger');
 
 const ONBOARDING_PHONE_OTP_TTL_MINUTES = 10;
@@ -1626,4 +1634,10 @@ module.exports = {
   resolveSettlementAccount,
   sendSettlementAccountOtp,
   addSettlementAccount,
+  listTransferLogs,
+  getTransferLog,
+  getTransferLogsBySettlement,
+  getTransferLogsByPayment,
+  getTransferStats,
+  exportTransferLogs,
 };
