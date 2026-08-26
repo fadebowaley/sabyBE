@@ -5,6 +5,9 @@ const FlutterwaveTransferLog = require('../models/flutterwaveTransferLog.model')
 const logger = require('../config/logger');
 
 const FLUTTERWAVE_TRANSFER_CURRENCIES = new Set(['NGN']);
+const FLUTTERWAVE_TRANSFER_MINIMUMS = {
+  NGN: 100,
+};
 
 const getSecretKey = () =>
   String(config.payment?.providers?.flutterwave?.secretKey || '').trim();
@@ -370,6 +373,18 @@ const assertTransferReady = ({ settlement }) => {
     )
   }
 
+  const minimumAmount = Number(FLUTTERWAVE_TRANSFER_MINIMUMS[currency] || 0);
+  if (minimumAmount > 0 && amount < minimumAmount) {
+    const error = new ApiError(
+      httpStatus.UNPROCESSABLE_ENTITY,
+      `Flutterwave ${currency} transfers require a minimum amount of ${minimumAmount}.`
+    );
+    error.code = 'FLUTTERWAVE_TRANSFER_MINIMUM_NOT_MET';
+    error.minimumAmount = minimumAmount;
+    error.transferAmount = amount;
+    throw error;
+  }
+
   return { secretKey, currency, account, amount }
 }
 
@@ -381,4 +396,5 @@ module.exports = {
   getWalletBalances,
   assertTransferReady,
   FLUTTERWAVE_TRANSFER_CURRENCIES,
+  FLUTTERWAVE_TRANSFER_MINIMUMS,
 }

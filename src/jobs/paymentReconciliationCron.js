@@ -17,7 +17,9 @@ const toIsoDate = (date) => new Date(date).toISOString().slice(0, 10);
 const canRetryFailedSettlement = (settlement) =>
   settlement.status === 'failed' &&
   !settlement.providerTransferId &&
-  settlement.guardrailStatus !== 'rejected';
+  settlement.guardrailStatus !== 'rejected' &&
+  !settlement.metadata?.failure?.aggregationRequired &&
+  !/amount is below minimum limit/i.test(String(settlement.failureReason || ''));
 
 const runReconciliationSweep = async () => {
   const startTime = Date.now();

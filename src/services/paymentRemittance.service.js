@@ -7,6 +7,7 @@ const {
 } = require('../queues/paymentRemittance.queue');
 const paymentEventService = require('./paymentEvent.service');
 const paymentSettlementService = require('./paymentSettlement.service');
+const paymentFlowService = require('./paymentFlow.service');
 const settlementProviderService = require('./settlementProvider.service');
 const dlqService = require('./dlq.service');
 
@@ -75,6 +76,12 @@ const enqueueIfEligible = async (payment, context = {}) => {
 
 const T_PLUS_ONE_HOURS = Number(config.payment?.remittance?.tPlusOneHours || 24);
 
+const requiresPayoutAggregation = (settlement = {}) =>
+  Boolean(
+    settlement.metadata?.failure?.aggregationRequired ||
+      /amount is below minimum limit/i.test(String(settlement.failureReason || ''))
+  );
+
 const processRemittanceJob = async (job) => {
   const { paymentId, remittanceConfigId, requestedAt, reference } = job.data || {};
   if (!paymentId) {
@@ -114,10 +121,35 @@ const processRemittanceJob = async (job) => {
   const { settlement, created } =
     await paymentSettlementService.createOrGetSettlementForPayment(payment);
   if (settlement.status === 'successful') {
+    await paymentFlowService.upsertPaymentFlow(
+      paymentFlowService.fromSettlement(settlement)
+    );
     return {
       success: true,
       skipped: true,
       reason: 'settlement_already_successful',
+      paymentId: String(payment._id),
+      reference: payment.reference,
+      settlementId: String(settlement._id || settlement.id),
+    };
+  }
+  if (requiresPayoutAggregation(settlement)) {
+    settlement.availabilityStatus = 'awaiting_provider_settlement';
+    settlement.metadata = {
+      ...(settlement.metadata || {}),
+      failure: {
+        ...(settlement.metadata?.failure || {}),
+        aggregationRequired: true,
+      },
+    };
+    await settlement.save();
+    await paymentFlowService.upsertPaymentFlow(
+      paymentFlowService.fromSettlement(settlement)
+    );
+    return {
+      success: true,
+      waiting: true,
+      reason: 'aggregation_required',
       paymentId: String(payment._id),
       reference: payment.reference,
       settlementId: String(settlement._id || settlement.id),
@@ -494,4 +526,5 @@ module.exports = {
   enqueueIfEligible,
   processRemittanceJob,
   handleRemittanceFailure,
+  requiresPayoutAggregation,
 };

@@ -139,6 +139,9 @@ const markSettlementAvailability = async ({ settlement, availability }) => {
     },
   };
   await settlement.save();
+  await paymentFlowService.upsertPaymentFlow(
+    paymentFlowService.fromSettlement(settlement)
+  );
   return settlement;
 };
 
@@ -165,6 +168,9 @@ const markSettlementAwaitingProviderSettlement = async ({
     },
   };
   await settlement.save();
+  await paymentFlowService.upsertPaymentFlow(
+    paymentFlowService.fromSettlement(settlement)
+  );
   return settlement;
 };
 
@@ -215,6 +221,9 @@ const markSettlementProcessing = async ({ settlement, transferResult = null }) =
     processingAt: new Date().toISOString(),
   };
   await settlement.save();
+  await paymentFlowService.upsertPaymentFlow(
+    paymentFlowService.fromSettlement(settlement)
+  );
   return settlement;
 };
 
@@ -235,12 +244,17 @@ const markSettlementSuccessful = async ({ settlement, transferResult = null }) =
     successfulAt: new Date().toISOString(),
   };
   await settlement.save();
+  await paymentFlowService.upsertPaymentFlow(
+    paymentFlowService.fromSettlement(settlement)
+  );
   return settlement;
 };
 
 const markSettlementFailed = async ({ settlement, error, transferResult = null }) => {
+  const failureCode = error?.code || null;
+  const aggregationRequired = failureCode === 'FLUTTERWAVE_TRANSFER_MINIMUM_NOT_MET';
   settlement.status = 'failed';
-  settlement.availabilityStatus = 'failed';
+  settlement.availabilityStatus = aggregationRequired ? 'awaiting_provider_settlement' : 'failed';
   settlement.attempts = Number(settlement.attempts || 0) + 1;
   settlement.failureReason = error?.message || String(error || 'Settlement transfer failed');
   settlement.metadata = {
@@ -248,11 +262,18 @@ const markSettlementFailed = async ({ settlement, error, transferResult = null }
     providerTransfer: transferResult || settlement.metadata?.providerTransfer || null,
     failedAt: new Date().toISOString(),
     failure: {
+      code: failureCode,
       message: settlement.failureReason,
       statusCode: error?.statusCode || null,
+      aggregationRequired,
+      minimumAmount: error?.minimumAmount || null,
+      transferAmount: error?.transferAmount || null,
     },
   };
   await settlement.save();
+  await paymentFlowService.upsertPaymentFlow(
+    paymentFlowService.fromSettlement(settlement)
+  );
   return settlement;
 };
 
