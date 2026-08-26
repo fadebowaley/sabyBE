@@ -118,12 +118,6 @@ const extractTransactionCandidates = (settlementDetail) => {
   });
 };
 
-const amountsMatch = (a, b) => {
-  const left = Number(a);
-  const right = Number(b);
-  return Number.isFinite(left) && Number.isFinite(right) && Math.abs(left - right) < 0.01;
-};
-
 const transactionMatchesPayment = ({ candidate, payment, settlement }) => {
   const txRef = readString(candidate, [
     'tx_ref',
@@ -140,13 +134,7 @@ const transactionMatchesPayment = ({ candidate, payment, settlement }) => {
     'flwRef',
   ]);
   const currency = readString(candidate, ['currency', 'settlement_currency']);
-  const amount = readNumber(candidate, [
-    'amount',
-    'charged_amount',
-    'settlement_amount',
-    'net_amount',
-  ]);
-  const expectedAmount = Number(payment.total || payment.amount || settlement.amount || 0);
+  const status = readString(candidate, ['status']);
 
   const referenceMatches =
     (txRef && txRef === payment.reference) ||
@@ -154,8 +142,9 @@ const transactionMatchesPayment = ({ candidate, payment, settlement }) => {
   const currencyMatches =
     String(currency || '').trim().toUpperCase() ===
     String(payment.currency || settlement.currency || '').trim().toUpperCase();
+  const successfulStatus = new Set(['successful', 'success', 'completed']);
 
-  return referenceMatches && currencyMatches && amountsMatch(amount, expectedAmount);
+  return referenceMatches && currencyMatches && successfulStatus.has(String(status || '').toLowerCase());
 };
 
 const findSettledTransaction = async ({
