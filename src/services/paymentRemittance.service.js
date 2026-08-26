@@ -46,7 +46,7 @@ const enqueueIfEligible = async (payment, context = {}) => {
   };
 
   const job = await queueRemittance(payload, {
-    jobId: `payment-remittance-${payload.paymentId}`,
+    jobId: context.jobId || `payment-remittance-${payload.paymentId}`,
   });
 
   logger.info(
@@ -101,10 +101,13 @@ const processRemittanceJob = async (job) => {
       logger.info(
         `[Payment Remittance] Skipping ${payment.reference} - only ${hoursSinceCompletion.toFixed(1)}h since completion (T+${T_PLUS_ONE_HOURS}h required)`
       );
-      // Requeue for later by throwing a special error that triggers retry
-      const retryError = new Error('T_PLUS_ONE_PENDING');
-      retryError.code = 'T_PLUS_ONE_PENDING';
-      throw retryError;
+      return {
+        success: true,
+        waiting: true,
+        reason: 't_plus_one_pending',
+        paymentId: String(payment._id),
+        reference: payment.reference,
+      };
     }
   }
 

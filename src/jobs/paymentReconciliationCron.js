@@ -1,11 +1,11 @@
 const config = require('../config/config');
 const logger = require('../config/logger');
 const { PaymentSettlement } = require('../models');
-const settlementProviderService = require('../services/settlementProviderService');
-const paymentSettlementService = require('../services/paymentSettlementService');
-const paymentRemittanceService = require('../services/paymentRemittanceService');
-const paymentEventService = require('../services/paymentEventService');
-const paymentFlowService = require('../services/paymentFlowService');
+const settlementProviderService = require('../services/settlementProvider.service');
+const paymentSettlementService = require('../services/paymentSettlement.service');
+const paymentRemittanceService = require('../services/paymentRemittance.service');
+const paymentEventService = require('../services/paymentEvent.service');
+const paymentFlowService = require('../services/paymentFlow.service');
 
 const RECONCILIATION_CRON = config.payment?.reconciliation?.cron || '0 6 * * *'; // Daily at 06:00 UTC
 const RECONCILIATION_LOOKBACK_DAYS = Number(config.payment?.reconciliation?.lookbackDays || 7);
@@ -14,6 +14,11 @@ const BATCH_SIZE = Number(config.payment?.reconciliation?.batchSize || 100);
 
 const toIsoDate = (date) => new Date(date).toISOString().slice(0, 10);
 
+const canRetryFailedSettlement = (settlement) =>
+  settlement.status === 'failed' &&
+  !settlement.providerTransferId &&
+  settlement.guardrailStatus !== 'rejected';
+
 const runReconciliationSweep = async () => {
   const startTime = Date.now();
   logger.info('[Payment Reconciliation] Starting daily reconciliation sweep');
@@ -21,6 +26,7 @@ const runReconciliationSweep = async () => {
   let failedCount = 0;
   let remittanceQueued = 0;
   let providerSettled = 0;
+  let recoveredSettlements = 0;
   let scannedStuck = 0;
 
   try {
@@ -86,6 +92,7 @@ const runReconciliationSweep = async () => {
     for (const payment of remittanceCandidates) {
       const result = await require('../services/paymentRemittance.service').enqueueIfEligible(payment, {
         trigger: 'payment.reconciliation.sweep',
+        jobId: `payment-remittance-${payment._id || payment.id}-reconcile-${Date.now()}`,
       });
       if (result?.queued) {
         remittanceQueued += 1;
@@ -108,12 +115,30 @@ const runReconciliationSweep = async () => {
     const pendingSettlements = await (require('../models').PaymentSettlement).find({
       provider: 'flutterwave',
       fundingStatus: { $in: ['provider_verified', 'unconfirmed', 'blocked_guardrail'] },
-      status: { $in: ['pending', 'queued', 'processing'] },
+      status: { $in: ['pending', 'queued', 'processing', 'failed'] },
     })
       .sort({ createdAt: -1 })
       .limit(BATCH_SIZE);
 
     for (const settlement of pendingSettlements) {
+      if (settlement.status === 'failed') {
+        if (!canRetryFailedSettlement(settlement)) {
+          continue;
+        }
+        settlement.status = 'pending';
+        settlement.availabilityStatus = 'awaiting_provider_settlement';
+        settlement.failureReason = null;
+        settlement.metadata = {
+          ...(settlement.metadata || {}),
+          reconciliation: {
+            ...(settlement.metadata?.reconciliation || {}),
+            recoveredForProviderSettlementCheckAt: new Date().toISOString(),
+          },
+        };
+        await settlement.save();
+        recoveredSettlements += 1;
+      }
+
       const payment = await (require('../models').Payment).findById(settlement.paymentId);
       if (!payment || payment.status !== 'completed') {
         continue;
@@ -167,6 +192,7 @@ const runReconciliationSweep = async () => {
 
       const result = await require('../services/paymentRemittance.service').enqueueIfEligible(payment, {
         trigger: 'payment.reconciliation.provider-settled',
+        jobId: `payment-remittance-${payment._id || payment.id}-provider-settled-${Date.now()}`,
       });
       if (result?.queued) {
         remittanceQueued += 1;
@@ -185,13 +211,14 @@ const runReconciliationSweep = async () => {
 
     const duration = Date.now() - startTime;
     logger.info(
-      `[Payment Reconciliation] Sweep done. failed=${failedCount}, remittanceQueued=${remittanceQueued}, providerSettled=${providerSettled}, scanned=${scannedStuck}, duration=${duration}ms`
+      `[Payment Reconciliation] Sweep done. failed=${failedCount}, remittanceQueued=${remittanceQueued}, providerSettled=${providerSettled}, recoveredSettlements=${recoveredSettlements}, scanned=${scannedStuck}, duration=${duration}ms`
     );
 
     return {
       failedCount,
       remittanceQueued,
       providerSettled,
+      recoveredSettlements,
       scannedStuck: stuckPayments.length,
       cutoff: cutoff.toISOString(),
       durationMs: duration,

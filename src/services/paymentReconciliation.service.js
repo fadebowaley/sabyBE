@@ -9,6 +9,11 @@ const paymentFlowService = require('./paymentFlow.service');
 
 const toIsoDate = (date) => new Date(date).toISOString().slice(0, 10);
 
+const canRetryFailedSettlement = (settlement) =>
+  settlement.status === 'failed' &&
+  !settlement.providerTransferId &&
+  settlement.guardrailStatus !== 'rejected';
+
 const runReconciliationSweep = async () => {
   const stuckMinutes = Number(config.payment?.reconciliation?.stuckMinutes) || 45;
   const batchSize = Number(config.payment?.reconciliation?.batchSize) || 200;
@@ -71,9 +76,11 @@ const runReconciliationSweep = async () => {
 
   let remittanceQueued = 0;
   let providerSettled = 0;
+  let recoveredSettlements = 0;
   for (const payment of remittanceCandidates) {
     const result = await paymentRemittanceService.enqueueIfEligible(payment, {
       trigger: 'payment.reconciliation.sweep',
+      jobId: `payment-remittance-${payment._id || payment.id}-reconcile-${Date.now()}`,
     });
     if (result?.queued) {
       remittanceQueued += 1;
@@ -94,12 +101,30 @@ const runReconciliationSweep = async () => {
   const pendingSettlements = await PaymentSettlement.find({
     provider: 'flutterwave',
     fundingStatus: { $in: ['provider_verified', 'unconfirmed', 'blocked_guardrail'] },
-    status: { $in: ['pending', 'queued'] },
+    status: { $in: ['pending', 'queued', 'failed'] },
   })
     .sort({ createdAt: -1 })
     .limit(batchSize);
 
   for (const settlement of pendingSettlements) {
+    if (settlement.status === 'failed') {
+      if (!canRetryFailedSettlement(settlement)) {
+        continue;
+      }
+      settlement.status = 'pending';
+      settlement.availabilityStatus = 'awaiting_provider_settlement';
+      settlement.failureReason = null;
+      settlement.metadata = {
+        ...(settlement.metadata || {}),
+        reconciliation: {
+          ...(settlement.metadata?.reconciliation || {}),
+          recoveredForProviderSettlementCheckAt: new Date().toISOString(),
+        },
+      };
+      await settlement.save();
+      recoveredSettlements += 1;
+    }
+
     const payment = await Payment.findById(settlement.paymentId);
     if (!payment || payment.status !== 'completed') {
       continue;
@@ -152,6 +177,7 @@ const runReconciliationSweep = async () => {
 
     const result = await paymentRemittanceService.enqueueIfEligible(payment, {
       trigger: 'payment.reconciliation.provider-settled',
+      jobId: `payment-remittance-${payment._id || payment.id}-provider-settled-${Date.now()}`,
     });
     if (result?.queued) {
       remittanceQueued += 1;
@@ -169,13 +195,14 @@ const runReconciliationSweep = async () => {
   }
 
   logger.info(
-    `[Payment Reconciliation] Sweep done. failed=${failedCount}, remittanceQueued=${remittanceQueued}, providerSettled=${providerSettled}, scanned=${stuckPayments.length}`
+    `[Payment Reconciliation] Sweep done. failed=${failedCount}, remittanceQueued=${remittanceQueued}, providerSettled=${providerSettled}, recoveredSettlements=${recoveredSettlements}, scanned=${stuckPayments.length}`
   );
 
   return {
     failedCount,
     remittanceQueued,
     providerSettled,
+    recoveredSettlements,
     scannedStuck: stuckPayments.length,
     cutoff: cutoff.toISOString(),
   };
