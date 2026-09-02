@@ -2,20 +2,53 @@ const { postgresPool } = require('../config/postgres');
 const logger = require('../config/logger');
 
 const COLUMNS = [
-  'tenant_id', 'user_id', 'user_name', 'user_email',
-  'payment_id', 'payment_reference', 'provider', 'amount', 'currency',
-  'purpose', 'beneficiary',
-  'payment_status', 'payment_created_at', 'payment_processed_at',
-  'payment_completed_at', 'payment_failed_at', 'failure_reason',
-  'settlement_id', 'settlement_status', 'funding_status', 'availability_status',
-  'provider_settlement_id', 'provider_settled_at', 'settlement_fee', 'service_fee', 'net_amount',
-  'destination_type', 'destination_node',
-  'reconciliation_status', 'last_reconciled_at', 'remittance_queued',
+  'tenant_id',
+  'user_id',
+  'user_name',
+  'user_email',
+  'payment_id',
+  'payment_reference',
+  'provider',
+  'amount',
+  'currency',
+  'purpose',
+  'beneficiary',
+  'payment_status',
+  'payment_created_at',
+  'payment_processed_at',
+  'payment_completed_at',
+  'payment_failed_at',
+  'failure_reason',
+  'settlement_id',
+  'settlement_status',
+  'funding_status',
+  'availability_status',
+  'provider_settlement_id',
+  'provider_settled_at',
+  'settlement_fee',
+  'service_fee',
+  'provider_fee',
+  'provider_app_fee',
+  'provider_merchant_fee',
+  'net_amount',
+  'destination_type',
+  'destination_node',
+  'destination_account_number',
+  'destination_account_name',
+  'destination_bank_name',
+  'destination_bank_code',
+  'reconciliation_status',
+  'last_reconciled_at',
+  'remittance_queued',
   'updated_at',
 ];
 
 const ALLOWED_SORT = new Set([
-  'payment_created_at', 'amount', 'payment_status', 'provider', 'updated_at',
+  'payment_created_at',
+  'amount',
+  'payment_status',
+  'provider',
+  'updated_at',
 ]);
 
 /**
@@ -24,7 +57,9 @@ const ALLOWED_SORT = new Set([
  */
 const upsertPaymentFlow = async (fields) => {
   if (!fields.payment_id || !fields.tenant_id) {
-    logger.warn('[PaymentFlow] upsert skipped — missing payment_id or tenant_id');
+    logger.warn(
+      '[PaymentFlow] upsert skipped — missing payment_id or tenant_id'
+    );
     return;
   }
 
@@ -46,7 +81,10 @@ const upsertPaymentFlow = async (fields) => {
     // Always bump updated_at
     setClauses.push(`updated_at = NOW()`);
 
-    const insertCols = ['payment_id', ...Object.keys(fields).filter((k) => k !== 'payment_id')];
+    const insertCols = [
+      'payment_id',
+      ...Object.keys(fields).filter((k) => k !== 'payment_id'),
+    ];
     const insertPlaceholders = insertCols.map((_, i) => `$${idx + i}`);
     const insertValues = insertCols.map((k) => fields[k]);
 
@@ -116,9 +154,11 @@ const fromSettlement = (settlement) => {
     provider_merchant_fee: Number(settlement.providerMerchantFee || 0),
     net_amount: Number(settlement.netAmount || 0),
     destination_type: settlement.destinationType,
-    destination_node: settlement.destinationNodeName || settlement.destinationNodeReference,
+    destination_node:
+      settlement.destinationNodeName || settlement.destinationNodeReference,
     destination_account_number: destAccount.accountNumber || null,
-    destination_account_name: destAccount.accountName || destAccount.label || null,
+    destination_account_name:
+      destAccount.accountName || destAccount.label || null,
     destination_bank_name: destAccount.bankName || null,
     destination_bank_code: destAccount.bankCode || null,
   };

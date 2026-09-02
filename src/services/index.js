@@ -42,6 +42,7 @@ module.exports.collectionService = require('./collection.service');
 module.exports.conversationService = require('./conversation.service');
 module.exports.departmentService = require('./department.service');
 module.exports.eventService = require('./event.service');
+module.exports.workItemService = require('./workItem.service');
 module.exports.eventConfigService = require('./eventConfig.service');
 module.exports.projectFormService = require('./projectForm.service');
 module.exports.projectFormWorkspaceService = require('./projectFormWorkspace.service');

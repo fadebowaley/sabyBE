@@ -25,6 +25,7 @@ const adminRoute = require('./admin.route');
 const captureRoute = require('./capture.route');
 const departmentRoute = require('./department.route');
 const eventRoute = require('./event.route');
+const workItemRoute = require('./workItem.route');
 const eventConfigRoute = require('./eventConfig.route');
 const paymentRoute = require('./payment.route');
 const paymentFlowRoute = require('./paymentFlow.route');
@@ -181,6 +182,10 @@ const defaultRoutes = [
   {
     path: '/event', // Example: /event/123, /event/info
     route: eventRoute,
+  },
+  {
+    path: '/work-items',
+    route: workItemRoute,
   },
   {
     path: '/eventConfig', // Example: /eventConfig/123, /eventConfig/info
