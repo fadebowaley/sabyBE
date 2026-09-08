@@ -164,7 +164,13 @@ class NotificationQueueService {
    * @param {string} opts.monthLabel
    * @returns {Promise<Object>}
    */
-  async queueAnomalyAlert({ tenantId, anomaly, projectId, projectName, monthLabel }) {
+  async queueAnomalyAlert({
+    tenantId,
+    anomaly,
+    projectId,
+    projectName,
+    monthLabel,
+  }) {
     try {
       const job = await this.queue.add('anomaly_alert', {
         type: 'anomaly_alert',
@@ -176,7 +182,9 @@ class NotificationQueueService {
         timestamp: new Date().toISOString(),
       });
 
-      logger.info(`🚨 Queued anomaly alert - severity=${anomaly?.severity} job=${job.id}`);
+      logger.info(
+        `🚨 Queued anomaly alert - severity=${anomaly?.severity} job=${job.id}`
+      );
       return { success: true, jobId: job.id };
     } catch (error) {
       logger.error('❌ Failed to queue anomaly alert:', error.message);
@@ -211,6 +219,23 @@ class NotificationQueueService {
         error: error.message,
       };
     }
+  }
+
+  async queueReminder({ reminderTriggerId, scheduledAt }) {
+    const job = await this.queue.add(
+      'work_item_reminder',
+      {
+        type: 'work_item_reminder',
+        reminderTriggerId,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        jobId: `reminder:${reminderTriggerId}:${new Date(
+          scheduledAt
+        ).getTime()}`,
+      }
+    );
+    return { success: true, jobId: job.id };
   }
 
   /**
@@ -306,6 +331,13 @@ class NotificationQueueService {
           );
           break;
 
+        case 'work_item_reminder':
+          notificationResult =
+            await require('./reminderTrigger.service').deliverReminder(
+              job.data.reminderTriggerId
+            );
+          break;
+
         default:
           throw new Error(`Unknown notification type: ${type}`);
       }
@@ -340,15 +372,21 @@ class NotificationQueueService {
    */
   async handleAnomalyAlert(jobData) {
     const { tenantId, anomaly, projectName, monthLabel } = jobData;
-    const metricKey    = anomaly?.metricKey || anomaly?.metric_key || 'unknown metric';
-    const severity     = (anomaly?.severity || 'high').toUpperCase();
-    const deviation    = anomaly?.deviation != null
-      ? `${Number(anomaly.deviation).toFixed(1)}%`
-      : 'significant';
+    const metricKey =
+      anomaly?.metricKey || anomaly?.metric_key || 'unknown metric';
+    const severity = (anomaly?.severity || 'high').toUpperCase();
+    const deviation =
+      anomaly?.deviation != null
+        ? `${Number(anomaly.deviation).toFixed(1)}%`
+        : 'significant';
 
-    const subject = `[${severity}] Anomaly detected: ${metricKey} - ${projectName || 'project'}`;
+    const subject = `[${severity}] Anomaly detected: ${metricKey} - ${
+      projectName || 'project'
+    }`;
     const message =
-      `A ${severity} anomaly was detected in "${projectName || 'your project'}" ` +
+      `A ${severity} anomaly was detected in "${
+        projectName || 'your project'
+      }" ` +
       `for ${monthLabel || 'the current period'}.\n\n` +
       `Metric: ${metricKey}\n` +
       `Deviation: ${deviation} from baseline\n\n` +
@@ -374,15 +412,17 @@ class NotificationQueueService {
           sendSabyEmail({
             to: a.email,
             subject,
-            preheader: `Saby detected an unusual movement in ${projectName || 'your project'}.`,
+            preheader: `Saby detected an unusual movement in ${
+              projectName || 'your project'
+            }.`,
             layout: 'operationalAlert',
             label: 'Anomaly alert',
             icon: 'ALT',
             headline: 'Saby detected an anomaly.',
             body: [
-              `Saby detected a ${severity} anomaly in "${projectName || 'your project'}" for ${
-                monthLabel || 'the current period'
-              }.`,
+              `Saby detected a ${severity} anomaly in "${
+                projectName || 'your project'
+              }" for ${monthLabel || 'the current period'}.`,
               'This metric moved outside the expected baseline. Please investigate the source and resolve any operational issue.',
             ],
             detailsRows: [
@@ -398,7 +438,9 @@ class NotificationQueueService {
 
       const sent = results.filter((r) => r.status === 'fulfilled').length;
       logger.info(`[AnomalyAlert] Sent to ${sent}/${admins.length} admins`, {
-        tenantId, severity, metricKey,
+        tenantId,
+        severity,
+        metricKey,
       });
 
       return { success: true, type: 'anomaly_alert', tenantId, sent };

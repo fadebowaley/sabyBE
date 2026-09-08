@@ -23,6 +23,25 @@ router.post(
   validate(validation.importWorkItems),
   controller.importWorkItems
 );
+router.post(
+  '/generate-meeting',
+  auth('calendar:manage'),
+  validate(validation.generateMeeting),
+  controller.generateMeeting
+);
+
+router.get(
+  '/public/:workItemId',
+  validate(validation.getPublicWorkItem),
+  controller.getPublicWorkItem
+);
+
+router.post(
+  '/public/:workItemId/resources',
+  validate(validation.addResource),
+  controller.addPublicResource
+);
+
 router
   .route('/:workItemId')
   .get(

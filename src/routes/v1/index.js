@@ -26,6 +26,7 @@ const captureRoute = require('./capture.route');
 const departmentRoute = require('./department.route');
 const eventRoute = require('./event.route');
 const workItemRoute = require('./workItem.route');
+const reminderTriggerRoute = require('./reminderTrigger.route');
 const eventConfigRoute = require('./eventConfig.route');
 const paymentRoute = require('./payment.route');
 const paymentFlowRoute = require('./paymentFlow.route');
@@ -69,6 +70,8 @@ const cmsPageRoute = require('./cmsPage.route');
 const whatsappRoute = require('./whatsapp.route');
 const executiveIntelligenceRoute = require('./executiveIntelligence.route');
 const geoRoute = require('./geo.route');
+const aiTokenRoute = require('./aiToken.route');
+const byokRoute = require('./byok.route');
 
 // declare rest of the routes: nodeLevel, nodeStructure, node etc.
 const config = require('../../config/config');
@@ -188,6 +191,10 @@ const defaultRoutes = [
     route: workItemRoute,
   },
   {
+    path: '/reminder-triggers',
+    route: reminderTriggerRoute,
+  },
+  {
     path: '/eventConfig', // Example: /eventConfig/123, /eventConfig/info
     route: eventConfigRoute,
   },
@@ -226,6 +233,14 @@ const defaultRoutes = [
   {
     path: '/subscriptions',
     route: subscriptionRoute,
+  },
+  {
+    path: '/ai-tokens',
+    route: aiTokenRoute,
+  },
+  {
+    path: '/byok',
+    route: byokRoute,
   },
   {
     path: '/collections',

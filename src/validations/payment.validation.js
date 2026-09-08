@@ -10,7 +10,7 @@ const PAYMENT_STATUSES = [
   'cancelled',
   'refunded',
 ];
-const PURPOSES = ['subscription', 'collection'];
+const PURPOSES = ['subscription', 'collection', 'ai_tokens'];
 const BENEFICIARY_TYPES = ['saby', 'tenant'];
 const PAYMENT_CURRENCIES = [
   'NGN',

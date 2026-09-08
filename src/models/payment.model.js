@@ -79,7 +79,7 @@ const paymentSchema = mongoose.Schema(
     },
     purpose: {
       type: String,
-      enum: ['subscription', 'collection'], //subscription for saby
+      enum: ['subscription', 'collection', 'ai_tokens'], // subscription, collection, or ai_tokens
       required: true,
       index: true,
     },

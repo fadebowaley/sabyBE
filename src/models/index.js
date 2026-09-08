@@ -13,6 +13,7 @@ module.exports.DatatureConfig = require('./datatureConfig.model');
 module.exports.Department = require('./department.model');
 module.exports.Event = require('./event.model');
 module.exports.WorkItem = require('./workItem.model');
+module.exports.ReminderTrigger = require('./reminderTrigger.model');
 module.exports.EventConfig = require('./eventConfig.model');
 module.exports.GlobalSettings = require('./globalSettings.model');
 module.exports.Level = require('./level.model');

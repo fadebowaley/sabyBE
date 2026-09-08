@@ -11,8 +11,12 @@ const {
   testRedisConnection,
   closeRedis,
 } = require('./config/redis');
-const { assertCopilotSchemaReady } = require('./services/copilotSchemaGuard.service');
-const { assertLevelIndexesReady } = require('./services/levelIndexGuard.service');
+const {
+  assertCopilotSchemaReady,
+} = require('./services/copilotSchemaGuard.service');
+const {
+  assertLevelIndexesReady,
+} = require('./services/levelIndexGuard.service');
 const { assertNodeIndexesReady } = require('./services/nodeIndexGuard.service');
 const { initializeSocket } = require('./config/socket');
 const { initializeWorkers, shutdownWorkers } = require('./workers/index');
@@ -83,8 +87,14 @@ const connectToDatabases = async () => {
       ) {
         const { scheduleCleanup } = require('./jobs/cleanupDeletedForms');
         scheduleCleanup();
-        const { startReconciliationCron } = require('./jobs/paymentReconciliationCron');
+        const {
+          startReconciliationCron,
+        } = require('./jobs/paymentReconciliationCron');
         startReconciliationCron();
+        const {
+          startReminderTriggerCron,
+        } = require('./jobs/reminderTriggerCron');
+        startReminderTriggerCron();
         logger.info('✅ Scheduled jobs initialized');
       } else if (process.env.JOBS_ENABLED === 'false') {
         logger.info('⊘ Scheduled jobs disabled (JOBS_ENABLED=false)');

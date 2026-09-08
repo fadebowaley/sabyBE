@@ -17,12 +17,13 @@ const { tokenTypes } = require('../config/tokens');
  * @example
  * const token = generateToken('60d5ec49f1b2c8b1f8e4e1a1', moment().add(1, 'hour'), tokenTypes.ACCESS);
  */
-const generateToken = (userId, expires, type, secret = config.jwt.secret) => {
+const generateToken = (userId, expires, type, secret = config.jwt.secret, extraClaims = {}) => {
   const payload = {
     sub: userId,
     iat: moment().unix(),
     exp: expires.unix(),
     type,
+    ...extraClaims,
   };
   return jwt.sign(payload, secret);
 };
@@ -92,10 +93,20 @@ const generateAuthTokens = async (user, metadata = {}) => {
     config.jwt.accessExpirationMinutes,
     'minutes'
   );
+  const userClaims = {
+    tenantId: user.tenantId,
+    isSaby: Boolean(user.isSaby),
+    isSuper: Boolean(user.isSuper),
+    isOwner: Boolean(user.isOwner),
+    isAdmin: Boolean(user.isAdmin),
+    email: user.email,
+  };
   const accessToken = generateToken(
     user.id,
     accessTokenExpires,
-    tokenTypes.ACCESS
+    tokenTypes.ACCESS,
+    config.jwt.secret,
+    userClaims
   );
 
   const refreshTokenExpires = moment().add(

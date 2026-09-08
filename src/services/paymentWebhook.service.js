@@ -8,6 +8,7 @@ const paymentProviderService = require('./paymentProvider.service');
 const paymentEventService = require('./paymentEvent.service');
 const paymentSubmissionSyncService = require('./paymentSubmissionSync.service');
 const subscriptionService = require('./subscription.service');
+const aiTokenService = require('./aiToken.service');
 const ApiError = require('../utils/ApiError');
 const paymentFlowService = require('./paymentFlow.service');
 
@@ -408,6 +409,8 @@ const completeVerifiedProviderPayment = async ({
         source,
         sourceRef,
       });
+    } else if (currentPayment.purpose === 'ai_tokens' || currentPayment.metadata?.type === 'ai_tokens') {
+      await aiTokenService.creditTokensFromPayment(currentPayment);
     } else {
       await paymentSubmissionSyncService.syncPaymentToSubmissions(currentPayment);
     }
