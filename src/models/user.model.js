@@ -338,7 +338,10 @@ userSchema.statics.isEmailTaken = async function (email, excludeUserId) {
  */
 
 userSchema.statics.createUser = async function (userBody) {
-  console.log('Creating user with body:', userBody);
+  console.log('Creating user with body:', {
+    ...userBody,
+    password: userBody?.password ? '[REDACTED]' : undefined,
+  });
   if (
     Object.prototype.hasOwnProperty.call(userBody, 'phone') &&
     !Object.prototype.hasOwnProperty.call(userBody, 'phoneNumber')

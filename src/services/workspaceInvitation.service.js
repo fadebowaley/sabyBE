@@ -550,6 +550,18 @@ const createWorkspaceInvitation = async ({
         'This user already belongs to the selected workspace'
       );
     }
+  } else {
+    const existingElsewhere = await User.findOne({
+      email: normalizedEmail,
+      deletedAt: null,
+    });
+
+    if (existingElsewhere) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'User already exists with another organisation, and cannot be added'
+      );
+    }
   }
 
   const token = generateToken();
@@ -766,6 +778,18 @@ const acceptWorkspaceInvitation = async ({
   }
 
   if (!user) {
+    const existingElsewhere = await User.findOne({
+      email: invitation.email,
+      deletedAt: null,
+    });
+
+    if (existingElsewhere) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'User already exists with another organisation, and cannot be added'
+      );
+    }
+
     if (!firstname || !lastname || !password) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
