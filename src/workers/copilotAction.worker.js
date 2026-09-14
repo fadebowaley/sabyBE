@@ -1,8 +1,11 @@
 const { postgresPool } = require('../config/postgres');
 const config = require('../config/config');
 const logger = require('../config/logger');
-const { executeActionEvent } = require('../services/copilotCommandHandler.service');
+const {
+  executeActionEvent,
+} = require('../services/copilotCommandHandler.service');
 const workflowEngineService = require('../services/workflowEngine.service');
+const { feedbackToResultJson } = require('../services/copilotFeedback.service');
 
 const POLL_MS = Number(config.copilot?.workerIntervalMs || 3000);
 const BATCH_SIZE = Number(config.copilot?.workerBatchSize || 20);
@@ -45,7 +48,8 @@ const processOutboxRecord = async (record) => {
     event = eventResult.rows[0];
     const projectedState = deriveStateFromAction(event.action_type);
     const executionResult = await executeActionEvent(event);
-    const resolvedEntityId = executionResult?.entityId || event.entity_id || null;
+    const resolvedEntityId =
+      executionResult?.entityId || event.entity_id || null;
 
     if (!executionResult || executionResult.handled === false) {
       throw new Error(
@@ -178,7 +182,8 @@ const processOutboxRecord = async (record) => {
     const isTerminalBusinessError =
       Number(error?.statusCode || 0) >= 400 &&
       Number(error?.statusCode || 0) < 500;
-    const shouldDeadLetter = isTerminalBusinessError || retries >= record.max_retries;
+    const shouldDeadLetter =
+      isTerminalBusinessError || retries >= record.max_retries;
 
     if (shouldDeadLetter) {
       await postgresPool.query(
@@ -216,6 +221,12 @@ const processOutboxRecord = async (record) => {
       );
     }
 
+    const resultJson = feedbackToResultJson(error, {
+      statusCode: Number(error?.statusCode || 500),
+      retryCount: retries,
+      deadLettered: shouldDeadLetter,
+    });
+
     await postgresPool.query(
       `UPDATE copilot.action_events
        SET status = 'failed',
@@ -225,13 +236,8 @@ const processOutboxRecord = async (record) => {
        WHERE id = $1`,
       [
         record.event_id,
-        error.message,
-        {
-          error: error.message,
-          statusCode: Number(error?.statusCode || 500),
-          retryCount: retries,
-          deadLettered: shouldDeadLetter,
-        },
+        resultJson.feedback?.message || error.message,
+        resultJson,
       ]
     );
 
@@ -239,13 +245,8 @@ const processOutboxRecord = async (record) => {
       await workflowEngineService.failActionEvent({
         tenantId: event.tenant_id,
         actionEventId: record.event_id,
-        outputJson: {
-          error: error.message,
-          statusCode: Number(error?.statusCode || 500),
-          retryCount: retries,
-          deadLettered: shouldDeadLetter,
-        },
-        errorMessage: error.message,
+        outputJson: resultJson,
+        errorMessage: resultJson.feedback?.message || error.message,
       });
     }
 

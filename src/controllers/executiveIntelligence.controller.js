@@ -47,16 +47,26 @@ const getCapabilities = catchAsync(async (_req, res) => {
 
 const getKnowledgeArtifact = catchAsync(async (req, res) => {
   const tenantId = req.user?.tenantId;
-  const artifact = await executiveIntelligenceService.getActiveArtifact({
-    tenantId,
-  });
+  const section = req.query.section;
+
+  const artifact = section
+    ? await executiveIntelligenceService.getActiveArtifactSection({ tenantId, section })
+    : await executiveIntelligenceService.getActiveArtifact({ tenantId });
+
+  if (!artifact?.artifact) {
+    return res.status(httpStatus.OK).send({
+      success: true,
+      data: null,
+      message: 'No active tenant knowledge artifact has been built',
+    });
+  }
 
   res.status(httpStatus.OK).send({
     success: true,
-    data: artifact || null,
-    message: artifact
-      ? 'Active tenant knowledge artifact retrieved'
-      : 'No active tenant knowledge artifact has been built',
+    data: artifact,
+    message: section
+      ? `Knowledge artifact section '${section}' retrieved`
+      : 'Active tenant knowledge artifact retrieved',
   });
 });
 
@@ -498,6 +508,48 @@ const downloadReportExport = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).send(result);
 });
 
+const getSchema = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Tenant ID is required');
+  }
+
+  const tables = req.query.tables
+    ? (Array.isArray(req.query.tables) ? req.query.tables : [req.query.tables])
+    : null;
+
+  const data = await executiveIntelligenceService.getSchema({
+    tenantId,
+    projectId: req.query.projectId || null,
+    tables,
+  });
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    data,
+  });
+});
+
+const getBusinessContext = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Tenant ID is required');
+  }
+
+  const pillar = req.query.pillar || null;
+
+  const data = await executiveIntelligenceService.getBusinessContext({
+    tenantId,
+    pillar,
+    projectId: req.query.projectId || null,
+  });
+
+  res.status(httpStatus.OK).send({
+    success: true,
+    data,
+  });
+});
+
 module.exports = {
   getCapabilities,
   getKnowledgeArtifact,
@@ -521,4 +573,6 @@ module.exports = {
   executeMultiProjectFormComparison,
   downloadReportExport,
   listAuditEvents,
+  getSchema,
+  getBusinessContext,
 };

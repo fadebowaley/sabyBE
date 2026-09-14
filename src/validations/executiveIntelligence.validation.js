@@ -249,6 +249,26 @@ const downloadReportExport = {
   }),
 };
 
+const getSchema = {
+  query: Joi.object().keys({
+    projectId: Joi.string().max(128).optional(),
+    tables: Joi.array().items(Joi.string().max(128)).optional(),
+  }),
+};
+
+const getBusinessContext = {
+  query: Joi.object().keys({
+    pillar: Joi.string().valid('people', 'structure', 'projects', 'operations').optional(),
+    projectId: Joi.string().max(128).optional(),
+  }),
+};
+
+const getKnowledgeArtifact = {
+  query: Joi.object().keys({
+    section: Joi.string().valid('organization', 'security', 'projects', 'metrics', 'glossary').optional(),
+  }),
+};
+
 module.exports = {
   rebuildKnowledgeArtifact,
   listKnowledgeArtifactVersions,
@@ -269,4 +289,7 @@ module.exports = {
   executeMultiProjectFormComparison,
   downloadReportExport,
   listAuditEvents,
+  getSchema,
+  getBusinessContext,
+  getKnowledgeArtifact,
 };

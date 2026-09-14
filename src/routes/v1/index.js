@@ -72,6 +72,7 @@ const executiveIntelligenceRoute = require('./executiveIntelligence.route');
 const geoRoute = require('./geo.route');
 const aiTokenRoute = require('./aiToken.route');
 const byokRoute = require('./byok.route');
+const agentRoute = require('./agent.route');
 
 // declare rest of the routes: nodeLevel, nodeStructure, node etc.
 const config = require('../../config/config');
@@ -241,6 +242,10 @@ const defaultRoutes = [
   {
     path: '/byok',
     route: byokRoute,
+  },
+  {
+    path: '/agent',
+    route: agentRoute,
   },
   {
     path: '/collections',

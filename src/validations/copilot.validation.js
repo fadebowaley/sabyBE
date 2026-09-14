@@ -274,7 +274,12 @@ const createApprovalDecision = {
       payload: Joi.object().optional().default({}),
       approvalToken: Joi.string().max(255).optional(),
       correlationId: Joi.string().guid({ version: 'uuidv4' }).optional(),
-      expiresInSec: Joi.number().integer().min(60).max(3600).optional().default(600),
+      expiresInSec: Joi.number()
+        .integer()
+        .min(60)
+        .max(3600)
+        .optional()
+        .default(600),
       reason: Joi.string().max(500).optional().allow('', null),
       metadata: Joi.object().optional().default({}),
     })
@@ -284,7 +289,9 @@ const createApprovalDecision = {
 const listToolCallLogs = {
   query: Joi.object().keys({
     toolName: Joi.string().max(120).optional(),
-    status: Joi.string().valid('success', 'failed', 'timeout', 'blocked').optional(),
+    status: Joi.string()
+      .valid('success', 'failed', 'timeout', 'blocked')
+      .optional(),
     limit: Joi.number().integer().min(1).max(200).optional().default(50),
   }),
 };
@@ -326,9 +333,11 @@ const clearFocusState = {
 
 const searchEntities = {
   body: Joi.object().keys({
-    query: Joi.string().trim().min(1).max(200).required(),
+    query: Joi.string().trim().allow('').max(200).required(),
     entityTypes: Joi.array()
-      .items(Joi.string().valid('user', 'role', 'node', 'project', 'permission'))
+      .items(
+        Joi.string().valid('user', 'role', 'node', 'project', 'permission')
+      )
       .optional(),
     actionType: Joi.string().trim().max(100).optional(),
     limit: Joi.number().integer().min(1).max(25).optional().default(8),
@@ -416,7 +425,9 @@ const importOnboardingCsv = {
 
 const getOnboardingJobById = {
   params: Joi.object().keys({
-    jobId: Joi.string().guid({ version: ['uuidv4', 'uuidv5'] }).required(),
+    jobId: Joi.string()
+      .guid({ version: ['uuidv4', 'uuidv5'] })
+      .required(),
   }),
   query: Joi.object().keys({
     includeEvents: Joi.string().valid('true', 'false').optional(),
@@ -428,7 +439,15 @@ const listOnboardingJobs = {
   query: Joi.object().keys({
     threadId: Joi.string().max(128).optional(),
     status: Joi.string()
-      .valid('uploaded', 'queued', 'validating', 'importing', 'completed', 'failed', 'cancelled')
+      .valid(
+        'uploaded',
+        'queued',
+        'validating',
+        'importing',
+        'completed',
+        'failed',
+        'cancelled'
+      )
       .optional(),
     limit: Joi.number().integer().min(1).max(200).optional().default(20),
     offset: Joi.number().integer().min(0).optional().default(0),
@@ -437,7 +456,9 @@ const listOnboardingJobs = {
 
 const cancelOnboardingJob = {
   params: Joi.object().keys({
-    jobId: Joi.string().guid({ version: ['uuidv4', 'uuidv5'] }).required(),
+    jobId: Joi.string()
+      .guid({ version: ['uuidv4', 'uuidv5'] })
+      .required(),
   }),
   body: Joi.object().keys({
     reason: Joi.string().max(500).optional().allow(''),
@@ -461,76 +482,82 @@ const listModelRegistry = {
 
 const resolveCallPlan = {
   body: Joi.object().keys({
-    taskType:        Joi.string().max(64).required(),
-    promptKey:       Joi.string().max(120).optional().allow(null, ''),
-    variables:       Joi.object().optional().default({}),
-    riskLevel:       Joi.string().valid('LOW', 'MEDIUM', 'HIGH', 'CRITICAL').optional().default('LOW'),
+    taskType: Joi.string().max(64).required(),
+    promptKey: Joi.string().max(120).optional().allow(null, ''),
+    variables: Joi.object().optional().default({}),
+    riskLevel: Joi.string()
+      .valid('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')
+      .optional()
+      .default('LOW'),
     fallbackAllowed: Joi.boolean().optional().default(true),
-    tenantId:        Joi.string().max(64).optional().allow(null),
+    tenantId: Joi.string().max(64).optional().allow(null),
   }),
 };
 
 const logIntelligenceUsage = {
   body: Joi.object().keys({
-    traceId:         Joi.string().max(128).required(),
-    modelKey:        Joi.string().max(64).required(),
-    stage:           Joi.string().max(64).required(),
-    chatTurnLogId:   Joi.number().integer().optional().allow(null),
-    intent:          Joi.string().max(100).optional().allow(null),
-    inputTokens:     Joi.number().integer().min(0).optional().allow(null),
-    outputTokens:    Joi.number().integer().min(0).optional().allow(null),
-    latencyMs:       Joi.number().integer().min(0).optional().allow(null),
-    status:          Joi.string().valid('success', 'failed', 'timeout').optional().default('success'),
-    requestExcerpt:  Joi.string().max(2000).optional().allow(null, ''),
+    traceId: Joi.string().max(128).required(),
+    modelKey: Joi.string().max(64).required(),
+    stage: Joi.string().max(64).required(),
+    chatTurnLogId: Joi.number().integer().optional().allow(null),
+    intent: Joi.string().max(100).optional().allow(null),
+    inputTokens: Joi.number().integer().min(0).optional().allow(null),
+    outputTokens: Joi.number().integer().min(0).optional().allow(null),
+    latencyMs: Joi.number().integer().min(0).optional().allow(null),
+    status: Joi.string()
+      .valid('success', 'failed', 'timeout')
+      .optional()
+      .default('success'),
+    requestExcerpt: Joi.string().max(2000).optional().allow(null, ''),
     responseExcerpt: Joi.string().max(2000).optional().allow(null, ''),
-    errorMessage:    Joi.string().max(1000).optional().allow(null, ''),
-    metadata:        Joi.object().optional().default({}),
+    errorMessage: Joi.string().max(1000).optional().allow(null, ''),
+    metadata: Joi.object().optional().default({}),
   }),
 };
 
 const getIntelligenceUsageSummary = {
   query: Joi.object().keys({
     from: Joi.date().iso().optional(),
-    to:   Joi.date().iso().optional(),
+    to: Joi.date().iso().optional(),
   }),
 };
 
 const listPrompts = {
   query: Joi.object().keys({
     taskType: Joi.string().max(64).optional(),
-    status:   Joi.string().valid('draft', 'active', 'deprecated').optional(),
-    limit:    Joi.number().integer().min(1).max(200).optional().default(100),
+    status: Joi.string().valid('draft', 'active', 'deprecated').optional(),
+    limit: Joi.number().integer().min(1).max(200).optional().default(100),
   }),
 };
 
 const getPromptVersion = {
   params: Joi.object().keys({
     promptKey: Joi.string().max(120).required(),
-    version:   Joi.number().integer().min(1).required(),
+    version: Joi.number().integer().min(1).required(),
   }),
 };
 
 const createPromptVersion = {
   body: Joi.object().keys({
-    promptKey:           Joi.string().max(120).required(),
-    owner:               Joi.string().max(64).optional().default('system'),
-    description:         Joi.string().max(500).optional().allow(null, ''),
-    systemPrompt:        Joi.string().min(10).required(),
-    userPromptTemplate:  Joi.string().optional().allow(null, ''),
-    inputVariables:      Joi.array().items(Joi.string()).optional().default([]),
-    outputSchema:        Joi.object().optional().default({}),
-    modelHint:           Joi.string().max(64).optional().allow(null),
-    taskType:            Joi.string().max(64).optional().allow(null),
-    status:              Joi.string().valid('draft', 'active').optional().default('draft'),
-    evalSet:             Joi.array().items(Joi.object()).optional().default([]),
-    changelog:           Joi.string().max(1000).optional().allow(null, ''),
+    promptKey: Joi.string().max(120).required(),
+    owner: Joi.string().max(64).optional().default('system'),
+    description: Joi.string().max(500).optional().allow(null, ''),
+    systemPrompt: Joi.string().min(10).required(),
+    userPromptTemplate: Joi.string().optional().allow(null, ''),
+    inputVariables: Joi.array().items(Joi.string()).optional().default([]),
+    outputSchema: Joi.object().optional().default({}),
+    modelHint: Joi.string().max(64).optional().allow(null),
+    taskType: Joi.string().max(64).optional().allow(null),
+    status: Joi.string().valid('draft', 'active').optional().default('draft'),
+    evalSet: Joi.array().items(Joi.object()).optional().default([]),
+    changelog: Joi.string().max(1000).optional().allow(null, ''),
   }),
 };
 
 const activatePromptVersion = {
   params: Joi.object().keys({
     promptKey: Joi.string().max(120).required(),
-    version:   Joi.number().integer().min(1).required(),
+    version: Joi.number().integer().min(1).required(),
   }),
 };
 
@@ -541,23 +568,29 @@ const getProjectMetrics = {
     projectId: Joi.string().max(64).required(),
   }),
   query: Joi.object().keys({
-    monthLabel: Joi.string().pattern(/^\d{4}-\d{2}$/).optional(),
-    recompute:  Joi.string().valid('true', 'false').optional(),
+    monthLabel: Joi.string()
+      .pattern(/^\d{4}-\d{2}$/)
+      .optional(),
+    recompute: Joi.string().valid('true', 'false').optional(),
   }),
 };
 
 const listAnomalies = {
   query: Joi.object().keys({
     projectId: Joi.string().max(64).optional(),
-    severity:  Joi.string().valid('low', 'medium', 'high', 'critical').optional(),
-    limit:     Joi.number().integer().min(1).max(200).optional().default(50),
+    severity: Joi.string()
+      .valid('low', 'medium', 'high', 'critical')
+      .optional(),
+    limit: Joi.number().integer().min(1).max(200).optional().default(50),
   }),
 };
 
 const generateInsight = {
   body: Joi.object().keys({
-    projectId:  Joi.string().max(64).optional().allow(null),
-    monthLabel: Joi.string().pattern(/^\d{4}-\d{2}$/).optional(),
+    projectId: Joi.string().max(64).optional().allow(null),
+    monthLabel: Joi.string()
+      .pattern(/^\d{4}-\d{2}$/)
+      .optional(),
   }),
 };
 
@@ -566,12 +599,14 @@ const completeInsight = {
     insightId: Joi.string().guid({ version: 'uuidv4' }).required(),
   }),
   body: Joi.object().keys({
-    briefJson: Joi.object().keys({
-      headline:            Joi.string().min(1).required(),
-      keyInsights:         Joi.array().items(Joi.string()).required(),
-      risks:               Joi.array().items(Joi.string()).required(),
-      recommendedActions:  Joi.array().items(Joi.string()).required(),
-    }).required(),
+    briefJson: Joi.object()
+      .keys({
+        headline: Joi.string().min(1).required(),
+        keyInsights: Joi.array().items(Joi.string()).required(),
+        risks: Joi.array().items(Joi.string()).required(),
+        recommendedActions: Joi.array().items(Joi.string()).required(),
+      })
+      .required(),
   }),
 };
 
@@ -587,8 +622,10 @@ const failInsight = {
 const listInsights = {
   query: Joi.object().keys({
     projectId: Joi.string().max(64).optional(),
-    status:    Joi.string().valid('pending', 'processing', 'completed', 'failed').optional(),
-    limit:     Joi.number().integer().min(1).max(100).optional().default(20),
+    status: Joi.string()
+      .valid('pending', 'processing', 'completed', 'failed')
+      .optional(),
+    limit: Joi.number().integer().min(1).max(100).optional().default(20),
   }),
 };
 
@@ -602,21 +639,26 @@ const getInsightById = {
 
 const ingestDocument = {
   body: Joi.object().keys({
-    title:         Joi.string().trim().min(1).max(255).required(),
-    source:        Joi.string().valid('upload', 's3', 'web', 'internal').optional().default('upload'),
-    sourceRef:     Joi.string().max(512).optional().allow(null, ''),
-    mimeType:      Joi.string().max(100).optional().default('text/plain'),
-    contentText:   Joi.string().min(10).required(),
+    title: Joi.string().trim().min(1).max(255).required(),
+    source: Joi.string()
+      .valid('upload', 's3', 'web', 'internal')
+      .optional()
+      .default('upload'),
+    sourceRef: Joi.string().max(512).optional().allow(null, ''),
+    mimeType: Joi.string().max(100).optional().default('text/plain'),
+    contentText: Joi.string().min(10).required(),
     ingestionMode: Joi.string().valid('off', 'auto', 'force').optional(),
-    accessPolicy:  Joi.object().optional().default({}),
-    metadata:      Joi.object().optional().default({}),
+    accessPolicy: Joi.object().optional().default({}),
+    metadata: Joi.object().optional().default({}),
   }),
 };
 
 const listDocs = {
   query: Joi.object().keys({
-    status: Joi.string().valid('pending', 'processing', 'indexed', 'failed').optional(),
-    limit:  Joi.number().integer().min(1).max(200).optional().default(50),
+    status: Joi.string()
+      .valid('pending', 'processing', 'indexed', 'failed')
+      .optional(),
+    limit: Joi.number().integer().min(1).max(200).optional().default(50),
   }),
 };
 
@@ -643,8 +685,8 @@ const getDocChunks = {
 
 const searchDocs = {
   body: Joi.object().keys({
-    query:     Joi.string().trim().min(3).max(1000).required(),
-    topK:      Joi.number().integer().min(1).max(20).optional().default(5),
+    query: Joi.string().trim().min(3).max(1000).required(),
+    topK: Joi.number().integer().min(1).max(20).optional().default(5),
     projectId: Joi.string().max(64).optional().allow(null),
   }),
 };
@@ -659,18 +701,18 @@ const reindexDoc = {
 
 const registerWorkflowDefinition = {
   body: Joi.object().keys({
-    tenantId:          Joi.string().max(64).optional().allow(null),
-    name:              Joi.string().max(120).required(),
-    description:       Joi.string().max(1000).optional().allow('', null),
-    triggerType:       Joi.string().valid('schedule','event','manual').required(),
-    triggerConfig:     Joi.object().optional().default({}),
-    stepsJson:         Joi.array().optional().default([]),
-    approvalPoints:    Joi.array().optional().default([]),
-    failurePolicy:     Joi.object().optional().default({}),
-    retryPolicy:       Joi.object().optional().default({}),
-    escalationPolicy:  Joi.object().optional().default({}),
-    autonomyLevel:     Joi.number().integer().min(1).max(6).optional().default(3),
-    enabled:           Joi.boolean().optional().default(true),
+    tenantId: Joi.string().max(64).optional().allow(null),
+    name: Joi.string().max(120).required(),
+    description: Joi.string().max(1000).optional().allow('', null),
+    triggerType: Joi.string().valid('schedule', 'event', 'manual').required(),
+    triggerConfig: Joi.object().optional().default({}),
+    stepsJson: Joi.array().optional().default([]),
+    approvalPoints: Joi.array().optional().default([]),
+    failurePolicy: Joi.object().optional().default({}),
+    retryPolicy: Joi.object().optional().default({}),
+    escalationPolicy: Joi.object().optional().default({}),
+    autonomyLevel: Joi.number().integer().min(1).max(6).optional().default(3),
+    enabled: Joi.boolean().optional().default(true),
   }),
 };
 
@@ -685,9 +727,9 @@ const startWorkflowRun = {
     workflowName: Joi.string().max(120).required(),
   }),
   body: Joi.object().keys({
-    triggerType:     Joi.string().valid('schedule','event','manual').required(),
+    triggerType: Joi.string().valid('schedule', 'event', 'manual').required(),
     triggerMetadata: Joi.object().optional().default({}),
-    taskId:          Joi.string().guid({ version: 'uuidv4' }).optional().allow(null),
+    taskId: Joi.string().guid({ version: 'uuidv4' }).optional().allow(null),
   }),
 };
 
@@ -696,8 +738,10 @@ const listWorkflowRuns = {
     workflowName: Joi.string().max(120).required(),
   }),
   query: Joi.object().keys({
-    status: Joi.string().valid('running','completed','failed','cancelled').optional(),
-    limit:  Joi.number().integer().min(1).max(200).optional().default(50),
+    status: Joi.string()
+      .valid('running', 'completed', 'failed', 'cancelled')
+      .optional(),
+    limit: Joi.number().integer().min(1).max(200).optional().default(50),
   }),
 };
 
@@ -712,49 +756,56 @@ const getWorkflowStats = {
 
 const submitFeedback = {
   body: Joi.object().keys({
-    taskId:       Joi.string().guid({ version: 'uuidv4' }).optional().allow(null),
-    toolCallId:   Joi.string().guid({ version: 'uuidv4' }).optional().allow(null),
+    taskId: Joi.string().guid({ version: 'uuidv4' }).optional().allow(null),
+    toolCallId: Joi.string().guid({ version: 'uuidv4' }).optional().allow(null),
     feedbackType: Joi.string()
-      .valid('correct','incorrect','partial','unsafe','helpful','not_helpful')
+      .valid(
+        'correct',
+        'incorrect',
+        'partial',
+        'unsafe',
+        'helpful',
+        'not_helpful'
+      )
       .required(),
-    rating:       Joi.number().integer().min(1).max(5).optional().allow(null),
-    comment:      Joi.string().max(2000).optional().allow('', null),
+    rating: Joi.number().integer().min(1).max(5).optional().allow(null),
+    comment: Joi.string().max(2000).optional().allow('', null),
     workflowName: Joi.string().max(120).optional().allow(null),
-    metadata:     Joi.object().optional().default({}),
+    metadata: Joi.object().optional().default({}),
   }),
 };
 
 const listFeedback = {
   query: Joi.object().keys({
-    taskId:       Joi.string().guid({ version: 'uuidv4' }).optional(),
+    taskId: Joi.string().guid({ version: 'uuidv4' }).optional(),
     workflowName: Joi.string().max(120).optional(),
-    limit:        Joi.number().integer().min(1).max(200).optional().default(50),
+    limit: Joi.number().integer().min(1).max(200).optional().default(50),
   }),
 };
 
 const getFeedbackSummary = {
   query: Joi.object().keys({
     workflowName: Joi.string().max(120).optional(),
-    days:         Joi.number().integer().min(1).max(365).optional().default(30),
+    days: Joi.number().integer().min(1).max(365).optional().default(30),
   }),
 };
 
 const createEvalDataset = {
   body: Joi.object().keys({
-    name:                Joi.string().max(120).required(),
-    workflowName:        Joi.string().max(120).optional().allow(null),
-    intent:              Joi.string().max(120).optional().allow(null),
-    inputJson:           Joi.object().required(),
-    expectedOutputJson:  Joi.object().required(),
-    description:         Joi.string().max(1000).optional().allow('', null),
-    enabled:             Joi.boolean().optional().default(true),
+    name: Joi.string().max(120).required(),
+    workflowName: Joi.string().max(120).optional().allow(null),
+    intent: Joi.string().max(120).optional().allow(null),
+    inputJson: Joi.object().required(),
+    expectedOutputJson: Joi.object().required(),
+    description: Joi.string().max(1000).optional().allow('', null),
+    enabled: Joi.boolean().optional().default(true),
   }),
 };
 
 const listEvalDatasets = {
   query: Joi.object().keys({
     workflowName: Joi.string().max(120).optional(),
-    enabled:      Joi.boolean().optional(),
+    enabled: Joi.boolean().optional(),
   }),
 };
 
@@ -763,51 +814,57 @@ const recordEvalResult = {
     datasetId: Joi.string().guid({ version: 'uuidv4' }).required(),
   }),
   body: Joi.object().keys({
-    taskId:           Joi.string().guid({ version: 'uuidv4' }).optional().allow(null),
-    passed:           Joi.boolean().required(),
+    taskId: Joi.string().guid({ version: 'uuidv4' }).optional().allow(null),
+    passed: Joi.boolean().required(),
     actualOutputJson: Joi.object().optional().default({}),
-    score:            Joi.number().min(0).max(1).optional().allow(null),
-    failureReason:    Joi.string().max(2000).optional().allow('', null),
-    modelUsed:        Joi.string().max(120).optional().allow(null),
-    latencyMs:        Joi.number().integer().min(0).optional().allow(null),
+    score: Joi.number().min(0).max(1).optional().allow(null),
+    failureReason: Joi.string().max(2000).optional().allow('', null),
+    modelUsed: Joi.string().max(120).optional().allow(null),
+    latencyMs: Joi.number().integer().min(0).optional().allow(null),
   }),
 };
 
 const getEvalStats = {
   query: Joi.object().keys({
     workflowName: Joi.string().max(120).optional(),
-    days:         Joi.number().integer().min(1).max(365).optional().default(30),
+    days: Joi.number().integer().min(1).max(365).optional().default(30),
   }),
 };
 
 const createPlaybook = {
   body: Joi.object().keys({
-    name:                  Joi.string().max(120).required(),
-    incidentType:          Joi.string().max(120).required(),
-    description:           Joi.string().max(1000).optional().allow('', null),
-    stepsJson:             Joi.array().optional().default([]),
-    severity:              Joi.string().valid('low','medium','high','critical').optional().default('medium'),
+    name: Joi.string().max(120).required(),
+    incidentType: Joi.string().max(120).required(),
+    description: Joi.string().max(1000).optional().allow('', null),
+    stepsJson: Joi.array().optional().default([]),
+    severity: Joi.string()
+      .valid('low', 'medium', 'high', 'critical')
+      .optional()
+      .default('medium'),
     autoTriggerConditions: Joi.object().optional().default({}),
-    enabled:               Joi.boolean().optional().default(true),
+    enabled: Joi.boolean().optional().default(true),
   }),
 };
 
 const listPlaybooks = {
   query: Joi.object().keys({
     incidentType: Joi.string().max(120).optional(),
-    enabled:      Joi.boolean().optional(),
+    enabled: Joi.boolean().optional(),
   }),
 };
 
 const openIncident = {
   body: Joi.object().keys({
     incidentType: Joi.string().max(120).required(),
-    title:        Joi.string().max(255).required(),
-    description:  Joi.string().max(5000).optional().allow('', null),
-    severity:     Joi.string().valid('low','medium','high','critical').optional().default('medium'),
-    contextJson:  Joi.object().optional().default({}),
-    playbookId:   Joi.string().guid({ version: 'uuidv4' }).optional().allow(null),
-    taskId:       Joi.string().guid({ version: 'uuidv4' }).optional().allow(null),
+    title: Joi.string().max(255).required(),
+    description: Joi.string().max(5000).optional().allow('', null),
+    severity: Joi.string()
+      .valid('low', 'medium', 'high', 'critical')
+      .optional()
+      .default('medium'),
+    contextJson: Joi.object().optional().default({}),
+    playbookId: Joi.string().guid({ version: 'uuidv4' }).optional().allow(null),
+    taskId: Joi.string().guid({ version: 'uuidv4' }).optional().allow(null),
   }),
 };
 
@@ -828,11 +885,20 @@ const resolveIncident = {
 
 const listIncidents = {
   query: Joi.object().keys({
-    status:   Joi.string()
-      .valid('open','acknowledged','investigating','contained','resolved','post_mortem')
+    status: Joi.string()
+      .valid(
+        'open',
+        'acknowledged',
+        'investigating',
+        'contained',
+        'resolved',
+        'post_mortem'
+      )
       .optional(),
-    severity: Joi.string().valid('low','medium','high','critical').optional(),
-    limit:    Joi.number().integer().min(1).max(200).optional().default(50),
+    severity: Joi.string()
+      .valid('low', 'medium', 'high', 'critical')
+      .optional(),
+    limit: Joi.number().integer().min(1).max(200).optional().default(50),
   }),
 };
 
@@ -848,7 +914,14 @@ const updateIncidentStatus = {
   }),
   body: Joi.object().keys({
     status: Joi.string()
-      .valid('open','acknowledged','investigating','contained','resolved','post_mortem')
+      .valid(
+        'open',
+        'acknowledged',
+        'investigating',
+        'contained',
+        'resolved',
+        'post_mortem'
+      )
       .required(),
   }),
 };

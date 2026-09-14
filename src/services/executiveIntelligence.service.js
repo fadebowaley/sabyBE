@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const httpStatus = require('http-status');
 const ApiError = require('../utils/ApiError');
+const { postgresPool } = require('../config/postgres');
 const TenantKnowledgeArtifact = require('../models/tenantKnowledgeArtifact.model');
 const ExecutiveIntelligenceAuditEvent = require('../models/executiveIntelligenceAuditEvent.model');
 const ProjectForm = require('../models/projectForm.model');
@@ -1174,6 +1175,31 @@ const getActiveArtifact = async ({ tenantId }) =>
   TenantKnowledgeArtifact.findOne({ tenantId, status: 'active' })
     .sort({ artifactVersion: -1 })
     .lean();
+
+const KNOWLEDGE_ARTIFACT_SECTIONS = {
+  organization: ['organization'],
+  security: ['security'],
+  projects: ['projects', 'forms', 'form_fields', 'datasets'],
+  metrics: ['metrics', 'dimensions'],
+  glossary: ['business_glossary', 'synonyms'],
+};
+
+const getActiveArtifactSection = async ({ tenantId, section }) => {
+  if (!section) return null;
+
+  const artifact = await getActiveArtifact({ tenantId });
+  if (!artifact?.artifact) return null;
+
+  const keys = KNOWLEDGE_ARTIFACT_SECTIONS[section] || [];
+  const filtered = {};
+  for (const key of keys) {
+    if (artifact.artifact[key] !== undefined) {
+      filtered[key] = artifact.artifact[key];
+    }
+  }
+
+  return { ...artifact, artifact: filtered };
+};
 
 const canInitializeTenantArtifact = (user = {}) =>
   Boolean(user.isOwner || user.isSuper || user.isAdmin || user.isSaby);
@@ -6260,6 +6286,522 @@ const listAuditEvents = async ({ tenantId, requestId, limit = 50 }) => {
 const getReportExportDownload = async ({ tenantId, user, exportId }) =>
   executiveReportExportService.getExportDownload({ tenantId, user, exportId });
 
+const BUSINESS_CONTEXT_PILLARS = {
+  people: {
+    key: 'people',
+    title: 'People',
+    description: 'Users, roles, permissions, and node assignments',
+    sources: ['security'],
+    build: (artifact) => {
+      const security = artifact.security || {};
+      const users = Array.isArray(security.users) ? security.users : [];
+      const roles = Array.isArray(security.roles) ? security.roles : [];
+      const permissions = Array.isArray(security.permissions) ? security.permissions : [];
+      return {
+        user_count: users.length,
+        role_count: roles.length,
+        permission_count: permissions.length,
+        workspace_actors: users.filter((u) => u.access_profile?.workspace_actor).length,
+        submitters: users.filter((u) => u.access_profile?.submitter).length,
+        users: users.map((u) => ({
+          user_ref: u.user_ref,
+          display_name: u.display_name,
+          workspace_actor: Boolean(u.access_profile?.workspace_actor),
+          submitter: Boolean(u.access_profile?.submitter),
+          roles: Array.isArray(u.role_refs) ? u.role_refs : [],
+          assigned_nodes: Array.isArray(u.assigned_node_refs) ? u.assigned_node_refs : [],
+        })),
+        roles: roles.map((r) => ({
+          role_ref: r.role_ref,
+          name: r.name,
+          description: r.description,
+        })),
+        permissions: permissions.map((p) => ({
+          permission_ref: p.permission_ref,
+          name: p.name,
+          resource: p.resource,
+          action: p.action,
+        })),
+      };
+    },
+  },
+  structure: {
+    key: 'structure',
+    title: 'Organization Structure',
+    description: 'Org hierarchy: levels, structures, nodes, and relationships',
+    sources: ['organization'],
+    build: (artifact) => {
+      const org = artifact.organization || {};
+      const nodes = Array.isArray(org.nodes) ? org.nodes : [];
+      const levels = Array.isArray(org.levels) ? org.levels : [];
+      const structures = Array.isArray(org.structures) ? org.structures : [];
+      return {
+        node_count: nodes.length,
+        level_count: levels.length,
+        structure_count: structures.length,
+        levels: levels.map((l) => ({
+          level_ref: l.level_ref,
+          name: l.name,
+          rank: l.rank,
+        })),
+        structures: structures.map((s) => ({
+          structure_ref: s.structure_ref,
+          name: s.name,
+          type: s.type,
+        })),
+        nodes: nodes.map((n) => ({
+          node_ref: n.node_ref,
+          name: n.name,
+          level_ref: n.level_ref,
+          parent_node_ref: n.parent_node_ref || null,
+        })),
+        hierarchy_rules: Array.isArray(org.hierarchy_rules) ? org.hierarchy_rules : [],
+      };
+    },
+  },
+  projects: {
+    key: 'projects',
+    title: 'Projects & Forms',
+    description: 'Projects, forms, form fields, and datasets',
+    sources: ['projects', 'forms', 'form_fields', 'datasets'],
+    build: (artifact) => ({
+      project_count: (artifact.projects || []).length,
+      form_count: (artifact.forms || []).length,
+      projects: (artifact.projects || []).map((p) => ({
+        project_id: p.project_id,
+        name: p.name,
+        status: p.status,
+        category: p.category,
+      })),
+      forms: (artifact.forms || []).map((f) => ({
+        project_id: f.project_id,
+        name: f.name,
+        status: f.status,
+      })),
+      datasets: (artifact.datasets || []).map((d) => ({
+        dataset_ref: d.dataset_ref,
+        read_tool: d.read_tool,
+        type: d.type,
+      })),
+    }),
+  },
+  operations: {
+    key: 'operations',
+    title: 'Operations & Intelligence',
+    description: 'Metrics, dimensions, and reporting rules',
+    sources: ['metrics', 'dimensions', 'reporting_rules'],
+    build: (artifact) => ({
+      metric_count: (artifact.metrics || []).length,
+      dimension_count: (artifact.dimensions || []).length,
+      metrics: (artifact.metrics || []).map((m) => ({
+        metric_key: m.metric_key,
+        label: m.display_name || m.label || null,
+        aggregation: m.aggregation,
+        data_type: m.data_type,
+      })),
+      dimensions: (artifact.dimensions || []).map((d) => ({
+        dimension_key: d.dimension_key,
+        label: d.display_name || d.label || null,
+        data_type: d.data_type,
+      })),
+      reporting_rules: Array.isArray(artifact.reporting_rules) ? artifact.reporting_rules : [],
+    }),
+  },
+};
+
+/**
+ * Tenant-scoped business context endpoint.
+ * Returns a 4-pillar business model distilled from the active tenant knowledge
+ * artifact (People / Structure / Projects / Operations). Supports scoped
+ * retrieval by pillar so the LLM only receives the context it needs.
+ *
+ * @param {Object} params
+ * @param {string} params.tenantId - The tenant ID (from JWT)
+ * @param {string} [params.pillar] - Optional pillar filter: people|structure|projects|operations
+ * @returns {Promise<Object>} Business context document
+ */
+const getBusinessContext = async ({ tenantId, pillar, projectId }) => {
+  const artifactRecord = await getActiveArtifact({ tenantId });
+  const artifact = getArtifactPayload(artifactRecord) || {};
+
+  const requestedPillars = pillar
+    ? [BUSINESS_CONTEXT_PILLARS[pillar]].filter(Boolean)
+    : Object.values(BUSINESS_CONTEXT_PILLARS);
+
+  const pillars = {};
+  for (const column of requestedPillars) {
+    pillars[column.key] = {
+      title: column.title,
+      description: column.description,
+      data: column.build(artifact),
+    };
+  }
+
+  return {
+    tenant_id: tenantId,
+    artifact_version: artifact.artifact_version || artifactRecord?.artifactVersion || null,
+    request_scope: {
+      pillar: pillar || 'all',
+      filtered: Boolean(pillar),
+    },
+    pillars,
+  };
+};
+
+/**
+ * Tenant-scoped schema introspection endpoint.
+ * Returns physical Postgres DDL (tables, columns, types, relationships) and
+ * semantic field metadata from form_field_catalog. This is what the LLM uses
+ * to generate correct SQL — it knows table names, column names, types, and
+ * business semantics (metrics, dimensions, glossary).
+ *
+ * @param {Object} params
+ * @param {string} params.tenantId - The tenant ID (from JWT)
+ * @param {string} [params.projectId] - Optional project ID for per-project field metadata
+ * @returns {Promise<Object>} Schema document
+ */
+const getSchema = async ({ tenantId, projectId, tables }) => {
+  // 1. Physical schema: query information_schema for tenant-scoped tables
+  const ALL_ALLOWED_TABLES = [
+    'form_submissions',
+    'form_submission_facts',
+    'form_field_catalog',
+    'node_dimension',
+    'event_calendar',
+    'submission_rollup_daily',
+    'submission_rollup_weekly',
+    'submission_rollup_monthly',
+  ];
+
+  const ALL_ALLOWED_VIEWS = [
+    'form_submission_enriched_view',
+    'recent_submissions',
+    'submission_stats_by_project',
+  ];
+
+  const tablesToQuery = tables
+    ? ALL_ALLOWED_TABLES.filter((t) => tables.includes(t))
+    : ALL_ALLOWED_TABLES;
+  const viewsToQuery = tables
+    ? ALL_ALLOWED_VIEWS.filter((t) => tables.includes(t))
+    : ALL_ALLOWED_VIEWS;
+
+  const physicalSchema = {};
+
+  // Query columns for allowed tables
+  try {
+    const tableResult = await postgresPool.query(
+      `SELECT table_name, column_name, data_type, is_nullable, column_default
+       FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = ANY($1)
+       ORDER BY table_name, ordinal_position`,
+      [tablesToQuery]
+    );
+
+    for (const row of tableResult.rows) {
+      if (!physicalSchema[row.table_name]) {
+        physicalSchema[row.table_name] = { type: 'table', columns: {} };
+      }
+      physicalSchema[row.table_name].columns[row.column_name] = {
+        type: row.data_type,
+        nullable: row.is_nullable === 'YES',
+        default: row.column_default || null,
+      };
+    }
+  } catch (error) {
+    // If information_schema query fails, return empty schema
+    // (table may not exist yet)
+  }
+
+  // Query columns for allowed views
+  try {
+    const viewResult = await postgresPool.query(
+      `SELECT table_name, column_name, data_type, is_nullable
+       FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = ANY($1)
+       ORDER BY table_name, ordinal_position`,
+      [viewsToQuery]
+    );
+
+    for (const row of viewResult.rows) {
+      if (!physicalSchema[row.table_name]) {
+        physicalSchema[row.table_name] = { type: 'view', columns: {} };
+      }
+      physicalSchema[row.table_name].columns[row.column_name] = {
+        type: row.data_type,
+        nullable: row.is_nullable === 'YES',
+      };
+    }
+  } catch (error) {
+    // View may not exist yet
+  }
+
+  // 2. Relationships (hardcoded — the EAV model is stable)
+  const relationships = [
+    {
+      from: 'form_submissions.id',
+      to: 'form_submission_facts.submission_id',
+      type: 'one-to-many',
+      description: 'Each submission has many fact rows (one per field)',
+    },
+    {
+      from: 'form_submission_facts.field_key',
+      to: 'form_field_catalog.field_key',
+      type: 'lookup',
+      description: 'Fact rows reference field metadata via field_key',
+      scope: 'Same project_id required',
+    },
+    {
+      from: 'form_submissions.project_id',
+      to: 'form_field_catalog.project_id',
+      type: 'scope',
+      description: 'Field catalog is scoped to project',
+    },
+  ];
+
+  // 3. Semantic layer: form_field_catalog with classifyField semantics
+  let fields = [];
+  try {
+    const fieldQuery = projectId
+      ? `SELECT field_key, field_label, field_type, is_required, aliases, transformations, metadata,
+                project_id, tenant_id
+         FROM form_field_catalog
+         WHERE project_id = $1
+         ORDER BY field_label ASC`
+      : `SELECT field_key, field_label, field_type, is_required, aliases, transformations, metadata,
+                project_id, tenant_id
+         FROM form_field_catalog
+         WHERE tenant_id = $1
+         ORDER BY project_id, field_label ASC`;
+
+    const fieldParams = projectId ? [projectId] : [tenantId];
+    const fieldResult = await postgresPool.query(fieldQuery, fieldParams);
+
+    fields = fieldResult.rows.map((row) => {
+      const meta = row.metadata || {};
+      const semantic = meta.semantic || {};
+      return {
+        field_key: row.field_key,
+        field_label: row.field_label,
+        field_type: row.field_type,
+        is_required: row.is_required,
+        project_id: row.project_id,
+        aliases: Array.isArray(row.aliases) ? row.aliases : [],
+        semantic: {
+          role: semantic.role || null,
+          valueType: semantic.valueType || null,
+          aggregationAllowed: Array.isArray(semantic.aggregationAllowed)
+            ? semantic.aggregationAllowed
+            : [],
+        },
+      };
+    });
+  } catch (error) {
+    // catalog table may not exist
+  }
+
+  // 4. Artifact context: metrics + dimensions from the knowledge artifact
+  let metrics = [];
+  let dimensions = [];
+  try {
+    const artifact = await TenantKnowledgeArtifact.findOne({
+      tenantId,
+      status: 'active',
+    }).lean();
+
+    if (artifact?.artifact) {
+      metrics = (artifact.artifact.metrics || []).map((m) => ({
+        metric_key: m.metric_key,
+        label: m.label,
+        aggregation: m.aggregation,
+        data_type: m.data_type,
+        source: m.source,
+      }));
+      dimensions = (artifact.artifact.dimensions || []).map((d) => ({
+        dimension_key: d.dimension_key,
+        label: d.label,
+        data_type: d.data_type,
+        source: d.source,
+      }));
+    }
+  } catch (error) {
+    // artifact may not exist
+  }
+
+  // 5. Allowed functions (from the SQL execution policy)
+  const allowedFunctions = executiveGeneratedAnalysisPolicy.ALLOWED_SQL_FUNCTIONS || [
+    'count', 'sum', 'avg', 'min', 'max', 'round', 'abs', 'coalesce',
+    'extract', 'date_trunc', 'to_char', 'trim', 'upper', 'lower', 'length',
+    'now', 'current_date', 'interval', 'concat', 'cast', 'nullif', 'greatest', 'least',
+  ];
+
+  // 6. Semantic layer: Mongo entity -> Postgres mirror -> business meaning -> allowed analysis
+  const SEMANTIC_LAYER = {
+    form_submissions: {
+      entityMeaning: 'Each row is one form fill by a user at a node',
+      mongoOrigin: 'ProjectFormSubmission (mirror)',
+      businessMeaning: 'A submission of data against a project form',
+      allowedAnalysis: ['count', 'aggregate', 'filter', 'group', 'join'],
+      relationships: {
+        project_id: 'references ProjectForm.projectId',
+        node_id: 'references Nodes.nodeId',
+        user_id: 'references User.userId',
+      },
+      metrics: ['submission_count', 'compliance_percentage'],
+      dimensions: ['node', 'project', 'month', 'status'],
+    },
+    form_submission_facts: {
+      entityMeaning: 'Each row is one captured answer for one form field on a submission',
+      mongoOrigin: 'form_submissions answers (flattened mirror)',
+      businessMeaning: 'The field-level answers captured against a project form',
+      allowedAnalysis: ['aggregate', 'filter', 'group', 'join', 'count'],
+      relationships: {
+        submission_id: 'references form_submissions.id',
+        field_key: 'references form_field_catalog.field_key',
+        project_id: 'references ProjectForm.projectId',
+      },
+      metrics: ['response_count', 'value_average', 'value_sum', 'enum_distribution'],
+      dimensions: ['field_key', 'project', 'node', 'month'],
+    },
+    form_field_catalog: {
+      entityMeaning: 'Each row is one configured field on a project form',
+      mongoOrigin: 'ProjectForm.formDesign fields / FieldProfile',
+      businessMeaning: 'The configured fields, labels, types, and semantics for a project form',
+      allowedAnalysis: ['filter', 'join', 'count'],
+      relationships: {
+        project_id: 'references ProjectForm.projectId',
+        field_key: 'referenced by form_submission_facts.field_key',
+      },
+      metrics: ['field_count', 'required_field_count'],
+      dimensions: ['field_type', 'project', 'required'],
+    },
+    node_dimension: {
+      entityMeaning: 'Each row is one node (branch/office) in the tenant hierarchy',
+      mongoOrigin: 'Nodes + Levels + Structures (mirror)',
+      businessMeaning: 'The organizational hierarchy node with parent/level context',
+      allowedAnalysis: ['filter', 'group', 'aggregate', 'join'],
+      relationships: {
+        parent_node_id: 'references node_dimension.node_id',
+        level_id: 'references Levels.levelId',
+        structure_id: 'references Structures.structureId',
+      },
+      metrics: ['node_count', 'active_node_count'],
+      dimensions: ['level', 'parent', 'structure', 'tenant'],
+    },
+    event_calendar: {
+      entityMeaning: 'Each row is one calendar event/observation',
+      mongoOrigin: 'Event (calendar/observations mirror)',
+      businessMeaning: 'Scheduled or recorded events usable as a time dimension',
+      allowedAnalysis: ['count', 'aggregate', 'filter'],
+      relationships: {
+        project_id: 'references ProjectForm.projectId',
+        node_id: 'references Nodes.nodeId',
+      },
+      metrics: ['event_count'],
+      dimensions: ['date', 'category', 'node', 'project', 'status'],
+    },
+    submission_rollup_daily: {
+      entityMeaning: 'Each row is one day of pre-aggregated submission counts for a project',
+      mongoOrigin: 'Aggregated from form_submissions',
+      businessMeaning: 'Daily submission volumes pre-aggregated for fast reporting',
+      allowedAnalysis: ['aggregate', 'filter', 'group'],
+      relationships: {
+        project_id: 'references ProjectForm.projectId',
+      },
+      metrics: ['submission_count', 'unique_node_count'],
+      dimensions: ['day', 'project', 'status'],
+    },
+    submission_rollup_weekly: {
+      entityMeaning: 'Each row is one week of pre-aggregated submission counts for a project',
+      mongoOrigin: 'Aggregated from form_submissions',
+      businessMeaning: 'Weekly submission volumes pre-aggregated for fast reporting',
+      allowedAnalysis: ['aggregate', 'filter', 'group'],
+      relationships: {
+        project_id: 'references ProjectForm.projectId',
+      },
+      metrics: ['submission_count', 'unique_node_count'],
+      dimensions: ['week', 'project', 'status'],
+    },
+    submission_rollup_monthly: {
+      entityMeaning: 'Each row is one month of pre-aggregated submission counts for a project',
+      mongoOrigin: 'Aggregated from form_submissions',
+      businessMeaning: 'Monthly submission volumes pre-aggregated for fast reporting',
+      allowedAnalysis: ['aggregate', 'filter', 'group'],
+      relationships: {
+        project_id: 'references ProjectForm.projectId',
+      },
+      metrics: ['submission_count', 'unique_node_count'],
+      dimensions: ['month', 'project', 'status'],
+    },
+    form_submission_enriched_view: {
+      entityMeaning: 'One row per submission enriched with node, project, and activity context',
+      mongoOrigin: 'form_submissions + node_dimension + event joins (view)',
+      businessMeaning: 'A denormalized submission view for reporting and analysis',
+      allowedAnalysis: ['count', 'aggregate', 'filter', 'group', 'join'],
+      relationships: {
+        submission_id: 'references form_submissions.id',
+        project_id: 'references ProjectForm.projectId',
+        node_id: 'references Nodes.nodeId',
+      },
+      metrics: ['submission_count', 'compliance_percentage'],
+      dimensions: ['node', 'project', 'month', 'status'],
+    },
+    recent_submissions: {
+      entityMeaning: 'One row per most-recent submission for a project',
+      mongoOrigin: 'form_submissions (view)',
+      businessMeaning: 'A time-boxed view of the most recent submissions',
+      allowedAnalysis: ['count', 'filter', 'group'],
+      relationships: {
+        project_id: 'references ProjectForm.projectId',
+      },
+      metrics: ['submission_count'],
+      dimensions: ['project', 'date'],
+    },
+    submission_stats_by_project: {
+      entityMeaning: 'One row of aggregate submission stats per project',
+      mongoOrigin: 'form_submissions (view)',
+      businessMeaning: 'Pre-computed per-project submission statistics',
+      allowedAnalysis: ['filter', 'group', 'join'],
+      relationships: {
+        project_id: 'references ProjectForm.projectId',
+      },
+      metrics: ['submission_count', 'compliance_percentage', 'avg_per_node'],
+      dimensions: ['project'],
+    },
+  };
+
+  const semanticLayer = {};
+  const exposedNames = [...tablesToQuery, ...viewsToQuery];
+  for (const name of exposedNames) {
+    if (SEMANTIC_LAYER[name]) {
+      semanticLayer[name] = SEMANTIC_LAYER[name];
+    }
+  }
+
+  const scopedRelationships = tables
+    ? relationships.filter((r) => {
+        const fromTable = String(r.from || '').split('.')[0];
+        const toTable = String(r.to || '').split('.')[0];
+        return exposedNames.includes(fromTable) && exposedNames.includes(toTable);
+      })
+    : relationships;
+
+  return {
+    tenant_id: tenantId,
+    physical: physicalSchema,
+    relationships: scopedRelationships,
+    fields,
+    metrics,
+    dimensions,
+    semantic_layer: semanticLayer,
+    allowed_functions: allowedFunctions,
+    tenant_filter: 'tenant_id = $1 is automatically injected on every table reference (AST rewrite)',
+    read_only: 'BEGIN READ ONLY transaction; SELECT/WITH...SELECT only; no DDL/DML',
+  };
+};
+
 module.exports = {
   CANONICAL_OPERATIONS,
   ERROR_CODES,
@@ -6296,4 +6838,7 @@ module.exports = {
   requestSandboxExecution: executiveSandboxRunner.requestSandboxExecution,
   listAuditEvents,
   logAuditEvent,
+  getSchema,
+  getBusinessContext,
+  getActiveArtifactSection,
 };

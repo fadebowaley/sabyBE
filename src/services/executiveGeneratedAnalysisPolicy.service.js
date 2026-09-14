@@ -5,9 +5,17 @@ const MAX_CODE_CHARS = 20000;
 const DEFAULT_MAX_ROWS = 5000;
 
 const DEFAULT_ALLOWED_SQL_SOURCES = [
-  'executive_intelligence_safe_facts',
-  'project_form_report_rows',
-  'safe_project_form_facts',
+  'form_submissions',
+  'form_submission_facts',
+  'form_field_catalog',
+  'node_dimension',
+  'event_calendar',
+  'submission_rollup_daily',
+  'submission_rollup_weekly',
+  'submission_rollup_monthly',
+  'form_submission_enriched_view',
+  'recent_submissions',
+  'submission_stats_by_project',
 ];
 
 const ALLOWED_SQL_FUNCTIONS = new Set([
@@ -52,6 +60,19 @@ const BLOCKED_CODE_PATTERNS = [
   { code: 'CODE_ENV_ACCESS', pattern: /\benviron\b|\bgetenv\s*\(/ },
   { code: 'CODE_SHELL_ESCAPE', pattern: /\bsystem\s*\(|\bpopen\s*\(/ },
   { code: 'CODE_PIP_INSTALL', pattern: /\bpip\s+install\b|\bconda\s+install\b/ },
+  { code: 'CODE_DUNDER_CLASS', pattern: /\b__class__\b/ },
+  { code: 'CODE_DUNDER_BASES', pattern: /\b__bases__\b/ },
+  { code: 'CODE_DUNDER_SUBCLASSES', pattern: /\b__subclasses__\b/ },
+  { code: 'CODE_DUNDER_INIT_GLOBALS', pattern: /\b__init__\.__globals__\b/ },
+  { code: 'CODE_DUNDER_GLOBALS', pattern: /\b__globals__\b/ },
+  { code: 'CODE_DUNDER_MRO', pattern: /\b__mro__\b/ },
+  { code: 'CODE_DUNDER_GETATTR', pattern: /\b__getattr__\b/ },
+  { code: 'CODE_GETATTR_CALL', pattern: /\bgetattr\s*\(/ },
+  { code: 'CODE_DUNDER_INIT_GLOBALS', pattern: /\b__init__\.__globals__\b/ },
+  { code: 'CODE_OBJECT_DOT', pattern: /\bobject\.\w/ },
+  { code: 'CODE_TYPE_CALL', pattern: /\btype\s*\(/ },
+  { code: 'CODE_BUILD_CLASS', pattern: /\b__build_class__\b/ },
+  { code: 'CODE_BUILTINS_ACCESS', pattern: /\bbuiltins\b/ },
 ];
 
 const normalizeIdentifier = (value) => {

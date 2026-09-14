@@ -14,7 +14,11 @@ router.get(
 
 router
   .route('/knowledge-artifact')
-  .get(auth(), executiveIntelligenceController.getKnowledgeArtifact);
+  .get(
+    auth(),
+    validate(executiveIntelligenceValidation.getKnowledgeArtifact),
+    executiveIntelligenceController.getKnowledgeArtifact
+  );
 
 router.get(
   '/knowledge-artifact/status',
@@ -54,6 +58,13 @@ router.patch(
   auth(),
   validate(executiveIntelligenceValidation.reviewSemanticMemory),
   executiveIntelligenceController.reviewSemanticMemory
+);
+
+router.get(
+  '/context',
+  auth(),
+  validate(executiveIntelligenceValidation.getBusinessContext),
+  executiveIntelligenceController.getBusinessContext
 );
 
 router.post(
@@ -152,6 +163,13 @@ router.get(
   auth(),
   validate(executiveIntelligenceValidation.listAuditEvents),
   executiveIntelligenceController.listAuditEvents
+);
+
+router.get(
+  '/schema',
+  auth(),
+  validate(executiveIntelligenceValidation.getSchema),
+  executiveIntelligenceController.getSchema
 );
 
 module.exports = router;

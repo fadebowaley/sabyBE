@@ -8,7 +8,13 @@ const redis = require('../config/redis');
 const DEFAULT_LIMIT = 8;
 const MAX_LIMIT = 25;
 const CACHE_TTL_SEC = 60;
-const SUPPORTED_ENTITY_TYPES = ['user', 'role', 'node', 'project', 'permission'];
+const SUPPORTED_ENTITY_TYPES = [
+  'user',
+  'role',
+  'node',
+  'project',
+  'permission',
+];
 
 const normalizeLimit = (limit) => {
   const parsed = Number(limit);
@@ -16,14 +22,19 @@ const normalizeLimit = (limit) => {
   return Math.min(parsed, MAX_LIMIT);
 };
 
-const toArray = (value) => (Array.isArray(value) ? value : value ? [value] : []);
+const toArray = (value) =>
+  Array.isArray(value) ? value : value ? [value] : [];
 
-const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeRegex = (value) =>
+  String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const isObjectId = (value) => mongoose.Types.ObjectId.isValid(String(value || ''));
+const isObjectId = (value) =>
+  mongoose.Types.ObjectId.isValid(String(value || ''));
 
 const scoreTextMatch = (query, values = []) => {
-  const q = String(query || '').trim().toLowerCase();
+  const q = String(query || '')
+    .trim()
+    .toLowerCase();
   if (!q) return 0;
   const pool = values
     .filter(Boolean)
@@ -228,7 +239,12 @@ const logResolution = async ({
   }
 };
 
-const searchUsers = async ({ tenantId, query, limit, includeDeleted = false }) => {
+const searchUsers = async ({
+  tenantId,
+  query,
+  limit,
+  includeDeleted = false,
+}) => {
   const regex = new RegExp(escapeRegex(query), 'i');
   const filter = {
     tenantId,
@@ -286,12 +302,19 @@ const searchProjects = async ({ tenantId, query, limit }) => {
 const searchPermissions = async ({ query, limit }) => {
   const regex = new RegExp(escapeRegex(query), 'i');
   const docs = await Permission.find({
-    $or: [{ name: regex }, { resource: regex }, { action: regex }, { path: regex }],
+    $or: [
+      { name: regex },
+      { resource: regex },
+      { action: regex },
+      { path: regex },
+    ],
   })
     .select('_id name resource action method path')
     .limit(limit)
     .lean();
-  return docs.map((doc) => mapPermissionCandidate(query, doc)).sort(byScoreDesc);
+  return docs
+    .map((doc) => mapPermissionCandidate(query, doc))
+    .sort(byScoreDesc);
 };
 
 const searchEntities = async ({
@@ -305,20 +328,20 @@ const searchEntities = async ({
     throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId is required');
   }
   const q = String(query || '').trim();
-  if (!q) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'query is required');
-  }
 
   const requestedTypes = toArray(entityTypes)
     .map((x) => String(x).toLowerCase())
     .filter((x) => SUPPORTED_ENTITY_TYPES.includes(x));
-  const effectiveTypes = requestedTypes.length > 0 ? requestedTypes : SUPPORTED_ENTITY_TYPES;
+  const effectiveTypes =
+    requestedTypes.length > 0 ? requestedTypes : SUPPORTED_ENTITY_TYPES;
   const normalizedAction = String(actionType || '').toLowerCase();
   const includeDeletedUsers = normalizedAction === 'reactivate_user';
   const effectiveLimit = normalizeLimit(limit);
   const typeKey = effectiveTypes.slice().sort().join(',');
   const actionKey = normalizedAction || 'none';
-  const includeDeletedKey = includeDeletedUsers ? 'with_deleted' : 'active_only';
+  const includeDeletedKey = includeDeletedUsers
+    ? 'with_deleted'
+    : 'active_only';
   const cacheKey = `copilot:search:v1:${tenantId}:${typeKey}:${actionKey}:${includeDeletedKey}:${effectiveLimit}:${q.toLowerCase()}`;
 
   const cached = await getCache(cacheKey);
@@ -339,12 +362,12 @@ const searchEntities = async ({
             includeDeleted: includeDeletedUsers,
           })
         : type === 'role'
-          ? await searchRoles({ tenantId, query: q, limit: effectiveLimit })
-          : type === 'node'
-            ? await searchNodes({ tenantId, query: q, limit: effectiveLimit })
-            : type === 'project'
-              ? await searchProjects({ tenantId, query: q, limit: effectiveLimit })
-              : await searchPermissions({ query: q, limit: effectiveLimit });
+        ? await searchRoles({ tenantId, query: q, limit: effectiveLimit })
+        : type === 'node'
+        ? await searchNodes({ tenantId, query: q, limit: effectiveLimit })
+        : type === 'project'
+        ? await searchProjects({ tenantId, query: q, limit: effectiveLimit })
+        : await searchPermissions({ query: q, limit: effectiveLimit });
     all.push(...rows);
   }
 
@@ -367,7 +390,10 @@ const resolveEntityReference = async ({
   }
   const normalizedType = String(entityType || '').toLowerCase();
   if (!SUPPORTED_ENTITY_TYPES.includes(normalizedType)) {
-    throw new ApiError(httpStatus.BAD_REQUEST, `Unsupported entityType: ${entityType}`);
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `Unsupported entityType: ${entityType}`
+    );
   }
   const ref = String(value || '').trim();
   if (!ref) {
@@ -380,7 +406,9 @@ const resolveEntityReference = async ({
     normalizedType === 'user' && normalizedAction === 'reactivate_user';
   const startedAt = Date.now();
   const actionKey = normalizedAction || 'none';
-  const includeDeletedKey = includeDeletedUsers ? 'with_deleted' : 'active_only';
+  const includeDeletedKey = includeDeletedUsers
+    ? 'with_deleted'
+    : 'active_only';
   const cacheKey = `copilot:resolve:v1:${tenantId}:${normalizedType}:${actionKey}:${includeDeletedKey}:${effectiveLimit}:${ref.toLowerCase()}`;
   const cached = await getCache(cacheKey);
   if (cached && cached.status && Array.isArray(cached.candidates)) {
@@ -643,11 +671,20 @@ const resolveActionPayload = async ({
         actionType: normalizedAction,
         source,
       });
-      const userId = ensureResolved(userRes, resolutionDetails, blockingErrors, 'userId');
+      const userId = ensureResolved(
+        userRes,
+        resolutionDetails,
+        blockingErrors,
+        'userId'
+      );
       if (userId) resolvedPayload.userId = userId;
     }
 
-    if (!resolvedPayload.roleIds && !resolvedPayload.roleId && !resolvedPayload.roles) {
+    if (
+      !resolvedPayload.roleIds &&
+      !resolvedPayload.roleId &&
+      !resolvedPayload.roles
+    ) {
       const roleRefs = [
         ...toArray(resolvedPayload.roleName),
         ...toArray(resolvedPayload.roleNames),
@@ -666,7 +703,12 @@ const resolveActionPayload = async ({
             actionType: normalizedAction,
             source,
           });
-          const roleId = ensureResolved(roleRes, resolutionDetails, blockingErrors, 'roleIds');
+          const roleId = ensureResolved(
+            roleRes,
+            resolutionDetails,
+            blockingErrors,
+            'roleIds'
+          );
           if (roleId) roleIds.push(roleId);
         }
         const uniqueRoleIds = [...new Set(roleIds)];
@@ -694,7 +736,12 @@ const resolveActionPayload = async ({
         actionType: normalizedAction,
         source,
       });
-      const roleId = ensureResolved(roleRes, resolutionDetails, blockingErrors, 'roleId');
+      const roleId = ensureResolved(
+        roleRes,
+        resolutionDetails,
+        blockingErrors,
+        'roleId'
+      );
       if (roleId) resolvedPayload.roleId = roleId;
     }
 
@@ -748,7 +795,10 @@ const resolveActionPayload = async ({
       'unassign_user_from_node',
     ].includes(normalizedAction)
   ) {
-    const nodeRef = resolvedPayload.nodeId || resolvedPayload.nodeName || resolvedPayload.node;
+    const nodeRef =
+      resolvedPayload.nodeId ||
+      resolvedPayload.nodeName ||
+      resolvedPayload.node;
     if (!resolvedPayload.nodeId && nodeRef) {
       const nodeRes = await resolveEntityReference({
         tenantId,
@@ -759,7 +809,12 @@ const resolveActionPayload = async ({
         actionType: normalizedAction,
         source,
       });
-      const nodeId = ensureResolved(nodeRes, resolutionDetails, blockingErrors, 'nodeId');
+      const nodeId = ensureResolved(
+        nodeRes,
+        resolutionDetails,
+        blockingErrors,
+        'nodeId'
+      );
       if (nodeId) resolvedPayload.nodeId = nodeId;
     }
 
@@ -769,7 +824,11 @@ const resolveActionPayload = async ({
         resolvedPayload.parentId ||
         resolvedPayload.targetParentName ||
         resolvedPayload.parentName;
-      if (!resolvedPayload.targetParentId && !resolvedPayload.parentId && parentRef) {
+      if (
+        !resolvedPayload.targetParentId &&
+        !resolvedPayload.parentId &&
+        parentRef
+      ) {
         const parentRes = await resolveEntityReference({
           tenantId,
           entityType: 'node',
@@ -790,10 +849,14 @@ const resolveActionPayload = async ({
     }
 
     if (
-      ['assign_user_to_node', 'unassign_user_from_node'].includes(normalizedAction)
+      ['assign_user_to_node', 'unassign_user_from_node'].includes(
+        normalizedAction
+      )
     ) {
       const nodeUserRef =
-        resolvedPayload.userId || resolvedPayload.userEmail || resolvedPayload.userName;
+        resolvedPayload.userId ||
+        resolvedPayload.userEmail ||
+        resolvedPayload.userName;
       if (!resolvedPayload.userId && nodeUserRef) {
         const userRes = await resolveEntityReference({
           tenantId,
@@ -804,7 +867,12 @@ const resolveActionPayload = async ({
           actionType: normalizedAction,
           source,
         });
-        const userId = ensureResolved(userRes, resolutionDetails, blockingErrors, 'userId');
+        const userId = ensureResolved(
+          userRes,
+          resolutionDetails,
+          blockingErrors,
+          'userId'
+        );
         if (userId) resolvedPayload.userId = userId;
       }
     }
@@ -836,9 +904,12 @@ const resolveActionPayload = async ({
   }
 
   if (
-    ['update_user', 'delete_user', 'deactivate_user', 'reactivate_user'].includes(
-      normalizedAction
-    )
+    [
+      'update_user',
+      'delete_user',
+      'deactivate_user',
+      'reactivate_user',
+    ].includes(normalizedAction)
   ) {
     const userRef =
       resolvedPayload.userId ||
@@ -856,7 +927,12 @@ const resolveActionPayload = async ({
         actionType: normalizedAction,
         source,
       });
-      const userId = ensureResolved(userRes, resolutionDetails, blockingErrors, 'userId');
+      const userId = ensureResolved(
+        userRes,
+        resolutionDetails,
+        blockingErrors,
+        'userId'
+      );
       if (userId) resolvedPayload.userId = userId;
     }
   }

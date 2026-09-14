@@ -62,6 +62,13 @@ jest.mock('../services/executiveReportExport.service', () => mockExecutiveReport
 jest.mock('../services/executiveGeneratedSqlExecutor.service', () => mockExecutiveGeneratedSqlExecutor);
 jest.mock('../services/executiveSandboxRunner.service', () => mockExecutiveSandboxRunner);
 
+const mockPostgresPool = { query: jest.fn() };
+jest.mock('../config/postgres', () => ({
+  postgresPool: mockPostgresPool,
+  testConnection: jest.fn(),
+  closePool: jest.fn(),
+}));
+
 const executiveIntelligenceService = require('../services/executiveIntelligence.service');
 
 const findChain = (result) => ({
@@ -1592,7 +1599,7 @@ describe('executiveIntelligence.service request execution context', () => {
         ok: true,
         readOnly: true,
         astValidated: true,
-        sources: ['safe_project_form_facts'],
+        sources: ['form_submission_facts'],
         limit: 50,
       },
       rawSqlReturned: false,
@@ -1619,7 +1626,7 @@ describe('executiveIntelligence.service request execution context', () => {
             projectFormId: 'form-sales',
           },
         ],
-        sql: 'SELECT branch, SUM(amount) AS total FROM safe_project_form_facts GROUP BY branch LIMIT 50',
+        sql: 'SELECT branch, SUM(amount) AS total FROM form_submission_facts GROUP BY branch LIMIT 50',
         maxRows: 50,
       },
     });
@@ -1634,7 +1641,7 @@ describe('executiveIntelligence.service request execution context', () => {
     );
     expect(mockExecutiveGeneratedSqlExecutor.executeGeneratedSql).toHaveBeenCalledWith(
       expect.objectContaining({
-        sql: 'SELECT branch, SUM(amount) AS total FROM safe_project_form_facts GROUP BY branch LIMIT 50',
+        sql: 'SELECT branch, SUM(amount) AS total FROM form_submission_facts GROUP BY branch LIMIT 50',
         maxRows: 50,
         tenantId: 'tenant-1',
         userId: 'user-owner',
@@ -1682,7 +1689,7 @@ describe('executiveIntelligence.service request execution context', () => {
               projectFormId: 'form-budget',
             },
           ],
-          sql: 'SELECT branch, SUM(amount) AS total FROM safe_project_form_facts GROUP BY branch LIMIT 50',
+          sql: 'SELECT branch, SUM(amount) AS total FROM form_submission_facts GROUP BY branch LIMIT 50',
         },
       })
     ).rejects.toMatchObject({
@@ -3862,5 +3869,186 @@ describe('executiveIntelligence.service request execution context', () => {
         }),
       })
     );
+  });
+});
+
+describe('executiveIntelligence.service schema, semantic layer, business context, and knowledge artifact', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockExecutiveIntelligenceAuditEvent.create.mockResolvedValue({});
+    mockPostgresPool.query.mockResolvedValue({ rows: [] });
+  });
+
+  const columnRow = (tableName, columnName, dataType = 'character varying', isNullable = 'YES') => ({
+    table_name: tableName,
+    column_name: columnName,
+    data_type: dataType,
+    is_nullable: isNullable,
+    column_default: null,
+  });
+
+  test('schema endpoint returns complete DDL with tables, columns, relationships, and semantic layer', async () => {
+    mockPostgresPool.query.mockResolvedValue({
+      rows: [
+        columnRow('form_submissions', 'id', 'uuid', 'NO'),
+        columnRow('form_submissions', 'tenant_id', 'character varying', 'NO'),
+        columnRow('form_submissions', 'project_id', 'character varying', 'NO'),
+        columnRow('form_submission_facts', 'submission_id', 'uuid', 'NO'),
+        columnRow('node_dimension', 'node_id', 'character varying', 'NO'),
+      ],
+    });
+    mockTenantKnowledgeArtifact.findOne.mockReturnValue(activeArtifactChain(activeArtifactRecord()));
+
+    const schema = await executiveIntelligenceService.getSchema({ tenantId: 'tenant-1' });
+
+    expect(schema.tenant_id).toBe('tenant-1');
+    expect(schema.physical.form_submissions.columns.id).toBeDefined();
+    expect(schema.physical.form_submissions.columns.tenant_id.nullable).toBe(false);
+    expect(schema.physical.form_submissions.columns.project_id).toBeDefined();
+    expect(schema.physical.node_dimension.columns.node_id).toBeDefined();
+    expect(schema.physical.form_submission_facts.columns.submission_id).toBeDefined();
+    expect(schema.relationships.length).toBeGreaterThan(0);
+    expect(Array.isArray(schema.allowed_functions)).toBe(true);
+    expect(schema.tenant_filter).toContain('tenant_id');
+    expect(schema.read_only).toContain('READ ONLY');
+  });
+
+  test('schema endpoint supports scoped retrieval via tables filter', async () => {
+    mockPostgresPool.query.mockResolvedValue({
+      rows: [
+        columnRow('form_submissions', 'tenant_id', 'character varying', 'NO'),
+        columnRow('form_submissions', 'project_id', 'character varying', 'NO'),
+      ],
+    });
+
+    const schema = await executiveIntelligenceService.getSchema({
+      tenantId: 'tenant-1',
+      tables: ['form_submissions'],
+    });
+
+    expect(schema.physical.form_submissions.columns.project_id).toBeDefined();
+    expect(schema.physical.node_dimension).toBeUndefined();
+    expect(schema.semantic_layer.form_submissions).toBeDefined();
+    expect(schema.semantic_layer.node_dimension).toBeUndefined();
+    expect(schema.semantic_layer.form_submissions.businessMeaning).toBe('A submission of data against a project form');
+    expect(schema.semantic_layer.form_submissions.allowedAnalysis).toEqual(['count', 'aggregate', 'filter', 'group', 'join']);
+  });
+
+  test('schema endpoint filters by tenant via per-project field query', async () => {
+    mockPostgresPool.query.mockImplementation((sql, params) => {
+      const queryText = String(sql);
+      const wantsTenantScopedFields = queryText.includes('form_field_catalog') && queryText.includes('tenant_id = $1');
+      if (wantsTenantScopedFields) {
+        return Promise.resolve({
+          rows: [
+            {
+              field_key: 'project-sales:amount',
+              field_label: 'Amount',
+              field_type: 'number',
+              is_required: true,
+              project_id: 'project-sales',
+              aliases: ['revenue'],
+              transformations: null,
+              metadata: { semantic: { role: 'measure', valueType: 'currency', aggregationAllowed: ['sum', 'avg'] } },
+              tenant_id: 'tenant-1',
+            },
+          ],
+        });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+
+    const schema = await executiveIntelligenceService.getSchema({ tenantId: 'tenant-1' });
+
+    const fieldQuery = mockPostgresPool.query.mock.calls.find(([sql]) => String(sql).includes('form_field_catalog'));
+    expect(fieldQuery).toBeDefined();
+    expect(fieldQuery[1]).toEqual(['tenant-1']);
+    expect(schema.fields[0].field_key).toBe('project-sales:amount');
+    expect(schema.fields[0].semantic.role).toBe('measure');
+    expect(schema.metrics).toBeDefined();
+    expect(schema.dimensions).toBeDefined();
+  });
+
+  test('semantic layer correctly maps entities across all allowed tables and views', async () => {
+    mockPostgresPool.query.mockResolvedValue({ rows: [] });
+    mockTenantKnowledgeArtifact.findOne.mockReturnValue(activeArtifactChain(activeArtifactRecord()));
+
+    const schema = await executiveIntelligenceService.getSchema({ tenantId: 'tenant-1' });
+
+    expect(schema.semantic_layer.form_submissions.entityMeaning).toContain('form fill');
+    expect(schema.semantic_layer.form_submission_facts.entityMeaning).toContain('answer');
+    expect(schema.semantic_layer.form_field_catalog.mongoOrigin).toContain('ProjectForm');
+    expect(schema.semantic_layer.node_dimension.businessMeaning).toContain('hierarchy');
+    expect(schema.semantic_layer.form_submission_enriched_view.allowedAnalysis).toContain('join');
+  });
+
+  test('business context returns all 4 pillars', async () => {
+    mockTenantKnowledgeArtifact.findOne.mockReturnValue(activeArtifactChain(activeArtifactRecord()));
+
+    const context = await executiveIntelligenceService.getBusinessContext({ tenantId: 'tenant-1' });
+
+    expect(Object.keys(context.pillars).sort()).toEqual(
+      ['operations', 'people', 'projects', 'structure'].sort()
+    );
+    expect(context.pillars.people.data.user_count).toBe(3);
+    expect(context.pillars.people.data.role_count).toBe(1);
+    expect(context.pillars.structure.data.node_count).toBe(3);
+    expect(context.pillars.projects.data.project_count).toBe(1);
+    expect(context.pillars.projects.data.form_count).toBe(1);
+    expect(context.pillars.operations.data.metric_count).toBe(1);
+    expect(context.pillars.operations.data.dimension_count).toBe(1);
+    expect(context.request_scope).toEqual({ pillar: 'all', filtered: false });
+  });
+
+  test('business context supports single-pillar scoped retrieval', async () => {
+    mockTenantKnowledgeArtifact.findOne.mockReturnValue(activeArtifactChain(activeArtifactRecord()));
+
+    const context = await executiveIntelligenceService.getBusinessContext({
+      tenantId: 'tenant-1',
+      pillar: 'people',
+    });
+
+    expect(Object.keys(context.pillars)).toEqual(['people']);
+    expect(context.request_scope).toEqual({ pillar: 'people', filtered: true });
+  });
+
+  test('business context handles missing artifact gracefully', async () => {
+    mockTenantKnowledgeArtifact.findOne.mockReturnValue(activeArtifactChain(null));
+
+    const context = await executiveIntelligenceService.getBusinessContext({ tenantId: 'tenant-1' });
+
+    expect(Object.keys(context.pillars).sort()).toEqual(
+      ['operations', 'people', 'projects', 'structure'].sort()
+    );
+    expect(context.pillars.people.data.user_count).toBe(0);
+    expect(context.pillars.structure.data.node_count).toBe(0);
+    expect(context.pillars.projects.data.project_count).toBe(0);
+    expect(context.pillars.operations.data.metric_count).toBe(0);
+    expect(context.artifact_version).toBeNull();
+  });
+
+  test('knowledge artifact supports section filtering', async () => {
+    mockTenantKnowledgeArtifact.findOne.mockReturnValue(activeArtifactChain(activeArtifactRecord()));
+
+    const section = await executiveIntelligenceService.getActiveArtifactSection({
+      tenantId: 'tenant-1',
+      section: 'metrics',
+    });
+
+    expect(section.artifact.metrics).toBeInstanceOf(Array);
+    expect(section.artifact.dimensions).toBeInstanceOf(Array);
+    expect(section.artifact.organization).toBeUndefined();
+    expect(section.artifact.security).toBeUndefined();
+  });
+
+  test('knowledge artifact section filtering is graceful when artifact is missing', async () => {
+    mockTenantKnowledgeArtifact.findOne.mockReturnValue(activeArtifactChain(null));
+
+    const section = await executiveIntelligenceService.getActiveArtifactSection({
+      tenantId: 'tenant-1',
+      section: 'glossary',
+    });
+
+    expect(section).toBeNull();
   });
 });

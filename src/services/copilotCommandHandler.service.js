@@ -15,11 +15,29 @@ const {
   queueUpdateSubmission,
   queueDeleteSubmission,
 } = require('./submission.service');
+const {
+  validateCopilotActionPayload,
+} = require('../validations/copilotAction.validation');
 
 const requireObjectPayload = (payload) => {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Action payload must be an object');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Action payload must be an object'
+    );
   }
+};
+
+const throwActionValidation = (validation) => {
+  const err = new ApiError(
+    httpStatus.BAD_REQUEST,
+    validation.feedback.message,
+    true,
+    '',
+    validation.feedback
+  );
+  err.feedback = validation.feedback;
+  throw err;
 };
 
 const normalizeIdRef = (value) => {
@@ -86,7 +104,10 @@ const cascadeMoveFamilyLevelAlignment = async ({
   const rootNode = await nodeService.getNodeById(nodeId, { populate: 'level' });
   const resolvedTenantId = String(tenantId || rootNode?.tenantId || '');
   if (!resolvedTenantId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Unable to resolve tenant for move_node');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Unable to resolve tenant for move_node'
+    );
   }
 
   const targetLevel = await Level.findOne({
@@ -114,7 +135,10 @@ const cascadeMoveFamilyLevelAlignment = async ({
 
   const rootPath = String(rootNode?.path || '');
   if (!rootPath) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Node path is missing for family move');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Node path is missing for family move'
+    );
   }
 
   const subtree = await Nodes.find({
@@ -123,7 +147,10 @@ const cascadeMoveFamilyLevelAlignment = async ({
     path: { $regex: `^${escapeRegex(rootPath)}(?:/|$)` },
   }).populate('level');
   if (!Array.isArray(subtree) || subtree.length === 0) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'No nodes found in family subtree');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'No nodes found in family subtree'
+    );
   }
 
   const allLevels = await Level.find({
@@ -245,8 +272,18 @@ const handleCreateUser = async (event) => {
     userBody.tenantId = event.tenant_id;
   }
 
+  const createValidation = validateCopilotActionPayload(
+    'create_user',
+    userBody
+  );
+  if (!createValidation.ok) {
+    throwActionValidation(createValidation);
+  }
+
   const createdUser = await userService.createUser(userBody);
-  await invalidateUserSearchAndResolveCache(event.tenant_id || userBody.tenantId);
+  await invalidateUserSearchAndResolveCache(
+    event.tenant_id || userBody.tenantId
+  );
   return {
     handled: true,
     resultType: 'user_created',
@@ -259,8 +296,9 @@ const handleCreateUser = async (event) => {
 
 const handleSubmitData = async (event) => {
   requireObjectPayload(event.payload_json);
-  const submissionBody =
-    event.payload_json.submissionBody || { ...event.payload_json };
+  const submissionBody = event.payload_json.submissionBody || {
+    ...event.payload_json,
+  };
 
   if (!submissionBody.tenantId) {
     submissionBody.tenantId = event.tenant_id;
@@ -309,7 +347,11 @@ const handleApproveSubmission = async (event) => {
   };
 };
 
-const queueSubmissionStatusUpdate = async (event, status, extraUpdates = {}) => {
+const queueSubmissionStatusUpdate = async (
+  event,
+  status,
+  extraUpdates = {}
+) => {
   requireObjectPayload(event.payload_json);
   const payload = event.payload_json;
   const submissionId = payload.submissionId || event.entity_id;
@@ -446,8 +488,14 @@ const handleUpdateUser = async (event) => {
   delete updates.updateBody;
   delete updates.userBody;
 
-  const updatedUser = await userService.updateUserById(userId, updates, actorUser);
-  await invalidateUserSearchAndResolveCache(event.tenant_id || updatedUser?.tenantId);
+  const updatedUser = await userService.updateUserById(
+    userId,
+    updates,
+    actorUser
+  );
+  await invalidateUserSearchAndResolveCache(
+    event.tenant_id || updatedUser?.tenantId
+  );
   return {
     handled: true,
     resultType: 'user_updated',
@@ -470,13 +518,22 @@ const handleDeactivateUser = async (event) => {
     );
   }
 
+  const deactivateValidation = validateCopilotActionPayload('deactivate_user', {
+    userId,
+  });
+  if (!deactivateValidation.ok) {
+    throwActionValidation(deactivateValidation);
+  }
+
   const result = await userService.softDeleteUserById(userId);
   if (result?.error) {
     throw new ApiError(httpStatus.BAD_REQUEST, result.error);
   }
 
   const deletedUser = result?.deletedUser || null;
-  await invalidateUserSearchAndResolveCache(event.tenant_id || deletedUser?.tenantId);
+  await invalidateUserSearchAndResolveCache(
+    event.tenant_id || deletedUser?.tenantId
+  );
   return {
     handled: true,
     resultType: 'user_deactivated',
@@ -499,13 +556,22 @@ const handleReactivateUser = async (event) => {
     );
   }
 
+  const reactivateValidation = validateCopilotActionPayload('reactivate_user', {
+    userId,
+  });
+  if (!reactivateValidation.ok) {
+    throwActionValidation(reactivateValidation);
+  }
+
   const result = await userService.restoreUserByUserId(userId);
   if (result?.error) {
     throw new ApiError(httpStatus.BAD_REQUEST, result.error);
   }
 
   const restoredUser = result?.restoredUser || null;
-  await invalidateUserSearchAndResolveCache(event.tenant_id || restoredUser?.tenantId);
+  await invalidateUserSearchAndResolveCache(
+    event.tenant_id || restoredUser?.tenantId
+  );
   return {
     handled: true,
     resultType: 'user_reactivated',
@@ -527,8 +593,17 @@ const handleDeleteUser = async (event) => {
     );
   }
 
+  const deleteValidation = validateCopilotActionPayload('delete_user', {
+    userId,
+  });
+  if (!deleteValidation.ok) {
+    throwActionValidation(deleteValidation);
+  }
+
   const deleted = await userService.deleteUserById(userId);
-  await invalidateUserSearchAndResolveCache(event.tenant_id || deleted?.tenantId);
+  await invalidateUserSearchAndResolveCache(
+    event.tenant_id || deleted?.tenantId
+  );
   return {
     handled: true,
     resultType: 'user_deleted',
@@ -542,20 +617,29 @@ const handleDeleteUser = async (event) => {
 const handleResetPassword = async (event) => {
   requireObjectPayload(event.payload_json);
   const payload = event.payload_json;
-  const email = String(payload.email || payload.userEmail || '').trim().toLowerCase();
-  const newPassword = String(payload.newPassword || payload.password || '').trim();
+  const email = String(payload.email || payload.userEmail || '')
+    .trim()
+    .toLowerCase();
+  const newPassword = String(
+    payload.newPassword || payload.password || ''
+  ).trim();
 
   if (!email) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'reset_password requires email'
-    );
+    throw new ApiError(httpStatus.BAD_REQUEST, 'reset_password requires email');
   }
   if (!newPassword) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'reset_password requires newPassword'
     );
+  }
+
+  const resetValidation = validateCopilotActionPayload('reset_password', {
+    email,
+    newPassword,
+  });
+  if (!resetValidation.ok) {
+    throwActionValidation(resetValidation);
   }
 
   const user = await userService.getUserByEmail(email);
@@ -590,13 +674,12 @@ const handleResetPassword = async (event) => {
 const handleVerifyAccount = async (event) => {
   requireObjectPayload(event.payload_json);
   const payload = event.payload_json;
-  const email = String(payload.email || payload.userEmail || '').trim().toLowerCase();
+  const email = String(payload.email || payload.userEmail || '')
+    .trim()
+    .toLowerCase();
 
   if (!email) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'verify_account requires email'
-    );
+    throw new ApiError(httpStatus.BAD_REQUEST, 'verify_account requires email');
   }
 
   const user = await userService.getUserByEmail(email);
@@ -643,7 +726,10 @@ const handleDeleteRole = async (event) => {
   }
 
   const actorUser = await resolveActorUser(event);
-  const deletedRole = await roleService.deleteRoleById(roleId, actorUser || null);
+  const deletedRole = await roleService.deleteRoleById(
+    roleId,
+    actorUser || null
+  );
   await invalidateRoleSearchAndResolveCache(
     event.tenant_id || deletedRole?.tenantId
   );
@@ -694,7 +780,9 @@ const handleAssignRole = async (event) => {
   );
 
   const updatedUser = await userService.assignRoles(userId, roleIds);
-  await invalidateUserSearchAndResolveCache(event.tenant_id || updatedUser?.tenantId);
+  await invalidateUserSearchAndResolveCache(
+    event.tenant_id || updatedUser?.tenantId
+  );
   return {
     handled: true,
     resultType: 'role_assigned',
@@ -748,7 +836,9 @@ const handleUnassignRole = async (event) => {
     { roles: filteredRoles },
     actorUser || null
   );
-  await invalidateUserSearchAndResolveCache(event.tenant_id || updatedUser?.tenantId);
+  await invalidateUserSearchAndResolveCache(
+    event.tenant_id || updatedUser?.tenantId
+  );
 
   return {
     handled: true,
@@ -788,8 +878,13 @@ const handleGrantPermission = async (event) => {
     entityName: 'Role',
   });
 
-  const updatedRole = await roleService.assignPermissions(roleId, permissionIds);
-  await invalidateRoleSearchAndResolveCache(event.tenant_id || updatedRole?.tenantId);
+  const updatedRole = await roleService.assignPermissions(
+    roleId,
+    permissionIds
+  );
+  await invalidateRoleSearchAndResolveCache(
+    event.tenant_id || updatedRole?.tenantId
+  );
   return {
     handled: true,
     resultType: 'permission_granted',
@@ -834,7 +929,9 @@ const handleRevokePermission = async (event) => {
     roleId,
     permissionIds
   );
-  await invalidateRoleSearchAndResolveCache(event.tenant_id || updatedRole?.tenantId);
+  await invalidateRoleSearchAndResolveCache(
+    event.tenant_id || updatedRole?.tenantId
+  );
   return {
     handled: true,
     resultType: 'permission_revoked',
@@ -851,10 +948,16 @@ const handleCreateNode = async (event) => {
   const nodeBody = payload.nodeBody || { ...payload };
 
   if (!nodeBody.name) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'create_node payload requires name');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'create_node payload requires name'
+    );
   }
   if (!nodeBody.level) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'create_node payload requires level');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'create_node payload requires level'
+    );
   }
   if (!nodeBody.structure) {
     throw new ApiError(
@@ -965,7 +1068,10 @@ const handleRestoreNode = async (event) => {
     );
   }
 
-  const node = await nodeService.restoreNodeById(nodeId, payload.restoreBody || {});
+  const node = await nodeService.restoreNodeById(
+    nodeId,
+    payload.restoreBody || {}
+  );
   return {
     handled: true,
     resultType: 'node_restored',
@@ -1083,7 +1189,9 @@ const handleArchiveProject = async (event) => {
       'archive_project requires projectFormId or project entity_id'
     );
   }
-  const projectForm = await projectFormService.getProjectFormById(projectFormId);
+  const projectForm = await projectFormService.getProjectFormById(
+    projectFormId
+  );
   assertTenantOwned({
     entity: projectForm,
     tenantId: event.tenant_id,
@@ -1119,7 +1227,9 @@ const handleRestoreProject = async (event) => {
     entityName: 'Project',
   });
 
-  const restored = await projectFormService.restoreProjectFormById(projectFormId);
+  const restored = await projectFormService.restoreProjectFormById(
+    projectFormId
+  );
   return {
     handled: true,
     resultType: 'project_restored',
@@ -1129,7 +1239,10 @@ const handleRestoreProject = async (event) => {
 };
 
 const paymentReferenceFallback = () =>
-  `copilot-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  `copilot-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 8)
+    .toUpperCase()}`;
 
 const handleCreatePayment = async (event) => {
   requireObjectPayload(event.payload_json);
@@ -1142,7 +1255,11 @@ const handleCreatePayment = async (event) => {
       'create_payment requires amount and total'
     );
   }
-  if (!paymentBody.currency || !paymentBody.paymentMethod || !paymentBody.purpose) {
+  if (
+    !paymentBody.currency ||
+    !paymentBody.paymentMethod ||
+    !paymentBody.purpose
+  ) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'create_payment requires currency, paymentMethod, and purpose'
@@ -1159,7 +1276,9 @@ const handleCreatePayment = async (event) => {
     reference: paymentBody.reference || paymentReferenceFallback(),
   };
 
-  const { payment, created } = await paymentService.createOrGetPayment(createPayload);
+  const { payment, created } = await paymentService.createOrGetPayment(
+    createPayload
+  );
   return {
     handled: true,
     resultType: created ? 'payment_created' : 'payment_deduped',

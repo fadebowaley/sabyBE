@@ -97,6 +97,7 @@ const ACTIONS = [
   ['complete_task', 'task', true, 'reopen_task', false, false, 0],
   ['reopen_task', 'task', true, 'complete_task', false, false, 0],
   ['cancel_task', 'task', true, 'reopen_task', false, false, 0],
+  ['create_project_form', 'project_form', false, null, false, false, 0],
 ];
 
 const seed = async () => {

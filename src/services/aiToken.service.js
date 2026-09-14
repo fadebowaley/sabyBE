@@ -406,6 +406,46 @@ const listAllTenantQuotas = async ({ page = 1, limit = 25, search = '' }) => {
   };
 };
 
+/**
+ * Deducts consumed AI tokens from a tenant's quota after an agent run.
+ * Never drives the balance below zero; isSaby/unlimited tenants are exempt.
+ * The gateway usage meter calls this on run completion.
+ */
+const deductAiUsage = async ({ tenantId, tokens = 0, isUnlimited = false }) => {
+  const consumed = Math.max(0, Math.round(Number(tokens) || 0));
+  if (!tenantId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId is required.');
+  }
+  if (isUnlimited || consumed === 0) {
+    return { tenantId, isUnlimited, deducted: consumed, remainingTokens: Infinity };
+  }
+
+  await ensureTenantQuotaTable();
+  const res = await postgresPool.query(
+    `UPDATE copilot.tenant_ai_quotas
+     SET used_tokens = copilot.tenant_ai_quotas.used_tokens + $2,
+         remaining_tokens = GREATEST(copilot.tenant_ai_quotas.remaining_tokens - $2, 0),
+         last_deduction_at = now(),
+         updated_at = now()
+     WHERE tenant_id = $1
+     RETURNING used_tokens, remaining_tokens;`,
+    [String(tenantId), consumed]
+  );
+
+  const row = res.rows[0];
+  if (!row) {
+    return { tenantId, isUnlimited: false, deducted: 0, remainingTokens: 0, noQuota: true };
+  }
+
+  return {
+    tenantId,
+    isUnlimited: false,
+    deducted: consumed,
+    usedTokens: Number(row.used_tokens),
+    remainingTokens: Number(row.remaining_tokens),
+  };
+};
+
 module.exports = {
   AI_TOKEN_PACKS,
   getAiTokenPacks,
@@ -414,4 +454,5 @@ module.exports = {
   creditTokensFromPayment,
   allocateTokensManually,
   listAllTenantQuotas,
+  deductAiUsage,
 };
