@@ -118,6 +118,199 @@ const SEEDED_TOOL_FIXTURES = {
     },
     expectedEntityId: 'project-restore-1',
   },
+  // action_* tools use flat schemas (no actionPayload wrapper) — the payload
+  // is built from the fixture fields directly in the test.each below.
+  action_create_user: {
+    entityType: 'user',
+    actionPayload: {
+      entityId: 'user-create-1',
+      userBody: { email: 'person@example.com', firstname: 'Person' },
+    },
+    expectedEntityId: 'user-create-1',
+  },
+  action_update_user: {
+    entityType: 'user',
+    actionPayload: {
+      entityId: 'user-update-1',
+      userBody: { email: 'person@example.com' },
+    },
+    expectedEntityId: 'user-update-1',
+  },
+  action_deactivate_user: {
+    entityType: 'user',
+    actionPayload: { entityId: 'user-deactivate-1' },
+    expectedEntityId: 'user-deactivate-1',
+  },
+  action_delete_user: {
+    entityType: 'user',
+    actionPayload: { entityId: 'user-delete-1' },
+    expectedEntityId: 'user-delete-1',
+  },
+  action_reset_password: {
+    entityType: 'user',
+    actionPayload: {
+      entityId: 'user-reset-pw-1',
+      email: 'person@example.com',
+      newPassword: 'NewSecret123!',
+    },
+    expectedEntityId: 'user-reset-pw-1',
+  },
+  action_assign_role: {
+    entityType: 'user_role',
+    actionPayload: { userId: 'user-assign-1', roleIds: ['role-admin-1'] },
+    expectedEntityId: 'user-assign-1',
+  },
+  action_create_role: {
+    entityType: 'role',
+    actionPayload: {
+      entityId: 'role-create-1',
+      roleName: 'Admin',
+      permissionIds: ['permission-manage-1'],
+    },
+    expectedEntityId: 'role-create-1',
+  },
+  action_delete_role: {
+    entityType: 'role',
+    actionPayload: { entityId: 'role-delete-1' },
+    expectedEntityId: 'role-delete-1',
+  },
+  action_grant_permission: {
+    entityType: 'role_permission',
+    actionPayload: {
+      roleId: 'role-grant-1',
+      permissionIds: ['permission-manage-1'],
+    },
+    expectedEntityId: 'role-grant-1',
+  },
+  action_revoke_permission: {
+    entityType: 'role_permission',
+    actionPayload: {
+      roleId: 'role-revoke-1',
+      permissionIds: ['permission-manage-1'],
+    },
+    expectedEntityId: 'role-revoke-1',
+  },
+  action_create_node: {
+    entityType: 'node',
+    actionPayload: {
+      entityId: 'node-create-1',
+      nodeName: 'Operations',
+      nodeType: 'department',
+    },
+    expectedEntityId: 'node-create-1',
+  },
+  action_delete_node: {
+    entityType: 'node',
+    actionPayload: { entityId: 'node-delete-1' },
+    expectedEntityId: 'node-delete-1',
+  },
+  action_move_node: {
+    entityType: 'node',
+    actionPayload: {
+      nodeId: 'node-move-1',
+      targetParentId: 'node-parent-1',
+    },
+    expectedEntityId: 'node-move-1',
+  },
+  action_submit_data: {
+    entityType: 'submission',
+    actionPayload: {
+      entityId: 'submission-1',
+      projectFormId: 'form-report-1',
+      data: {},
+    },
+    expectedEntityId: 'submission-1',
+  },
+  action_approve_submission: {
+    entityType: 'submission',
+    actionPayload: { entityId: 'submission-approve-1' },
+    expectedEntityId: 'submission-approve-1',
+  },
+  action_reject_submission: {
+    entityType: 'submission',
+    actionPayload: {
+      entityId: 'submission-reject-1',
+      reason: 'Documentation missing',
+    },
+    expectedEntityId: 'submission-reject-1',
+  },
+  action_reopen_submission: {
+    entityType: 'submission',
+    actionPayload: { entityId: 'submission-reopen-1' },
+    expectedEntityId: 'submission-reopen-1',
+  },
+  action_delete_submission: {
+    entityType: 'submission',
+    actionPayload: { entityId: 'submission-delete-1' },
+    expectedEntityId: 'submission-delete-1',
+  },
+  action_create_project: {
+    entityType: 'project',
+    actionPayload: {
+      entityId: 'project-create-1',
+      projectFormId: 'form-project-1',
+      projectName: 'Expansion',
+    },
+    expectedEntityId: 'project-create-1',
+  },
+  action_archive_project: {
+    entityType: 'project',
+    actionPayload: {
+      entityId: 'project-archive-1',
+      projectFormId: 'form-project-1',
+    },
+    expectedEntityId: 'project-archive-1',
+  },
+  action_restore_project: {
+    entityType: 'project',
+    actionPayload: {
+      entityId: 'project-restore-1',
+      projectFormId: 'form-project-1',
+    },
+    expectedEntityId: 'project-restore-1',
+  },
+  action_create_project_form: {
+    entityType: 'project_form',
+    actionPayload: {
+      entityId: 'project-form-create-1',
+      title: 'Quarterly Report',
+    },
+    expectedEntityId: 'project-form-create-1',
+  },
+  action_create_payment: {
+    entityType: 'payment',
+    actionPayload: {
+      entityId: 'payment-1',
+      amount: 250,
+      currency: 'USD',
+      payerEmail: 'person@example.com',
+    },
+    expectedEntityId: 'payment-1',
+  },
+  action_create_task: {
+    entityType: 'task',
+    actionPayload: {
+      entityId: 'task-create-1',
+      title: 'Ship feature',
+      assignees: ['user-1'],
+    },
+    expectedEntityId: 'task-create-1',
+  },
+  action_complete_task: {
+    entityType: 'task',
+    actionPayload: { entityId: 'task-complete-1' },
+    expectedEntityId: 'task-complete-1',
+  },
+  action_reopen_task: {
+    entityType: 'task',
+    actionPayload: { entityId: 'task-reopen-1' },
+    expectedEntityId: 'task-reopen-1',
+  },
+  action_cancel_task: {
+    entityType: 'task',
+    actionPayload: { entityId: 'task-cancel-1' },
+    expectedEntityId: 'task-cancel-1',
+  },
 };
 
 describe('copilotToolRuntime.service', () => {
@@ -471,6 +664,17 @@ describe('copilotToolRuntime.service', () => {
         ]),
       });
 
+      const wrapped = !!(tool.schema_json.properties && tool.schema_json.properties.actionPayload);
+      const payload = wrapped
+        ? {
+            actionPayload: fixture.actionPayload,
+            idempotencyKey: `idem-${tool.tool_name}`,
+          }
+        : {
+            ...fixture.actionPayload,
+            idempotencyKey: `idem-${tool.tool_name}`,
+          };
+
       mockCopilotEntityResolverService.resolveActionPayload.mockResolvedValue({
         canExecute: true,
         resolvedPayload: fixture.actionPayload,
@@ -504,10 +708,7 @@ describe('copilotToolRuntime.service', () => {
         roleIds: ['role-1'],
         toolName: tool.tool_name,
         approvalToken: `approval-${tool.tool_name}`,
-        payload: {
-          actionPayload: fixture.actionPayload,
-          idempotencyKey: `idem-${tool.tool_name}`,
-        },
+        payload,
       });
 
       expect(result).toEqual(
@@ -523,7 +724,9 @@ describe('copilotToolRuntime.service', () => {
         expect.objectContaining({
           tenantId: 'tenant-1',
           actionType: tool.action_type,
-          payload: fixture.actionPayload,
+          payload: wrapped
+            ? fixture.actionPayload
+            : expect.objectContaining(fixture.actionPayload),
           actorUserId: 'user-1',
           source: 'tool_runtime',
         })
@@ -541,13 +744,15 @@ describe('copilotToolRuntime.service', () => {
           source: 'tool_runtime',
         })
       );
-      expect(
-        mockCopilotApprovalService.consumeApprovalDecision
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({
-          approvalId: 'approval-1',
-        })
-      );
+      if (tool.requires_approval) {
+        expect(
+          mockCopilotApprovalService.consumeApprovalDecision
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            approvalId: 'approval-1',
+          })
+        );
+      }
     }
   );
 });

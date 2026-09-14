@@ -4,6 +4,40 @@ const path = require('path');
 // Load test environment variables
 require('dotenv').config({ path: path.join(__dirname, '.env.test') });
 
+// Jest 26's node environment does not surface newer web globals into the VM
+// sandbox, so controller/services that rely on AbortController (agentGateway
+// chat SSE) need a small polyfill for the abort signal only.
+if (typeof globalThis.AbortController === 'undefined') {
+  class AbortSignal {
+    constructor() {
+      this.aborted = false;
+      this.reason = undefined;
+      this._listeners = [];
+    }
+    addEventListener(_type, listener) {
+      this._listeners.push(listener);
+    }
+    removeEventListener(_type, listener) {
+      this._listeners = this._listeners.filter((l) => l !== listener);
+    }
+    dispatchEvent() {
+      return true;
+    }
+  }
+  class AbortController {
+    constructor() {
+      this.signal = new AbortSignal();
+    }
+    abort() {
+      this.signal.aborted = true;
+      this.signal.reason = new Error('Aborted');
+      this.signal._listeners.slice().forEach((listener) => listener());
+    }
+  }
+  globalThis.AbortController = AbortController;
+  globalThis.AbortSignal = AbortSignal;
+}
+
 // Mock external services that might cause issues in tests
 jest.mock('nodemailer', () => ({
   createTransport: jest.fn(() => ({

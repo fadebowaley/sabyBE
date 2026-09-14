@@ -55,13 +55,13 @@ describe('copilot command handler service', () => {
     const result = await executeActionEvent({
       action_type: 'create_user',
       tenant_id: 'tenant-1',
-      actor_user_id: 'actor-1',
+      actor_user_id: '507f1f77bcf86cd799439011',
       payload_json: {
         userBody: {
           email: 'new@example.com',
           firstname: 'New',
           lastname: 'User',
-          password: 'secret',
+          password: 'NewSecret123!',
         },
       },
     });
@@ -69,7 +69,7 @@ describe('copilot command handler service', () => {
     expect(mockUserService.createUser).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 'tenant-1',
-        createdBy: 'actor-1',
+        createdBy: '507f1f77bcf86cd799439011',
         isOwner: false,
         isSuper: false,
         email: 'new@example.com',
@@ -168,22 +168,24 @@ describe('copilot command handler service', () => {
 
   test('handles deactivate_user using existing userService.softDeleteUserById', async () => {
     mockUserService.softDeleteUserById.mockResolvedValue({
-      deletedUser: { _id: 'user-2' },
+      deletedUser: { _id: '507f1f77bcf86cd799439012' },
     });
 
     const result = await executeActionEvent({
       action_type: 'deactivate_user',
       tenant_id: 'tenant-1',
-      entity_id: 'user-2',
+      entity_id: '507f1f77bcf86cd799439012',
       payload_json: {},
     });
 
-    expect(mockUserService.softDeleteUserById).toHaveBeenCalledWith('user-2');
+    expect(mockUserService.softDeleteUserById).toHaveBeenCalledWith(
+      '507f1f77bcf86cd799439012'
+    );
     expect(result).toEqual(
       expect.objectContaining({
         handled: true,
         resultType: 'user_deactivated',
-        entityId: 'user-2',
+        entityId: '507f1f77bcf86cd799439012',
       })
     );
   });
@@ -300,10 +302,10 @@ describe('copilot command handler service', () => {
       executeActionEvent({
         action_type: 'reset_password',
         tenant_id: 'tenant-1',
-        actor_user_id: 'actor-1',
+        actor_user_id: '507f1f77bcf86cd799439011',
         payload_json: {
           email: 'person@example.com',
-          newPassword: 'new-secret',
+          newPassword: 'NewSecret123!',
         },
       })
     ).rejects.toMatchObject({

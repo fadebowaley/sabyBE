@@ -35,6 +35,34 @@ jobs:
       NODE_ENV: test
       MONGODB_URL: mongodb://127.0.0.1:27017/saby_ci
       JWT_SECRET: ci-test-jwt-secret
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sodzo
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sodzo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'quit(db.adminCommand({ ping: 1 }).ok ? 0 : 2)'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -47,6 +75,10 @@ jobs:
 
       - name: 📦 Install deps
         run: npm ci
+
+      - name: 🗄️ Prepare test database
+        run: |
+          PGPASSWORD=postgres createdb -h 127.0.0.1 -U postgres sodzo_test 2>/dev/null || true
 
       - name: 🧪 Run tests
         run: npm test

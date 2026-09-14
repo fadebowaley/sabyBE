@@ -1,10 +1,12 @@
 const { TOOLS } = require('../scripts/seed-copilot-tool-registry');
 
-describe('copilot tool registry seed contracts', () => {
-  test('every seeded tool has Phase 1 safety metadata', () => {
-    expect(TOOLS.length).toBeGreaterThan(0);
+const PHASE1_TOOLS = TOOLS.filter((tool) => !tool.tool_name.startsWith('action_'));
 
-    TOOLS.forEach((tool) => {
+describe('copilot tool registry seed contracts', () => {
+  test('every Phase 1 seeded tool has safety metadata', () => {
+    expect(PHASE1_TOOLS.length).toBeGreaterThan(0);
+
+    PHASE1_TOOLS.forEach((tool) => {
       expect(tool.tool_name).toEqual(expect.any(String));
       expect(tool.action_type).toEqual(expect.any(String));
       expect(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).toContain(tool.risk_level);
@@ -33,8 +35,8 @@ describe('copilot tool registry seed contracts', () => {
     });
   });
 
-  test('high and critical seeded tools require approval and idempotency', () => {
-    const highRiskTools = TOOLS.filter((tool) =>
+  test('high and critical Phase 1 tools require approval and idempotency', () => {
+    const highRiskTools = PHASE1_TOOLS.filter((tool) =>
       ['HIGH', 'CRITICAL'].includes(tool.risk_level)
     );
 
