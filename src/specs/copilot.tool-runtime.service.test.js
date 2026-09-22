@@ -166,6 +166,40 @@ const SEEDED_TOOL_FIXTURES = {
     actionPayload: { userId: 'user-assign-1', roleIds: ['role-admin-1'] },
     expectedEntityId: 'user-assign-1',
   },
+  action_unassign_role: {
+    entityType: 'user_role',
+    actionPayload: { userId: 'user-unassign-1', roleIds: ['role-admin-1'] },
+    expectedEntityId: 'user-unassign-1',
+  },
+  action_reactivate_user: {
+    entityType: 'user',
+    actionPayload: { userId: 'user-reactivate-1' },
+    expectedEntityId: 'user-reactivate-1',
+  },
+  action_verify_account: {
+    entityType: 'user',
+    actionPayload: {
+      userId: 'user-verify-1',
+      email: 'person@example.com',
+    },
+    expectedEntityId: 'user-verify-1',
+  },
+  action_assign_user_to_node: {
+    entityType: 'node_user',
+    actionPayload: {
+      userId: 'user-node-1',
+      nodeId: 'node-1',
+    },
+    expectedEntityId: 'user-node-1',
+  },
+  action_unassign_user_from_node: {
+    entityType: 'node_user',
+    actionPayload: {
+      userId: 'user-node-1',
+      nodeId: 'node-1',
+    },
+    expectedEntityId: 'user-node-1',
+  },
   action_create_role: {
     entityType: 'role',
     actionPayload: {
@@ -674,7 +708,7 @@ describe('copilotToolRuntime.service', () => {
         ]),
       });
 
-      const wrapped = !!(tool.schema_json.properties && tool.schema_json.properties.actionPayload);
+      const wrapped = Boolean(tool.schema_json?.properties?.actionPayload);
       const payload = wrapped
         ? {
             actionPayload: fixture.actionPayload,
@@ -711,10 +745,6 @@ describe('copilotToolRuntime.service', () => {
         deduped: false,
         event: { id: `event-${tool.tool_name}` },
       });
-
-      const usesActionPayloadEnvelope = Boolean(
-        tool.schema_json?.properties?.actionPayload
-      );
 
       const result = await toolRuntimeService.executeToolCall({
         tenantId: 'tenant-1',
