@@ -35,7 +35,9 @@ jest.mock('../services/node.service', () => mockNodeService);
 jest.mock('../services/projectForm.service', () => mockProjectFormService);
 jest.mock('../services/submission.service', () => mockSubmissionService);
 
-const { executeActionEvent } = require('../services/copilotCommandHandler.service');
+const {
+  executeActionEvent,
+} = require('../services/copilotCommandHandler.service');
 
 describe('copilot command handler service', () => {
   beforeEach(() => {

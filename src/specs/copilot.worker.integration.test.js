@@ -10,6 +10,7 @@ jest.mock('../config/postgres', () => ({
 jest.mock('../config/logger', () => ({
   info: jest.fn(),
   error: jest.fn(),
+  warn: jest.fn(),
 }));
 
 const mockExecuteActionEvent = jest.fn();

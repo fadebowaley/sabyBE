@@ -40,8 +40,14 @@ jest.mock(
   '../services/copilotEntityResolver.service',
   () => mockCopilotEntityResolverService
 );
-jest.mock('../services/copilotApproval.service', () => mockCopilotApprovalService);
-jest.mock('../services/workflowEngine.service', () => mockWorkflowEngineService);
+jest.mock(
+  '../services/copilotApproval.service',
+  () => mockCopilotApprovalService
+);
+jest.mock(
+  '../services/workflowEngine.service',
+  () => mockWorkflowEngineService
+);
 
 const toolRuntimeService = require('../services/copilotToolRuntime.service');
 const { TOOLS } = require('../scripts/seed-copilot-tool-registry');
@@ -421,14 +427,18 @@ describe('copilotToolRuntime.service', () => {
         correlationId: '11111111-1111-4111-8111-111111111111',
       })
     );
-    expect(mockWorkflowEngineService.beginToolExecutionWorkflow).toHaveBeenCalledWith(
+    expect(
+      mockWorkflowEngineService.beginToolExecutionWorkflow
+    ).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 'tenant-1',
         correlationId: '11111111-1111-4111-8111-111111111111',
         source: 'tool_runtime',
       })
     );
-    expect(mockWorkflowEngineService.queueWorkflowActionEvent).toHaveBeenCalledWith(
+    expect(
+      mockWorkflowEngineService.queueWorkflowActionEvent
+    ).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 'tenant-1',
         actionEventId: 'evt-1',
@@ -701,6 +711,10 @@ describe('copilotToolRuntime.service', () => {
         deduped: false,
         event: { id: `event-${tool.tool_name}` },
       });
+
+      const usesActionPayloadEnvelope = Boolean(
+        tool.schema_json?.properties?.actionPayload
+      );
 
       const result = await toolRuntimeService.executeToolCall({
         tenantId: 'tenant-1',

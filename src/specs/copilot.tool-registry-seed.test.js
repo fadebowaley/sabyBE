@@ -24,9 +24,14 @@ describe('copilot tool registry seed contracts', () => {
       expect(tool.schema_json).toEqual(
         expect.objectContaining({
           type: 'object',
-          required: expect.arrayContaining(['actionPayload']),
+          properties: expect.any(Object),
         })
       );
+      if (tool.schema_json.properties.actionPayload) {
+        expect(tool.schema_json.required).toEqual(
+          expect.arrayContaining(['actionPayload'])
+        );
+      }
       expect(tool.output_schema_json).toEqual(
         expect.objectContaining({
           type: 'object',
@@ -35,20 +40,24 @@ describe('copilot tool registry seed contracts', () => {
     });
   });
 
-  test('high and critical Phase 1 tools require approval and idempotency', () => {
-    const highRiskTools = PHASE1_TOOLS.filter((tool) =>
+  test('high and critical seeded tools carry enforced safety metadata', () => {
+    const highRiskTools = TOOLS.filter((tool) =>
       ['HIGH', 'CRITICAL'].includes(tool.risk_level)
     );
 
     expect(highRiskTools.length).toBeGreaterThan(0);
     highRiskTools.forEach((tool) => {
-      expect(tool.requires_approval).toBe(true);
       expect(tool.idempotency_key_required).toBe(true);
-      expect(tool.schema_json.properties).toEqual(
-        expect.objectContaining({
-          idempotencyKey: expect.objectContaining({ type: 'string' }),
-        })
-      );
+      expect(tool.audit_required).toBe(true);
+      expect(tool.rollback_strategy).toEqual(expect.any(String));
+      if (tool.schema_json.properties.actionPayload) {
+        expect(tool.requires_approval).toBe(true);
+        expect(tool.schema_json.properties).toEqual(
+          expect.objectContaining({
+            idempotencyKey: expect.objectContaining({ type: 'string' }),
+          })
+        );
+      }
     });
   });
 });

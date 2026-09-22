@@ -68,6 +68,11 @@ const mockCopilotOnboardingJobService = {
   listOnboardingJobs: jest.fn(),
   cancelOnboardingJob: jest.fn(),
 };
+const mockCopilotPeopleService = {
+  getPeopleState: jest.fn(),
+  observePeople: jest.fn(),
+  recordPeopleEvent: jest.fn(),
+};
 const mockQueueOnboardingImportJob = jest.fn();
 
 jest.mock('../middlewares/auth', () => () => (req, res, next) => {
@@ -92,6 +97,7 @@ jest.mock('../services/copilotSessionContext.service', () => mockCopilotSessionC
 jest.mock('../services/copilotEntityResolver.service', () => mockCopilotEntityResolverService);
 jest.mock('../services/copilotOnboarding.service', () => mockCopilotOnboardingService);
 jest.mock('../services/copilotOnboardingJob.service', () => mockCopilotOnboardingJobService);
+jest.mock('../services/copilotPeople.service', () => mockCopilotPeopleService);
 jest.mock('../queues/onboardingImport.queue', () => ({
   queueOnboardingImportJob: (...args) => mockQueueOnboardingImportJob(...args),
 }));
@@ -656,6 +662,77 @@ describe('copilot routes api', () => {
       limit: 5,
       source: 'resolve_api',
     });
+  });
+
+  test('POST /v1/copilot/people/state returns derived people state', async () => {
+    mockCopilotPeopleService.getPeopleState.mockResolvedValue({
+      tenantId: 'tenant-1',
+      users: [{ userId: 'u-1', flags: [] }],
+      units: [],
+      roles: [],
+      permissions: [],
+      derived: { userCount: 1 },
+    });
+
+    const res = await request(app)
+      .post('/v1/copilot/people/state')
+      .send({ userId: 'u-1' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.users).toHaveLength(1);
+    expect(mockCopilotPeopleService.getPeopleState).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      userId: 'u-1',
+      nodeId: undefined,
+      roleId: undefined,
+    });
+  });
+
+  test('POST /v1/copilot/people/observe returns observations and deferred rules', async () => {
+    mockCopilotPeopleService.observePeople.mockResolvedValue({
+      observations: [{ ruleId: 'org_gap', severity: 'warning' }],
+      deferred: [],
+      derived: { userCount: 3 },
+    });
+
+    const res = await request(app)
+      .post('/v1/copilot/people/observe')
+      .send({ ruleId: 'org_gap' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.observations[0].ruleId).toBe('org_gap');
+    expect(mockCopilotPeopleService.observePeople).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      ruleId: 'org_gap',
+      userId: undefined,
+      nodeId: undefined,
+    });
+  });
+
+  test('POST /v1/copilot/people/events records an audited observation', async () => {
+    mockCopilotPeopleService.recordPeopleEvent.mockResolvedValue({
+      taskId: 'task-1',
+      stepId: 'step-1',
+      durableTarget: {
+        taskType: 'people.observation',
+        stepType: 'observation',
+      },
+    });
+
+    const res = await request(app)
+      .post('/v1/copilot/people/events')
+      .send({ kind: 'observation', summary: 'Lagos has no admin' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.record.taskId).toBe('task-1');
+    expect(mockCopilotPeopleService.recordPeopleEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        requestedByUserId: 'user-1',
+        kind: 'observation',
+        summary: 'Lagos has no admin',
+      })
+    );
   });
 
   test('POST /v1/copilot/onboarding/import-csv runs dry-run validation by default', async () => {

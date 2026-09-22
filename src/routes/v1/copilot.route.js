@@ -238,6 +238,24 @@ router.post(
   copilotController.resolveEntityReference
 );
 router.post(
+  '/people/state',
+  auth(),
+  validate(copilotValidation.getPeopleState),
+  copilotController.getPeopleState
+);
+router.post(
+  '/people/observe',
+  auth(),
+  validate(copilotValidation.observePeople),
+  copilotController.observePeople
+);
+router.post(
+  '/people/events',
+  auth(),
+  validate(copilotValidation.recordPeopleEvent),
+  copilotController.recordPeopleEvent
+);
+router.post(
   '/project-wizard/generate',
   auth(),
   validate(copilotValidation.generateProjectWizardDraft),

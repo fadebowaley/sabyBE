@@ -58,6 +58,9 @@ describe('copilotSchemaGuard.service', () => {
       .mockResolvedValueOnce({
         rows: [{ table_name: 'copilot.agent_escalations' }],
       })
+      .mockResolvedValueOnce({
+        rows: [{ table_name: 'copilot.people_history' }],
+      })
       // column checks
       .mockResolvedValueOnce({ rows: [{ '?column?': 1 }] })
       .mockResolvedValueOnce({ rows: [{ '?column?': 1 }] })
@@ -113,6 +116,7 @@ describe('copilotSchemaGuard.service', () => {
       .mockResolvedValueOnce({
         rows: [{ table_name: 'copilot.agent_escalations' }],
       })
+      .mockResolvedValueOnce({ rows: [] }) // people_history — table missing check
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ '?column?': 1 }] })
       .mockResolvedValueOnce({ rows: [{ '?column?': 1 }] })

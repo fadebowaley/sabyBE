@@ -182,6 +182,9 @@ const chat = async (req, res) => {
     const tally = await engineClient.createRun({
       promptText: message,
       model,
+      byok: byokHeaderKey
+        ? { apiKey: byokHeaderKey, provider: quota?.byokProvider || null, model: model || null }
+        : null,
       metadata: { threadId: thread.threadId, tenantId, userId, runId: run },
       signal: controller.signal,
       onEvent: (engineEvent) => {

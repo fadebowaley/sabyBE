@@ -15,6 +15,7 @@ const REQUIRED_TABLES = [
   'copilot.agent_errors',
   'copilot.agent_schedules',
   'copilot.agent_escalations',
+  'copilot.people_history',
 ];
 
 const REQUIRED_COLUMNS = [

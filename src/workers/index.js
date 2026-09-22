@@ -32,6 +32,7 @@ const {
 } = require('./onboardingMaintenance.worker');
 const { initializeBaselineWorkers, shutdownBaselineWorkers } = require('./baseline.worker');
 const { createComplianceAgentWorker }    = require('./complianceAgent.worker');
+const { createPeopleIntelligenceWorker } = require('./peopleIntelligence.worker');
 const { createDataIntelligenceWorker }   = require('./dataIntelligence.worker');
 const { createDocIngestionWorker }       = require('./docIngestion.worker');
 const {
@@ -61,6 +62,7 @@ let onboardingMaintenanceWorker = null;
 let emailIngestorWorker = null;
 let baselineWorkersInitialized = false;
 let complianceAgentWorker    = null;
+let peopleIntelligenceWorker = null;
 let dataIntelligenceWorker   = null;
 let docIngestionWorker       = null;
 let submissionAttachmentIngestionWorker = null;
@@ -128,6 +130,14 @@ const initializeWorkers = async () => {
       logger.info('⊘ Compliance agent worker disabled (COMPLIANCE_AGENT_ENABLED=false)');
     }
 
+    // Start people intelligence worker (optional — disabled when PEOPLE_INTELLIGENCE_AGENT_ENABLED=false)
+    if (config.peopleIntelligence?.agentEnabled !== false) {
+      peopleIntelligenceWorker = createPeopleIntelligenceWorker();
+      logger.info('✅ People intelligence worker started');
+    } else {
+      logger.info('⊘ People intelligence worker disabled (PEOPLE_INTELLIGENCE_AGENT_ENABLED=false)');
+    }
+
     // Start data intelligence worker (optional — disabled when DATA_INTELLIGENCE_ENABLED=false)
     if (config.dataIntelligence?.enabled !== false) {
       dataIntelligenceWorker = createDataIntelligenceWorker();
@@ -188,6 +198,7 @@ const initializeWorkers = async () => {
       emailIngestorWorker ? 'email-ingestor' : null,
       baselineWorkersInitialized ? 'baseline' : null,
       complianceAgentWorker  ? 'compliance-agent'    : null,
+      peopleIntelligenceWorker ? 'people-intelligence' : null,
       dataIntelligenceWorker ? 'data-intelligence'   : null,
       docIngestionWorker     ? 'doc-ingestion'       : null,
       submissionAttachmentIngestionWorker ? 'submission-attachment-ingestion' : null,
@@ -305,6 +316,14 @@ const shutdownWorkers = async () => {
     shutdownPromises.push(
       Promise.resolve(complianceAgentWorker.close()).then(() =>
         logger.info('✅ Compliance agent worker stopped')
+      )
+    );
+  }
+
+  if (peopleIntelligenceWorker) {
+    shutdownPromises.push(
+      Promise.resolve(peopleIntelligenceWorker.close()).then(() =>
+        logger.info('✅ People intelligence worker stopped')
       )
     );
   }

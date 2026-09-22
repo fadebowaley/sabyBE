@@ -355,6 +355,103 @@ const resolveEntityReference = {
   }),
 };
 
+const getPeopleState = {
+  body: Joi.object().keys({
+    userId: Joi.string().trim().max(255).optional(),
+    nodeId: Joi.string().trim().max(255).optional(),
+    roleId: Joi.string().trim().max(255).optional(),
+  }),
+};
+
+const observePeople = {
+  body: Joi.object().keys({
+    ruleId: Joi.string()
+      .valid(
+        'data_quality',
+        'lifecycle_problem',
+        'org_gap',
+        'missing_responsibility',
+        'identity_duplicate',
+        'role_assignment_mismatch',
+        'access_anomaly'
+      )
+      .optional(),
+    userId: Joi.string().trim().max(255).optional(),
+    nodeId: Joi.string().trim().max(255).optional(),
+    policy: Joi.object()
+      .keys({
+        roleUnit: Joi.array()
+          .items(
+            Joi.object().keys({
+              roleId: Joi.string().trim().max(255).required(),
+              expectedStructureTypes: Joi.array()
+                .items(Joi.string().trim().max(255))
+                .min(1)
+                .optional(),
+              maxUnits: Joi.number().integer().min(0).optional(),
+            })
+          )
+          .optional(),
+        permissionBreadth: Joi.array()
+          .items(
+            Joi.object().keys({
+              roleId: Joi.string().trim().max(255).required(),
+              expectedPermissionIds: Joi.array()
+                .items(Joi.string().trim().max(255))
+                .min(1)
+                .required(),
+            })
+          )
+          .optional(),
+      })
+      .optional(),
+  }),
+};
+
+const recordPeopleEvent = {
+  body: Joi.object().keys({
+    kind: Joi.string().valid('observation', 'decision').required(),
+    summary: Joi.string().trim().min(1).max(1000).required(),
+    ruleId: Joi.string().trim().max(120).optional().allow(null),
+    subject: Joi.object()
+      .keys({
+        kind: Joi.string().trim().max(40).required(),
+        id: Joi.string().trim().max(255).required(),
+      })
+      .optional()
+      .allow(null),
+    evidence: Joi.array()
+      .items(
+        Joi.object().keys({
+          source: Joi.string().trim().max(255).required(),
+          detail: Joi.string().trim().max(1000).required(),
+        })
+      )
+      .optional(),
+    suggestedCapability: Joi.string().trim().max(120).optional().allow(null),
+    responseClass: Joi.string()
+      .valid(
+        'INFORMATION',
+        'RECOMMENDATION',
+        'SAFE_AUTOMATIC',
+        'REQUIRES_APPROVAL',
+        'ESCALATION'
+      )
+      .optional()
+      .allow(null),
+    rationale: Joi.string().trim().max(2000).optional().allow(null),
+    verification: Joi.object()
+      .keys({
+        capability: Joi.string().trim().max(120).required(),
+        expected: Joi.string().trim().max(1000).required(),
+        observed: Joi.string().trim().max(1000).optional().allow(null),
+        verified: Joi.boolean().required(),
+      })
+      .optional()
+      .allow(null),
+  }),
+};
+
 const generateProjectWizardDraft = {
   body: Joi.object().keys({
     prompt: Joi.string().trim().min(5).max(5000).required(),
@@ -960,6 +1057,9 @@ module.exports = {
   clearFocusState,
   searchEntities,
   resolveEntityReference,
+  getPeopleState,
+  observePeople,
+  recordPeopleEvent,
   generateProjectWizardDraft,
   finalizeProjectWizardDraft,
   saveProjectWizardDraft,

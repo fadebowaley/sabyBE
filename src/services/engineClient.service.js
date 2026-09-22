@@ -22,10 +22,14 @@ const engineConfig = () => ({
   token: process.env.SABY_ENGINE_TOKEN || null,
 });
 
+const engineAuthHeader = (token) =>
+  token ? `Basic ${Buffer.from(`opencode:${token}`).toString('base64')}` : null;
+
 const engineRequest = async (path, { method = 'GET', body = null } = {}) => {
   const { baseUrl, token } = engineConfig();
   const headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  const auth = engineAuthHeader(token);
+  if (auth) headers.Authorization = auth;
 
   const response = await fetch(`${baseUrl}${path}`, {
     method,
@@ -43,12 +47,23 @@ const engineRequest = async (path, { method = 'GET', body = null } = {}) => {
 };
 
 /**
- * Creates an engine session for the saby agent. Returns the engine session id.
+ * Creates an engine session for the saby agent. Optional `byok` carries the
+ * user-selected provider key (and provider/model) so the engine can honor it
+ * for that session's model calls instead of the default Saby key.
  */
-const createSession = async ({ agent = SABY_AGENT_ID, model = null, metadata = null } = {}) => {
+const createSession = async ({ agent = SABY_AGENT_ID, model = null, metadata = null, byok = null } = {}) => {
   const session = await engineRequest('/api/session', {
     method: 'POST',
-    body: { agent, model: model || undefined, metadata: metadata || undefined },
+    body: {
+      agent,
+      // Top-level `model` must be a Model.Ref({id,providerID}) or null. When a
+      // BYOK session carries its model inside metadata.byok (handled by the
+      // engine's BYOK-aware resolve()), omit the top-level model.
+      model: byok ? undefined : undefined,
+      metadata: byok
+        ? { ...(metadata || {}), byok: { apiKey: byok.apiKey, provider: byok.provider || null, model: byok.model || null } }
+        : metadata || undefined,
+    },
   });
   return { sessionId: session?.id };
 };
@@ -57,10 +72,10 @@ const createSession = async ({ agent = SABY_AGENT_ID, model = null, metadata = n
  * Admits a user prompt into an existing engine session. Resolves once the
  * message is durably admitted; streaming continues over /api/event.
  */
-const prompt = async ({ sessionId, promptText, delivery = 'prompt' }) => {
+const prompt = async ({ sessionId, promptText, delivery = 'steer' }) => {
   await engineRequest(`/api/session/${encodeURIComponent(sessionId)}/prompt`, {
     method: 'POST',
-    body: { prompt: promptText, delivery },
+    body: { prompt: { text: promptText }, delivery },
   });
   return { admitted: true, sessionId };
 };
@@ -100,7 +115,8 @@ const getAfterParam = (after) => (after ? `?after=${encodeURIComponent(after)}` 
 const streamEvents = async ({ after = null, onEvent, signal }) => {
   const { baseUrl, token } = engineConfig();
   const headers = { Accept: 'text/event-stream' };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  const auth = engineAuthHeader(token);
+  if (auth) headers.Authorization = auth;
 
   const response = await fetch(`${baseUrl}/api/event${getAfterParam(after)}`, { headers, signal });
   if (!response.ok) throw new Error(`Engine event stream failed ${response.status}`);
@@ -148,12 +164,13 @@ const createRun = async ({
   promptText,
   model = null,
   metadata = null,
+  byok = null,
   onEvent = null,
   signal = null,
   onProgress = null,
 }) => {
   const started = Date.now();
-  const { sessionId } = await createSession({ agent: SABY_AGENT_ID, model, metadata });
+  const { sessionId } = await createSession({ agent: SABY_AGENT_ID, model, metadata, byok });
   await prompt({ sessionId, promptText });
 
   const tokenTally = { sessionId, startedAt: new Date().toISOString(), inputTokens: 0, outputTokens: 0 };

@@ -30,7 +30,7 @@ describe('agentThread.service', () => {
     test('inserts and returns the created thread', async () => {
       const thread = await agentThread.createThread({ tenantId: 't-1', userId: 'u-1', title: 'Hello' });
       expect(thread.threadId).toBe('thr-1');
-      expect(allQueries()).toContain('INSERT INTO copilot.chat_threads');
+      expect(allQueries()).toContain('INSERT INTO copilot.agent_threads');
     });
 
     test('rejects missing identity', async () => {
@@ -77,15 +77,15 @@ describe('agentThread.service', () => {
         inputTokens: 10,
       });
       expect(id).toBe('5');
-      expect(allQueries()).toContain('INSERT INTO copilot.chat_messages');
-      expect(allQueries()).toContain('UPDATE copilot.chat_threads');
+      expect(allQueries()).toContain('INSERT INTO copilot.agent_messages');
+      expect(allQueries()).toContain('UPDATE copilot.agent_threads');
     });
   });
 
   describe('deleteThread', () => {
     test('deletes the tenant thread after verifying it exists', async () => {
       await agentThread.deleteThread({ tenantId: 't-1', threadId: 'thr-1' });
-      expect(allQueries()).toContain('DELETE FROM copilot.chat_threads');
+      expect(allQueries()).toContain('DELETE FROM copilot.agent_threads');
     });
   });
 });

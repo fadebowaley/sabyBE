@@ -17,6 +17,7 @@ const copilotEntityResolverService = require('../services/copilotEntityResolver.
 const copilotProjectWizardService = require('../services/copilotProjectWizard.service');
 const copilotOnboardingService = require('../services/copilotOnboarding.service');
 const copilotOnboardingJobService = require('../services/copilotOnboardingJob.service');
+const copilotPeopleService = require('../services/copilotPeople.service');
 const { queueOnboardingImportJob } = require('../queues/onboardingImport.queue');
 const modelRouterService         = require('../services/modelRouter.service');
 const promptRegistryService      = require('../services/promptRegistry.service');
@@ -42,6 +43,7 @@ const AGENT_WORKFLOWS = [
   { name: 'compliance_monitor', cron: '0 2 * * *' },
   { name: 'data_intelligence',  cron: '0 3 * * *' },
   { name: 'agent_eval',         cron: '0 4 * * *' },
+  { name: 'people_intelligence', cron: '0 5 * * *' },
 ];
 async function seedAgentSchedulesForTenant(tenantId) {
   for (const wf of AGENT_WORKFLOWS) {
@@ -768,6 +770,48 @@ const resolveEntityReference = catchAsync(async (req, res) => {
     source: 'resolve_api',
   });
   res.status(httpStatus.OK).send(result);
+});
+
+const getPeopleState = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const state = await copilotPeopleService.getPeopleState({
+    tenantId,
+    userId: req.body.userId,
+    nodeId: req.body.nodeId,
+    roleId: req.body.roleId,
+  });
+  res.status(httpStatus.OK).send(state);
+});
+
+const observePeople = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const result = await copilotPeopleService.observePeople({
+    tenantId,
+    ruleId: req.body.ruleId,
+    userId: req.body.userId,
+    nodeId: req.body.nodeId,
+    policy: req.body.policy,
+  });
+  res.status(httpStatus.OK).send(result);
+});
+
+const recordPeopleEvent = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const requestedByUserId = resolveUserId(req.user);
+  const record = await copilotPeopleService.recordPeopleEvent({
+    tenantId,
+    requestedByUserId,
+    kind: req.body.kind,
+    summary: req.body.summary,
+    ruleId: req.body.ruleId,
+    subject: req.body.subject,
+    evidence: req.body.evidence,
+    suggestedCapability: req.body.suggestedCapability,
+    responseClass: req.body.responseClass,
+    rationale: req.body.rationale,
+    verification: req.body.verification,
+  });
+  res.status(httpStatus.CREATED).send({ record });
 });
 
 const generateProjectWizardDraft = catchAsync(async (req, res) => {
@@ -1578,6 +1622,9 @@ module.exports = {
   clearFocusState,
   searchEntities,
   resolveEntityReference,
+  getPeopleState,
+  observePeople,
+  recordPeopleEvent,
   generateProjectWizardDraft,
   finalizeProjectWizardDraft,
   saveProjectWizardDraft,

@@ -408,7 +408,8 @@ const TOOLS = [
     idempotency_key_required: true,
     audit_required: true,
     retry_policy: retryPolicy,
-    rollback_strategy: 'No automatic rollback. Apply a corrected update if needed.',
+    rollback_strategy:
+      'No automatic rollback. Apply a corrected update if needed.',
     schema_json: {
       type: 'object',
       properties: {
@@ -469,7 +470,8 @@ const TOOLS = [
     idempotency_key_required: true,
     audit_required: true,
     retry_policy: retryPolicy,
-    rollback_strategy: 'No automatic rollback. Deleted users cannot be restored.',
+    rollback_strategy:
+      'No automatic rollback. Deleted users cannot be restored.',
     schema_json: {
       type: 'object',
       properties: {
@@ -495,7 +497,8 @@ const TOOLS = [
     idempotency_key_required: true,
     audit_required: true,
     retry_policy: retryPolicy,
-    rollback_strategy: 'No automatic rollback. Require a new approved reset if correction is needed.',
+    rollback_strategy:
+      'No automatic rollback. Require a new approved reset if correction is needed.',
     schema_json: {
       type: 'object',
       properties: {
@@ -533,6 +536,143 @@ const TOOLS = [
         nodeIds: { type: 'array', items: { type: 'string' } },
       },
       required: ['userId'],
+    },
+    output_schema_json: actionEventOutputSchema,
+    metadata: { phase: 'copilot-embed', owner: 'copilot' },
+  },
+  {
+    tool_name: 'action_unassign_role',
+    description: 'Unassign one or more roles from a user',
+    category: 'people',
+    action_type: 'unassign_role',
+    enabled: true,
+    requires_approval: false,
+    reversible: true,
+    timeout_ms: 20000,
+    risk_level: 'CRITICAL',
+    required_permissions: ['user:assign'],
+    tenant_scope_required: true,
+    idempotency_key_required: true,
+    audit_required: true,
+    retry_policy: retryPolicy,
+    rollback_strategy: 'Reverse with an approved assign_role action.',
+    schema_json: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string' },
+        roleId: { type: 'string' },
+        roleIds: { type: 'array', items: { type: 'string' } },
+      },
+      required: ['userId'],
+    },
+    output_schema_json: actionEventOutputSchema,
+    metadata: { phase: 'copilot-embed', owner: 'copilot' },
+  },
+  {
+    tool_name: 'action_reactivate_user',
+    description: 'Reactivate a deactivated user account',
+    category: 'people',
+    action_type: 'reactivate_user',
+    enabled: true,
+    requires_approval: false,
+    reversible: true,
+    timeout_ms: 20000,
+    risk_level: 'HIGH',
+    required_permissions: ['user:update'],
+    tenant_scope_required: true,
+    idempotency_key_required: true,
+    audit_required: true,
+    retry_policy: retryPolicy,
+    rollback_strategy: 'Reverse with an approved deactivate_user action.',
+    schema_json: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string' },
+      },
+      required: ['userId'],
+    },
+    output_schema_json: actionEventOutputSchema,
+    metadata: { phase: 'copilot-embed', owner: 'copilot' },
+  },
+  {
+    tool_name: 'action_verify_account',
+    description: 'Verify a user account (email + OTP + active)',
+    category: 'people',
+    action_type: 'verify_account',
+    enabled: true,
+    requires_approval: false,
+    reversible: false,
+    timeout_ms: 20000,
+    risk_level: 'HIGH',
+    required_permissions: ['user:update'],
+    tenant_scope_required: true,
+    idempotency_key_required: true,
+    audit_required: true,
+    retry_policy: retryPolicy,
+    rollback_strategy:
+      'No automatic rollback. Deactivate the account if verification must be undone.',
+    schema_json: {
+      type: 'object',
+      properties: {
+        email: { type: 'string' },
+        userId: { type: 'string' },
+      },
+      required: ['email'],
+    },
+    output_schema_json: actionEventOutputSchema,
+    metadata: { phase: 'copilot-embed', owner: 'copilot' },
+  },
+  {
+    tool_name: 'action_assign_user_to_node',
+    description: 'Assign a user to a workspace node',
+    category: 'people',
+    action_type: 'assign_user_to_node',
+    enabled: true,
+    requires_approval: false,
+    reversible: true,
+    timeout_ms: 20000,
+    risk_level: 'HIGH',
+    required_permissions: ['node:manage'],
+    tenant_scope_required: true,
+    idempotency_key_required: true,
+    audit_required: true,
+    retry_policy: retryPolicy,
+    rollback_strategy:
+      'Reverse with an approved unassign_user_from_node action.',
+    schema_json: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string' },
+        nodeId: { type: 'string' },
+      },
+      required: ['userId', 'nodeId'],
+    },
+    output_schema_json: actionEventOutputSchema,
+    metadata: { phase: 'copilot-embed', owner: 'copilot' },
+  },
+  {
+    tool_name: 'action_unassign_user_from_node',
+    description: 'Unassign a user from a workspace node',
+    category: 'people',
+    action_type: 'unassign_user_from_node',
+    enabled: true,
+    requires_approval: false,
+    reversible: true,
+    timeout_ms: 20000,
+    risk_level: 'HIGH',
+    required_permissions: ['node:manage'],
+    tenant_scope_required: true,
+    idempotency_key_required: true,
+    audit_required: true,
+    retry_policy: retryPolicy,
+    rollback_strategy: 'Reverse with an approved assign_user_to_node action.',
+    schema_json: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string' },
+        nodeId: { type: 'string' },
+      },
+      required: ['userId', 'nodeId'],
     },
     output_schema_json: actionEventOutputSchema,
     metadata: { phase: 'copilot-embed', owner: 'copilot' },
@@ -694,7 +834,8 @@ const TOOLS = [
     idempotency_key_required: true,
     audit_required: true,
     retry_policy: retryPolicy,
-    rollback_strategy: 'Reverse with an approved restore_node action when available.',
+    rollback_strategy:
+      'Reverse with an approved restore_node action when available.',
     schema_json: {
       type: 'object',
       properties: {
@@ -720,7 +861,8 @@ const TOOLS = [
     idempotency_key_required: true,
     audit_required: true,
     retry_policy: retryPolicy,
-    rollback_strategy: 'No automatic rollback. Require an approved move_node action back to the prior parent.',
+    rollback_strategy:
+      'No automatic rollback. Require an approved move_node action back to the prior parent.',
     schema_json: {
       type: 'object',
       properties: {
@@ -749,7 +891,8 @@ const TOOLS = [
     idempotency_key_required: true,
     audit_required: true,
     retry_policy: retryPolicy,
-    rollback_strategy: 'Reverse with an approved withdraw_submission action when available.',
+    rollback_strategy:
+      'Reverse with an approved withdraw_submission action when available.',
     schema_json: {
       type: 'object',
       properties: {
@@ -855,7 +998,8 @@ const TOOLS = [
     idempotency_key_required: true,
     audit_required: true,
     retry_policy: retryPolicy,
-    rollback_strategy: 'No automatic rollback. Deleted submissions cannot be restored.',
+    rollback_strategy:
+      'No automatic rollback. Deleted submissions cannot be restored.',
     schema_json: {
       type: 'object',
       properties: {
@@ -966,7 +1110,8 @@ const TOOLS = [
     idempotency_key_required: true,
     audit_required: true,
     retry_policy: retryPolicy,
-    rollback_strategy: 'No automatic rollback. Archive the form if no longer needed.',
+    rollback_strategy:
+      'No automatic rollback. Archive the form if no longer needed.',
     schema_json: {
       type: 'object',
       properties: {
@@ -995,7 +1140,8 @@ const TOOLS = [
     idempotency_key_required: true,
     audit_required: true,
     retry_policy: retryPolicy,
-    rollback_strategy: 'No automatic rollback. Complete or cancel the payment through the payment flow.',
+    rollback_strategy:
+      'No automatic rollback. Complete or cancel the payment through the payment flow.',
     schema_json: {
       type: 'object',
       properties: {

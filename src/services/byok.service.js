@@ -98,7 +98,13 @@ const ensureTenantsConfigTable = async () => {
   }
 };
 
-const SUPPORTED_PROVIDERS = ['openai', 'gemini', 'deepseek', 'claude'];
+const SUPPORTED_PROVIDERS = [
+  'openai',
+  'gemini',
+  'deepseek',
+  'claude',
+  'opencode',
+];
 
 /**
  * Retrieves configured BYOK keys for a tenant (masked).
@@ -200,7 +206,10 @@ const saveTenantByokKey = async ({
   }
 
   if (typeof apiKey !== 'string' || apiKey.trim().length < 8) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Valid API key is required (minimum 8 characters)');
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Valid API key is required (minimum 8 characters)'
+    );
   }
 
   const trimmedKey = apiKey.trim();
@@ -528,6 +537,51 @@ const testProviderKey = async ({ provider, apiKey, model = null }) => {
           res.statusCode === 401
             ? 'Invalid Anthropic Claude API key'
             : `Claude returned status ${res.statusCode}`,
+      };
+    }
+
+    if (normalizedProvider === 'opencode') {
+      // Console Console BYOK probe: POST https://opencode.ai/inference/opencode/v1/chat/completions (1-token ping)
+      // Console free tier is gated to only be used from within OpenCode; this BYOK branch verifies
+      // a paid Console token. Deterministically: the token is only ever sent to this host+path.
+      const postBody = JSON.stringify({
+        model: model || 'big-pickle',
+        max_tokens: 1,
+        messages: [{ role: 'user', content: 'hi' }],
+      });
+
+      const res = await makeHttpsProbe(
+        {
+          hostname: 'opencode.ai',
+          port: 443,
+          path: '/inference/opencode/v1/chat/completions',
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${trimmedKey}`,
+            'content-type': 'application/json',
+            'content-length': Buffer.byteLength(postBody),
+            'User-Agent': 'Saby-BYOK-Verifier/1.0',
+          },
+        },
+        postBody
+      );
+
+      if (res.ok) {
+        return {
+          success: true,
+          provider: 'opencode',
+          latencyMs: res.latencyMs,
+          message: 'OpenCode Console key verified',
+        };
+      }
+      return {
+        success: false,
+        provider: 'opencode',
+        statusCode: res.statusCode,
+        error:
+          res.statusCode === 401
+            ? 'Invalid OpenCode Console key'
+            : `OpenCode Console returned status ${res.statusCode}`,
       };
     }
 

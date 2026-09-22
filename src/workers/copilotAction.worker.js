@@ -5,6 +5,7 @@ const {
   executeActionEvent,
 } = require('../services/copilotCommandHandler.service');
 const workflowEngineService = require('../services/workflowEngine.service');
+const peopleHistoryService = require('../services/peopleHistory.service');
 const { feedbackToResultJson } = require('../services/copilotFeedback.service');
 
 const POLL_MS = Number(config.copilot?.workerIntervalMs || 3000);
@@ -55,6 +56,24 @@ const processOutboxRecord = async (record) => {
       throw new Error(
         `No execution handler implemented for action_type=${event.action_type}`
       );
+    }
+
+    // Append-only people history (non-fatal): record the subject timeline for
+    // agent-initiated people mutations so the access_flux rule can observe it.
+    if (peopleHistoryService.PEOPLE_ACTIONS.has(event.action_type)) {
+      try {
+        await peopleHistoryService.recordPeopleMutation({
+          tenantId: event.tenant_id,
+          actionEventId: event.id,
+          actionType: event.action_type,
+          payload: event.payload_json || {},
+          actorUserId: event.actor_user_id || null,
+        });
+      } catch (historyErr) {
+        logger.warn(
+          `[${WORKER_ID}] People history write failed (non-fatal): ${historyErr.message}`
+        );
+      }
     }
 
     await client.query(

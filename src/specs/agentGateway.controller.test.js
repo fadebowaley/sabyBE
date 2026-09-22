@@ -104,6 +104,51 @@ describe('agentGateway.controller', () => {
       });
   });
 
+  test('chat forwards the selected BYOK key and provider to the engine', async () => {
+    process.env.SABY_ENGINE_ENABLED = 'true';
+    agentQuotaService.assertQuota.mockResolvedValue({
+      allowed: true,
+      mode: 'byok',
+      byokProvider: 'openai',
+      balance: null,
+    });
+    engineClient.createRun.mockImplementation(async ({ onEvent }) => {
+      onEvent({ type: 'session.message.done', data: { usage: { inputTokens: 5 } } });
+      return { durationMs: 50 };
+    });
+
+    await request(app)
+      .post('/v1/agent/chat')
+      .set('x-ai-api-key', 'sk-user-selected-key')
+      .send({ message: 'hello', model: 'gpt-4o-mini' })
+      .expect(200);
+
+    expect(engineClient.createRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        byok: {
+          apiKey: 'sk-user-selected-key',
+          provider: 'openai',
+          model: 'gpt-4o-mini',
+        },
+      })
+    );
+  });
+
+  test('chat does not send byok when no user key is supplied', async () => {
+    process.env.SABY_ENGINE_ENABLED = 'true';
+    engineClient.createRun.mockImplementation(async ({ onEvent }) => {
+      onEvent({ type: 'session.message.done', data: { usage: { inputTokens: 5 } } });
+      return { durationMs: 50 };
+    });
+
+    await request(app)
+      .post('/v1/agent/chat')
+      .send({ message: 'hello' })
+      .expect(200);
+
+    expect(engineClient.createRun).toHaveBeenCalledWith(expect.objectContaining({ byok: null }));
+  });
+
   test('history threads CRUD works', async () => {
     const listRes = await request(app).get('/v1/agent/history/threads').expect(200);
     expect(listRes.body.data.items).toEqual([thread]);
