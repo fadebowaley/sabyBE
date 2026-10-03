@@ -1501,6 +1501,7 @@ const TOOLS = [
       required: ['eventId'],
     },
     output_schema_json: actionEventOutputSchema,
+  },
   {
     tool_name: 'action_query_events',
     description: 'Query and list calendar events and meetings with optional date range, status, or search query',

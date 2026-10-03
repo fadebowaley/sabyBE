@@ -26,7 +26,7 @@ const isTerminalType = (type, data) => {
   if (type === 'session.status' && data?.status?.type === 'idle') return true;
   if (
     typeof type === 'string' &&
-    /(run\.completed|stream\.done|session\.completed)$/i.test(type)
+    /(completed|finished|done|complete)$/i.test(type)
   )
     return true;
   return false;
@@ -152,7 +152,10 @@ const extractText = (event) => {
   if (Array.isArray(data?.message?.parts)) {
     const text = data.message.parts
       .filter(
-        (part) => part && part.type === 'text' && typeof part.text === 'string'
+        (part) =>
+          part &&
+          typeof part.text === 'string' &&
+          part.type !== 'reasoning'
       )
       .map((part) => part.text)
       .join('');
@@ -164,7 +167,12 @@ const extractText = (event) => {
 
 const extractUsage = (event) => {
   const data = event?.properties || event?.data || event;
-  const usage = data?.usage || event?.usage || null;
+  const usage =
+    data?.usage ||
+    event?.usage ||
+    data?.summary ||
+    event?.summary ||
+    null;
   if (!usage || typeof usage !== 'object') return null;
   if ('files' in usage && !('inputTokens' in usage || 'input' in usage)) {
     return null;
@@ -222,6 +230,12 @@ const translateEngineEvent = (engineEvent, targetSessionId = null) => {
     return { type: 'error', error: errorMessage };
   }
 
+  // Check if session has usage or is terminal
+  const usage = extractUsage(engineEvent);
+  if (usage || isTerminalType(type, data)) {
+    return { type: 'done', usage, sessionId: eventSessionId };
+  }
+
   // Stream reasoning token if this is reasoning/thinking content (checked before text!)
   const reasoning = extractReasoning(engineEvent);
   if (reasoning) {
@@ -239,12 +253,6 @@ const translateEngineEvent = (engineEvent, targetSessionId = null) => {
     return { type: 'token', token: text, sessionId: eventSessionId };
   }
 
-  // Check if session is truly terminal (session.idle or session.status with idle)
-  if (isTerminalType(type, data)) {
-    const usage = extractUsage(engineEvent);
-    return { type: 'done', usage, sessionId: eventSessionId };
-  }
-
   // Detect reasoning/thinking progress start
   if (
     data?.field === 'reasoning' ||
@@ -256,7 +264,11 @@ const translateEngineEvent = (engineEvent, targetSessionId = null) => {
   }
 
   if (isToolEvent(engineEvent)) {
-    return { type: 'progress', stage: 'tools', sessionId: eventSessionId };
+    return {
+      type: 'progress',
+      stage: 'tools',
+      ...(eventSessionId ? { sessionId: eventSessionId } : {}),
+    };
   }
 
   return {

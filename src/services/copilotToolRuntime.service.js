@@ -224,7 +224,6 @@ const resolveEntityTypeForAction = async (actionType) => {
       'publish_project_form',
       'unpublish_project_form',
       'delete_project_form',
-      'create_project_form',
     ].includes(actionType)
   ) {
     return 'project_form';

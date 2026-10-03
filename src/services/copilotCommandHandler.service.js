@@ -343,50 +343,23 @@ const handleCreateUser = async (event) => {
 
 const handleSubmitData = async (event) => {
   requireObjectPayload(event.payload_json);
-  const payload = event.payload_json;
-  const submissionBody = payload.submissionBody || { ...payload };
-
-  const formId = submissionBody.formId || submissionBody.projectFormId || event.entity_id;
-  let projectId = submissionBody.projectId;
-  const rawData =
-    submissionBody.data ||
-    submissionBody.submissionData ||
-    submissionBody.formData ||
-    {};
-  const wrappedData = {
-    submissionData: rawData,
-    formData: rawData,
-    data: rawData,
+  const submissionBody = event.payload_json.submissionBody || {
+    ...event.payload_json,
   };
-  const actorUser = await resolveActorUser(event);
 
-  if (formId) {
-    const pf = await ProjectForm.findOne({
-      $or: [{ _id: formId }, { projectId: formId }],
-      tenantId: event.tenant_id,
-      deletedAt: null,
-    });
-    if (pf) {
-      projectId = pf.projectId || String(pf._id);
-      tenantId = pf.tenantId;
-    }
+  if (!submissionBody.tenantId) {
+    submissionBody.tenantId = event.tenant_id;
+  }
+  if (!submissionBody.userId && event.actor_user_id) {
+    submissionBody.userId = event.actor_user_id;
   }
 
-  // Create submission directly via projectFormSubmissionService
-  const created = await projectFormSubmissionService.createSubmission(
-    wrappedData,
-    projectId || formId,
-    tenantId,
-    actorUser?._id || null
-  );
-
+  const queued = await queueSubmission(submissionBody);
   return {
     handled: true,
-    resultType: 'submission_created',
-    entityId: String(created._id || created.id),
-    submissionId: String(created._id || created.id),
-    projectId,
-    status: created.status || 'submitted',
+    resultType: 'submission_queued',
+    jobId: queued.jobId,
+    queueStatus: queued.status,
   };
 };
 
@@ -402,29 +375,22 @@ const handleApproveSubmission = async (event) => {
     );
   }
 
-  const submission = await ProjectFormSubmission.findOne({
-    _id: submissionId,
+  const queued = await queueUpdateSubmission({
+    submissionId,
+    updates: {
+      ...(payload.updates || {}),
+      status: 'approved',
+    },
+    userId: payload.userId || event.actor_user_id || null,
     tenantId: event.tenant_id,
-    deletedAt: null,
   });
-
-  if (!submission) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
-  }
-
-  submission.status = 'approved';
-  submission.processedAt = new Date();
-  if (event.actor_user_id) {
-    submission.processedBy = event.actor_user_id;
-  }
-  await submission.save();
 
   return {
     handled: true,
-    resultType: 'submission_approved',
-    entityId: String(submission._id || submission.id),
-    submissionId: String(submission._id || submission.id),
-    status: 'approved',
+    resultType: 'submission_approval_queued',
+    submissionId,
+    jobId: queued.jobId,
+    queueStatus: queued.status,
   };
 };
 

@@ -424,6 +424,25 @@ const SEEDED_TOOL_FIXTURES = {
     },
     expectedEntityId: 'event-1',
   },
+  action_query_events: {
+    entityType: 'calendar',
+    actionPayload: {
+      entityId: 'query-events-1',
+      from: '2026-09-01T00:00:00Z',
+      to: '2026-09-30T23:59:59Z',
+      query: 'meeting',
+    },
+    expectedEntityId: 'query-events-1',
+  },
+  action_query_tasks: {
+    entityType: 'task',
+    actionPayload: {
+      entityId: 'query-tasks-1',
+      status: 'pending',
+      query: 'report',
+    },
+    expectedEntityId: 'query-tasks-1',
+  },
 };
 
 describe('copilotToolRuntime.service', () => {
