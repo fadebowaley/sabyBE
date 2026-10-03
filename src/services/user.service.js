@@ -840,6 +840,7 @@ const updateUserById = async (userId, updateBody, currentUser = null) => {
     'status',
     'isActive',
     'isEmailVerified',
+    'isPhoneVerified',
     'otpVerified',
     'otp',
     'otpExpires',

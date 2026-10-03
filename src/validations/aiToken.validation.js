@@ -31,8 +31,17 @@ const listQuotas = {
   }),
 };
 
+const listTokenLogs = {
+  query: Joi.object().keys({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(25),
+    userId: Joi.string().trim().allow('', null).optional(),
+  }),
+};
+
 module.exports = {
   initializeCheckout,
   allocateTokens,
   listQuotas,
+  listTokenLogs,
 };

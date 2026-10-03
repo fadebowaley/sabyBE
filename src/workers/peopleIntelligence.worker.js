@@ -81,26 +81,7 @@ const markScheduleCompleted = async (scheduleId, nextRunAt) => {
  * after migration 038). ON CONFLICT DO NOTHING keeps re-runs safe.
  */
 const ensureSchedulesForActiveTenants = async () => {
-  await postgresPool.query(
-    `INSERT INTO copilot.agent_schedules
-       (tenant_id, workflow_name, trigger_type, cron_expression, scope_json,
-        enabled, next_run_at, created_by)
-     SELECT DISTINCT ON (ae.tenant_id)
-       ae.tenant_id,
-       'people_intelligence',
-       'schedule',
-       '0 5 * * *',
-       '{"interval_hours": 24}'::jsonb,
-       TRUE,
-       NOW(),
-       'worker:bootstrap'
-     FROM copilot.action_events ae
-     LEFT JOIN copilot.agent_schedules s
-       ON s.tenant_id = ae.tenant_id
-      AND s.workflow_name = 'people_intelligence'
-     WHERE s.id IS NULL
-     ON CONFLICT DO NOTHING`
-  );
+  // Deprecated: legacy cron schedules removed in favor of Copilot agent
 };
 
 const processSchedule = async (schedule) => {
@@ -182,38 +163,11 @@ const tick = async () => {
 let intervalHandle = null;
 
 const createPeopleIntelligenceWorker = () => {
-  if (intervalHandle) return intervalHandle;
-
   logger.info(
-    `[${WORKER_ID}] People intelligence worker starting — poll interval ${POLL_MS}ms`
+    `[${WORKER_ID}] People intelligence worker disabled (legacy incident cron removed in favor of Copilot agent)`
   );
-
-  // Back-fill schedules for tenants created after migration 038 (non-fatal)
-  ensureSchedulesForActiveTenants().catch((err) =>
-    logger.error(`[${WORKER_ID}] Schedule bootstrap failed: ${err.message}`)
-  );
-
-  intervalHandle = setInterval(async () => {
-    try {
-      await tick();
-    } catch (err) {
-      logger.error(`[${WORKER_ID}] Unhandled tick error: ${err.message}`);
-    }
-  }, POLL_MS);
-
-  // Run once immediately on boot so a due schedule fires without waiting one interval
-  tick().catch((err) =>
-    logger.error(`[${WORKER_ID}] Initial tick error: ${err.message}`)
-  );
-
   return {
-    close: () => {
-      if (intervalHandle) {
-        clearInterval(intervalHandle);
-        intervalHandle = null;
-        logger.info(`[${WORKER_ID}] People intelligence worker stopped`);
-      }
-    },
+    close: () => {},
   };
 };
 

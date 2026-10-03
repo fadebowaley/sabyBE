@@ -10,6 +10,13 @@ router.get('/packs', aiTokenController.getPacks);
 
 router.get('/balance', auth(), aiTokenController.getBalance);
 
+router.get(
+  '/logs',
+  auth(),
+  validate(aiTokenValidation.listTokenLogs),
+  aiTokenController.getTokenLogs
+);
+
 router.post(
   '/checkout',
   auth(),

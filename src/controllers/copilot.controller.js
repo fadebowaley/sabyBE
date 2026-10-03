@@ -18,6 +18,7 @@ const copilotProjectWizardService = require('../services/copilotProjectWizard.se
 const copilotOnboardingService = require('../services/copilotOnboarding.service');
 const copilotOnboardingJobService = require('../services/copilotOnboardingJob.service');
 const copilotPeopleService = require('../services/copilotPeople.service');
+const copilotStructureService = require('../services/copilotStructure.service');
 const { queueOnboardingImportJob } = require('../queues/onboardingImport.queue');
 const modelRouterService         = require('../services/modelRouter.service');
 const promptRegistryService      = require('../services/promptRegistry.service');
@@ -38,12 +39,11 @@ const logger                     = require('../config/logger');
 
 const resolveUserId = (user = {}) => user.id || user._id || user.userId || null;
 
-// Seed the three worker schedules for a tenant on first onboarding. Idempotent.
+// Seed worker schedules for a tenant on first onboarding.
+// Legacy compliance_monitor and people_intelligence incident cron jobs removed in favor of Copilot agent.
 const AGENT_WORKFLOWS = [
-  { name: 'compliance_monitor', cron: '0 2 * * *' },
   { name: 'data_intelligence',  cron: '0 3 * * *' },
   { name: 'agent_eval',         cron: '0 4 * * *' },
-  { name: 'people_intelligence', cron: '0 5 * * *' },
 ];
 async function seedAgentSchedulesForTenant(tenantId) {
   for (const wf of AGENT_WORKFLOWS) {
@@ -525,9 +525,9 @@ const callTool = catchAsync(async (req, res) => {
     isOwner,
     toolName: req.params.toolName,
     payload: req.body.payload || {},
-    lockKey: req.body.lockKey,
+    lockKey: req.body.lockKey || req.body.payload?.lockKey,
     lockTtlSec: req.body.lockTtlSec,
-    approvalToken: req.body.approvalToken,
+    approvalToken: req.body.approvalToken || req.body.payload?.approvalToken,
     correlationId:
       req.body.correlationId ||
       req.headers['x-correlation-id'] ||
@@ -812,6 +812,45 @@ const recordPeopleEvent = catchAsync(async (req, res) => {
     verification: req.body.verification,
   });
   res.status(httpStatus.CREATED).send({ record });
+});
+
+const getStructureState = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const state = await copilotStructureService.getStructureState({
+    tenantId,
+    nodeId: req.query.nodeId || req.body?.nodeId,
+    rootNodeId: req.query.rootNodeId || req.body?.rootNodeId,
+    structureId: req.query.structureId || req.body?.structureId,
+    levelId: req.query.levelId || req.body?.levelId,
+    maxDepth: req.query.maxDepth !== undefined ? Number(req.query.maxDepth) : req.body?.maxDepth,
+  });
+  res.status(httpStatus.OK).send(state);
+});
+
+const getStructureTree = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const tree = await copilotStructureService.getNodeSubtree({
+    tenantId,
+    nodeId: req.query.nodeId || req.params?.nodeId,
+    maxDepth: req.query.maxDepth !== undefined ? Number(req.query.maxDepth) : undefined,
+  });
+  res.status(httpStatus.OK).send(tree);
+});
+
+const getStructureMetrics = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const metrics = await copilotStructureService.getStructureMetrics({ tenantId });
+  res.status(httpStatus.OK).send(metrics);
+});
+
+const simulateStructuralMutation = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const simulation = await copilotStructureService.simulateStructuralMutation({
+    tenantId,
+    action: req.body.action,
+    params: req.body.params,
+  });
+  res.status(httpStatus.OK).send(simulation);
 });
 
 const generateProjectWizardDraft = catchAsync(async (req, res) => {
@@ -1625,6 +1664,10 @@ module.exports = {
   getPeopleState,
   observePeople,
   recordPeopleEvent,
+  getStructureState,
+  getStructureTree,
+  getStructureMetrics,
+  simulateStructuralMutation,
   generateProjectWizardDraft,
   finalizeProjectWizardDraft,
   saveProjectWizardDraft,

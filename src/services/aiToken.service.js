@@ -58,6 +58,25 @@ const ensureTenantQuotaTable = async () => {
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
+
+      CREATE TABLE IF NOT EXISTS copilot.user_token_logs (
+        id BIGSERIAL PRIMARY KEY,
+        run_id VARCHAR(128),
+        tenant_id VARCHAR(128) NOT NULL,
+        user_id VARCHAR(128) NOT NULL,
+        thread_id VARCHAR(64),
+        model VARCHAR(128),
+        tokens_consumed BIGINT NOT NULL DEFAULT 0,
+        input_tokens BIGINT NOT NULL DEFAULT 0,
+        output_tokens BIGINT NOT NULL DEFAULT 0,
+        balance_before BIGINT,
+        balance_after BIGINT,
+        action VARCHAR(64) NOT NULL DEFAULT 'agent_chat',
+        metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS idx_user_token_logs_tenant ON copilot.user_token_logs (tenant_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_user_token_logs_user ON copilot.user_token_logs (tenant_id, user_id, created_at DESC);
     `);
     _tableEnsured = true;
   } catch (error) {
@@ -407,20 +426,75 @@ const listAllTenantQuotas = async ({ page = 1, limit = 25, search = '' }) => {
 };
 
 /**
- * Deducts consumed AI tokens from a tenant's quota after an agent run.
+ * Deducts consumed AI tokens from a tenant's quota after an agent run,
+ * and records an auditable log entry into copilot.user_token_logs.
  * Never drives the balance below zero; isSaby/unlimited tenants are exempt.
- * The gateway usage meter calls this on run completion.
  */
-const deductAiUsage = async ({ tenantId, tokens = 0, isUnlimited = false }) => {
+const deductAiUsage = async ({
+  tenantId,
+  userId = null,
+  runId = null,
+  threadId = null,
+  model = null,
+  tokens = 0,
+  inputTokens = 0,
+  outputTokens = 0,
+  action = 'agent_chat',
+  isUnlimited = false,
+}) => {
   const consumed = Math.max(0, Math.round(Number(tokens) || 0));
   if (!tenantId) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId is required.');
   }
-  if (isUnlimited || consumed === 0) {
-    return { tenantId, isUnlimited, deducted: consumed, remainingTokens: Infinity };
-  }
 
   await ensureTenantQuotaTable();
+
+  // If unlimited or zero tokens consumed, still record user token log if userId is provided
+  if (isUnlimited || consumed === 0) {
+    if (userId) {
+      try {
+        await postgresPool.query(
+          `INSERT INTO copilot.user_token_logs (
+             run_id, tenant_id, user_id, thread_id, model,
+             tokens_consumed, input_tokens, output_tokens,
+             balance_before, balance_after, action, metadata
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb);`,
+          [
+            runId ? String(runId) : null,
+            String(tenantId),
+            String(userId),
+            threadId ? String(threadId) : null,
+            model || null,
+            consumed,
+            Math.max(0, Number(inputTokens) || 0),
+            Math.max(0, Number(outputTokens) || 0),
+            null,
+            null,
+            action || 'agent_chat',
+            JSON.stringify({ isUnlimited: Boolean(isUnlimited) }),
+          ]
+        );
+      } catch (logErr) {
+        logger.warn(`[AiTokenService] Failed to record user token log: ${logErr.message}`);
+      }
+    }
+    return { tenantId, userId, isUnlimited, deducted: consumed, remainingTokens: Infinity };
+  }
+
+  // Fetch current remaining tokens before deduction
+  let balanceBefore = null;
+  try {
+    const currentRes = await postgresPool.query(
+      `SELECT remaining_tokens FROM copilot.tenant_ai_quotas WHERE tenant_id = $1 LIMIT 1;`,
+      [String(tenantId)]
+    );
+    if (currentRes.rows.length > 0) {
+      balanceBefore = Number(currentRes.rows[0].remaining_tokens || 0);
+    }
+  } catch (err) {
+    logger.warn(`[AiTokenService] Failed reading balance before deduction: ${err.message}`);
+  }
+
   const res = await postgresPool.query(
     `UPDATE copilot.tenant_ai_quotas
      SET used_tokens = copilot.tenant_ai_quotas.used_tokens + $2,
@@ -433,16 +507,112 @@ const deductAiUsage = async ({ tenantId, tokens = 0, isUnlimited = false }) => {
   );
 
   const row = res.rows[0];
+  const balanceAfter = row ? Number(row.remaining_tokens) : 0;
+
+  if (userId) {
+    try {
+      await postgresPool.query(
+        `INSERT INTO copilot.user_token_logs (
+           run_id, tenant_id, user_id, thread_id, model,
+           tokens_consumed, input_tokens, output_tokens,
+           balance_before, balance_after, action, metadata
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb);`,
+        [
+          runId ? String(runId) : null,
+          String(tenantId),
+          String(userId),
+          threadId ? String(threadId) : null,
+          model || null,
+          consumed,
+          Math.max(0, Number(inputTokens) || 0),
+          Math.max(0, Number(outputTokens) || 0),
+          balanceBefore,
+          balanceAfter,
+          action || 'agent_chat',
+          JSON.stringify({ isUnlimited: Boolean(isUnlimited) }),
+        ]
+      );
+    } catch (logErr) {
+      logger.warn(`[AiTokenService] Failed to record user token log: ${logErr.message}`);
+    }
+  }
+
   if (!row) {
-    return { tenantId, isUnlimited: false, deducted: 0, remainingTokens: 0, noQuota: true };
+    return { tenantId, userId, isUnlimited: false, deducted: 0, remainingTokens: 0, noQuota: true };
   }
 
   return {
     tenantId,
+    userId,
     isUnlimited: false,
     deducted: consumed,
     usedTokens: Number(row.used_tokens),
-    remainingTokens: Number(row.remaining_tokens),
+    remainingTokens: balanceAfter,
+  };
+};
+
+/**
+ * Lists token consumption logs for a tenant, optionally filtered by userId.
+ */
+const listUserTokenLogs = async ({ tenantId, userId = null, page = 1, limit = 25 }) => {
+  if (!tenantId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId is required.');
+  }
+  await ensureTenantQuotaTable();
+  const safePage = Math.max(1, Number(page) || 1);
+  const safeLimit = Math.min(100, Math.max(1, Number(limit) || 25));
+  const offset = (safePage - 1) * safeLimit;
+
+  const params = [String(tenantId)];
+  let where = 'WHERE tenant_id = $1';
+  if (userId) {
+    params.push(String(userId));
+    where += ` AND user_id = $${params.length}`;
+  }
+
+  const queryText = `
+    SELECT id, run_id, tenant_id, user_id, thread_id, model,
+           tokens_consumed, input_tokens, output_tokens,
+           balance_before, balance_after, action, metadata, created_at
+    FROM copilot.user_token_logs
+    ${where}
+    ORDER BY created_at DESC
+    LIMIT $${params.length + 1} OFFSET $${params.length + 2};
+  `;
+  params.push(safeLimit, offset);
+
+  const res = await postgresPool.query(queryText, params);
+
+  const countParams = params.slice(0, userId ? 2 : 1);
+  const countRes = await postgresPool.query(
+    `SELECT count(*)::int as total FROM copilot.user_token_logs ${where};`,
+    countParams
+  );
+  const total = Number(countRes.rows[0]?.total || 0);
+
+  return {
+    items: res.rows.map((row) => ({
+      id: String(row.id),
+      runId: row.run_id,
+      tenantId: row.tenant_id,
+      userId: row.user_id,
+      threadId: row.thread_id,
+      model: row.model,
+      tokensConsumed: Number(row.tokens_consumed),
+      inputTokens: Number(row.input_tokens),
+      outputTokens: Number(row.output_tokens),
+      balanceBefore: row.balance_before != null ? Number(row.balance_before) : null,
+      balanceAfter: row.balance_after != null ? Number(row.balance_after) : null,
+      action: row.action,
+      metadata: row.metadata || {},
+      createdAt: row.created_at,
+    })),
+    pagination: {
+      page: safePage,
+      limit: safeLimit,
+      total,
+      totalPages: Math.ceil(total / safeLimit),
+    },
   };
 };
 
@@ -455,4 +625,5 @@ module.exports = {
   allocateTokensManually,
   listAllTenantQuotas,
   deductAiUsage,
+  listUserTokenLogs,
 };

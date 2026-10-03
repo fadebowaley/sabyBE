@@ -200,7 +200,7 @@ const summarizeUsage = async ({ tenantId, since = null }) => {
   };
 };
 
-const listUsage = async ({ tenantId, page = 1, limit = 25 }) => {
+const listUsage = async ({ tenantId, userId = null, page = 1, limit = 25 }) => {
   if (!tenantId) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId is required.');
   }
@@ -208,19 +208,29 @@ const listUsage = async ({ tenantId, page = 1, limit = 25 }) => {
   const safePage = Math.max(1, Number(page) || 1);
   const safeLimit = Math.min(100, Math.max(1, Number(limit) || 25));
   const offset = (safePage - 1) * safeLimit;
+
+  const params = [String(tenantId)];
+  let where = 'WHERE tenant_id = $1';
+  if (userId) {
+    params.push(String(userId));
+    where += ` AND user_id = $${params.length}`;
+  }
+
   const res = await postgresPool.query(
     `SELECT id, run_id, tenant_id, user_id, thread_id, model, input_tokens, output_tokens,
             model_calls, tool_calls, subagent_calls, retries, duration_ms,
             estimated_cost_cents, quota_consumed, metadata, created_at
      FROM copilot.usage_events
-     WHERE tenant_id = $1
+     ${where}
      ORDER BY created_at DESC
-     LIMIT $2 OFFSET $3;`,
-    [String(tenantId), safeLimit, offset]
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2};`,
+    [...params, safeLimit, offset]
   );
   return res.rows.map((row) => ({
     id: String(row.id),
     runId: row.run_id,
+    tenantId: row.tenant_id,
+    userId: row.user_id,
     threadId: row.thread_id,
     model: row.model,
     inputTokens: Number(row.input_tokens),

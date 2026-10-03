@@ -6,14 +6,18 @@ const chat = {
     threadId: Joi.string().trim().max(64).allow(null).optional(),
     model: Joi.string().trim().max(128).allow(null).optional(),
     title: Joi.string().trim().max(512).allow(null).optional(),
-  }),
+  }).unknown(true),
 };
 
 const createThread = {
   body: Joi.object().keys({
+    threadId: Joi.string().trim().max(64).allow(null).optional(),
     title: Joi.string().trim().max(512).default('New conversation'),
+    preview: Joi.string().max(1000).allow('', null).optional(),
+    turns: Joi.array().optional(),
+    metadata: Joi.object().optional(),
     model: Joi.string().trim().max(128).allow(null).optional(),
-  }),
+  }).unknown(true),
 };
 
 const listThreads = {
@@ -36,6 +40,7 @@ const listUsage = {
   query: Joi.object().keys({
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(100).default(25),
+    userId: Joi.string().trim().allow('', null).optional(),
   }),
 };
 

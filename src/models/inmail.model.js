@@ -14,9 +14,10 @@ const inmailSchema = mongoose.Schema(
     starred: { type: Boolean, default: false },
     status: {
       type: String,
-      enum: ['inbox', 'sent', 'drafts', 'starred', 'trash'],
+      enum: ['inbox', 'sent', 'drafts', 'starred', 'trash', 'archive', 'archived'],
       default: 'inbox',
     },
+    archivedAt: { type: Date, default: null },
     channel: { type: String },
     attachments: [
       {

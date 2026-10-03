@@ -237,22 +237,38 @@ const queryMessages = async (filter, options, user) => {
   }
 
   // Filter by user's messages
-  if (filter.inbox) {
+  if (filter.inbox || filter.status === 'inbox') {
     filter.to = user._id;
-    filter.status = 'inbox';
+    filter.status = { $in: ['inbox', 'sent'] };
+    filter.deletedAt = null;
     delete filter.inbox;
-  }
-
-  if (filter.sent) {
+  } else if (filter.sent || filter.status === 'sent') {
     filter.from = user._id;
-    filter.status = 'sent';
+    filter.status = { $in: ['sent', 'inbox'] };
+    filter.deletedAt = null;
     delete filter.sent;
-  }
-
-  if (filter.drafts) {
+  } else if (filter.drafts || filter.status === 'drafts') {
     filter.from = user._id;
     filter.status = 'drafts';
+    filter.deletedAt = null;
     delete filter.drafts;
+  } else if (filter.archive || filter.archived || filter.status === 'archive' || filter.status === 'archived') {
+    filter.$or = [{ to: user._id }, { from: user._id }];
+    filter.status = { $in: ['archive', 'archived'] };
+    filter.deletedAt = null;
+    delete filter.archive;
+    delete filter.archived;
+  } else if (filter.trash || filter.status === 'trash') {
+    filter.$or = [
+      { status: 'trash' },
+      { deletedAt: { $ne: null } },
+    ];
+    delete filter.trash;
+  } else if (filter.starred || filter.status === 'starred') {
+    filter.$or = [{ to: user._id }, { from: user._id }];
+    filter.starred = true;
+    filter.deletedAt = null;
+    delete filter.status;
   }
 
   // Set default sorting
@@ -453,14 +469,14 @@ const getInboxCount = async (userId, tenantId) => {
   const total = await InMail.countDocuments({
     tenantId,
     to: userId,
-    status: 'inbox',
+    status: { $in: ['inbox', 'sent'] },
     deletedAt: null,
   });
 
   const unread = await InMail.countDocuments({
     tenantId,
     to: userId,
-    status: 'inbox',
+    status: { $in: ['inbox', 'sent'] },
     read: false,
     deletedAt: null,
   });
@@ -470,12 +486,48 @@ const getInboxCount = async (userId, tenantId) => {
   return { total, unread };
 };
 
+/**
+ * Archive message
+ * @param {string} id - Message ID
+ * @returns {Promise<InMail>}
+ */
+const archiveMessage = async (id) => {
+  console.log('[InMail Service] Archiving message:', id);
+  const message = await InMail.findById(id);
+  if (!message) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Message not found');
+  }
+  message.status = 'archive';
+  message.archivedAt = new Date();
+  await message.save();
+  return message.populate('from to', 'firstname lastname email');
+};
+
+/**
+ * Toggle or set starred state
+ * @param {string} id - Message ID
+ * @param {boolean} starred - Starred flag
+ * @returns {Promise<InMail>}
+ */
+const starMessage = async (id, starred = true) => {
+  console.log('[InMail Service] Setting starred on message:', { id, starred });
+  const message = await InMail.findById(id);
+  if (!message) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Message not found');
+  }
+  message.starred = Boolean(starred);
+  await message.save();
+  return message.populate('from to', 'firstname lastname email');
+};
+
 module.exports = {
   createMessage,
   getMessageById,
   queryMessages,
   updateMessage,
   deleteMessage,
+  archiveMessage,
+  starMessage,
   sendMessage,
   saveDraft,
   markAsRead,

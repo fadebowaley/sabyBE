@@ -452,6 +452,46 @@ const recordPeopleEvent = {
   }),
 };
 
+const getStructureState = {
+  query: Joi.object().keys({
+    nodeId: Joi.string().trim().max(255).optional(),
+    rootNodeId: Joi.string().trim().max(255).optional(),
+    structureId: Joi.string().trim().max(255).optional(),
+    levelId: Joi.string().trim().max(255).optional(),
+    maxDepth: Joi.number().integer().min(0).max(50).optional(),
+  }),
+  body: Joi.object().keys({
+    nodeId: Joi.string().trim().max(255).optional(),
+    rootNodeId: Joi.string().trim().max(255).optional(),
+    structureId: Joi.string().trim().max(255).optional(),
+    levelId: Joi.string().trim().max(255).optional(),
+    maxDepth: Joi.number().integer().min(0).max(50).optional(),
+  }).optional(),
+};
+
+const getStructureTree = {
+  query: Joi.object().keys({
+    nodeId: Joi.string().trim().max(255).optional(),
+    maxDepth: Joi.number().integer().min(0).max(50).optional(),
+  }),
+};
+
+const getStructureMetrics = {
+  query: Joi.object().keys({}),
+};
+
+const simulateStructuralMutation = {
+  body: Joi.object().keys({
+    action: Joi.string().valid('MOVE_NODE', 'DELETE_NODE', 'ASSIGN_LEVEL', 'ASSIGN_STRUCTURE').required(),
+    params: Joi.object().keys({
+      nodeId: Joi.string().trim().max(255).required(),
+      newParentId: Joi.string().trim().max(255).allow(null, '').optional(),
+      newLevelId: Joi.string().trim().max(255).optional(),
+      newStructureId: Joi.string().trim().max(255).optional(),
+    }).required(),
+  }),
+};
+
 const generateProjectWizardDraft = {
   body: Joi.object().keys({
     prompt: Joi.string().trim().min(5).max(5000).required(),
@@ -1060,6 +1100,10 @@ module.exports = {
   getPeopleState,
   observePeople,
   recordPeopleEvent,
+  getStructureState,
+  getStructureTree,
+  getStructureMetrics,
+  simulateStructuralMutation,
   generateProjectWizardDraft,
   finalizeProjectWizardDraft,
   saveProjectWizardDraft,

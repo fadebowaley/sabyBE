@@ -22,7 +22,7 @@ const RETRYABLE_ERROR_CODES = new Set([
 const ONBOARDING_UPLOAD_ROOT = path.join(os.tmpdir(), 'saby-onboarding-jobs');
 const MAX_ONBOARDING_ROWS = Math.max(
   1,
-  Number(config.copilot?.onboarding?.maxRows || process.env.COPILOT_ONBOARDING_MAX_ROWS || 200000)
+  Number(config.copilot?.onboarding?.maxRows || process.env.COPILOT_ONBOARDING_MAX_ROWS || 1000000)
 );
 
 const resolveMode = (value) => {

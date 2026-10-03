@@ -37,6 +37,7 @@ describe('agentGateway.controller', () => {
       byokProvider: null,
       balance: { remainingTokens: 100, isUnlimited: false },
     });
+    agentQuotaService.resolveTenantByok.mockResolvedValue(null);
     agentThreadService.createThread.mockResolvedValue(thread);
     agentThreadService.getThreadWithMessages.mockResolvedValue({ ...thread, messages: [] });
     agentThreadService.listThreads.mockResolvedValue({ items: [thread], pagination: { total: 1 } });
@@ -69,9 +70,9 @@ describe('agentGateway.controller', () => {
   test('chat streams tokens and a done summary from the engine', async () => {
     process.env.SABY_ENGINE_ENABLED = 'true';
     engineClient.createRun.mockImplementation(async ({ onEvent }) => {
-      onEvent({ id: 'evt_1', type: 'session.message', data: { message: { parts: [{ text: 'Hello' }] } } });
+      onEvent({ id: 'evt_1', type: 'message.part.delta', data: { field: 'text', delta: 'Hello' } });
       onEvent({ type: 'session.permission', data: { permission: { id: 'p' } } });
-      onEvent({ type: 'session.message.done', data: { usage: { inputTokens: 50 } } });
+      onEvent({ type: 'stream.done', data: { usage: { inputTokens: 50 } } });
       return { durationMs: 120 };
     });
 
@@ -106,6 +107,11 @@ describe('agentGateway.controller', () => {
 
   test('chat forwards the selected BYOK key and provider to the engine', async () => {
     process.env.SABY_ENGINE_ENABLED = 'true';
+    agentQuotaService.resolveTenantByok.mockResolvedValue({
+      provider: 'openai',
+      apiKey: 'sk-user-selected-key',
+      defaultModel: 'gpt-4o-mini',
+    });
     agentQuotaService.assertQuota.mockResolvedValue({
       allowed: true,
       mode: 'byok',
@@ -172,5 +178,24 @@ describe('agentGateway.controller', () => {
       .send({ targetTenantId: 't-9', tokens: 1000 })
       .expect(403);
     expect(creditRes.body.message).toContain('Saby superuser');
+  });
+
+  test('usage and token logs endpoints work and record user tokens', async () => {
+    aiTokenService.listUserTokenLogs.mockResolvedValue({
+      items: [{ id: '1', userId: 'u-1', tokensConsumed: 50 }],
+      pagination: { total: 1 },
+    });
+    const logsRes = await request(app).get('/v1/agent/tokens/logs').expect(200);
+    expect(logsRes.body.status).toBe('success');
+    expect(logsRes.body.data.items).toEqual([{ id: '1', userId: 'u-1', tokensConsumed: 50 }]);
+    expect(aiTokenService.listUserTokenLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId: 't-1', userId: 'u-1' })
+    );
+
+    const usageRes = await request(app).get('/v1/agent/usage').expect(200);
+    expect(usageRes.body.status).toBe('success');
+    expect(agentUsageService.listUsage).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId: 't-1', userId: 'u-1' })
+    );
   });
 });

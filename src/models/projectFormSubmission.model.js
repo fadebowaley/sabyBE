@@ -81,7 +81,15 @@ const ProjectFormSubmissionSchema = new mongoose.Schema(
     // Status and validation
     status: {
       type: String,
-      enum: ['submitted', 'processing', 'completed', 'failed', 'archived'],
+      enum: [
+        'submitted',
+        'processing',
+        'completed',
+        'approved',
+        'rejected',
+        'failed',
+        'archived',
+      ],
       default: 'submitted',
     },
 
@@ -186,7 +194,11 @@ ProjectFormSubmissionSchema.statics.createSubmission = async function (
     projectId,
     projectFormId: projectForm._id,
     tenantId,
-    submissionData: submissionData.submissionData || submissionData.formData,
+    submissionData:
+      submissionData?.submissionData ||
+      submissionData?.formData ||
+      submissionData?.data ||
+      submissionData,
     submittedBy,
     submittedAt: submissionData.submittedAt || new Date(),
     metadata: {

@@ -68,6 +68,7 @@ const processOutboxRecord = async (record) => {
           actionType: event.action_type,
           payload: event.payload_json || {},
           actorUserId: event.actor_user_id || null,
+          client,
         });
       } catch (historyErr) {
         logger.warn(
@@ -186,6 +187,16 @@ const processOutboxRecord = async (record) => {
       [record.id]
     );
 
+    await client.query(
+      `UPDATE copilot.action_events
+       SET status = 'completed',
+           completed_at = NOW(),
+           result_json = $2::jsonb,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [event.id, JSON.stringify(executionResult || {})]
+    );
+
     await workflowEngineService.completeActionEvent({
       tenantId: event.tenant_id,
       actionEventId: event.id,
@@ -282,8 +293,8 @@ const claimPendingOutbox = async () => {
     `WITH picked AS (
       SELECT id
       FROM copilot.action_outbox
-      WHERE status = 'pending'
-        AND next_retry_at <= NOW()
+      WHERE (status = 'pending' AND next_retry_at <= NOW())
+         OR (status = 'processing' AND (locked_at IS NULL OR locked_at < NOW() - INTERVAL '120 seconds'))
       ORDER BY created_at ASC
       LIMIT $1
       FOR UPDATE SKIP LOCKED

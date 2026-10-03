@@ -11,10 +11,73 @@ const config = require('../config/config');
 const { v4: uuidv4 } = require('uuid');
 
 class DLQService {
+  constructor() {
+    this._tablesEnsured = false;
+  }
+
+  /**
+   * Ensure DLQ and system alerts tables exist
+   */
+  async ensureTables() {
+    if (this._tablesEnsured) return;
+    try {
+      await postgresPool.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`);
+      await postgresPool.query(`
+        CREATE TABLE IF NOT EXISTS dead_letter_queue (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          job_id VARCHAR(255) UNIQUE NOT NULL,
+          queue_name VARCHAR(100) NOT NULL,
+          job_data JSONB NOT NULL,
+          error_message TEXT,
+          error_stack TEXT,
+          attempts INTEGER DEFAULT 0,
+          failed_at TIMESTAMP WITH TIME ZONE NOT NULL,
+          tenant_id VARCHAR(64),
+          project_id VARCHAR(64),
+          user_id VARCHAR(64),
+          recovered BOOLEAN DEFAULT FALSE,
+          recovered_at TIMESTAMP WITH TIME ZONE,
+          recovered_by VARCHAR(64),
+          recovery_notes TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_dlq_tenant_id ON dead_letter_queue(tenant_id);
+        CREATE INDEX IF NOT EXISTS idx_dlq_queue_name ON dead_letter_queue(queue_name);
+        CREATE INDEX IF NOT EXISTS idx_dlq_failed_at ON dead_letter_queue(failed_at);
+        CREATE INDEX IF NOT EXISTS idx_dlq_recovered ON dead_letter_queue(recovered);
+        CREATE INDEX IF NOT EXISTS idx_dlq_job_id ON dead_letter_queue(job_id);
+
+        CREATE TABLE IF NOT EXISTS system_alerts (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          level VARCHAR(20) NOT NULL,
+          type VARCHAR(50) NOT NULL,
+          message TEXT NOT NULL,
+          error_message TEXT,
+          tenant_id VARCHAR(64),
+          project_id VARCHAR(64),
+          user_id VARCHAR(64),
+          resolved BOOLEAN DEFAULT FALSE,
+          resolved_at TIMESTAMP WITH TIME ZONE,
+          resolved_by VARCHAR(64),
+          resolution_notes TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_alerts_level ON system_alerts(level);
+        CREATE INDEX IF NOT EXISTS idx_alerts_type ON system_alerts(type);
+        CREATE INDEX IF NOT EXISTS idx_alerts_resolved ON system_alerts(resolved);
+        CREATE INDEX IF NOT EXISTS idx_alerts_tenant_id ON system_alerts(tenant_id);
+      `);
+      this._tablesEnsured = true;
+    } catch (err) {
+      logger.warn(`[DLQ] Failed to ensure DLQ tables: ${err.message}`);
+    }
+  }
+
   /**
    * Save failed job to DLQ
    */
   async saveToDLQ(failedJob) {
+    await this.ensureTables();
     const {
       jobId,
       queueName,
@@ -78,6 +141,7 @@ class DLQService {
    * Get all failed jobs from DLQ
    */
   async getFailedJobs(filters = {}) {
+    await this.ensureTables();
     const {
       tenantId,
       queueName,
@@ -129,6 +193,7 @@ class DLQService {
    * Retry failed job from DLQ
    */
   async retryFromDLQ(dlqId, recoveredBy) {
+    await this.ensureTables();
     try {
       // Get job from DLQ
       const getQuery = `
@@ -177,6 +242,7 @@ class DLQService {
    * Send admin alert for critical failures
    */
   async sendAdminAlert(alert) {
+    await this.ensureTables();
     const { level, type, message, error, tenantId, projectId } = alert;
 
     try {
@@ -248,6 +314,7 @@ class DLQService {
    * Get DLQ statistics
    */
   async getDLQStats() {
+    await this.ensureTables();
     try {
       const query = `
         SELECT 
@@ -273,6 +340,7 @@ class DLQService {
    * Get system alerts
    */
   async getAlerts(filters = {}) {
+    await this.ensureTables();
     const {
       level,
       resolved,

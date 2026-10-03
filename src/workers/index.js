@@ -122,21 +122,13 @@ const initializeWorkers = async () => {
       logger.info('⊘ Email ingestor worker disabled (EMAIL_ENABLED=false)');
     }
 
-    // Start compliance agent worker (optional — disabled when COMPLIANCE_AGENT_ENABLED=false)
-    if (config.compliance?.agentEnabled !== false) {
-      complianceAgentWorker = createComplianceAgentWorker();
-      logger.info('✅ Compliance agent worker started');
-    } else {
-      logger.info('⊘ Compliance agent worker disabled (COMPLIANCE_AGENT_ENABLED=false)');
-    }
+    // Start compliance agent worker — legacy incident cron disabled in favor of Copilot agent
+    complianceAgentWorker = null;
+    logger.info('⊘ Compliance agent worker disabled (legacy incident cron removed in favor of Copilot agent)');
 
-    // Start people intelligence worker (optional — disabled when PEOPLE_INTELLIGENCE_AGENT_ENABLED=false)
-    if (config.peopleIntelligence?.agentEnabled !== false) {
-      peopleIntelligenceWorker = createPeopleIntelligenceWorker();
-      logger.info('✅ People intelligence worker started');
-    } else {
-      logger.info('⊘ People intelligence worker disabled (PEOPLE_INTELLIGENCE_AGENT_ENABLED=false)');
-    }
+    // Start people intelligence worker — legacy incident cron disabled in favor of Copilot agent
+    peopleIntelligenceWorker = null;
+    logger.info('⊘ People intelligence worker disabled (legacy incident cron removed in favor of Copilot agent)');
 
     // Start data intelligence worker (optional — disabled when DATA_INTELLIGENCE_ENABLED=false)
     if (config.dataIntelligence?.enabled !== false) {

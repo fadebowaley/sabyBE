@@ -103,4 +103,6 @@ module.exports.copilotNodeRankingService = require('./copilotNodeRanking.service
 module.exports.agentTaskService = require('./agentTask.service');
 module.exports.workflowEngineService = require('./workflowEngine.service');
 
+module.exports.copilotPeopleService = require('./copilotPeople.service');
+module.exports.copilotStructureService = require('./copilotStructure.service');
 module.exports.cmsPageService = require('./cmsPage.service');

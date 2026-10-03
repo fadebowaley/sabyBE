@@ -38,7 +38,7 @@ const updateMessage = {
     to: Joi.array().items(recipientSchema),
     recipients: Joi.array().items(recipientSchema),
     starred: Joi.boolean(),
-    status: Joi.string().valid('inbox', 'sent', 'drafts', 'starred', 'trash'),
+    status: Joi.string().valid('inbox', 'sent', 'drafts', 'starred', 'trash', 'archive', 'archived'),
     subject: Joi.string(),
     body: Joi.string(),
     attachments: Joi.array().items(attachmentSchema),
@@ -47,7 +47,7 @@ const updateMessage = {
 
 const queryMessages = {
   query: Joi.object().keys({
-    status: Joi.string().valid('inbox', 'sent', 'drafts', 'starred', 'trash'),
+    status: Joi.string().valid('inbox', 'sent', 'drafts', 'starred', 'trash', 'archive', 'archived'),
     search: Joi.string(),
     read: Joi.boolean(),
     starred: Joi.boolean(),
@@ -58,6 +58,8 @@ const queryMessages = {
     sent: Joi.boolean(),
     drafts: Joi.boolean(),
     trash: Joi.boolean(),
+    archive: Joi.boolean(),
+    archived: Joi.boolean(),
     sortBy: Joi.string(),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),

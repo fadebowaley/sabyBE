@@ -24,6 +24,11 @@ const getRunner = (client) => client || postgresPool;
 
 const getToolMetadata = async ({ client, toolName }) => {
   if (!toolName) return null;
+  // eslint-disable-next-line global-require
+  const { SYNTHETIC_TOOLS } = require('./copilotToolRuntime.service');
+  if (SYNTHETIC_TOOLS && SYNTHETIC_TOOLS[toolName]) {
+    return SYNTHETIC_TOOLS[toolName];
+  }
   const runner = getRunner(client);
   const result = await runner.query(
     `SELECT tool_name, action_type, requires_approval, risk_level
@@ -37,6 +42,11 @@ const getToolMetadata = async ({ client, toolName }) => {
 
 const getActionMetadata = async ({ client, actionType }) => {
   if (!actionType) return null;
+  // eslint-disable-next-line global-require
+  const { SYNTHETIC_ACTIONS } = require('./copilotAction.service');
+  if (SYNTHETIC_ACTIONS && SYNTHETIC_ACTIONS[actionType]) {
+    return SYNTHETIC_ACTIONS[actionType];
+  }
   const runner = getRunner(client);
   const result = await runner.query(
     `SELECT action_type, requires_approval, approval_type

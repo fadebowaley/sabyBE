@@ -124,6 +124,7 @@ const recordPeopleMutation = async ({
   payload = {},
   actorUserId = null,
   taskId = null,
+  client = null,
 }) => {
   if (!tenantId || !actionEventId) return null;
   if (!PEOPLE_ACTIONS.has(actionType)) return null;
@@ -131,7 +132,8 @@ const recordPeopleMutation = async ({
   const subject = subjectOf(actionType, payload);
   if (!subject) return null;
 
-  const { rows } = await postgresPool.query(
+  const db = client || postgresPool;
+  const { rows } = await db.query(
     `INSERT INTO copilot.people_history (
        tenant_id, action_event_id, task_id, actor_user_id, action_type,
        subject_kind, subject_id, after_json

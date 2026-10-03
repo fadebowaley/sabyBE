@@ -146,33 +146,11 @@ const tick = async () => {
 let intervalHandle = null;
 
 const createComplianceAgentWorker = () => {
-  if (intervalHandle) return intervalHandle;
-
   logger.info(
-    `[${WORKER_ID}] Compliance agent worker starting — poll interval ${POLL_MS}ms`
+    `[${WORKER_ID}] Compliance agent worker disabled (legacy incident cron removed in favor of Copilot agent)`
   );
-
-  intervalHandle = setInterval(async () => {
-    try {
-      await tick();
-    } catch (err) {
-      logger.error(`[${WORKER_ID}] Unhandled tick error: ${err.message}`);
-    }
-  }, POLL_MS);
-
-  // Run once immediately on boot so a due schedule fires without waiting one interval
-  tick().catch((err) =>
-    logger.error(`[${WORKER_ID}] Initial tick error: ${err.message}`)
-  );
-
   return {
-    close: () => {
-      if (intervalHandle) {
-        clearInterval(intervalHandle);
-        intervalHandle = null;
-        logger.info(`[${WORKER_ID}] Compliance agent worker stopped`);
-      }
-    },
+    close: () => {},
   };
 };
 

@@ -57,6 +57,8 @@ const getSubmissions = {
       'submitted',
       'processing',
       'completed',
+      'approved',
+      'rejected',
       'failed',
       'archived'
     ),
@@ -87,6 +89,8 @@ const getSubmissionsByProject = {
       'submitted',
       'processing',
       'completed',
+      'approved',
+      'rejected',
       'failed',
       'archived'
     ),
@@ -109,6 +113,8 @@ const getSubmissionsByTenant = {
       'submitted',
       'processing',
       'completed',
+      'approved',
+      'rejected',
       'failed',
       'archived'
     ),
@@ -136,7 +142,7 @@ const updateSubmissionStatus = {
   }),
   body: Joi.object().keys({
     status: Joi.string()
-      .valid('submitted', 'processing', 'completed', 'failed', 'archived')
+      .valid('submitted', 'processing', 'completed', 'approved', 'rejected', 'failed', 'archived')
       .required(),
     notes: Joi.string().allow(''),
   }),
@@ -153,6 +159,8 @@ const updateSubmission = {
         'submitted',
         'processing',
         'completed',
+        'approved',
+        'rejected',
         'failed',
         'archived'
       ),

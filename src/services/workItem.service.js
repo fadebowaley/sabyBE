@@ -394,11 +394,13 @@ const createWorkItem = async (body, user) => {
   }
 
   if (reminder) {
+    const minutes = reminder.minutesBefore != null ? reminder.minutesBefore : reminder.leadTimeMinutes;
+    const referenceDate = workItemBody.startAt || workItemBody.endAt;
     let scheduledAt = reminder.scheduledAt;
-    if (!scheduledAt && reminder.minutesBefore && workItemBody.startAt) {
+    if (!scheduledAt && minutes != null && referenceDate) {
       scheduledAt = new Date(
-        new Date(workItemBody.startAt).getTime() -
-          Number(reminder.minutesBefore) * 60 * 1000
+        new Date(referenceDate).getTime() -
+          Number(minutes) * 60 * 1000
       );
     }
     if (scheduledAt && new Date(scheduledAt) > new Date()) {
@@ -562,16 +564,25 @@ const importWorkItems = async (items, user) => {
   return { results, errors };
 };
 
-const queryWorkItems = ({ from, to, type, status }, user) => {
+const queryWorkItems = ({ from, to, type, status, query, search, limit }, user) => {
   const filter = { tenantId: user.tenantId };
   if (type) filter.type = type;
   if (status) filter.status = status;
   if (from || to) {
     filter.startAt = {};
-    if (from) filter.startAt.$lte = new Date(to || from);
-    if (to) filter.endAt = { $gte: new Date(from || to) };
+    if (from) filter.startAt.$gte = new Date(from);
+    if (to) filter.startAt.$lte = new Date(to);
   }
-  return WorkItem.find(filter).sort({ startAt: 1 });
+  const q = (query || search || '').trim();
+  if (q) {
+    filter.$or = [
+      { title: { $regex: q, $options: 'i' } },
+      { description: { $regex: q, $options: 'i' } },
+      { 'aiAgenda.topics': { $regex: q, $options: 'i' } },
+    ];
+  }
+  const maxLimit = Math.min(Math.max(1, Number(limit) || 50), 100);
+  return WorkItem.find(filter).sort({ startAt: 1 }).limit(maxLimit);
 };
 
 const updateWorkItem = async (id, body, user) => {
@@ -604,16 +615,21 @@ const updateWorkItem = async (id, body, user) => {
 };
 
 const getWorkItem = async (id, user) => {
-  const item = await WorkItem.findOne({ _id: id, tenantId: user.tenantId });
+  const isMongoId = mongoose.Types.ObjectId.isValid(id);
+  const query = isMongoId
+    ? { $or: [{ _id: id }, { shareCode: id }], tenantId: user.tenantId }
+    : { shareCode: id, tenantId: user.tenantId };
+  const item = await WorkItem.findOne(query);
   if (!item) throw new ApiError(httpStatus.NOT_FOUND, 'Work item not found');
   return item;
 };
 
 const deleteWorkItem = async (id, user) => {
-  const item = await WorkItem.findOneAndDelete({
-    _id: id,
-    tenantId: user.tenantId,
-  });
+  const isMongoId = mongoose.Types.ObjectId.isValid(id);
+  const query = isMongoId
+    ? { $or: [{ _id: id }, { shareCode: id }], tenantId: user.tenantId }
+    : { shareCode: id, tenantId: user.tenantId };
+  const item = await WorkItem.findOneAndDelete(query);
   if (!item) throw new ApiError(httpStatus.NOT_FOUND, 'Work item not found');
 };
 

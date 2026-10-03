@@ -13,10 +13,22 @@ const stableStringify = (value) => {
     .join(',')}}`;
 };
 
+const normalizePayloadForHashing = (payload) => {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return payload;
+  }
+  const clean = { ...payload };
+  delete clean.idempotencyKey;
+  delete clean.approvalToken;
+  delete clean.lockKey;
+  delete clean.correlationId;
+  return clean;
+};
+
 const hashPayload = (payload) =>
   crypto
     .createHash('sha256')
-    .update(stableStringify(payload || {}))
+    .update(stableStringify(normalizePayloadForHashing(payload) || {}))
     .digest('hex');
 
 module.exports = {

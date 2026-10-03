@@ -14,7 +14,20 @@ const ACTION_ITEM_STATUS_TRANSITIONS = {
   cancelled: [],
 };
 
+const SYNTHETIC_ACTIONS = {
+  archive_inmail: { action_type: 'archive_inmail', entity_type: 'inmail', can_reverse: false, reverse_action_type: null, requires_approval: false },
+  delete_inmail: { action_type: 'delete_inmail', entity_type: 'inmail', can_reverse: false, reverse_action_type: null, requires_approval: false },
+  star_inmail: { action_type: 'star_inmail', entity_type: 'inmail', can_reverse: false, reverse_action_type: null, requires_approval: false },
+  update_project_form: { action_type: 'update_project_form', entity_type: 'project_form', can_reverse: false, reverse_action_type: null, requires_approval: false },
+  publish_project_form: { action_type: 'publish_project_form', entity_type: 'project_form', can_reverse: true, reverse_action_type: 'unpublish_project_form', requires_approval: true },
+  unpublish_project_form: { action_type: 'unpublish_project_form', entity_type: 'project_form', can_reverse: true, reverse_action_type: 'publish_project_form', requires_approval: true },
+  delete_project_form: { action_type: 'delete_project_form', entity_type: 'project_form', can_reverse: false, reverse_action_type: null, requires_approval: true },
+};
+
 const getActionCatalog = async (actionType) => {
+  if (SYNTHETIC_ACTIONS[actionType]) {
+    return SYNTHETIC_ACTIONS[actionType];
+  }
   const result = await postgresPool.query(
     `SELECT action_type, entity_type, can_reverse, reverse_action_type, requires_approval
      FROM copilot.action_catalog
@@ -130,6 +143,12 @@ const createAction = async ({
   priority = 0,
   enforceRbac = true,
 }) => {
+  const safePriority =
+    typeof priority === 'number' && !Number.isNaN(priority)
+      ? priority
+      : ({ low: 0, medium: 1, high: 2, critical: 3 }[String(priority || '').toLowerCase()] ?? (Number(priority) || 0));
+  const numericPriority = Number.isNaN(safePriority) ? 0 : safePriority;
+
   if (!tenantId) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId is required');
   }
@@ -241,7 +260,7 @@ const createAction = async ({
         idempotencyKey || null,
         correlationId || null,
         source,
-        priority,
+        numericPriority,
       ]
     );
     const event = eventResult.rows[0];
@@ -282,7 +301,7 @@ const createAction = async ({
         event.id,
         entityType,
         entityId || null,
-        priority,
+        numericPriority,
         normalizedActorUserId || null,
         `Action requested: ${actionType}`,
         `Queued action ${actionType} for processing`,
@@ -688,4 +707,5 @@ module.exports = {
   getActionItemById,
   updateActionItemStatus,
   recordExistingAction,
+  SYNTHETIC_ACTIONS,
 };

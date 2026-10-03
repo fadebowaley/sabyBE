@@ -541,37 +541,24 @@ const testProviderKey = async ({ provider, apiKey, model = null }) => {
     }
 
     if (normalizedProvider === 'opencode') {
-      // Console Console BYOK probe: POST https://opencode.ai/inference/opencode/v1/chat/completions (1-token ping)
-      // Console free tier is gated to only be used from within OpenCode; this BYOK branch verifies
-      // a paid Console token. Deterministically: the token is only ever sent to this host+path.
-      const postBody = JSON.stringify({
-        model: model || 'big-pickle',
-        max_tokens: 1,
-        messages: [{ role: 'user', content: 'hi' }],
-      });
-
-      const res = await makeHttpsProbe(
-        {
-          hostname: 'opencode.ai',
-          port: 443,
-          path: '/inference/opencode/v1/chat/completions',
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${trimmedKey}`,
-            'content-type': 'application/json',
-            'content-length': Buffer.byteLength(postBody),
-            'User-Agent': 'Saby-BYOK-Verifier/1.0',
-          },
+      // OpenCode Zen BYOK probe: GET https://opencode.ai/zen/v1/models
+      const res = await makeHttpsProbe({
+        hostname: 'opencode.ai',
+        port: 443,
+        path: '/zen/v1/models',
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${trimmedKey}`,
+          'User-Agent': 'Saby-BYOK-Verifier/1.0',
         },
-        postBody
-      );
+      });
 
       if (res.ok) {
         return {
           success: true,
           provider: 'opencode',
           latencyMs: res.latencyMs,
-          message: 'OpenCode Console key verified',
+          message: 'OpenCode Zen key verified',
         };
       }
       return {
@@ -580,8 +567,8 @@ const testProviderKey = async ({ provider, apiKey, model = null }) => {
         statusCode: res.statusCode,
         error:
           res.statusCode === 401
-            ? 'Invalid OpenCode Console key'
-            : `OpenCode Console returned status ${res.statusCode}`,
+            ? 'Invalid OpenCode key'
+            : `OpenCode returned status ${res.statusCode}`,
       };
     }
 

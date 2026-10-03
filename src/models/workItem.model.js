@@ -134,4 +134,21 @@ workItemSchema.index({ tenantId: 1, idempotencyKey: 1 }, { unique: true, sparse:
 workItemSchema.plugin(toJSON);
 workItemSchema.plugin(paginate);
 
+// Augment toJSON to include canonical agenda and public share URLs
+const baseTransform = workItemSchema.options.toJSON?.transform;
+workItemSchema.options.toJSON = Object.assign(workItemSchema.options.toJSON || {}, {
+  transform(doc, ret, options) {
+    if (baseTransform) {
+      baseTransform(doc, ret, options);
+    }
+    const code = ret.shareCode || ret.id || (doc._id ? doc._id.toString() : '');
+    const clientUrl = process.env.SABYFE_URL || 'https://saby.ai';
+    const baseUrl = clientUrl.replace(/\/+$/, '');
+    ret.shareCode = ret.shareCode || code;
+    ret.shortUrl = `/a/${code}`;
+    ret.agendaUrl = `${baseUrl}/a/${code}`;
+    return ret;
+  },
+});
+
 module.exports = mongoose.model('WorkItem', workItemSchema);

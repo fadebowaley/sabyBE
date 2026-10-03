@@ -57,7 +57,7 @@ const getPeopleSnapshot = async ({ tenantId }) => {
   const [users, roles, nodes, permissions] = await Promise.all([
     User.find({ tenantId })
       .select(
-        'userId firstname lastname email status isEmailVerified isPhoneVerified isOwner isSuper isAdmin onboardingComplete roles'
+        'userId firstname lastname email phone phoneNumber status isEmailVerified isPhoneVerified isOwner isSuper isAdmin onboardingComplete roles'
       )
       .lean(),
     Role.find({ tenantId }).select('name permissions isActive').lean(),
@@ -125,10 +125,14 @@ const getPeopleSnapshot = async ({ tenantId }) => {
     tenantId,
     generatedAt: new Date().toISOString(),
     users: users.map((user) => ({
+      id: String(user._id),
+      entityId: String(user._id),
       userId: user.userId || String(user._id),
       firstname: user.firstname,
       lastname: user.lastname,
       email: user.email,
+      phone: user.phoneNumber || user.phone || null,
+      phoneNumber: user.phoneNumber || user.phone || null,
       status: user.status === true,
       isEmailVerified: user.isEmailVerified,
       isPhoneVerified: user.isPhoneVerified,
@@ -188,9 +192,13 @@ const buildPeopleState = (snapshot) => {
       flags.push('noOrgAssignment');
 
     return {
+      id: person.id || person.entityId || person.userId,
+      entityId: person.entityId || person.id || person.userId,
       userId: person.userId,
       name: personNameOf(person),
       email: person.email,
+      phone: person.phone || person.phoneNumber || null,
+      phoneNumber: person.phoneNumber || person.phone || null,
       status: person.status,
       isEmailVerified: person.isEmailVerified,
       isPhoneVerified: person.isPhoneVerified,
@@ -311,7 +319,10 @@ const selectPeopleState = (state, selector = {}) => {
 
   const users = state.users.filter(
     (person) =>
-      (userId === undefined || person.userId === userId) &&
+      (userId === undefined ||
+        person.userId === userId ||
+        person.id === userId ||
+        person.entityId === userId) &&
       (nodeId === undefined || person.memberNodeIds.includes(nodeId)) &&
       (roleId === undefined || person.roleIds.includes(roleId))
   );

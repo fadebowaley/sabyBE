@@ -41,6 +41,9 @@ const ACTIONS = [
   ['cancel_payment', 'payment', false, null, false, true, 0],
   ['refund_payment', 'payment', false, null, false, true, 0],
   ['create_node', 'node', true, 'delete_node', false, true, 0],
+  ['create_level', 'level', false, null, false, false, 0],
+  ['create_structure', 'structure', false, null, false, false, 0],
+  ['bulk_import_nodes', 'node', false, null, false, false, 0],
   ['delete_node', 'node', false, null, true, true, 0],
   ['restore_node', 'node', true, 'delete_node', false, false, 0],
   ['move_node', 'node', false, null, false, false, 0],
@@ -97,7 +100,14 @@ const ACTIONS = [
   ['complete_task', 'task', true, 'reopen_task', false, false, 0],
   ['reopen_task', 'task', true, 'complete_task', false, false, 0],
   ['cancel_task', 'task', true, 'reopen_task', false, false, 0],
+  ['create_event', 'calendar', true, 'delete_event', false, false, 0],
+  ['delete_event', 'calendar', false, null, false, true, 0],
   ['create_project_form', 'project_form', false, null, false, false, 0],
+  ['send_inmail', 'inmail', false, null, false, false, 0],
+  ['send_announcement', 'inmail', false, null, false, true, 0],
+  ['mark_inmail_read', 'inmail', false, null, false, false, 0],
+  ['query_events', 'calendar', false, null, false, false, 0],
+  ['query_tasks', 'task', false, null, false, false, 0],
 ];
 
 const seed = async () => {

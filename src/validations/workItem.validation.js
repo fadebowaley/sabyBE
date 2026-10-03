@@ -210,11 +210,14 @@ module.exports = {
       to: Joi.date(),
       type: fields.type,
       status: fields.status,
+      query: Joi.string().trim().max(200).allow(''),
+      search: Joi.string().trim().max(200).allow(''),
+      limit: Joi.number().integer().min(1).max(100),
     }),
   },
   getWorkItem: {
     params: Joi.object({
-      workItemId: Joi.string().custom(objectId).required(),
+      workItemId: Joi.string().trim().min(3).max(64).required(),
     }),
   },
   getPublicWorkItem: {

@@ -703,7 +703,7 @@ const assignUsersToNode = async (nodeId, userIds) => {
   await node.save();
 
   // Populate users with their roles for the response
-  const populatedNode = await Nodes.findById(nodeId).populate({
+  const populatedNode = await Nodes.findById(node._id).populate({
     path: 'users',
     populate: {
       path: 'roles',
@@ -717,34 +717,78 @@ const assignUsersToNode = async (nodeId, userIds) => {
 /**
  * Bulk import nodes
  * @param {Array} nodesData - Array of node objects to be imported
- * @returns {Promise<Array<Node>>}
+/**
+ * Bulk import nodes with high-throughput chunking and atomic ID batch allocation.
+ * Designed to handle from 1,000 up to 1,000,000 nodes without heap exhaustion or DB socket starvation.
+ * @param {Array<Object>} nodesData
+ * @param {Object} [options]
+ * @param {number} [options.batchSize=2500]
+ * @returns {Promise<Array<Node>|Object>}
  */
-const bulkImportNodes = async (nodesData) => {
-  // Generate nodeIds for all nodes
-  const nodesWithIds = await Promise.all(
-    nodesData.map(async (data) => ({
+const bulkImportNodes = async (nodesData, options = {}) => {
+  if (!Array.isArray(nodesData) || nodesData.length === 0) {
+    return [];
+  }
+  const batchSize = Math.max(100, Math.min(Number(options.batchSize) || 2500, 10000));
+  const total = nodesData.length;
+  const allCreatedNodes = [];
+  const nodePathMap = new Map();
+
+  for (let i = 0; i < total; i += batchSize) {
+    const chunk = nodesData.slice(i, i + batchSize);
+    const chunkIds = await Nodes.generateNodeIds(chunk.length);
+
+    const chunkWithIds = chunk.map((data, idx) => ({
       ...data,
-      nodeId: await Nodes.generateNodeId(),
-    }))
-  );
+      nodeId: chunkIds[idx],
+    }));
 
-  // Create all nodes
-  const nodes = await Nodes.insertMany(nodesWithIds);
+    const insertedChunk = await Nodes.insertMany(chunkWithIds, { ordered: true });
 
-  // Update parent references and hierarchy
-  for (const node of nodes) {
-    if (node.parent) {
-      const parentNode = nodes.find(
-        (n) => n._id.toString() === node.parent.toString()
-      );
-      if (parentNode) {
-        node.path = `${parentNode.path}/${node._id}`;
-        await node.save();
+    for (const node of insertedChunk) {
+      if (node.path) {
+        nodePathMap.set(String(node._id), node.path);
       }
+      if (total <= 10000) {
+        allCreatedNodes.push(node);
+      }
+    }
+
+    const updateOps = [];
+    for (const node of insertedChunk) {
+      if (node.parent) {
+        const parentId = String(node.parent);
+        const parentPath = nodePathMap.get(parentId);
+        if (parentPath) {
+          const newPath = `${parentPath}/${node._id}`;
+          node.path = newPath;
+          nodePathMap.set(String(node._id), newPath);
+          updateOps.push({
+            updateOne: {
+              filter: { _id: node._id },
+              update: { $set: { path: newPath } },
+            },
+          });
+        }
+      } else if (!node.path) {
+        const rootPath = String(node._id);
+        node.path = rootPath;
+        nodePathMap.set(String(node._id), rootPath);
+        updateOps.push({
+          updateOne: {
+            filter: { _id: node._id },
+            update: { $set: { path: rootPath } },
+          },
+        });
+      }
+    }
+
+    if (updateOps.length > 0) {
+      await Nodes.bulkWrite(updateOps, { ordered: false });
     }
   }
 
-  return nodes;
+  return total <= 10000 ? allCreatedNodes : { count: total, status: 'completed' };
 };
 
 module.exports = {

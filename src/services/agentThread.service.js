@@ -51,18 +51,29 @@ const ensureTables = async () => {
   }
 };
 
-const createThread = async ({ tenantId, userId, title = 'New conversation', engineSessionId = null }) => {
+const createThread = async ({
+  tenantId,
+  userId,
+  threadId = null,
+  title = 'New conversation',
+  engineSessionId = null,
+  metadata = {},
+}) => {
   if (!tenantId || !userId) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId and userId are required.');
   }
   await ensureTables();
-  const threadId = nextId();
+  const id = threadId ? String(threadId).slice(0, 64) : nextId();
   await postgresPool.query(
     `INSERT INTO copilot.agent_threads (thread_id, tenant_id, user_id, title, engine_session_id, metadata)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb);`,
-    [threadId, String(tenantId), String(userId), String(title || 'New conversation'), engineSessionId, '{}']
+     VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+     ON CONFLICT (thread_id) DO UPDATE SET 
+       updated_at = now(),
+       title = CASE WHEN copilot.agent_threads.title = 'New conversation' OR copilot.agent_threads.title IS NULL OR copilot.agent_threads.title = '' THEN EXCLUDED.title ELSE copilot.agent_threads.title END,
+       metadata = copilot.agent_threads.metadata || EXCLUDED.metadata;`,
+    [id, String(tenantId), String(userId), String(title || 'New conversation'), engineSessionId, JSON.stringify(metadata || {})]
   );
-  return getThread({ tenantId, threadId });
+  return getThread({ tenantId, threadId: id });
 };
 
 const getThread = async ({ tenantId, threadId }) => {
@@ -104,10 +115,25 @@ const listThreads = async ({ tenantId, userId, page = 1, limit = 20 }) => {
 
   const params = [String(tenantId), safeLimit, offset];
   const res = await postgresPool.query(
-    `SELECT thread_id, tenant_id, user_id, title, engine_session_id, metadata, created_at, updated_at
-     FROM copilot.agent_threads
-     WHERE tenant_id = $1
-     ORDER BY updated_at DESC
+    `SELECT 
+       t.thread_id, t.tenant_id, t.user_id,
+       CASE 
+         WHEN t.title = 'New conversation' OR t.title IS NULL OR t.title = ''
+         THEN COALESCE(
+           (SELECT SUBSTRING(content FROM 1 FOR 60) FROM copilot.agent_messages WHERE thread_id = t.thread_id AND role = 'user' ORDER BY id ASC LIMIT 1),
+           t.title
+         )
+         ELSE t.title
+       END AS title,
+       COALESCE(
+         t.metadata->>'preview',
+         (SELECT SUBSTRING(content FROM 1 FOR 120) FROM copilot.agent_messages WHERE thread_id = t.thread_id ORDER BY id DESC LIMIT 1),
+         ''
+       ) AS preview,
+       t.engine_session_id, t.metadata, t.created_at, t.updated_at
+     FROM copilot.agent_threads t
+     WHERE t.tenant_id = $1
+     ORDER BY t.updated_at DESC
      LIMIT $2 OFFSET $3;`,
     params
   );
@@ -121,7 +147,8 @@ const listThreads = async ({ tenantId, userId, page = 1, limit = 20 }) => {
       threadId: row.thread_id,
       tenantId: row.tenant_id,
       userId: row.user_id,
-      title: row.title,
+      title: row.title || 'Untitled chat',
+      preview: row.preview || '',
       engineSessionId: row.engine_session_id,
       metadata: row.metadata || {},
       createdAt: row.created_at,
@@ -155,6 +182,7 @@ const listMessages = async ({ tenantId, threadId, limit = 100 }) => {
     threadId: row.thread_id,
     role: row.role,
     content: row.content,
+    text: row.content,
     inputTokens: Number(row.input_tokens),
     outputTokens: Number(row.output_tokens),
     model: row.model,
@@ -199,9 +227,17 @@ const appendMessage = async ({
      RETURNING id;`,
     [String(threadId), String(tenantId), role, String(content), Math.max(0, Number(inputTokens) || 0), Math.max(0, Number(outputTokens) || 0), model]
   );
+
+  const trimmedSnippet = String(content).slice(0, 120);
+  const titleSnippet = String(content).slice(0, 60);
+
   await postgresPool.query(
-    `UPDATE copilot.agent_threads SET updated_at = now() WHERE tenant_id = $1 AND thread_id = $2;`,
-    [String(tenantId), String(threadId)]
+    `UPDATE copilot.agent_threads 
+     SET updated_at = now(),
+         title = CASE WHEN $5 = 'user' AND (title = 'New conversation' OR title IS NULL OR title = '') THEN $3 ELSE title END,
+         metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{preview}', to_jsonb($4::text))
+     WHERE tenant_id = $1 AND thread_id = $2;`,
+    [String(tenantId), String(threadId), titleSnippet, trimmedSnippet, role]
   );
   return String(res.rows[0]?.id);
 };

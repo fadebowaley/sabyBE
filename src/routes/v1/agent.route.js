@@ -18,6 +18,14 @@ router.post(
   agentGatewayController.chat
 );
 
+// Stream alias for frontend copilot proxy compatibility
+router.post(
+  '/stream',
+  auth(),
+  validate(agentGatewayValidation.chat),
+  agentGatewayController.chat
+);
+
 router.get(
   '/history/threads',
   auth(),
@@ -55,6 +63,13 @@ router.get(
   auth(),
   validate(agentGatewayValidation.listUsage),
   agentGatewayController.getUsage
+);
+
+router.get(
+  '/tokens/logs',
+  auth(),
+  validate(agentGatewayValidation.listUsage),
+  agentGatewayController.getTokenLogs
 );
 
 module.exports = router;

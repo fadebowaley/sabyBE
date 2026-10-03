@@ -51,17 +51,21 @@ const mapUserCandidate = (query, doc) => {
   const last = doc.lastname || '';
   const fullName = `${first} ${last}`.trim();
   const email = doc.email || '';
+  const phone = doc.phoneNumber || doc.phone || '';
+  const labelDetail = [email, phone].filter(Boolean).join(', ');
   return {
     entityType: 'user',
     id: String(doc._id),
-    label: fullName || email || String(doc._id),
+    label: fullName ? `${fullName}${labelDetail ? ` (${labelDetail})` : ''}` : labelDetail || String(doc._id),
     meta: {
       email,
+      phone,
+      phoneNumber: phone,
       firstname: first,
       lastname: last,
       tenantId: doc.tenantId,
     },
-    score: scoreTextMatch(query, [email, first, last, fullName]),
+    score: scoreTextMatch(query, [email, first, last, fullName, phone]),
   };
 };
 
@@ -246,15 +250,33 @@ const searchUsers = async ({
   includeDeleted = false,
 }) => {
   const regex = new RegExp(escapeRegex(query), 'i');
+  const words = String(query || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const or = [
+    { email: regex },
+    { firstname: regex },
+    { lastname: regex },
+    { phoneNumber: regex },
+    { phone: regex },
+  ];
+  if (words.length > 1) {
+    const firstWord = new RegExp(escapeRegex(words[0]), 'i');
+    const lastWord = new RegExp(escapeRegex(words[words.length - 1]), 'i');
+    or.push({
+      $and: [{ firstname: firstWord }, { lastname: lastWord }],
+    });
+  }
   const filter = {
     tenantId,
-    $or: [{ email: regex }, { firstname: regex }, { lastname: regex }],
+    $or: or,
   };
   if (!includeDeleted) {
     filter.deletedAt = null;
   }
   const docs = await User.find(filter)
-    .select('_id tenantId firstname lastname email')
+    .select('_id tenantId firstname lastname email phoneNumber phone')
     .limit(limit)
     .lean();
   return docs.map((doc) => mapUserCandidate(query, doc)).sort(byScoreDesc);
@@ -878,7 +900,22 @@ const resolveActionPayload = async ({
     }
   }
 
-  if (['archive_project', 'restore_project'].includes(normalizedAction)) {
+  if (
+    [
+      'archive_project',
+      'restore_project',
+      'update_project_form',
+      'publish_project_form',
+      'unpublish_project_form',
+      'delete_project_form',
+    ].includes(normalizedAction)
+  ) {
+    if (resolvedPayload.id && !resolvedPayload.projectFormId) {
+      resolvedPayload.projectFormId = resolvedPayload.id;
+    }
+    if (resolvedPayload.formId && !resolvedPayload.projectFormId) {
+      resolvedPayload.projectFormId = resolvedPayload.formId;
+    }
     const projectRef =
       resolvedPayload.projectFormId ||
       resolvedPayload.projectName ||

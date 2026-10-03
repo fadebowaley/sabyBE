@@ -25,6 +25,12 @@ const FormElementSchema = new mongoose.Schema(
       textAlign: String,
       acceptedTypes: String,
       defaultCountry: String,
+      correctAnswer: mongoose.Schema.Types.Mixed,
+      quizPoints: Number,
+      leadScores: mongoose.Schema.Types.Mixed,
+      leadScore: Number,
+      matchWeights: mongoose.Schema.Types.Mixed,
+      showWithNext: { type: Boolean, default: false },
     },
     aliases: [{ type: String }],
     metadata: {

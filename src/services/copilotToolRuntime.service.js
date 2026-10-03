@@ -33,7 +33,143 @@ const listTools = async ({ enabledOnly = true } = {}) => {
   return result.rows;
 };
 
+const SYNTHETIC_TOOLS = {
+  action_archive_inmail: {
+    tool_name: 'action_archive_inmail',
+    description: 'Archive an internal In-Mail message',
+    category: 'communication',
+    action_type: 'archive_inmail',
+    enabled: true,
+    requires_approval: false,
+    risk_level: 'LOW',
+    required_permissions: ['inmail:update'],
+    tenant_scope_required: true,
+    idempotency_key_required: false,
+    audit_required: true,
+    schema_json: { type: 'object', properties: { messageId: { type: 'string' } }, required: ['messageId'] },
+  },
+  action_delete_inmail: {
+    tool_name: 'action_delete_inmail',
+    description: 'Move an internal In-Mail message to trash',
+    category: 'communication',
+    action_type: 'delete_inmail',
+    enabled: true,
+    requires_approval: false,
+    risk_level: 'LOW',
+    required_permissions: ['inmail:delete'],
+    tenant_scope_required: true,
+    idempotency_key_required: false,
+    audit_required: true,
+    schema_json: { type: 'object', properties: { messageId: { type: 'string' } }, required: ['messageId'] },
+  },
+  action_star_inmail: {
+    tool_name: 'action_star_inmail',
+    description: 'Toggle starred status on an internal In-Mail message',
+    category: 'communication',
+    action_type: 'star_inmail',
+    enabled: true,
+    requires_approval: false,
+    risk_level: 'LOW',
+    required_permissions: ['inmail:update'],
+    tenant_scope_required: true,
+    idempotency_key_required: false,
+    audit_required: true,
+    schema_json: { type: 'object', properties: { messageId: { type: 'string' } }, required: ['messageId'] },
+  },
+  action_update_project_form: {
+    tool_name: 'action_update_project_form',
+    description: 'Update project form fields, identity, elements, layout, or capabilities',
+    category: 'project',
+    action_type: 'update_project_form',
+    enabled: true,
+    requires_approval: false,
+    risk_level: 'MEDIUM',
+    required_permissions: ['update:project-form'],
+    tenant_scope_required: true,
+    idempotency_key_required: false,
+    audit_required: true,
+    schema_json: {
+      type: 'object',
+      properties: {
+        entityId: { type: 'string' },
+        projectFormId: { type: 'string' },
+        title: { type: 'string' },
+        name: { type: 'string' },
+        description: { type: 'string' },
+        elements: { type: 'array' },
+        capabilities: { type: 'object' },
+        layout: { type: 'object' },
+        settings: { type: 'object' },
+        body: { type: 'object' },
+      },
+    },
+  },
+  action_publish_project_form: {
+    tool_name: 'action_publish_project_form',
+    description: 'Publish project form to accept submissions',
+    category: 'project',
+    action_type: 'publish_project_form',
+    enabled: true,
+    requires_approval: true,
+    risk_level: 'HIGH',
+    required_permissions: ['update:project-form'],
+    tenant_scope_required: true,
+    idempotency_key_required: false,
+    audit_required: true,
+    schema_json: {
+      type: 'object',
+      properties: {
+        entityId: { type: 'string' },
+        projectFormId: { type: 'string' },
+      },
+    },
+  },
+  action_unpublish_project_form: {
+    tool_name: 'action_unpublish_project_form',
+    description: 'Unpublish project form back to draft',
+    category: 'project',
+    action_type: 'unpublish_project_form',
+    enabled: true,
+    requires_approval: true,
+    risk_level: 'HIGH',
+    required_permissions: ['update:project-form'],
+    tenant_scope_required: true,
+    idempotency_key_required: false,
+    audit_required: true,
+    schema_json: {
+      type: 'object',
+      properties: {
+        entityId: { type: 'string' },
+        projectFormId: { type: 'string' },
+      },
+    },
+  },
+  action_delete_project_form: {
+    tool_name: 'action_delete_project_form',
+    description: 'Soft-delete a project form',
+    category: 'project',
+    action_type: 'delete_project_form',
+    enabled: true,
+    requires_approval: true,
+    risk_level: 'CRITICAL',
+    required_permissions: ['delete:project-form'],
+    tenant_scope_required: true,
+    idempotency_key_required: false,
+    audit_required: true,
+    schema_json: {
+      type: 'object',
+      properties: {
+        entityId: { type: 'string' },
+        projectFormId: { type: 'string' },
+      },
+    },
+  },
+};
+
 const getToolByName = async (toolName) => {
+  if (SYNTHETIC_TOOLS[toolName]) {
+    return SYNTHETIC_TOOLS[toolName];
+  }
   const result = await postgresPool.query(
     `SELECT id, tool_name, description, category, action_type, enabled,
             requires_approval, reversible, timeout_ms, schema_json,
@@ -79,6 +215,20 @@ const logToolCall = async ({
 };
 
 const resolveEntityTypeForAction = async (actionType) => {
+  if (['archive_inmail', 'delete_inmail', 'star_inmail'].includes(actionType)) {
+    return 'inmail';
+  }
+  if (
+    [
+      'update_project_form',
+      'publish_project_form',
+      'unpublish_project_form',
+      'delete_project_form',
+      'create_project_form',
+    ].includes(actionType)
+  ) {
+    return 'project_form';
+  }
   const result = await postgresPool.query(
     `SELECT entity_type
      FROM copilot.action_catalog
@@ -86,7 +236,7 @@ const resolveEntityTypeForAction = async (actionType) => {
      LIMIT 1`,
     [actionType]
   );
-  return result.rows[0]?.entity_type || null;
+  return result.rows[0]?.entity_type || (String(actionType).endsWith('_inmail') ? 'inmail' : null);
 };
 
 const tryAcquireLock = async ({
@@ -428,8 +578,12 @@ const executeToolCall = async ({
         payload: resolveResult.resolvedPayload,
         idempotencyKey: payload.idempotencyKey,
         correlationId,
+        approvalToken,
         source: 'tool_runtime',
-        priority: Number(payload.priority || 0),
+        priority:
+          typeof payload.priority === 'number' && !Number.isNaN(payload.priority)
+            ? payload.priority
+            : ({ low: 0, medium: 1, high: 2, critical: 3 }[String(payload.priority || '').toLowerCase()] ?? (Number(payload.priority) || 0)),
       });
 
       actionEventId = actionResult?.event?.id || null;
@@ -577,4 +731,5 @@ module.exports = {
   listTools,
   executeToolCall,
   listToolCallLogs,
+  SYNTHETIC_TOOLS,
 };

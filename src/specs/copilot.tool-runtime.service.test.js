@@ -239,6 +239,33 @@ const SEEDED_TOOL_FIXTURES = {
     },
     expectedEntityId: 'node-create-1',
   },
+  action_create_level: {
+    entityType: 'level',
+    actionPayload: {
+      entityId: 'level-create-1',
+      name: 'Regional Hub',
+      rank: 1,
+    },
+    expectedEntityId: 'level-create-1',
+  },
+  action_create_structure: {
+    entityType: 'structure',
+    actionPayload: {
+      entityId: 'structure-create-1',
+      name: 'Operations Structure',
+      type: 'organizational',
+    },
+    expectedEntityId: 'structure-create-1',
+  },
+  action_bulk_import_nodes: {
+    entityType: 'node_bulk',
+    actionPayload: {
+      entityId: 'bulk-import-1',
+      csvText: 'LEVEL,STRUCTURE,NODE_NAME\n0,HQ,Headquarters',
+      structureName: 'Operations Structure',
+    },
+    expectedEntityId: 'bulk-import-1',
+  },
   action_delete_node: {
     entityType: 'node',
     actionPayload: { entityId: 'node-delete-1' },
@@ -350,6 +377,52 @@ const SEEDED_TOOL_FIXTURES = {
     entityType: 'task',
     actionPayload: { entityId: 'task-cancel-1' },
     expectedEntityId: 'task-cancel-1',
+  },
+  action_send_inmail: {
+    entityType: 'inmail',
+    actionPayload: {
+      entityId: 'inmail-send-1',
+      to: ['user-1'],
+      subject: 'Team meeting update',
+      body: 'Meeting shifted to 3 PM',
+    },
+    expectedEntityId: 'inmail-send-1',
+  },
+  action_send_announcement: {
+    entityType: 'inmail',
+    actionPayload: {
+      entityId: 'announcement-1',
+      subject: 'Company wide announcement',
+      body: 'All staff mandatory briefing',
+      targetNodeId: 'node-1',
+    },
+    expectedEntityId: 'announcement-1',
+  },
+  action_mark_inmail_read: {
+    entityType: 'inmail',
+    actionPayload: {
+      entityId: 'inmail-read-1',
+      messageId: 'inmail-1',
+    },
+    expectedEntityId: 'inmail-read-1',
+  },
+  action_create_event: {
+    entityType: 'calendar',
+    actionPayload: {
+      entityId: 'event-1',
+      title: 'Strategy Session',
+      startAt: '2026-09-28T14:00:00Z',
+      endAt: '2026-09-28T15:00:00Z',
+    },
+    expectedEntityId: 'event-1',
+  },
+  action_delete_event: {
+    entityType: 'calendar',
+    actionPayload: {
+      entityId: 'event-1',
+      eventId: 'event-1',
+    },
+    expectedEntityId: 'event-1',
   },
 };
 

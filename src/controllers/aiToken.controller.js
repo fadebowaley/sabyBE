@@ -68,10 +68,32 @@ const listQuotas = catchAsync(async (req, res) => {
   });
 });
 
+const getTokenLogs = catchAsync(async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const { page, limit, userId } = req.query;
+  const isElevated = Boolean(
+    req.user?.isAdmin || req.user?.isOwner || req.user?.isSuper || req.user?.isSaby
+  );
+  const targetUserId = isElevated ? (userId || null) : (req.user?.id || req.user?._id);
+
+  const result = await aiTokenService.listUserTokenLogs({
+    tenantId,
+    userId: targetUserId,
+    page,
+    limit,
+  });
+
+  res.status(httpStatus.OK).send({
+    status: 'success',
+    data: result,
+  });
+});
+
 module.exports = {
   getPacks,
   getBalance,
   initializeCheckout,
   allocateTokens,
   listQuotas,
+  getTokenLogs,
 };

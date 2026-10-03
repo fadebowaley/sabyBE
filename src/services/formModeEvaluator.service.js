@@ -28,13 +28,17 @@ const parseJsonObject = (value) => {
   }
 };
 
-const getModeSettings = (projectForm) =>
-  projectForm?.metadata?.moduleStudio?.document?.settings || {};
+const getModeSettings = (projectForm) => {
+  const formObj = typeof projectForm?.toObject === 'function' ? projectForm.toObject() : projectForm;
+  return formObj?.metadata?.moduleStudio?.document?.settings || {};
+};
 
-const getModeNodes = (projectForm) =>
-  (Array.isArray(projectForm?.elements) ? projectForm.elements : []).filter(
+const getModeNodes = (projectForm) => {
+  const formObj = typeof projectForm?.toObject === 'function' ? projectForm.toObject() : projectForm;
+  return (Array.isArray(formObj?.elements) ? formObj.elements : []).filter(
     (element) => !['welcome_screen', 'end_screen', 'statement'].includes(String(element?.type || ''))
   );
+};
 
 const resolveAnswer = (submissionData, node) => {
   const candidates = [node?.id, node?.properties?.fieldKey, node?.properties?.label]
@@ -129,12 +133,22 @@ const sanitizeProctoringMetadata = (
 
 const evaluateFormMode = ({ projectForm, submissionData = {} }) => {
   const settings = getModeSettings(projectForm);
-  const mode = FORM_MODES.has(String(settings.formMode || '').trim())
-    ? String(settings.formMode).trim()
-    : 'universal';
-  if (mode === 'universal') return null;
-
   const nodes = getModeNodes(projectForm);
+  let mode = FORM_MODES.has(String(settings.formMode || '').trim())
+    ? String(settings.formMode).trim()
+    : null;
+  if (!mode) {
+    if (settings.formModeConfig?.quiz || nodes.some((n) => n.properties?.correctAnswer || n.props?.correctAnswer)) {
+      mode = 'knowledge_quiz';
+    } else if (settings.formModeConfig?.lead || nodes.some((n) => n.properties?.leadScores || n.properties?.leadScore)) {
+      mode = 'lead_qualification';
+    } else if (settings.formModeConfig?.match || nodes.some((n) => n.properties?.matchWeights)) {
+      mode = 'match_quiz';
+    } else {
+      mode = 'universal';
+    }
+  }
+  if (mode === 'universal') return null;
   if (mode === 'lead_qualification') {
     const score = nodes.reduce((total, node) => {
       const answer = asStringList(resolveAnswer(submissionData, node));

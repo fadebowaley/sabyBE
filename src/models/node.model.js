@@ -156,13 +156,31 @@ nodeSchema.index({ structure: 1, level: 1 });
  * @returns {Promise<string>}
  */
 nodeSchema.statics.generateNodeId = async function () {
+  const [nodeId] = await this.generateNodeIds(1);
+  return nodeId;
+};
+
+/**
+ * Atomically reserve a batch of Base36 incremental nodeIds prefixed with 'HLN-'
+ * Crucial for scaling high-volume bulk imports from 1,000 to 1,000,000 nodes without DB contention.
+ * @param {number} count Number of unique IDs to reserve
+ * @returns {Promise<string[]>}
+ */
+nodeSchema.statics.generateNodeIds = async function (count = 1) {
+  const safeCount = Math.max(1, Math.trunc(Number(count) || 1));
   const counter = await HaloNCounter.findOneAndUpdate(
     { name: 'haloNode' },
-    { $inc: { seq: 1 } },
+    { $inc: { seq: safeCount } },
     { new: true, upsert: true }
   );
-  const base36 = counter.seq.toString(36).toUpperCase().padStart(5, '0');
-  return `HLN-${base36}`;
+  const endSeq = counter.seq;
+  const startSeq = endSeq - safeCount + 1;
+  const ids = new Array(safeCount);
+  for (let i = 0; i < safeCount; i += 1) {
+    const seq = startSeq + i;
+    ids[i] = `HLN-${seq.toString(36).toUpperCase().padStart(5, '0')}`;
+  }
+  return ids;
 };
 
 // Utility function to build hierarchy dynamically based on level names

@@ -3,12 +3,18 @@ const ApiError = require('../utils/ApiError');
 const userService = require('./user.service');
 const roleService = require('./role.service');
 const nodeService = require('./node.service');
+const levelService = require('./level.service');
+const structureService = require('./structure.service');
 const projectFormService = require('./projectForm.service');
 const paymentService = require('./payment.service');
 const {
   invalidateTenantEntityCaches,
 } = require('./copilotEntityResolver.service');
-const { User, Nodes, Level, Structures } = require('../models');
+const { User, Nodes, Level, Structures, InMail, WorkItem, ProjectForm, ProjectFormSubmission } = require('../models');
+const inmailService = require('./inmail.service');
+const workItemService = require('./workItem.service');
+const projectFormSubmissionService = require('./projectFormSubmission.service');
+const mongoose = require('mongoose');
 const { postgresPool } = require('../config/postgres');
 const {
   queueSubmission,
@@ -238,6 +244,19 @@ const invalidateUserSearchAndResolveCache = async (tenantId) =>
 const invalidateRoleSearchAndResolveCache = async (tenantId) =>
   invalidateEntitySearchAndResolveCache(tenantId, 'role');
 
+const invalidateNodeSearchAndResolveCache = async (tenantId) =>
+  invalidateEntitySearchAndResolveCache(tenantId, 'node');
+
+const resolveUserDoc = async (id, tenantId) => {
+  if (!id) return null;
+  const isObj = mongoose.Types.ObjectId.isValid(id);
+  let u = isObj ? await User.findById(id) : null;
+  if (!u) {
+    u = await User.findOne({ userId: id, ...(tenantId ? { tenantId } : {}) });
+  }
+  return u;
+};
+
 const handleCreateUser = async (event) => {
   requireObjectPayload(event.payload_json);
   const userBody = event.payload_json.userBody || { ...event.payload_json };
@@ -268,8 +287,17 @@ const handleCreateUser = async (event) => {
     userBody.isSuper = false;
   }
 
+  if (userBody.status === undefined) {
+    userBody.status = true;
+  }
+
   if (!userBody.tenantId) {
     userBody.tenantId = event.tenant_id;
+  }
+
+  const initialRoleId = event.payload_json?.userRoleId || event.payload_json?.roleId;
+  if (initialRoleId && (!userBody.roles || userBody.roles.length === 0)) {
+    userBody.roles = [initialRoleId];
   }
 
   const createValidation = validateCopilotActionPayload(
@@ -281,6 +309,25 @@ const handleCreateUser = async (event) => {
   }
 
   const createdUser = await userService.createUser(userBody);
+
+  const rawNodeIds = event.payload_json?.nodeIds || (event.payload_json?.nodeId ? [event.payload_json.nodeId] : []);
+  const nodeIds = Array.isArray(rawNodeIds) ? rawNodeIds.filter(Boolean) : [];
+  for (let i = 0; i < nodeIds.length; i += 1) {
+    try {
+      const nId = nodeIds[i];
+      // eslint-disable-next-line no-await-in-loop
+      const node = await nodeService.getNodeById(nId);
+      if (node) {
+        const currentUsers = (node.users || []).map(normalizeIdRef).filter(Boolean);
+        const merged = Array.from(new Set([...currentUsers, String(createdUser._id || createdUser.id)]));
+        // eslint-disable-next-line no-await-in-loop
+        await nodeService.assignUsersToNode(nId, merged);
+      }
+    } catch (nodeErr) {
+      // Non-fatal node attachment failure
+    }
+  }
+
   await invalidateUserSearchAndResolveCache(
     event.tenant_id || userBody.tenantId
   );
@@ -296,30 +343,57 @@ const handleCreateUser = async (event) => {
 
 const handleSubmitData = async (event) => {
   requireObjectPayload(event.payload_json);
-  const submissionBody = event.payload_json.submissionBody || {
-    ...event.payload_json,
+  const payload = event.payload_json;
+  const submissionBody = payload.submissionBody || { ...payload };
+
+  const formId = submissionBody.formId || submissionBody.projectFormId || event.entity_id;
+  let projectId = submissionBody.projectId;
+  const rawData =
+    submissionBody.data ||
+    submissionBody.submissionData ||
+    submissionBody.formData ||
+    {};
+  const wrappedData = {
+    submissionData: rawData,
+    formData: rawData,
+    data: rawData,
   };
+  const actorUser = await resolveActorUser(event);
 
-  if (!submissionBody.tenantId) {
-    submissionBody.tenantId = event.tenant_id;
-  }
-  if (!submissionBody.userId && event.actor_user_id) {
-    submissionBody.userId = event.actor_user_id;
+  if (formId) {
+    const pf = await ProjectForm.findOne({
+      $or: [{ _id: formId }, { projectId: formId }],
+      tenantId: event.tenant_id,
+      deletedAt: null,
+    });
+    if (pf) {
+      projectId = pf.projectId || String(pf._id);
+      tenantId = pf.tenantId;
+    }
   }
 
-  const queued = await queueSubmission(submissionBody);
+  // Create submission directly via projectFormSubmissionService
+  const created = await projectFormSubmissionService.createSubmission(
+    wrappedData,
+    projectId || formId,
+    tenantId,
+    actorUser?._id || null
+  );
+
   return {
     handled: true,
-    resultType: 'submission_queued',
-    jobId: queued.jobId,
-    queueStatus: queued.status,
+    resultType: 'submission_created',
+    entityId: String(created._id || created.id),
+    submissionId: String(created._id || created.id),
+    projectId,
+    status: created.status || 'submitted',
   };
 };
 
 const handleApproveSubmission = async (event) => {
   requireObjectPayload(event.payload_json);
   const payload = event.payload_json;
-  const submissionId = payload.submissionId || event.entity_id;
+  const submissionId = payload.submissionId || payload.id || event.entity_id;
 
   if (!submissionId) {
     throw new ApiError(
@@ -328,77 +402,111 @@ const handleApproveSubmission = async (event) => {
     );
   }
 
-  const queued = await queueUpdateSubmission({
-    submissionId,
-    updates: {
-      ...(payload.updates || {}),
-      status: 'approved',
-    },
-    userId: payload.userId || event.actor_user_id || null,
+  const submission = await ProjectFormSubmission.findOne({
+    _id: submissionId,
     tenantId: event.tenant_id,
+    deletedAt: null,
   });
+
+  if (!submission) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
+  }
+
+  submission.status = 'approved';
+  submission.processedAt = new Date();
+  if (event.actor_user_id) {
+    submission.processedBy = event.actor_user_id;
+  }
+  await submission.save();
 
   return {
     handled: true,
-    resultType: 'submission_approval_queued',
-    submissionId,
-    jobId: queued.jobId,
-    queueStatus: queued.status,
+    resultType: 'submission_approved',
+    entityId: String(submission._id || submission.id),
+    submissionId: String(submission._id || submission.id),
+    status: 'approved',
   };
 };
 
-const queueSubmissionStatusUpdate = async (
-  event,
-  status,
-  extraUpdates = {}
-) => {
+const handleRejectSubmission = async (event) => {
   requireObjectPayload(event.payload_json);
   const payload = event.payload_json;
-  const submissionId = payload.submissionId || event.entity_id;
+  const submissionId = payload.submissionId || payload.id || event.entity_id;
 
   if (!submissionId) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      `${event.action_type} requires submissionId or submission entity_id`
+      'reject_submission requires submissionId or submission entity_id'
     );
   }
 
-  const queued = await queueUpdateSubmission({
-    submissionId,
-    updates: {
-      ...(payload.updates || {}),
-      ...extraUpdates,
-      status,
-    },
-    userId: payload.userId || event.actor_user_id || null,
+  const submission = await ProjectFormSubmission.findOne({
+    _id: submissionId,
     tenantId: event.tenant_id,
+    deletedAt: null,
   });
+
+  if (!submission) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
+  }
+
+  submission.status = 'rejected';
+  submission.processedAt = new Date();
+  if (payload.reason) {
+    submission.rejectionReason = payload.reason;
+  }
+  if (event.actor_user_id) {
+    submission.processedBy = event.actor_user_id;
+  }
+  await submission.save();
 
   return {
     handled: true,
-    resultType: `${status}_queued`,
-    submissionId,
-    jobId: queued.jobId,
-    queueStatus: queued.status,
+    resultType: 'submission_rejected',
+    entityId: String(submission._id || submission.id),
+    submissionId: String(submission._id || submission.id),
+    status: 'rejected',
   };
 };
 
-const handleRejectSubmission = async (event) =>
-  queueSubmissionStatusUpdate(event, 'rejected');
+const handleReopenSubmission = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const submissionId = payload.submissionId || payload.id || event.entity_id;
 
-const handleReopenSubmission = async (event) =>
-  queueSubmissionStatusUpdate(event, 'reopened');
+  if (!submissionId) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'reopen_submission requires submissionId or submission entity_id'
+    );
+  }
 
-const handleRevokeApproval = async (event) =>
-  queueSubmissionStatusUpdate(event, 'submitted');
+  const submission = await ProjectFormSubmission.findOne({
+    _id: submissionId,
+    tenantId: event.tenant_id,
+    deletedAt: null,
+  });
 
-const handleWithdrawSubmission = async (event) =>
-  queueSubmissionStatusUpdate(event, 'withdrawn');
+  if (!submission) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
+  }
+
+  submission.status = 'submitted';
+  await submission.save();
+
+  return {
+    handled: true,
+    resultType: 'submission_reopened',
+    entityId: String(submission._id || submission.id),
+    submissionId: String(submission._id || submission.id),
+    status: 'submitted',
+  };
+};
 
 const handleDeleteSubmission = async (event) => {
   requireObjectPayload(event.payload_json);
   const payload = event.payload_json;
-  const submissionId = payload.submissionId || event.entity_id;
+  const submissionId = payload.submissionId || payload.id || event.entity_id;
 
   if (!submissionId) {
     throw new ApiError(
@@ -407,20 +515,25 @@ const handleDeleteSubmission = async (event) => {
     );
   }
 
-  const queued = await queueDeleteSubmission({
-    submissionId,
-    userId: payload.userId || event.actor_user_id || null,
+  const submission = await ProjectFormSubmission.findOne({
+    _id: submissionId,
     tenantId: event.tenant_id,
-    permanent: Boolean(payload.permanent),
+    deletedAt: null,
   });
+
+  if (!submission) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Submission not found');
+  }
+
+  submission.deletedAt = new Date();
+  await submission.save();
 
   return {
     handled: true,
-    resultType: 'submission_delete_queued',
-    submissionId,
-    permanent: Boolean(payload.permanent),
-    jobId: queued.jobId,
-    queueStatus: queued.status,
+    resultType: 'submission_deleted',
+    entityId: String(submission._id || submission.id),
+    submissionId: String(submission._id || submission.id),
+    status: 'deleted',
   };
 };
 
@@ -473,26 +586,52 @@ const handleCreateRole = async (event) => {
 const handleUpdateUser = async (event) => {
   requireObjectPayload(event.payload_json);
   const payload = event.payload_json;
-  const userId = payload.userId || event.entity_id;
+  const rawUserId = payload.userId || event.entity_id;
 
-  if (!userId) {
+  if (!rawUserId) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'update_user requires userId or user entity_id'
     );
   }
 
+  const userDoc = await resolveUserDoc(rawUserId, event.tenant_id);
+  const userId = userDoc ? String(userDoc._id) : rawUserId;
+
   const actorUser = await resolveActorUser(event);
   const updates = payload.userBody || payload.updateBody || { ...payload };
   delete updates.userId;
   delete updates.updateBody;
   delete updates.userBody;
+  delete updates.nodeId;
+  delete updates.nodeIds;
 
   const updatedUser = await userService.updateUserById(
     userId,
     updates,
     actorUser
   );
+
+  const rawNodeIds = payload.nodeIds || (payload.nodeId ? [payload.nodeId] : []);
+  const nodeIds = Array.isArray(rawNodeIds) ? rawNodeIds.filter(Boolean) : [];
+  for (let i = 0; i < nodeIds.length; i += 1) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const node = await nodeService.getNodeById(nodeIds[i]);
+      if (node) {
+        const currentUsers = (node.users || []).map(normalizeIdRef).filter(Boolean);
+        const userObjId = String(updatedUser._id || updatedUser.id);
+        const merged = Array.from(new Set([...currentUsers, userObjId]));
+        // eslint-disable-next-line no-await-in-loop
+        await nodeService.assignUsersToNode(node._id, merged);
+        // eslint-disable-next-line no-await-in-loop
+        await invalidateNodeSearchAndResolveCache(event.tenant_id || node?.tenantId);
+      }
+    } catch {
+      // non-fatal node assignment error on update
+    }
+  }
+
   await invalidateUserSearchAndResolveCache(
     event.tenant_id || updatedUser?.tenantId
   );
@@ -677,28 +816,59 @@ const handleVerifyAccount = async (event) => {
   const email = String(payload.email || payload.userEmail || '')
     .trim()
     .toLowerCase();
+  const rawUserId = payload.userId || payload.id || event.entity_id;
+  const phone = payload.phone || payload.phoneNumber;
 
-  if (!email) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'verify_account requires email');
+  let user = null;
+  if (email) {
+    user = await userService.getUserByEmail(email);
+  } else if (rawUserId) {
+    user = await resolveUserDoc(rawUserId, event.tenant_id);
+  } else if (phone) {
+    user = await User.findOne({
+      $or: [{ phone }, { phoneNumber: phone }],
+      tenantId: event.tenant_id,
+    });
   }
 
-  const user = await userService.getUserByEmail(email);
   if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'User not found for account verification'
+    );
   }
   if (String(user.tenantId || '') !== String(event.tenant_id || '')) {
     throw new ApiError(httpStatus.FORBIDDEN, 'User does not belong to tenant');
   }
 
+  const verifyEmail =
+    payload.verifyEmail !== false && payload.channel !== 'phone';
+  const verifyPhone =
+    payload.verifyPhone === true ||
+    payload.isPhoneVerified === true ||
+    payload.channel === 'phone' ||
+    payload.channel === 'all' ||
+    (payload.verifyEmail === false && payload.verifyPhone !== false) ||
+    (payload.channel === undefined &&
+      payload.verifyPhone === undefined &&
+      Boolean(user.phone || user.phoneNumber));
+
+  const updateFields = {
+    otpVerified: true,
+    status: true,
+    otp: null,
+    otpExpires: null,
+  };
+  if (verifyEmail) {
+    updateFields.isEmailVerified = true;
+  }
+  if (verifyPhone) {
+    updateFields.isPhoneVerified = true;
+  }
+
   const updated = await userService.updateUserById(
     user._id,
-    {
-      otpVerified: true,
-      isEmailVerified: true,
-      status: true,
-      otp: null,
-      otpExpires: null,
-    },
+    updateFields,
     await resolveActorUser(event)
   );
   await invalidateUserSearchAndResolveCache(event.tenant_id || user?.tenantId);
@@ -707,7 +877,9 @@ const handleVerifyAccount = async (event) => {
     handled: true,
     resultType: 'account_verified',
     entityId: String(updated?._id || user?._id || ''),
-    email,
+    email: user.email,
+    isEmailVerified: updated?.isEmailVerified ?? user.isEmailVerified,
+    isPhoneVerified: updated?.isPhoneVerified ?? user.isPhoneVerified,
     firstname: updated?.firstname || user?.firstname || null,
     lastname: updated?.lastname || user?.lastname || null,
   };
@@ -780,6 +952,27 @@ const handleAssignRole = async (event) => {
   );
 
   const updatedUser = await userService.assignRoles(userId, roleIds);
+
+  const rawNodeIds = payload.nodeIds || (payload.nodeId ? [payload.nodeId] : []);
+  const nodeIds = Array.isArray(rawNodeIds) ? rawNodeIds.filter(Boolean) : [];
+  for (let i = 0; i < nodeIds.length; i += 1) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const node = await nodeService.getNodeById(nodeIds[i]);
+      if (node) {
+        const currentUsers = (node.users || []).map(normalizeIdRef).filter(Boolean);
+        const userObjId = String(targetUser._id || targetUser.id);
+        const merged = Array.from(new Set([...currentUsers, userObjId]));
+        // eslint-disable-next-line no-await-in-loop
+        await nodeService.assignUsersToNode(node._id, merged);
+        // eslint-disable-next-line no-await-in-loop
+        await invalidateNodeSearchAndResolveCache(event.tenant_id || node?.tenantId);
+      }
+    } catch {
+      // non-fatal node assignment error
+    }
+  }
+
   await invalidateUserSearchAndResolveCache(
     event.tenant_id || updatedUser?.tenantId
   );
@@ -946,29 +1139,117 @@ const handleCreateNode = async (event) => {
   requireObjectPayload(event.payload_json);
   const payload = event.payload_json;
   const nodeBody = payload.nodeBody || { ...payload };
+  const tenantId = event.tenant_id || nodeBody.tenantId;
 
-  if (!nodeBody.name) {
+  // 1. Name normalization (accepts name or nodeName)
+  const name = String(nodeBody.name || nodeBody.nodeName || '').trim();
+  if (!name) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'create_node payload requires name'
     );
   }
-  if (!nodeBody.level) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'create_node payload requires level'
-    );
+  nodeBody.name = name;
+
+  // 2. Parent resolution (accepts parent, parentNodeId, parentId)
+  const parentRef = nodeBody.parent || nodeBody.parentNodeId || nodeBody.parentId;
+  let resolvedParent = null;
+  if (parentRef) {
+    if (mongoose.Types.ObjectId.isValid(parentRef)) {
+      resolvedParent = await Nodes.findOne({ _id: parentRef, tenantId });
+    }
+    if (!resolvedParent) {
+      resolvedParent = await Nodes.findOne({ nodeId: String(parentRef), tenantId });
+    }
+    if (!resolvedParent) {
+      resolvedParent = await Nodes.findOne({
+        tenantId,
+        name: new RegExp(`^${escapeRegex(String(parentRef).trim())}$`, 'i'),
+      });
+    }
+    if (resolvedParent) {
+      nodeBody.parent = resolvedParent._id;
+    }
   }
-  if (!nodeBody.structure) {
+
+  // 3. Level resolution (accepts level, levelId, levelName, or parent inheritance)
+  const levelRef = nodeBody.level || nodeBody.levelId || nodeBody.levelName;
+  let resolvedLevel = null;
+  if (levelRef) {
+    if (mongoose.Types.ObjectId.isValid(levelRef)) {
+      resolvedLevel = await Level.findOne({ _id: levelRef, tenantId });
+    }
+    if (!resolvedLevel) {
+      resolvedLevel = await Level.findOne({
+        tenantId,
+        name: new RegExp(`^${escapeRegex(String(levelRef).trim())}$`, 'i'),
+      });
+    }
+  }
+
+  // If level not explicitly given, try to resolve from parent's level + 1 rank
+  if (!resolvedLevel && resolvedParent && resolvedParent.level) {
+    const parentLevelDoc = await Level.findById(resolvedParent.level);
+    if (parentLevelDoc) {
+      const nextRank = (parentLevelDoc.rank ?? 0) + 1;
+      resolvedLevel = await Level.findOne({ tenantId, rank: nextRank, isActive: true });
+    }
+  }
+
+  // If still not resolved and tenant has levels, pick default
+  if (!resolvedLevel && !levelRef) {
+    resolvedLevel = await Level.findOne({ tenantId, isActive: true }).sort({ rank: 1 });
+  }
+
+  if (resolvedLevel) {
+    nodeBody.level = resolvedLevel._id;
+  } else if (!nodeBody.level) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      'create_node payload requires structure'
+      'create_node payload requires level (provide level ID or level name)'
     );
   }
 
-  if (!nodeBody.tenantId) {
-    nodeBody.tenantId = event.tenant_id;
+  // 4. Structure resolution (accepts structure, structureId, structureName, or inheritance)
+  const structRef = nodeBody.structure || nodeBody.structureId || nodeBody.structureName;
+  let resolvedStructure = null;
+  if (structRef) {
+    if (mongoose.Types.ObjectId.isValid(structRef)) {
+      resolvedStructure = await Structures.findOne({ _id: structRef, tenantId });
+    }
+    if (!resolvedStructure) {
+      resolvedStructure = await Structures.findOne({
+        tenantId,
+        name: new RegExp(`^${escapeRegex(String(structRef).trim())}$`, 'i'),
+      });
+    }
   }
+
+  // Inherit structure from level if level links to one
+  if (!resolvedStructure && resolvedLevel) {
+    resolvedStructure = await Structures.findOne({ tenantId, level: resolvedLevel._id, isActive: true });
+  }
+
+  // Inherit structure from parent node if parent exists
+  if (!resolvedStructure && resolvedParent && resolvedParent.structure) {
+    resolvedStructure = await Structures.findById(resolvedParent.structure);
+  }
+
+  // Fallback to active tenant structure
+  if (!resolvedStructure && !structRef) {
+    resolvedStructure = await Structures.findOne({ tenantId, isActive: true });
+  }
+
+  if (resolvedStructure) {
+    nodeBody.structure = resolvedStructure._id;
+  } else if (!nodeBody.structure) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'create_node payload requires structure (provide structure ID or structure name)'
+    );
+  }
+
+  nodeBody.tenantId = tenantId;
 
   const node = await nodeService.createNode(nodeBody);
   return {
@@ -977,6 +1258,309 @@ const handleCreateNode = async (event) => {
     entityId: String(node?._id || node?.id || node?.nodeId || ''),
     nodeId: node?.nodeId || null,
     name: node?.name || nodeBody.name,
+  };
+};
+
+const handleCreateLevel = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const tenantId = event.tenant_id || payload.tenantId;
+  const name = String(payload.name || payload.levelName || '').trim();
+  if (!name) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'create_level payload requires name');
+  }
+  const rank = Number(payload.rank ?? payload.levelRank);
+  if (!Number.isFinite(rank)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'create_level payload requires numeric rank');
+  }
+
+  const level = await levelService.createLevel({
+    tenantId,
+    name,
+    rank,
+    description: payload.description || '',
+    isSpecial: Boolean(payload.isSpecial),
+    isActive: true,
+  });
+
+  return {
+    handled: true,
+    resultType: 'level_created',
+    entityId: String(level?._id || level?.id || ''),
+    name: level?.name || name,
+    rank: level?.rank ?? rank,
+  };
+};
+
+const handleCreateStructure = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const tenantId = event.tenant_id || payload.tenantId;
+  const name = String(payload.name || payload.structureName || '').trim();
+  if (!name) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'create_structure payload requires name');
+  }
+
+  let levelId = payload.level || payload.levelId;
+  if (levelId && !mongoose.Types.ObjectId.isValid(levelId)) {
+    const levelDoc = await Level.findOne({
+      tenantId,
+      name: new RegExp(`^${escapeRegex(String(levelId).trim())}$`, 'i'),
+    });
+    if (levelDoc) levelId = levelDoc._id;
+  }
+
+  const structure = await structureService.createStructure({
+    tenantId,
+    name,
+    level: levelId || null,
+    description: payload.description || '',
+    isSpecial: Boolean(payload.isSpecial),
+    isActive: true,
+  });
+
+  return {
+    handled: true,
+    resultType: 'structure_created',
+    entityId: String(structure?._id || structure?.id || ''),
+    name: structure?.name || name,
+  };
+};
+
+const parseRawCsvText = (text) => {
+  const lines = String(text || '').trim().split(/\r?\n/).filter(Boolean);
+  if (lines.length === 0) return [];
+
+  const parseRow = (line) => {
+    const row = [];
+    let insideQuote = false;
+    let entry = '';
+    for (let i = 0; i < line.length; i += 1) {
+      const char = line[i];
+      if (char === '"' || char === "'") {
+        insideQuote = !insideQuote;
+      } else if (char === ',' && !insideQuote) {
+        row.push(entry.trim());
+        entry = '';
+      } else {
+        entry += char;
+      }
+    }
+    row.push(entry.trim());
+    return row.map((c) => c.replace(/^["']|["']$/g, '').trim());
+  };
+
+  const headers = parseRow(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i += 1) {
+    const cols = parseRow(lines[i]);
+    const obj = {};
+    headers.forEach((h, idx) => {
+      obj[h] = cols[idx] !== undefined ? cols[idx] : '';
+    });
+    rows.push(obj);
+  }
+  return rows;
+};
+
+const handleBulkImportNodes = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const tenantId = event.tenant_id || payload.tenantId;
+
+  let rawRows = [];
+  if (Array.isArray(payload.nodes)) {
+    rawRows = payload.nodes;
+  } else if (payload.csvText) {
+    rawRows = parseRawCsvText(payload.csvText);
+  } else if (payload.filePath && fs.existsSync(payload.filePath)) {
+    const fileContent = fs.readFileSync(payload.filePath, 'utf8');
+    if (payload.filePath.endsWith('.json')) {
+      const parsed = JSON.parse(fileContent);
+      rawRows = Array.isArray(parsed) ? parsed : parsed.nodes || [];
+    } else {
+      rawRows = parseRawCsvText(fileContent);
+    }
+  }
+
+  // Pre-load tenant levels and structures to resolve ObjectIds
+  const tenantLevels = await Level.find({ tenantId, deletedAt: null });
+  const tenantStructures = await Structures.find({ tenantId, deletedAt: null });
+
+  const levelByRank = new Map();
+  const levelByName = new Map();
+  tenantLevels.forEach((lvl) => {
+    levelByRank.set(Number(lvl.rank), lvl);
+    levelByName.set(String(lvl.name).trim().toLowerCase(), lvl);
+  });
+
+  const structureByName = new Map();
+  const structureByType = new Map();
+  const structureByLevelId = new Map();
+  tenantStructures.forEach((str) => {
+    structureByName.set(String(str.name).trim().toLowerCase(), str);
+    if (str.type) structureByType.set(String(str.type).trim().toLowerCase(), str);
+    if (str.level) structureByLevelId.set(String(str.level), str);
+  });
+
+  // Ensure every level has a matching Structure (required by Node pre-save hook)
+  for (const lvl of tenantLevels) {
+    const lvlIdStr = String(lvl._id);
+    if (!structureByLevelId.has(lvlIdStr)) {
+      const newStruct = await Structures.create({
+        tenantId,
+        name: `${lvl.name} Structure`,
+        level: lvl._id,
+        parent: null,
+        isActive: true,
+        isSpecial: Boolean(lvl.isSpecial),
+        type: lvl.rank === 0 ? 'headquarters' : 'branch',
+      });
+      structureByLevelId.set(lvlIdStr, newStruct);
+      tenantStructures.push(newStruct);
+    }
+  }
+  const defaultStructure = tenantStructures[0] || null;
+
+  // Process rows and build tree relationships
+  const stack = {}; // rank -> nodeName
+  const nodeObjects = [];
+
+  for (let idx = 0; idx < rawRows.length; idx += 1) {
+    const row = rawRows[idx];
+    const name = row.NODE_NAME || row.node_name || row['CHURCH NAME'] || row.church_name || row.name || row.nodeName;
+    if (!name) continue;
+
+    const rawLevel = row.LEVEL ?? row.level ?? row.level_name ?? row.levelName ?? '';
+    let rank = Number(rawLevel);
+    let resolvedLevel = null;
+    if (Number.isFinite(rank) && levelByRank.has(rank)) {
+      resolvedLevel = levelByRank.get(rank);
+    } else if (typeof rawLevel === 'string' && levelByName.has(rawLevel.trim().toLowerCase())) {
+      resolvedLevel = levelByName.get(rawLevel.trim().toLowerCase());
+      rank = Number(resolvedLevel.rank);
+    } else {
+      rank = Number.isFinite(rank) ? rank : 0;
+    }
+
+    let parentName = row.PARENT || row.parent || row.parent_node_name || row.parentName || null;
+    if (!parentName && rank > 0) {
+      for (let r = rank - 1; r >= 0; r -= 1) {
+        if (stack[r]) {
+          parentName = stack[r];
+          break;
+        }
+      }
+    }
+
+    stack[rank] = name;
+    Object.keys(stack).forEach((r) => {
+      if (Number(r) > rank) delete stack[r];
+    });
+
+    const rawStructure = row.STRUCTURE || row.structure || row.structure_name || row.structureName || '';
+    const resolvedStructure =
+      (resolvedLevel ? structureByLevelId.get(String(resolvedLevel._id)) : null) ||
+      structureByName.get(String(rawStructure).trim().toLowerCase()) ||
+      structureByType.get(String(rawStructure).trim().toLowerCase()) ||
+      defaultStructure;
+
+    nodeObjects.push({
+      name,
+      parentName,
+      level: resolvedLevel ? resolvedLevel._id : null,
+      structure: resolvedStructure ? resolvedStructure._id : null,
+      type: rawStructure || (resolvedStructure ? resolvedStructure.type : 'branch'),
+      address: row.ADDRESS || row.address || '',
+      city: row.CITY || row.city || '',
+      state: row.REGION_STATE || row.state || '',
+      country: row.COUNTRY || row.country || '',
+      tenantId,
+      isActive: true,
+    });
+  }
+
+  if (payload.dryRun) {
+    return {
+      handled: true,
+      resultType: 'bulk_import_nodes_dry_run',
+      count: nodeObjects.length,
+      sample: nodeObjects.slice(0, 5),
+    };
+  }
+
+  // Topological node creation & parent linking
+  const nameToDoc = new Map();
+  const existingNodes = await Nodes.find({ tenantId, deletedAt: null }, { name: 1, _id: 1, path: 1, nodeId: 1 });
+  existingNodes.forEach((en) => {
+    nameToDoc.set(String(en.name).trim().toLowerCase(), en);
+  });
+
+  const createdNodes = [];
+  for (let i = 0; i < nodeObjects.length; i += 1) {
+    const n = nodeObjects[i];
+    const existing = nameToDoc.get(String(n.name).trim().toLowerCase());
+    if (existing) {
+      createdNodes.push(existing);
+      continue;
+    }
+
+    let parentNode = null;
+    if (n.parentName) {
+      parentNode = nameToDoc.get(String(n.parentName).trim().toLowerCase());
+    }
+
+    const generatedIds = await Nodes.generateNodeIds(1);
+    const nodeDoc = new Nodes({
+      tenantId,
+      name: n.name,
+      nodeId: generatedIds[0],
+      level: n.level,
+      structure: n.structure,
+      type: n.type,
+      parent: parentNode ? parentNode._id : null,
+      address: n.address,
+      city: n.city,
+      state: n.state,
+      country: n.country,
+      isActive: true,
+    });
+
+    if (parentNode) {
+      nodeDoc.path = `${parentNode.path || parentNode._id}/${nodeDoc._id}`;
+    } else {
+      nodeDoc.path = String(nodeDoc._id);
+    }
+
+    await nodeDoc.save();
+    nameToDoc.set(String(n.name).trim().toLowerCase(), nodeDoc);
+    createdNodes.push(nodeDoc);
+  }
+
+  await invalidateNodeSearchAndResolveCache(tenantId);
+
+  // Replicate to PostgreSQL dimensions (public.node_dimension and copilot.node_dimension)
+  try {
+    const { upsertNodeDimension } = require('./nodeSync.service');
+    for (const nodeDoc of createdNodes) {
+      await upsertNodeDimension(nodeDoc);
+    }
+  } catch (err) {
+    logger.warn(`[handleBulkImportNodes] Warning: failed to upsert public.node_dimension: ${err.message}`);
+  }
+
+  try {
+    const { syncTenantNodeHierarchy } = require('./copilotNodeDimensionSync.service');
+    await syncTenantNodeHierarchy(tenantId);
+  } catch (err) {
+    logger.warn(`[handleBulkImportNodes] Warning: failed to sync copilot.node_dimension: ${err.message}`);
+  }
+
+  return {
+    handled: true,
+    resultType: 'bulk_import_nodes_completed',
+    count: createdNodes.length,
+    totalNodes: createdNodes.length,
   };
 };
 
@@ -1082,32 +1666,40 @@ const handleRestoreNode = async (event) => {
 const handleAssignUserToNode = async (event) => {
   requireObjectPayload(event.payload_json);
   const payload = event.payload_json;
-  const nodeId = payload.nodeId || event.entity_id;
-  const userId = payload.userId;
+  const rawNodeId = payload.nodeId || event.entity_id;
+  const rawUserId = payload.userId;
 
-  if (!nodeId) {
+  if (!rawNodeId) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'assign_user_to_node requires nodeId or node entity_id'
     );
   }
-  if (!userId) {
+  if (!rawUserId) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'assign_user_to_node payload requires userId'
     );
   }
 
-  const node = await nodeService.getNodeById(nodeId);
+  const user = await resolveUserDoc(rawUserId, event.tenant_id);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, `User not found: ${rawUserId}`);
+  }
+
+  const node = await nodeService.getNodeById(rawNodeId);
   const currentUsers = (node.users || []).map(normalizeIdRef).filter(Boolean);
-  const merged = Array.from(new Set([...currentUsers, String(userId)]));
-  const updated = await nodeService.assignUsersToNode(nodeId, merged);
+  const userObjectIdStr = String(user._id);
+  const merged = Array.from(new Set([...currentUsers, userObjectIdStr]));
+  const updated = await nodeService.assignUsersToNode(node._id, merged);
+  await invalidateNodeSearchAndResolveCache(event.tenant_id || node?.tenantId);
+  await invalidateUserSearchAndResolveCache(event.tenant_id || user?.tenantId);
 
   return {
     handled: true,
     resultType: 'node_user_assigned',
-    nodeId: String(nodeId),
-    userId: String(userId),
+    nodeId: String(node.nodeId || node._id),
+    userId: String(user.userId || user._id),
     totalUsers: (updated?.users || []).length,
   };
 };
@@ -1115,32 +1707,40 @@ const handleAssignUserToNode = async (event) => {
 const handleUnassignUserFromNode = async (event) => {
   requireObjectPayload(event.payload_json);
   const payload = event.payload_json;
-  const nodeId = payload.nodeId || event.entity_id;
-  const userId = payload.userId;
+  const rawNodeId = payload.nodeId || event.entity_id;
+  const rawUserId = payload.userId;
 
-  if (!nodeId) {
+  if (!rawNodeId) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'unassign_user_from_node requires nodeId or node entity_id'
     );
   }
-  if (!userId) {
+  if (!rawUserId) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'unassign_user_from_node payload requires userId'
     );
   }
 
-  const node = await nodeService.getNodeById(nodeId);
+  const user = await resolveUserDoc(rawUserId, event.tenant_id);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, `User not found: ${rawUserId}`);
+  }
+
+  const node = await nodeService.getNodeById(rawNodeId);
   const currentUsers = (node.users || []).map(normalizeIdRef).filter(Boolean);
-  const filtered = currentUsers.filter((id) => id !== String(userId));
-  const updated = await nodeService.assignUsersToNode(nodeId, filtered);
+  const userObjectIdStr = String(user._id);
+  const filtered = currentUsers.filter((id) => id !== userObjectIdStr);
+  const updated = await nodeService.assignUsersToNode(node._id, filtered);
+  await invalidateNodeSearchAndResolveCache(event.tenant_id || node?.tenantId);
+  await invalidateUserSearchAndResolveCache(event.tenant_id || user?.tenantId);
 
   return {
     handled: true,
     resultType: 'node_user_unassigned',
-    nodeId: String(nodeId),
-    userId: String(userId),
+    nodeId: String(node.nodeId || node._id),
+    userId: String(user.userId || user._id),
     totalUsers: (updated?.users || []).length,
   };
 };
@@ -1148,13 +1748,33 @@ const handleUnassignUserFromNode = async (event) => {
 const handleCreateProject = async (event) => {
   requireObjectPayload(event.payload_json);
   const payload = event.payload_json;
-  const projectFormBody = payload.projectFormBody || { ...payload };
+  let projectFormBody = payload.projectFormBody || (payload.body && typeof payload.body === 'object' ? payload.body : { ...payload });
 
-  if (!projectFormBody.identity?.name) {
+  const formName =
+    projectFormBody.identity?.name ||
+    payload.title ||
+    payload.name ||
+    payload.projectName ||
+    projectFormBody.title ||
+    projectFormBody.name ||
+    projectFormBody.projectName;
+
+  if (!projectFormBody.identity) {
+    projectFormBody.identity = {};
+  }
+  if (!projectFormBody.identity.name && formName) {
+    projectFormBody.identity.name = formName;
+  }
+
+  if (!projectFormBody.identity.name) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      'create_project requires payload.projectFormBody.identity.name'
+      'create_project requires payload.projectFormBody.identity.name or title'
     );
+  }
+
+  if (!Array.isArray(projectFormBody.elements) && Array.isArray(payload.elements)) {
+    projectFormBody.elements = payload.elements;
   }
 
   const actorUser = await resolveActorUser(event);
@@ -1170,12 +1790,26 @@ const handleCreateProject = async (event) => {
     event.tenant_id,
     actorUser._id
   );
+
+  // Read-back verification
+  const verified = await ProjectForm.findOne({
+    _id: created._id,
+    tenantId: event.tenant_id,
+    deletedAt: null,
+  });
+  if (!verified) {
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Form creation verification failed: form not found post-creation'
+    );
+  }
+
   return {
     handled: true,
     resultType: 'project_created',
-    entityId: String(created?._id || created?.id || ''),
-    projectId: created?.projectId || null,
-    projectName: created?.configuration?.projectName || null,
+    entityId: String(verified._id || verified.id || ''),
+    projectId: verified.projectId || null,
+    projectName: verified.identity?.name || verified.configuration?.projectName || null,
   };
 };
 
@@ -1235,6 +1869,148 @@ const handleRestoreProject = async (event) => {
     resultType: 'project_restored',
     entityId: String(restored?._id || restored?.id || projectFormId),
     status: restored?.status || null,
+  };
+};
+
+const handleUpdateProjectForm = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const projectFormId = payload.projectFormId || payload.id || payload.formId || event.entity_id;
+  if (!projectFormId) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'update_project_form requires projectFormId, id, or entity_id'
+    );
+  }
+  const projectForm = await projectFormService.getProjectFormById(projectFormId);
+  assertTenantOwned({
+    entity: projectForm,
+    tenantId: event.tenant_id,
+    entityName: 'ProjectForm',
+  });
+
+  const actorUser = await resolveActorUser(event);
+  const actorUserId = actorUser?._id ? String(actorUser._id) : null;
+
+  const updateBody = payload.projectFormBody || payload.updateBody || { ...payload };
+  delete updateBody.projectFormId;
+  delete updateBody.id;
+  delete updateBody.formId;
+  delete updateBody.entityId;
+  delete updateBody.idempotencyKey;
+  delete updateBody.approvalToken;
+  delete updateBody.correlationId;
+  delete updateBody.lockKey;
+
+  if (updateBody.title && !updateBody.identity?.name) {
+    updateBody.identity = updateBody.identity || {};
+    updateBody.identity.name = updateBody.title;
+  }
+  if (updateBody.name && !updateBody.identity?.name) {
+    updateBody.identity = updateBody.identity || {};
+    updateBody.identity.name = updateBody.name;
+  }
+  if (updateBody.description !== undefined) {
+    updateBody.identity = updateBody.identity || {};
+    updateBody.identity.description = updateBody.description;
+  }
+
+  const updated = await projectFormService.updateProjectFormById(
+    projectFormId,
+    updateBody,
+    { actorUserId }
+  );
+
+  return {
+    handled: true,
+    resultType: 'project_form_updated',
+    entityId: String(updated._id || updated.id || projectFormId),
+    title: updated.identity?.name || updated.title || null,
+    elementsCount: Array.isArray(updated.elements) ? updated.elements.length : 0,
+    status: updated.identity?.status || updated.status || null,
+    schemaVersion: updated.schemaVersion || updated.metadata?.schemaVersion || null,
+  };
+};
+
+const handlePublishProjectForm = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const projectFormId = payload.projectFormId || payload.id || payload.formId || event.entity_id;
+  if (!projectFormId) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'publish_project_form requires projectFormId, id, or entity_id'
+    );
+  }
+  const projectForm = await projectFormService.getProjectFormById(projectFormId);
+  assertTenantOwned({
+    entity: projectForm,
+    tenantId: event.tenant_id,
+    entityName: 'ProjectForm',
+  });
+
+  const published = await projectFormService.publishProjectForm(projectFormId);
+  return {
+    handled: true,
+    resultType: 'project_form_published',
+    entityId: String(published._id || published.id || projectFormId),
+    status: published.identity?.status || published.status || 'published',
+  };
+};
+
+const handleUnpublishProjectForm = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const projectFormId = payload.projectFormId || payload.id || payload.formId || event.entity_id;
+  if (!projectFormId) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'unpublish_project_form requires projectFormId, id, or entity_id'
+    );
+  }
+  const projectForm = await projectFormService.getProjectFormById(projectFormId);
+  assertTenantOwned({
+    entity: projectForm,
+    tenantId: event.tenant_id,
+    entityName: 'ProjectForm',
+  });
+
+  const unpublished = await projectFormService.unpublishProjectForm(projectFormId);
+  return {
+    handled: true,
+    resultType: 'project_form_unpublished',
+    entityId: String(unpublished._id || unpublished.id || projectFormId),
+    status: unpublished.identity?.status || unpublished.status || 'draft',
+  };
+};
+
+const handleDeleteProjectForm = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const projectFormId = payload.projectFormId || payload.id || payload.formId || event.entity_id;
+  if (!projectFormId) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'delete_project_form requires projectFormId, id, or entity_id'
+    );
+  }
+  const projectForm = await projectFormService.getProjectFormById(projectFormId);
+  assertTenantOwned({
+    entity: projectForm,
+    tenantId: event.tenant_id,
+    entityName: 'ProjectForm',
+  });
+
+  const actorUser = await resolveActorUser(event);
+  const deleted = await projectFormService.softDeleteProjectFormById(
+    projectFormId,
+    actorUser?._id || null
+  );
+  return {
+    handled: true,
+    resultType: 'project_form_deleted',
+    entityId: String(deleted?._id || deleted?.id || projectFormId),
+    status: 'deleted',
   };
 };
 
@@ -1370,7 +2146,15 @@ const handleRefundPayment = async (event) => {
 
 const resolveActionItemId = (event) => {
   const payload = event.payload_json || {};
-  return payload.actionItemId || event.entity_id || null;
+  return (
+    payload.actionItemId ||
+    payload.id ||
+    payload.taskId ||
+    payload.taskItemId ||
+    payload.entityId ||
+    event.entity_id ||
+    null
+  );
 };
 
 const setActionItemStatus = async (event, nextStatus) => {
@@ -1382,6 +2166,37 @@ const setActionItemStatus = async (event, nextStatus) => {
     );
   }
 
+  // 1. Try updating canonical MongoDB WorkItem
+  const mongoStatus =
+    nextStatus === 'done'
+      ? 'completed'
+      : nextStatus === 'open'
+      ? 'scheduled'
+      : 'cancelled';
+  let mongoItem = null;
+  try {
+    const isMongoId = mongoose.Types.ObjectId.isValid(actionItemId);
+    const query = isMongoId
+      ? { $or: [{ _id: actionItemId }, { shareCode: actionItemId }], tenantId: event.tenant_id }
+      : { shareCode: actionItemId, tenantId: event.tenant_id };
+    mongoItem = await WorkItem.findOneAndUpdate(
+      query,
+      { $set: { status: mongoStatus } },
+      { new: true }
+    );
+  } catch (err) {
+    // Non-fatal if ID format is not a Mongo ObjectId
+  }
+
+  if (mongoItem) {
+    return {
+      entityId: String(mongoItem._id),
+      id: String(mongoItem._id),
+      status: mongoItem.status,
+    };
+  }
+
+  // 2. Fallback to copilot.action_items in Postgres
   const result = await postgresPool.query(
     `UPDATE copilot.action_items
      SET status = $2,
@@ -1400,31 +2215,294 @@ const setActionItemStatus = async (event, nextStatus) => {
 const handleCreateTask = async (event) => {
   requireObjectPayload(event.payload_json);
   const payload = event.payload_json;
-  const updateResult = await postgresPool.query(
-    `UPDATE copilot.action_items
-     SET title = COALESCE($2, title),
-         summary = COALESCE($3, summary),
-         due_at = COALESCE($4::timestamptz, due_at),
-         assigned_user_id = COALESCE($5, assigned_user_id),
-         assigned_role_id = COALESCE($6, assigned_role_id),
-         updated_at = NOW()
-     WHERE source_event_id = $1
-     RETURNING id, title, status`,
-    [
-      event.id,
-      payload.title || null,
-      payload.summary || null,
-      payload.dueAt || null,
-      payload.assignedUserId || null,
-      payload.assignedRoleId || null,
-    ]
-  );
+  const tenantId = event.tenant_id;
+  const actorUserId = event.actor_user_id || payload.userId || 'system';
+
+  const startAt = payload.startAt || new Date().toISOString();
+  const endAt =
+    payload.dueAt ||
+    payload.dueDate ||
+    payload.endAt ||
+    new Date(new Date(startAt).getTime() + 24 * 60 * 60 * 1000).toISOString();
+
+  let assignees = [];
+  if (Array.isArray(payload.assignees)) {
+    assignees = payload.assignees.map((a) => {
+      if (typeof a === 'string') {
+        if (a === '@all' || a === 'all' || a === 'allofus') return { kind: 'all', name: '@all (All Users)' };
+        return { kind: 'user', userId: a };
+      }
+      return a;
+    });
+  } else if (payload.assignedAll || payload.assignToAll) {
+    assignees = [{ kind: 'all', name: '@all (All Users)' }];
+  } else if (payload.assignedUserId) {
+    assignees = [{ kind: 'user', userId: payload.assignedUserId }];
+  } else if (payload.assignedRoleId || payload.roleId) {
+    assignees = [{ kind: 'role', roleId: payload.assignedRoleId || payload.roleId }];
+  }
+
+  const reminder =
+    payload.reminder ||
+    (payload.reminderMinutes != null
+      ? {
+          enabled: true,
+          leadTimeMinutes: Number(payload.reminderMinutes),
+          channels: payload.reminderChannels || ['email'],
+        }
+      : undefined);
+
+  let workItem = null;
+  if (workItemService && typeof workItemService.createWorkItem === 'function') {
+    workItem = await workItemService.createWorkItem(
+      {
+        type: 'task',
+        title: payload.title,
+        description: payload.description || payload.summary || '',
+        startAt,
+        endAt,
+        priority: payload.priority || 'medium',
+        assignees,
+        formAttachment: payload.formAttachment,
+        reminder,
+        idempotencyKey: payload.idempotencyKey,
+      },
+      { tenantId, id: actorUserId, _id: actorUserId }
+    );
+  }
+
+  // Read-back verification
+  let verified = null;
+  if (workItem && workItem._id) {
+    verified = await WorkItem.findOne({ _id: workItem._id, tenantId });
+    if (!verified) {
+      throw new ApiError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        'Task verification failed: workItem not found post-creation'
+      );
+    }
+  }
+
+  // Also maintain postgres action_items if source_event_id is present
+  let postgresItem = null;
+  try {
+    const updateResult = await postgresPool.query(
+      `UPDATE copilot.action_items
+       SET title = COALESCE($2, title),
+           summary = COALESCE($3, summary),
+           due_at = COALESCE($4::timestamptz, due_at),
+           assigned_user_id = COALESCE($5, assigned_user_id),
+           assigned_role_id = COALESCE($6, assigned_role_id),
+           updated_at = NOW()
+       WHERE source_event_id = $1
+       RETURNING id, title, status`,
+      [
+        event.id,
+        payload.title || null,
+        payload.summary || null,
+        payload.dueAt || null,
+        payload.assignedUserId || null,
+        payload.assignedRoleId || null,
+      ]
+    );
+    postgresItem = updateResult.rows[0];
+  } catch (err) {
+    // Non-fatal if postgres table is absent or unlinked
+  }
 
   return {
     handled: true,
     resultType: 'task_created',
-    taskItemId: updateResult.rows[0]?.id || null,
-    title: updateResult.rows[0]?.title || payload.title || null,
+    entityId: verified ? String(verified._id) : (postgresItem?.id || null),
+    taskId: verified ? String(verified._id) : (postgresItem?.id || null),
+    taskItemId: verified ? String(verified._id) : (postgresItem?.id || null),
+    title: verified ? verified.title : (postgresItem?.title || payload.title || null),
+    status: verified ? verified.status : (postgresItem?.status || 'scheduled'),
+  };
+};
+
+const handleCreateEvent = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const tenantId = event.tenant_id;
+  const actorUserId = event.actor_user_id || payload.userId || 'system';
+
+  const startAt = payload.startAt || payload.startDate || new Date().toISOString();
+  const endAt =
+    payload.endAt ||
+    payload.endDate ||
+    new Date(new Date(startAt).getTime() + 60 * 60 * 1000).toISOString();
+
+  let assignees = [];
+  if (Array.isArray(payload.assignees)) {
+    assignees = payload.assignees.map((a) => {
+      if (typeof a === 'string') {
+        if (a === '@all' || a === 'all' || a === 'allofus') return { kind: 'all', name: '@all (All Users)' };
+        return { kind: 'user', userId: a };
+      }
+      return a;
+    });
+  } else if (payload.assignedAll || payload.assignToAll) {
+    assignees = [{ kind: 'all', name: '@all (All Users)' }];
+  } else if (payload.assignedUserId) {
+    assignees = [{ kind: 'user', userId: payload.assignedUserId }];
+  } else if (payload.assignedRoleId || payload.roleId) {
+    assignees = [{ kind: 'role', roleId: payload.assignedRoleId || payload.roleId }];
+  }
+
+  const meeting =
+    payload.meeting ||
+    (payload.videoConference || payload.createMeeting
+      ? {
+          enabled: true,
+          provider: payload.meetingProvider || 'google_meet',
+        }
+      : undefined);
+
+  const reminder =
+    payload.reminder ||
+    (payload.reminderMinutes != null
+      ? {
+          enabled: true,
+          leadTimeMinutes: Number(payload.reminderMinutes),
+          channels: payload.reminderChannels || ['inmail'],
+        }
+      : undefined);
+
+  const workItem = await workItemService.createWorkItem(
+    {
+      type: 'event',
+      title: payload.title,
+      description: payload.description || '',
+      startAt,
+      endAt,
+      allDay: Boolean(payload.allDay),
+      assignees,
+      meeting,
+      agendaTopics: payload.agendaTopics,
+      formAttachment: payload.formAttachment,
+      reminder,
+      idempotencyKey: payload.idempotencyKey,
+    },
+    { tenantId, id: actorUserId, _id: actorUserId }
+  );
+
+  // Read-back verification
+  const verified = await WorkItem.findOne({ _id: workItem._id, tenantId });
+  if (!verified) {
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Event verification failed: workItem not found post-creation'
+    );
+  }
+
+  const clientUrl = process.env.SABYFE_URL || 'https://saby.ai';
+  const baseUrl = clientUrl.replace(/\/+$/, '');
+  const shareCode = verified.shareCode || String(verified._id);
+  const agendaUrl = `${baseUrl}/a/${shareCode}`;
+
+  return {
+    handled: true,
+    resultType: 'event_created',
+    entityId: String(verified._id),
+    eventId: String(verified._id),
+    title: verified.title,
+    shareCode: verified.shareCode,
+    agendaUrl,
+    shortUrl: `/a/${shareCode}`,
+    meetingUrl: verified.meeting?.joinUrl || null,
+  };
+};
+
+const handleDeleteEvent = async (event) => {
+  const eventId = event.payload_json?.eventId || event.entity_id;
+  if (!eventId) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'delete_event requires eventId or entity_id'
+    );
+  }
+  const deleted = await WorkItem.findOneAndDelete({
+    _id: eventId,
+    tenantId: event.tenant_id,
+  });
+  if (!deleted) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'Event not found or does not belong to tenant'
+    );
+  }
+  return {
+    handled: true,
+    resultType: 'event_deleted',
+    eventId: String(deleted._id),
+  };
+};
+
+const handleQueryEvents = async (event) => {
+  const payload = event.payload_json || {};
+  const tenantId = event.tenant_id;
+  const items = await workItemService.queryWorkItems(
+    {
+      type: 'event',
+      from: payload.from,
+      to: payload.to,
+      status: payload.status,
+      query: payload.query || payload.search,
+      limit: payload.limit,
+    },
+    { tenantId }
+  );
+
+  return {
+    handled: true,
+    resultType: 'events_queried',
+    count: items.length,
+    events: items.map((item) => ({
+      id: String(item._id),
+      title: item.title,
+      description: item.description || '',
+      startAt: item.startAt,
+      endAt: item.endAt,
+      status: item.status,
+      meetingUrl: item.meeting?.joinUrl || null,
+      meetingProvider: item.meeting?.provider || null,
+      shareCode: item.shareCode || null,
+      agendaTopics: item.agendaTopics || [],
+      assignees: (item.assignees || []).map((a) => a.name || a.userId),
+    })),
+  };
+};
+
+const handleQueryTasks = async (event) => {
+  const payload = event.payload_json || {};
+  const tenantId = event.tenant_id;
+  const items = await workItemService.queryWorkItems(
+    {
+      type: 'task',
+      from: payload.from,
+      to: payload.to,
+      status: payload.status,
+      query: payload.query || payload.search,
+      limit: payload.limit,
+    },
+    { tenantId }
+  );
+
+  return {
+    handled: true,
+    resultType: 'tasks_queried',
+    count: items.length,
+    tasks: items.map((item) => ({
+      id: String(item._id),
+      title: item.title,
+      description: item.description || '',
+      startAt: item.startAt,
+      endAt: item.endAt,
+      status: item.status,
+      priority: item.priority || 'medium',
+      assignees: (item.assignees || []).map((a) => a.name || a.userId),
+    })),
   };
 };
 
@@ -1458,6 +2536,195 @@ const handleCancelTask = async (event) => {
   };
 };
 
+const handleSendInMail = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const tenantId = event.tenant_id;
+  const actorUserId = event.actor_user_id || payload.fromUserId || payload.userId;
+
+  if (!actorUserId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'send_inmail requires an authenticated actorUserId');
+  }
+
+  const recipients = payload.to || payload.recipients || [];
+  if (!Array.isArray(recipients) || recipients.length === 0) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'send_inmail requires recipients array');
+  }
+
+  const message = await inmailService.sendMessage(
+    {
+      subject: payload.subject,
+      body: payload.body,
+      recipients,
+      attachments: payload.attachments || [],
+      channel: payload.channel || 'direct',
+    },
+    { _id: actorUserId, tenantId }
+  );
+
+  // Read-back verification
+  const verified = await InMail.findOne({ _id: message._id, tenantId });
+  if (!verified) {
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'InMail verification failed: message not found post-creation');
+  }
+
+  return {
+    handled: true,
+    resultType: 'send_inmail_completed',
+    messageId: String(verified._id),
+    recipientCount: verified.to.length,
+    subject: verified.subject,
+  };
+};
+
+const handleSendAnnouncement = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const tenantId = event.tenant_id;
+  const actorUserId = event.actor_user_id || payload.fromUserId || payload.userId;
+
+  if (!actorUserId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'send_announcement requires an authenticated actorUserId');
+  }
+
+  let recipients = payload.to || payload.recipients || [];
+
+  // If targeted at a specific node/branch, resolve users in that branch via structure
+  if (payload.targetNodeId) {
+    const targetNode = await Nodes.findOne({ _id: payload.targetNodeId, tenantId });
+    if (targetNode) {
+      const branchNodes = await Nodes.find({
+        tenantId,
+        path: { $regex: `^${targetNode.path}` },
+        deletedAt: null,
+      }).select('users');
+      const branchUserIds = new Set();
+      branchNodes.forEach((n) => {
+        (n.users || []).forEach((u) => branchUserIds.add(String(u)));
+      });
+      recipients = [...new Set([...recipients, ...branchUserIds])];
+    }
+  }
+
+  // If targeted at a specific role (e.g. "Branch Operations Lead")
+  if (payload.roleName) {
+    recipients = [...new Set([...recipients, `all+${payload.roleName}`])];
+  }
+
+  // Default to 'allofus' if no specific recipients/nodes/roles provided
+  if (recipients.length === 0) {
+    recipients = ['allofus'];
+  }
+
+  const message = await inmailService.sendMessage(
+    {
+      subject: payload.subject,
+      body: payload.body,
+      recipients,
+      attachments: payload.attachments || [],
+      channel: 'announcement',
+    },
+    { _id: actorUserId, tenantId }
+  );
+
+  // Read-back verification
+  const verified = await InMail.findOne({ _id: message._id, tenantId });
+  if (!verified) {
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Announcement verification failed: message not found post-creation');
+  }
+
+  return {
+    handled: true,
+    resultType: 'send_announcement_completed',
+    messageId: String(verified._id),
+    recipientCount: verified.to.length,
+    subject: verified.subject,
+    channel: 'announcement',
+  };
+};
+
+const handleMarkInMailRead = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const messageId = payload.messageId || event.entity_id;
+  const actorUserId = event.actor_user_id || payload.userId;
+
+  if (!messageId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'mark_inmail_read requires messageId');
+  }
+  if (!actorUserId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'mark_inmail_read requires actorUserId');
+  }
+
+  const updated = await inmailService.markAsRead(messageId, actorUserId);
+
+  return {
+    handled: true,
+    resultType: 'mark_inmail_read_completed',
+    messageId: String(updated._id),
+    isRead: updated.read,
+  };
+};
+
+const handleArchiveInMail = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const messageId = payload.messageId || payload.id || event.entity_id;
+
+  if (!messageId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'archive_inmail requires messageId');
+  }
+
+  const updated = await inmailService.archiveMessage(messageId);
+
+  return {
+    handled: true,
+    resultType: 'archive_inmail_completed',
+    messageId: String(updated._id),
+    status: updated.status,
+  };
+};
+
+const handleDeleteInMail = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const messageId = payload.messageId || payload.id || event.entity_id;
+
+  if (!messageId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'delete_inmail requires messageId');
+  }
+
+  const deleted = await inmailService.deleteMessage(messageId);
+
+  return {
+    handled: true,
+    resultType: 'delete_inmail_completed',
+    messageId: String(deleted._id),
+    status: deleted.status,
+    deletedAt: deleted.deletedAt,
+  };
+};
+
+const handleStarInMail = async (event) => {
+  requireObjectPayload(event.payload_json);
+  const payload = event.payload_json;
+  const messageId = payload.messageId || payload.id || event.entity_id;
+  const starred = payload.starred !== undefined ? Boolean(payload.starred) : true;
+
+  if (!messageId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'star_inmail requires messageId');
+  }
+
+  const updated = await inmailService.starMessage(messageId, starred);
+
+  return {
+    handled: true,
+    resultType: 'star_inmail_completed',
+    messageId: String(updated._id),
+    starred: updated.starred,
+  };
+};
+
 const executeActionEvent = async (event) => {
   switch (event.action_type) {
     case 'create_user':
@@ -1488,6 +2755,13 @@ const executeActionEvent = async (event) => {
       return handleRevokePermission(event);
     case 'create_node':
       return handleCreateNode(event);
+    case 'create_level':
+      return handleCreateLevel(event);
+    case 'create_structure':
+      return handleCreateStructure(event);
+    case 'bulk_import_nodes':
+    case 'action_bulk_import_nodes':
+      return handleBulkImportNodes(event);
     case 'move_node':
       return handleMoveNode(event);
     case 'delete_node':
@@ -1499,10 +2773,29 @@ const executeActionEvent = async (event) => {
     case 'unassign_user_from_node':
       return handleUnassignUserFromNode(event);
     case 'create_project':
+    case 'action_create_project':
+    case 'create_project_form':
+    case 'action_create_project_form':
       return handleCreateProject(event);
+    case 'update_project_form':
+    case 'action_update_project_form':
+    case 'edit_project_form':
+    case 'action_edit_project_form':
+      return handleUpdateProjectForm(event);
+    case 'publish_project_form':
+    case 'action_publish_project_form':
+      return handlePublishProjectForm(event);
+    case 'unpublish_project_form':
+    case 'action_unpublish_project_form':
+      return handleUnpublishProjectForm(event);
+    case 'delete_project_form':
+    case 'action_delete_project_form':
+      return handleDeleteProjectForm(event);
     case 'archive_project':
+    case 'action_archive_project':
       return handleArchiveProject(event);
     case 'restore_project':
+    case 'action_restore_project':
       return handleRestoreProject(event);
     case 'create_payment':
       return handleCreatePayment(event);
@@ -1522,6 +2815,22 @@ const executeActionEvent = async (event) => {
       return handleReopenTask(event);
     case 'cancel_task':
       return handleCancelTask(event);
+    case 'create_event':
+    case 'action_create_event':
+      return handleCreateEvent(event);
+    case 'delete_event':
+    case 'action_delete_event':
+      return handleDeleteEvent(event);
+    case 'query_events':
+    case 'action_query_events':
+    case 'read_events':
+    case 'action_read_events':
+      return handleQueryEvents(event);
+    case 'query_tasks':
+    case 'action_query_tasks':
+    case 'read_tasks':
+    case 'action_read_tasks':
+      return handleQueryTasks(event);
     case 'submit_data':
       return handleSubmitData(event);
     case 'approve_submission':
@@ -1536,6 +2845,24 @@ const executeActionEvent = async (event) => {
       return handleWithdrawSubmission(event);
     case 'delete_submission':
       return handleDeleteSubmission(event);
+    case 'send_inmail':
+    case 'action_send_inmail':
+      return handleSendInMail(event);
+    case 'send_announcement':
+    case 'action_send_announcement':
+      return handleSendAnnouncement(event);
+    case 'mark_inmail_read':
+    case 'action_mark_inmail_read':
+      return handleMarkInMailRead(event);
+    case 'archive_inmail':
+    case 'action_archive_inmail':
+      return handleArchiveInMail(event);
+    case 'delete_inmail':
+    case 'action_delete_inmail':
+      return handleDeleteInMail(event);
+    case 'star_inmail':
+    case 'action_star_inmail':
+      return handleStarInMail(event);
     default:
       return { handled: false, resultType: 'noop' };
   }

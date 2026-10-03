@@ -1,10 +1,11 @@
 const Joi = require('joi');
+const { SUPPORTED_PROVIDERS } = require('../services/byok.service');
 
 const saveKey = {
   body: Joi.object()
     .keys({
       provider: Joi.string()
-        .valid('openai', 'gemini', 'deepseek', 'claude')
+        .valid(...SUPPORTED_PROVIDERS)
         .required(),
       apiKey: Joi.string().trim().min(8).max(512).optional(),
       defaultModel: Joi.string().allow(null, '').optional(),
@@ -16,7 +17,7 @@ const saveKey = {
 const deleteKey = {
   params: Joi.object().keys({
     provider: Joi.string()
-      .valid('openai', 'gemini', 'deepseek', 'claude')
+      .valid(...SUPPORTED_PROVIDERS)
       .required(),
   }),
 };
@@ -24,7 +25,7 @@ const deleteKey = {
 const testKey = {
   body: Joi.object().keys({
     provider: Joi.string()
-      .valid('openai', 'gemini', 'deepseek', 'claude')
+      .valid(...SUPPORTED_PROVIDERS)
       .required(),
     apiKey: Joi.string().trim().min(8).max(512).required(),
     model: Joi.string().allow(null, '').optional(),

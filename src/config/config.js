@@ -252,7 +252,7 @@ const envVarsSchema = Joi.object()
       .description('Concurrency for onboarding import worker'),
     COPILOT_ONBOARDING_MAX_ROWS: Joi.alternatives()
       .try(Joi.number(), Joi.string().pattern(/^\d+/))
-      .default(200000)
+      .default(1000000)
       .description('Maximum onboarding CSV rows allowed per upload'),
     COPILOT_ONBOARDING_QUEUE_ATTEMPTS: Joi.alternatives()
       .try(Joi.number(), Joi.string().pattern(/^\d+/))

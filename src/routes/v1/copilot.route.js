@@ -255,6 +255,36 @@ router.post(
   validate(copilotValidation.recordPeopleEvent),
   copilotController.recordPeopleEvent
 );
+router.get(
+  '/structure/state',
+  auth(),
+  validate(copilotValidation.getStructureState),
+  copilotController.getStructureState
+);
+router.post(
+  '/structure/state',
+  auth(),
+  validate(copilotValidation.getStructureState),
+  copilotController.getStructureState
+);
+router.get(
+  '/structure/tree',
+  auth(),
+  validate(copilotValidation.getStructureTree),
+  copilotController.getStructureTree
+);
+router.get(
+  '/structure/metrics',
+  auth(),
+  validate(copilotValidation.getStructureMetrics),
+  copilotController.getStructureMetrics
+);
+router.post(
+  '/structure/simulate',
+  auth(),
+  validate(copilotValidation.simulateStructuralMutation),
+  copilotController.simulateStructuralMutation
+);
 router.post(
   '/project-wizard/generate',
   auth(),
