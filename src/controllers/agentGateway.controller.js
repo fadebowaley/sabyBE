@@ -208,14 +208,13 @@ const chat = async (req, res) => {
         },
       });
 
-      if (
-        quotaConsumed > 0 &&
-        !isExempt({
-          isSaby,
-          byokProvider: quota?.byokProvider,
-          balance: quota?.balance,
-        })
-      ) {
+      const exempt = isExempt({
+        isSaby,
+        byokProvider: quota?.byokProvider,
+        balance: quota?.balance,
+      });
+
+      if (quotaConsumed > 0) {
         await aiTokenService.deductAiUsage({
           tenantId,
           userId,
@@ -226,7 +225,7 @@ const chat = async (req, res) => {
           inputTokens,
           outputTokens,
           action: 'agent_chat',
-          isUnlimited: Boolean(quota?.balance?.isUnlimited),
+          isUnlimited: exempt,
         });
       }
     } catch (error) {
