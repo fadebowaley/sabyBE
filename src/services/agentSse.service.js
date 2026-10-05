@@ -187,18 +187,87 @@ const extractUsage = (event) => {
   };
 };
 
+const formatEngineError = (err) => {
+  if (!err) return null;
+  if (typeof err === 'string') return err;
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'object') {
+    const name = err.name || err._tag || '';
+    const errData = err.data || {};
+    const innerMessage =
+      (typeof errData?.message === 'string' && errData.message) ||
+      (typeof err?.message === 'string' && err.message) ||
+      (typeof errData?.reason === 'string' && errData.reason) ||
+      null;
+
+    if (name === 'ProviderAuthError') {
+      const provider = errData.providerID || errData.provider || 'AI provider';
+      return (
+        innerMessage ||
+        `AI provider authentication failed for ${provider}. Please verify API keys in Settings.`
+      );
+    }
+    if (name === 'ProviderModelNotFoundError') {
+      const provider = errData.providerID || '';
+      const model = errData.modelID || '';
+      return (
+        innerMessage ||
+        `Requested model not found (${provider}${provider && model ? '/' : ''}${model}).`
+      );
+    }
+    if (name === 'ContextOverflowError') {
+      return (
+        innerMessage ||
+        'Context length exceeded. Please start a new conversation or reduce input size.'
+      );
+    }
+    if (name === 'MessageOutputLengthError') {
+      return (
+        innerMessage ||
+        'The agent response exceeded the maximum allowed length.'
+      );
+    }
+    if (name === 'APIError') {
+      return (
+        innerMessage ||
+        `AI service API error${errData.statusCode ? ` (${errData.statusCode})` : ''}. Please retry.`
+      );
+    }
+    if (innerMessage) return innerMessage;
+    if (name) {
+      const details =
+        Object.keys(errData).length > 0 ? `: ${JSON.stringify(errData)}` : '';
+      return `${name}${details}`;
+    }
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return String(err);
+    }
+  }
+  return String(err);
+};
+
 const extractError = (event) => {
   const data = event?.properties || event?.data || event;
   if (isErrorType(event?.type)) {
     if (typeof event?.error === 'string') return event.error;
-    return (
-      data?.error?.message ||
-      data?.error ||
-      data?.message ||
-      `Engine error (${event?.type})`
-    );
+    if (event?.error) {
+      const formatted = formatEngineError(event.error);
+      if (formatted) return formatted;
+    }
+    if (data?.error) {
+      const formatted = formatEngineError(data.error);
+      if (formatted) return formatted;
+    }
+    if (typeof data?.message === 'string') return data.message;
+    return `Engine error (${event?.type})`;
   }
   if (typeof data?.error === 'string') return data.error;
+  if (data?.error) {
+    const formatted = formatEngineError(data.error);
+    if (formatted) return formatted;
+  }
   if (data?.error?.message) return data.error.message;
   return null;
 };

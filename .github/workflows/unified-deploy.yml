@@ -234,7 +234,13 @@ jobs:
             fi
 
             echo "🚀 Recreating backend (no build)..."
-            \$DC -f "\$COMPOSE_FILE" up -d --no-build --force-recreate backend
+            if ! \$DC -f "\$COMPOSE_FILE" up -d --no-build --force-recreate backend; then
+              echo "⚠️ Recreate hit container removal race; retrying with clean recreation..."
+              sleep 5
+              docker stop saby-backend 2>/dev/null || true
+              docker rm -f saby-backend 2>/dev/null || true
+              \$DC -f "\$COMPOSE_FILE" up -d --no-build backend
+            fi
 
             echo "⏳ Waiting for backend to settle..."
             sleep 20

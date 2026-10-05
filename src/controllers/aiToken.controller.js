@@ -13,7 +13,12 @@ const getPacks = catchAsync(async (req, res) => {
 const getBalance = catchAsync(async (req, res) => {
   const tenantId = req.user?.tenantId;
   const isSaby = Boolean(req.user?.isSaby || req.user?.isSuper);
-  const balance = await aiTokenService.getTenantAiBalance({ tenantId, isSaby });
+  const isOwner = Boolean(req.user?.isOwner);
+  const balance = await aiTokenService.getTenantAiBalance({
+    tenantId,
+    isSaby,
+    isOwner,
+  });
 
   res.status(httpStatus.OK).send({
     status: 'success',
@@ -72,9 +77,14 @@ const getTokenLogs = catchAsync(async (req, res) => {
   const tenantId = req.user?.tenantId;
   const { page, limit, userId } = req.query;
   const isElevated = Boolean(
-    req.user?.isAdmin || req.user?.isOwner || req.user?.isSuper || req.user?.isSaby
+    req.user?.isAdmin ||
+      req.user?.isOwner ||
+      req.user?.isSuper ||
+      req.user?.isSaby
   );
-  const targetUserId = isElevated ? (userId || null) : (req.user?.id || req.user?._id);
+  const targetUserId = isElevated
+    ? userId || null
+    : req.user?.id || req.user?._id;
 
   const result = await aiTokenService.listUserTokenLogs({
     tenantId,

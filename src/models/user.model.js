@@ -379,7 +379,9 @@ userSchema.statics.createUser = async function (userBody) {
   if (!Object.prototype.hasOwnProperty.call(userBody, 'requiresOnboarding')) {
     userBody.requiresOnboarding = canConfigureTenant;
   }
-  if (!Object.prototype.hasOwnProperty.call(userBody, 'onboardingCompletedAt')) {
+  if (
+    !Object.prototype.hasOwnProperty.call(userBody, 'onboardingCompletedAt')
+  ) {
     userBody.onboardingCompletedAt = canConfigureTenant ? null : new Date();
   }
 
@@ -393,6 +395,23 @@ userSchema.statics.createUser = async function (userBody) {
   }
   const user = new this(userBody);
   await user.save();
+
+  // Proactively provision starter AI token quota for new tenant owner
+  if (user.isOwner && user.tenantId && !user.isSaby) {
+    try {
+      // eslint-disable-next-line global-require
+      const aiTokenService = require('../services/aiToken.service');
+      aiTokenService
+        .provisionStarterQuota({
+          tenantId: user.tenantId,
+          reason: 'New tenant owner signup starter grant',
+        })
+        .catch(() => null);
+    } catch (quotaErr) {
+      // Non-blocking
+    }
+  }
+
   return user;
 };
 
@@ -456,27 +475,37 @@ userSchema.pre('save', async function (next) {
 });
 
 // Post-save hook for baseline intelligence updates
-userSchema.post('save', async function(doc) {
+userSchema.post('save', async function (doc) {
   try {
     // Only trigger baseline updates for meaningful changes
     const relevantFields = [
-      'status', 'profile', 'roles', 'isEmailVerified', 'isPhoneVerified',
-      'isOwner', 'isSuper', 'isAdmin', 'isSaby', 'customFields'
+      'status',
+      'profile',
+      'roles',
+      'isEmailVerified',
+      'isPhoneVerified',
+      'isOwner',
+      'isSuper',
+      'isAdmin',
+      'isSaby',
+      'customFields',
     ];
-    
-    const hasRelevantChanges = this.isNew || relevantFields.some(field => this.isModified(field));
-    
+
+    const hasRelevantChanges =
+      this.isNew || relevantFields.some((field) => this.isModified(field));
+
     if (hasRelevantChanges) {
       // Import here to avoid circular dependency
       const { baselineIntelligenceService } = require('../services');
       const { batchChangeProcessor } = require('../services');
-      
+
       // Handle baseline updates asynchronously to avoid blocking user operations
       setImmediate(async () => {
         try {
           // Check if this is part of a bulk operation (e.g., CSV import)
-          const isBulkOperation = process.env.BULK_OPERATION === 'true' || this.isBulkOperation;
-          
+          const isBulkOperation =
+            process.env.BULK_OPERATION === 'true' || this.isBulkOperation;
+
           if (isBulkOperation && batchChangeProcessor) {
             // Use batch processing for bulk operations
             await batchChangeProcessor.addUserChange(doc);
@@ -504,15 +533,18 @@ userSchema.post('save', async function(doc) {
 });
 
 // Post-remove hook for baseline intelligence updates
-userSchema.post('remove', async function(doc) {
+userSchema.post('remove', async (doc) => {
   try {
     const { baselineIntelligenceService } = require('../services');
-    
+
     setImmediate(async () => {
       try {
         await baselineIntelligenceService.handleUserChange(doc);
       } catch (error) {
-        console.error('Error updating baseline intelligence after user removal:', error);
+        console.error(
+          'Error updating baseline intelligence after user removal:',
+          error
+        );
       }
     });
   } catch (error) {
@@ -589,18 +621,23 @@ userSchema.statics.createBulk = async function (
         delete userBody.phone;
       }
       if (Object.prototype.hasOwnProperty.call(userBody, 'phoneNumber')) {
-        userBody.phoneNumber = normalizePhoneForPersistence(userBody.phoneNumber);
+        userBody.phoneNumber = normalizePhoneForPersistence(
+          userBody.phoneNumber
+        );
       }
 
       // Handle roles: convert role names to ObjectIds
       if (userBody.roles) {
-        let roleIds = [];
-        
+        const roleIds = [];
+
         // Normalize roles to array
         let roleInput = userBody.roles;
         if (typeof roleInput === 'string') {
           // Handle comma-separated string
-          roleInput = roleInput.split(',').map((r) => r.trim()).filter((r) => r);
+          roleInput = roleInput
+            .split(',')
+            .map((r) => r.trim())
+            .filter((r) => r);
         }
         if (!Array.isArray(roleInput)) {
           roleInput = [roleInput];
@@ -615,7 +652,7 @@ userSchema.statics.createBulk = async function (
             // Verify the role exists
             const role = await Role.findOne({
               _id: roleItem,
-              tenantId: tenantId,
+              tenantId,
             });
             if (role) {
               roleIds.push(roleItem);
@@ -629,7 +666,7 @@ userSchema.statics.createBulk = async function (
             // Use regex for case-insensitive matching
             const role = await Role.findOne({
               name: { $regex: new RegExp(`^${roleItem.trim()}$`, 'i') },
-              tenantId: tenantId,
+              tenantId,
             });
             if (role) {
               roleIds.push(role._id);

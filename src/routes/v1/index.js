@@ -135,6 +135,10 @@ const defaultRoutes = [
     route: projectFormRoute,
   },
   {
+    path: '/projectforms', // Alias for backward compatibility
+    route: projectFormRoute,
+  },
+  {
     path: '/form-submissions', // Example: /form-submissions/123, /form-submissions/project/abc123
     route: projectFormSubmissionRoute,
   },
@@ -246,6 +250,10 @@ const defaultRoutes = [
   {
     path: '/agent',
     route: agentRoute,
+  },
+  {
+    path: '/history/threads', // Direct alias for agent history threads
+    route: agentRoute.historyThreadsRouter,
   },
   {
     path: '/collections',

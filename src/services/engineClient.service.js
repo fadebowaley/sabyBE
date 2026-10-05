@@ -128,6 +128,22 @@ const createSession = async ({
 };
 
 /**
+ * Updates an existing engine session with fresh caller metadata (such as
+ * updated accessToken and tenant identity).
+ */
+const updateSession = async ({ sessionId, metadata }) => {
+  if (!sessionId || !metadata) return null;
+  try {
+    await engineRequest(`/session/${encodeURIComponent(sessionId)}`, {
+      method: 'PATCH',
+      body: { metadata },
+    });
+  } catch (err) {
+    logger.warn(`[EngineClient] Could not update session metadata: ${err.message}`);
+  }
+};
+
+/**
  * Admits a user prompt into an existing engine session. Resolves once the
  * message is durably admitted; streaming continues over /api/event.
  */
@@ -295,6 +311,8 @@ const createRun = async ({
       byok,
     });
     activeSessionId = session.sessionId;
+  } else if (metadata) {
+    await updateSession({ sessionId: activeSessionId, metadata });
   }
 
   let armed = false;
@@ -336,6 +354,10 @@ const createRun = async ({
     onEvent: wrappedOnEvent,
     signal,
   });
+
+  if (activeSessionId && metadata) {
+    await updateSession({ sessionId: activeSessionId, metadata });
+  }
 
   try {
     await prompt({ sessionId: activeSessionId, promptText, model, byok });

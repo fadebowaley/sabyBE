@@ -26,6 +26,7 @@ const identity = (req) => ({
   tenantId: req.user?.tenantId,
   userId: String(req.user?.id || req.user?._id || ''),
   isSaby: Boolean(req.user?.isSaby),
+  isOwner: Boolean(req.user?.isOwner),
 });
 
 const isExempt = ({ isSaby, byokProvider, balance }) =>
@@ -69,7 +70,7 @@ const chat = async (req, res) => {
   } = req.body || {};
   const rawModel = model || context?.modelPreference || null;
   const requestedModel = normalizeModel(rawModel);
-  const { tenantId, userId, isSaby } = identity(req);
+  const { tenantId, userId, isSaby, isOwner } = identity(req);
   const byokHeaderKey = req.get('x-ai-api-key') || null;
   const run = runId();
 
@@ -85,6 +86,7 @@ const chat = async (req, res) => {
     quota = await agentQuotaService.assertQuota({
       tenantId,
       isSaby,
+      isOwner,
       byokHeaderKey,
       byokProvider: resolvedByok?.provider || null,
       model: requestedModel || rawModel,
@@ -107,7 +109,9 @@ const chat = async (req, res) => {
   try {
     const derivedTitle =
       (title && title.trim()) ||
-      (message && message.length > 50 ? `${message.slice(0, 47)}...` : message) ||
+      (message && message.length > 50
+        ? `${message.slice(0, 47)}...`
+        : message) ||
       'New conversation';
 
     if (threadId) {
@@ -288,6 +292,9 @@ const chat = async (req, res) => {
     const activeModel =
       requestedModel || normalizeModel(resolvedByok?.defaultModel) || null;
     const existingSessionId = thread.engineSessionId || null;
+    const callerAccessToken = req.headers.authorization
+      ? req.headers.authorization.replace(/^Bearer\s+/i, '').trim()
+      : null;
     const tally = await engineClient.createRun({
       promptText: message,
       model: activeModel,
@@ -299,7 +306,17 @@ const chat = async (req, res) => {
             model: activeModel,
           }
         : null,
-      metadata: { threadId: thread.threadId, tenantId, userId, runId: run },
+      metadata: {
+        threadId: thread.threadId,
+        tenantId,
+        userId,
+        runId: run,
+        sabyRunId: run,
+        sabyTenantId: tenantId,
+        sabyUserId: userId,
+        accessToken: callerAccessToken,
+        isOwner,
+      },
       signal: controller.signal,
       onEvent: (engineEvent, activeSessionId) => {
         const frame = agentSse.translateEngineEvent(
@@ -432,20 +449,21 @@ const createThread = catchAsync(async (req, res) => {
   });
 
   if (Array.isArray(turns) && turns.length > 0) {
-    for (let i = 0; i < turns.length; i += 1) {
-      const turn = turns[i];
-      if (turn && (turn.text || turn.content)) {
-        await agentThreadService
-          .appendMessage({
-            tenantId,
-            threadId: thread.threadId,
-            role: turn.role === 'assistant' ? 'assistant' : 'user',
-            content: turn.text || turn.content || '',
-            model: model || null,
-          })
-          .catch(() => null);
-      }
-    }
+    await Promise.all(
+      turns.map(async (turn) => {
+        if (turn && (turn.text || turn.content)) {
+          await agentThreadService
+            .appendMessage({
+              tenantId,
+              threadId: thread.threadId,
+              role: turn.role === 'assistant' ? 'assistant' : 'user',
+              content: turn.text || turn.content || '',
+              model: model || null,
+            })
+            .catch(() => null);
+        }
+      })
+    );
   }
 
   res
@@ -473,8 +491,12 @@ const deleteThread = catchAsync(async (req, res) => {
 });
 
 const getBalance = catchAsync(async (req, res) => {
-  const { tenantId, isSaby } = identity(req);
-  const balance = await aiTokenService.getTenantAiBalance({ tenantId, isSaby });
+  const { tenantId, isSaby, isOwner } = identity(req);
+  const balance = await aiTokenService.getTenantAiBalance({
+    tenantId,
+    isSaby,
+    isOwner,
+  });
   res.status(httpStatus.OK).send({ status: 'success', data: balance });
 });
 
@@ -508,9 +530,12 @@ const getUsage = catchAsync(async (req, res) => {
   const { tenantId, userId: callerId } = identity(req);
   const { page, limit, userId } = req.query || {};
   const isElevated = Boolean(
-    req.user?.isOwner || req.user?.isAdmin || req.user?.isSuper || req.user?.isSaby
+    req.user?.isOwner ||
+      req.user?.isAdmin ||
+      req.user?.isSuper ||
+      req.user?.isSaby
   );
-  const targetUserId = isElevated ? (userId || null) : callerId;
+  const targetUserId = isElevated ? userId || null : callerId;
   const result = await agentUsageService.listUsage({
     tenantId,
     userId: targetUserId,
@@ -524,9 +549,12 @@ const getTokenLogs = catchAsync(async (req, res) => {
   const { tenantId, userId: callerId } = identity(req);
   const { page, limit, userId } = req.query || {};
   const isElevated = Boolean(
-    req.user?.isOwner || req.user?.isAdmin || req.user?.isSuper || req.user?.isSaby
+    req.user?.isOwner ||
+      req.user?.isAdmin ||
+      req.user?.isSuper ||
+      req.user?.isSaby
   );
-  const targetUserId = isElevated ? (userId || null) : callerId;
+  const targetUserId = isElevated ? userId || null : callerId;
   const result = await aiTokenService.listUserTokenLogs({
     tenantId,
     userId: targetUserId,

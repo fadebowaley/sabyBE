@@ -15,6 +15,23 @@ describe('agentSse.service', () => {
       expect(frame).toEqual({ type: 'error', error: 'provider exploded' });
     });
 
+    test('maps Opencode namedError objects to clean string error frames', () => {
+      const authFrame = agentSse.translateEngineEvent({
+        type: 'session.error',
+        data: { error: { name: 'ProviderAuthError', data: { providerID: 'opencode-go' } } },
+      });
+      expect(authFrame.type).toBe('error');
+      expect(typeof authFrame.error).toBe('string');
+      expect(authFrame.error).toContain('opencode-go');
+
+      const apiFrame = agentSse.translateEngineEvent({
+        type: 'error',
+        data: { error: { name: 'APIError', data: { message: 'rate limited', statusCode: 429 } } },
+      });
+      expect(apiFrame.type).toBe('error');
+      expect(apiFrame.error).toBe('rate limited');
+    });
+
     test('maps an event with a usage summary to a done frame', () => {
       const frame = agentSse.translateEngineEvent({
         type: 'session.message.completed',

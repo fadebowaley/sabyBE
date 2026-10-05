@@ -86,13 +86,59 @@ const ensureTenantQuotaTable = async () => {
   }
 };
 
+const DEFAULT_STARTER_TOKENS = 100000;
+
 /**
  * Returns available AI token packs.
  */
 const getAiTokenPacks = () => Object.values(AI_TOKEN_PACKS);
 
 /**
+ * Auto-provisions the default starter quota (100,000 tokens) for a tenant workspace.
+ * Idempotent: uses ON CONFLICT (tenant_id) DO NOTHING so it never overwrites existing balances.
+ */
+const provisionStarterQuota = async ({
+  tenantId,
+  reason = 'Default starter token grant for tenant workspace',
+}) => {
+  if (!tenantId) return null;
+  await ensureTenantQuotaTable();
+  try {
+    const res = await postgresPool.query(
+      `INSERT INTO copilot.tenant_ai_quotas (
+         tenant_id, purchased_tokens, used_tokens, remaining_tokens, is_unlimited, metadata, created_at, updated_at
+       ) VALUES ($1, $2, 0, $2, false, $3::jsonb, now(), now())
+       ON CONFLICT (tenant_id) DO NOTHING
+       RETURNING purchased_tokens, used_tokens, remaining_tokens, is_unlimited, last_purchase_at;`,
+      [
+        String(tenantId),
+        DEFAULT_STARTER_TOKENS,
+        JSON.stringify({
+          reason,
+          initialGrant: DEFAULT_STARTER_TOKENS,
+          grantedAt: new Date().toISOString(),
+        }),
+      ]
+    );
+
+    if (res.rows.length > 0) {
+      logger.info(
+        `🎁 [AiTokenService] Provisioned default starter quota (${DEFAULT_STARTER_TOKENS.toLocaleString()} tokens) for tenant ${tenantId}`
+      );
+      return res.rows[0];
+    }
+  } catch (error) {
+    logger.warn(
+      `[AiTokenService] Could not auto-provision starter quota for tenant ${tenantId}: ${error.message}`
+    );
+  }
+  return null;
+};
+
+/**
  * Retrieves the current AI token balance for a tenant.
+ * If the tenant has no existing record, automatically provisions the default
+ * starter quota (100,000 tokens) so tenant owners can immediately use the agent.
  */
 const getTenantAiBalance = async ({ tenantId, isSaby = false }) => {
   if (isSaby) {
@@ -103,6 +149,18 @@ const getTenantAiBalance = async ({ tenantId, isSaby = false }) => {
       usedTokens: 0,
       remainingTokens: Infinity,
       isUnlimited: true,
+    };
+  }
+
+  if (!tenantId) {
+    return {
+      tenantId: null,
+      isSaby: false,
+      purchasedTokens: 0,
+      usedTokens: 0,
+      remainingTokens: 0,
+      isUnlimited: false,
+      lastPurchaseAt: null,
     };
   }
 
@@ -125,6 +183,28 @@ const getTenantAiBalance = async ({ tenantId, isSaby = false }) => {
         remainingTokens: Number(row.remaining_tokens || 0),
         isUnlimited: Boolean(row.is_unlimited),
         lastPurchaseAt: row.last_purchase_at,
+      };
+    }
+
+    // Auto-provision starter quota (100,000 tokens) for new or uninitialized tenant
+    const provisioned = await provisionStarterQuota({
+      tenantId,
+      reason: 'Auto-provisioned default starter quota on initial balance check',
+    });
+
+    if (provisioned) {
+      return {
+        tenantId,
+        isSaby: false,
+        purchasedTokens: Number(
+          provisioned.purchased_tokens || DEFAULT_STARTER_TOKENS
+        ),
+        usedTokens: Number(provisioned.used_tokens || 0),
+        remainingTokens: Number(
+          provisioned.remaining_tokens || DEFAULT_STARTER_TOKENS
+        ),
+        isUnlimited: Boolean(provisioned.is_unlimited),
+        lastPurchaseAt: provisioned.last_purchase_at,
       };
     }
   } catch (error) {
@@ -475,10 +555,18 @@ const deductAiUsage = async ({
           ]
         );
       } catch (logErr) {
-        logger.warn(`[AiTokenService] Failed to record user token log: ${logErr.message}`);
+        logger.warn(
+          `[AiTokenService] Failed to record user token log: ${logErr.message}`
+        );
       }
     }
-    return { tenantId, userId, isUnlimited, deducted: consumed, remainingTokens: Infinity };
+    return {
+      tenantId,
+      userId,
+      isUnlimited,
+      deducted: consumed,
+      remainingTokens: Infinity,
+    };
   }
 
   // Fetch current remaining tokens before deduction
@@ -492,7 +580,9 @@ const deductAiUsage = async ({
       balanceBefore = Number(currentRes.rows[0].remaining_tokens || 0);
     }
   } catch (err) {
-    logger.warn(`[AiTokenService] Failed reading balance before deduction: ${err.message}`);
+    logger.warn(
+      `[AiTokenService] Failed reading balance before deduction: ${err.message}`
+    );
   }
 
   const res = await postgresPool.query(
@@ -533,12 +623,21 @@ const deductAiUsage = async ({
         ]
       );
     } catch (logErr) {
-      logger.warn(`[AiTokenService] Failed to record user token log: ${logErr.message}`);
+      logger.warn(
+        `[AiTokenService] Failed to record user token log: ${logErr.message}`
+      );
     }
   }
 
   if (!row) {
-    return { tenantId, userId, isUnlimited: false, deducted: 0, remainingTokens: 0, noQuota: true };
+    return {
+      tenantId,
+      userId,
+      isUnlimited: false,
+      deducted: 0,
+      remainingTokens: 0,
+      noQuota: true,
+    };
   }
 
   return {
@@ -554,7 +653,12 @@ const deductAiUsage = async ({
 /**
  * Lists token consumption logs for a tenant, optionally filtered by userId.
  */
-const listUserTokenLogs = async ({ tenantId, userId = null, page = 1, limit = 25 }) => {
+const listUserTokenLogs = async ({
+  tenantId,
+  userId = null,
+  page = 1,
+  limit = 25,
+}) => {
   if (!tenantId) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'tenantId is required.');
   }
@@ -601,8 +705,10 @@ const listUserTokenLogs = async ({ tenantId, userId = null, page = 1, limit = 25
       tokensConsumed: Number(row.tokens_consumed),
       inputTokens: Number(row.input_tokens),
       outputTokens: Number(row.output_tokens),
-      balanceBefore: row.balance_before != null ? Number(row.balance_before) : null,
-      balanceAfter: row.balance_after != null ? Number(row.balance_after) : null,
+      balanceBefore:
+        row.balance_before != null ? Number(row.balance_before) : null,
+      balanceAfter:
+        row.balance_after != null ? Number(row.balance_after) : null,
       action: row.action,
       metadata: row.metadata || {},
       createdAt: row.created_at,
@@ -617,8 +723,10 @@ const listUserTokenLogs = async ({ tenantId, userId = null, page = 1, limit = 25
 };
 
 module.exports = {
+  DEFAULT_STARTER_TOKENS,
   AI_TOKEN_PACKS,
   getAiTokenPacks,
+  provisionStarterQuota,
   getTenantAiBalance,
   initializeAiTokenCheckout,
   creditTokensFromPayment,

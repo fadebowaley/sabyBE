@@ -64,10 +64,24 @@ const createThread = async ({
   }
   await ensureTables();
   const id = threadId ? String(threadId).slice(0, 64) : nextId();
+
+  // Cross-tenant guard: verify that existing thread does not belong to another tenant
+  const existing = await postgresPool.query(
+    `SELECT tenant_id FROM copilot.agent_threads WHERE thread_id = $1 LIMIT 1;`,
+    [id]
+  );
+  if (existing.rows[0] && existing.rows[0].tenant_id !== String(tenantId)) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Cross-tenant access violation: thread belongs to another tenant.'
+    );
+  }
+
   await postgresPool.query(
     `INSERT INTO copilot.agent_threads (thread_id, tenant_id, user_id, title, engine_session_id, metadata)
      VALUES ($1, $2, $3, $4, $5, $6::jsonb)
      ON CONFLICT (thread_id) DO UPDATE SET 
+       tenant_id = EXCLUDED.tenant_id,
        updated_at = now(),
        title = CASE WHEN copilot.agent_threads.title = 'New conversation' OR copilot.agent_threads.title IS NULL OR copilot.agent_threads.title = '' THEN EXCLUDED.title ELSE copilot.agent_threads.title END,
        metadata = copilot.agent_threads.metadata || EXCLUDED.metadata;`,
@@ -114,6 +128,12 @@ const listThreads = async ({ tenantId, userId, page = 1, limit = 20 }) => {
   const offset = (safePage - 1) * safeLimit;
 
   const params = [String(tenantId), safeLimit, offset];
+  let userClause = '';
+  if (userId) {
+    params.push(String(userId));
+    userClause = ` AND t.user_id = $${params.length}`;
+  }
+
   const res = await postgresPool.query(
     `SELECT 
        t.thread_id, t.tenant_id, t.user_id,
@@ -132,14 +152,20 @@ const listThreads = async ({ tenantId, userId, page = 1, limit = 20 }) => {
        ) AS preview,
        t.engine_session_id, t.metadata, t.created_at, t.updated_at
      FROM copilot.agent_threads t
-     WHERE t.tenant_id = $1
+     WHERE t.tenant_id = $1${userClause}
      ORDER BY t.updated_at DESC
      LIMIT $2 OFFSET $3;`,
     params
   );
+  const countParams = [String(tenantId)];
+  let countUserClause = '';
+  if (userId) {
+    countParams.push(String(userId));
+    countUserClause = ` AND user_id = $${countParams.length}`;
+  }
   const countRes = await postgresPool.query(
-    `SELECT count(*)::int AS total FROM copilot.agent_threads WHERE tenant_id = $1;`,
-    [String(tenantId)]
+    `SELECT count(*)::int AS total FROM copilot.agent_threads WHERE tenant_id = $1${countUserClause};`,
+    countParams
   );
 
   return {

@@ -26,30 +26,34 @@ router.post(
   agentGatewayController.chat
 );
 
-router.get(
-  '/history/threads',
+const historyThreadsRouter = express.Router();
+historyThreadsRouter.get(
+  '/',
   auth(),
   validate(agentGatewayValidation.listThreads),
   agentGatewayController.listThreads
 );
-router.post(
-  '/history/threads',
+historyThreadsRouter.post(
+  '/',
   auth(),
   validate(agentGatewayValidation.createThread),
   agentGatewayController.createThread
 );
-router.get(
-  '/history/threads/:threadId',
+historyThreadsRouter.get(
+  '/:threadId',
   auth(),
   validate(agentGatewayValidation.getThread),
   agentGatewayController.getThread
 );
-router.delete(
-  '/history/threads/:threadId',
+historyThreadsRouter.delete(
+  '/:threadId',
   auth(),
   validate(agentGatewayValidation.getThread),
   agentGatewayController.deleteThread
 );
+
+router.use('/history/threads', historyThreadsRouter);
+router.historyThreadsRouter = historyThreadsRouter;
 
 router.get('/tokens/balance', auth(), agentGatewayController.getBalance);
 router.post(
