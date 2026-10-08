@@ -641,65 +641,80 @@ app.use(mongoSanitize());
 app.use(compression());
 
 // CORS configuration
-// For production, consider using environment variables for origins
-const corsOptions = {
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://0.0.0.0:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-    'http://0.0.0.0:3001',
-    // Production frontend domains (priority order)
-    'https://dashboard.saby.ai', // Main production dashboard
-    'https://app.saby.ai', // Current production frontend
-    'https://www.app.saby.ai',
-    'https://saby.ai',
-    'https://www.saby.ai',
-    'https://web.saby.ai',
-    'https://stg.saby.ai',
-    'https://portal.saby.ai',
-    'https://www.portal.saby.ai',
-    // External domains that need API access
-    'https://portal.sotsm.org',
-    // Add production origins from environment variables if needed
-    ...(config.cors?.allowedOrigins || []),
-  ],
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
-  // Allow custom headers for API key authentication and other integrations
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'X-API-Key', // API key header for authentication
-    'x-api-key', // Lowercase variant (browsers may normalize)
-    'X-Requested-With', // Common header for AJAX requests
-    'Accept', // Accept header for content negotiation
-    'Origin', // Origin header for CORS
-    'Access-Control-Request-Method', // CORS preflight
-    'Access-Control-Request-Headers', // CORS preflight
-  ],
-  exposedHeaders: [
-    'X-RateLimit-Limit',
-    'X-RateLimit-Remaining',
-    'X-RateLimit-Reset',
-    'X-Request-ID',
-  ],
-  credentials: true,
-  // Preflight cache duration (24 hours)
-  maxAge: 86400,
+const isAllowedCorsOrigin = (origin) => {
+  // Allow requests with no origin (mobile apps, curl, server-to-server)
+  if (!origin) return true;
+
+  // Allow all saby.ai domains and subdomains (https/http, any port)
+  if (/^https?:\/\/([a-z0-9-]+\.)*saby\.ai(:[0-9]+)?$/i.test(origin)) return true;
+
+  // Allow sotsm.org domains
+  if (/^https?:\/\/([a-z0-9-]+\.)*sotsm\.org(:[0-9]+)?$/i.test(origin)) return true;
+
+  // Allow local development (localhost, 127.0.0.1, 0.0.0.0 on any port)
+  if (/^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:[0-9]+)?$/i.test(origin)) return true;
+
+  // Configured origins
+  const configured = config.cors?.allowedOrigins || [];
+  return configured.includes(origin);
+};
+
+const defaultAllowedHeaders = [
+  'Content-Type',
+  'Authorization',
+  'X-API-Key', // API key header for external authentication and integrations
+  'x-api-key', // Lowercase variant
+  'x-workspace-id', // Workspace context header
+  'X-Workspace-ID',
+  'X-Requested-With',
+  'Accept',
+  'Origin',
+  'Access-Control-Request-Method',
+  'Access-Control-Request-Headers',
+  'Cache-Control',
+  'Pragma',
+  'Expires',
+];
+
+const corsOptionsDelegate = (req, callback) => {
+  const origin = req.header('Origin');
+  if (!isAllowedCorsOrigin(origin)) {
+    return callback(null, { origin: false });
+  }
+
+  // Combine explicitly allowed headers (including X-API-Key) with any headers requested by the client
+  const requestedHeaders = req.header('Access-Control-Request-Headers');
+  let allowedHeaders = [...defaultAllowedHeaders];
+  if (requestedHeaders) {
+    const extraHeaders = requestedHeaders.split(',').map((h) => h.trim()).filter(Boolean);
+    allowedHeaders = Array.from(new Set([...allowedHeaders, ...extraHeaders]));
+  }
+
+  callback(null, {
+    origin: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders,
+    exposedHeaders: [
+      'X-RateLimit-Limit',
+      'X-RateLimit-Remaining',
+      'X-RateLimit-Reset',
+      'X-Request-ID',
+    ],
+    credentials: true,
+    maxAge: 86400,
+  });
 };
 
 /*
 Access-Control-Allow-Origin: http://localhost:3000
 Access-Control-Allow-Methods: GET, POST, PUT, DELETE
-Access-Control-Allow-Headers: Content-Type, Authorization
+Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Key, x-workspace-id
 Access-Control-Allow-Credentials: true
  */
 
 // enable cors
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.use(cors(corsOptionsDelegate));
+app.options('*', cors(corsOptionsDelegate));
 
 // jwt authentication
 app.use(passport.initialize());
