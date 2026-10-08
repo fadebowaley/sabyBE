@@ -45,6 +45,15 @@ const tokenSchema = mongoose.Schema(
       type: Date,
       default: null,
     },
+    rotatedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    replacedByToken: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,

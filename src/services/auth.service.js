@@ -64,10 +64,51 @@ const refreshAuth = async (refreshToken) => {
     );
     const user = await userService.getUserById(refreshTokenDoc.user);
     if (!user) {
-      throw new Error();
+      throw new Error('User not found');
     }
-    await refreshTokenDoc.remove();
-    return tokenService.generateAuthTokens(user);
+
+    const now = Date.now();
+    const GRACE_PERIOD_MS = 30000; // 30 seconds grace period for concurrent refresh requests
+
+    if (refreshTokenDoc.rotatedAt) {
+      const timeSinceRotation = now - new Date(refreshTokenDoc.rotatedAt).getTime();
+      if (timeSinceRotation <= GRACE_PERIOD_MS) {
+        // Token was rotated within the grace window (e.g. concurrent request or sibling tab).
+        // Return valid auth tokens for the user without failing.
+        return tokenService.generateAuthTokens(user);
+      } else {
+        // Rotated too long ago (>30s) — possible reuse attack, invalidate completely
+        if (typeof refreshTokenDoc.remove === 'function') {
+          await refreshTokenDoc.remove();
+        } else {
+          await refreshTokenDoc.deleteOne();
+        }
+        throw new Error('Refresh token has expired or already rotated');
+      }
+    }
+
+    // Mark current token as rotated
+    refreshTokenDoc.rotatedAt = new Date();
+    await refreshTokenDoc.save();
+
+    // Generate new auth tokens for the user
+    const newTokens = await tokenService.generateAuthTokens(user);
+
+    if (newTokens?.refresh?.token) {
+      refreshTokenDoc.replacedByToken = newTokens.refresh.token;
+      await refreshTokenDoc.save();
+    }
+
+    // Clean up stale rotated tokens for this user older than grace period
+    Token.deleteMany({
+      user: user.id,
+      type: tokenTypes.REFRESH,
+      rotatedAt: { $ne: null, $lt: new Date(now - GRACE_PERIOD_MS * 2) },
+    }).catch((cleanupErr) => {
+      logger.error('Error cleaning up stale rotated tokens:', cleanupErr);
+    });
+
+    return newTokens;
   } catch (error) {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
   }
