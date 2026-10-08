@@ -145,6 +145,48 @@ async function migrateIndexes() {
     console.log('\n✅ Structures collection migration complete!\n');
 
     // =========================================================================
+    // ROLES COLLECTION
+    // =========================================================================
+    console.log('📊 Migrating Roles Collection Indexes...');
+    console.log('=========================================\n');
+
+    const rolesCollection = db.collection('roles');
+
+    // Drop old global unique index on name (if exists)
+    try {
+      console.log('🗑️  Attempting to drop global unique index on roles.name...');
+      await rolesCollection.dropIndex('name_1');
+      console.log('✅ Dropped name_1 index from roles');
+    } catch (error) {
+      if (error.code === 27) {
+        console.log('⚠️  name_1 index does not exist on roles');
+      } else {
+        console.error('❌ Error dropping name_1 index on roles:', error.message);
+      }
+    }
+
+    // Create new tenant-scoped unique index on [tenantId, name]
+    try {
+      console.log('✨ Creating tenant-scoped unique index on roles [tenantId, name]...');
+      await rolesCollection.createIndex(
+        { tenantId: 1, name: 1 },
+        {
+          unique: true,
+          name: 'tenantId_1_name_1_unique',
+        }
+      );
+      console.log('✅ Created tenantId_1_name_1_unique index on roles');
+    } catch (error) {
+      if (error.code === 85 || error.code === 86) {
+        console.log('⚠️  Index already exists on roles');
+      } else {
+        console.error('❌ Error creating index on roles:', error.message);
+      }
+    }
+
+    console.log('\n✅ Roles collection migration complete!\n');
+
+    // =========================================================================
     // SUMMARY
     // =========================================================================
     console.log('========================================');

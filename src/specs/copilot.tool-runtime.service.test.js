@@ -443,6 +443,63 @@ const SEEDED_TOOL_FIXTURES = {
     },
     expectedEntityId: 'query-tasks-1',
   },
+  action_update_project_form: {
+    entityType: 'project_form',
+    actionPayload: {
+      entityId: 'form-1',
+      projectFormId: 'form-1',
+      title: 'Feedback Form',
+    },
+    expectedEntityId: 'form-1',
+  },
+  action_publish_project_form: {
+    entityType: 'project_form',
+    actionPayload: {
+      entityId: 'form-1',
+      projectFormId: 'form-1',
+    },
+    expectedEntityId: 'form-1',
+  },
+  action_unpublish_project_form: {
+    entityType: 'project_form',
+    actionPayload: {
+      entityId: 'form-1',
+      projectFormId: 'form-1',
+    },
+    expectedEntityId: 'form-1',
+  },
+  action_delete_project_form: {
+    entityType: 'project_form',
+    actionPayload: {
+      entityId: 'form-1',
+      projectFormId: 'form-1',
+    },
+    expectedEntityId: 'form-1',
+  },
+  action_archive_inmail: {
+    entityType: 'inmail',
+    actionPayload: {
+      entityId: 'inmail-1',
+      messageId: 'inmail-1',
+    },
+    expectedEntityId: 'inmail-1',
+  },
+  action_delete_inmail: {
+    entityType: 'inmail',
+    actionPayload: {
+      entityId: 'inmail-1',
+      messageId: 'inmail-1',
+    },
+    expectedEntityId: 'inmail-1',
+  },
+  action_star_inmail: {
+    entityType: 'inmail',
+    actionPayload: {
+      entityId: 'inmail-1',
+      messageId: 'inmail-1',
+    },
+    expectedEntityId: 'inmail-1',
+  },
 };
 
 describe('copilotToolRuntime.service', () => {
